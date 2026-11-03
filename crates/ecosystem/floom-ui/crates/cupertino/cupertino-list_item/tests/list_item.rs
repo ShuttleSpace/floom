@@ -1,8 +1,5 @@
 //! The ported Cupertino list item.
 //!
-//! The engine suite (`floom-widgets/tests/list_item.rs`) owns the *shape*; this
-//! suite owns the *translation*, which is all that is left in this crate. So each
-//! assertion is one v1 read: the token or literal it came from, and where it went.
 
 use floom_core::Widget;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -72,7 +69,6 @@ fn the_hard_coded_numbers_are_preserved_and_disagree_with_the_tokens() {
     assert_ne!(style.subtitle_size, Some(tokens.subtitle_font_size));
 
     // The two this kit *does* read are still read, so the change above did not turn
-    // into "stop reading tokens at all".
     assert_eq!(
         style.padding_horizontal,
         f64::from(tokens.padding_horizontal),

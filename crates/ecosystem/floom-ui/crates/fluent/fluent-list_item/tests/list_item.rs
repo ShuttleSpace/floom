@@ -1,8 +1,4 @@
 //! The ported Fluent list item.
-//!
-//! The engine suite (`floom-widgets/tests/list_item.rs`) owns the *shape*; this
-//! suite owns the *translation*, which is all that is left in this crate. So each
-//! assertion is one v1 read: the token or literal it came from, and where it went.
 
 use floom_core::Widget;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -13,11 +9,6 @@ use floom_widgets::{Pressable, Ripple, Surface};
 
 use floom_widget_fluent_list_item::{to_engine_weight, FluentListItem};
 
-/// Activate Fluent and hand back a theme that will read it.
-///
-/// `MultiTheme::new_for(ds)` does **not** select `ds` — it reads a process-global at
-/// every access (the porting plan's correction 9) — so a test that wants Fluent's
-/// numbers has to say so.
 fn fluent() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
@@ -35,17 +26,7 @@ fn list_tokens(theme: &MultiTheme) -> floom_core_theme::component_tokens::ListIt
     }
 }
 
-// --- the tokens reach the engine ------------------------------------------
 
-/// Fluent is the kit that **does not** read its own token table for three of the five
-/// numbers. v1 hard-coded them, and this test pins the hard-coded values *and* the
-/// disagreement with `ListItemTokens` — because a port that "helpfully" routed all
-/// three through the tokens would change Fluent's rows from 40.0 to 56.0 tall, which
-/// is a design change wearing a refactor's clothes.
-///
-/// So this is the one assertion in the whole port that must **fail** if someone
-/// makes the three kits consistent, and the engine widget's doc comment says why
-/// that would be wrong.
 #[test]
 fn the_hard_coded_numbers_are_preserved_and_disagree_with_the_tokens() {
     let theme = fluent();
@@ -71,8 +52,6 @@ fn the_hard_coded_numbers_are_preserved_and_disagree_with_the_tokens() {
     assert_ne!(style.title_size, tokens.title_font_size);
     assert_ne!(style.subtitle_size, Some(tokens.subtitle_font_size));
 
-    // The two this kit *does* read are still read, so the change above did not turn
-    // into "stop reading tokens at all".
     assert_eq!(
         style.padding_horizontal,
         f64::from(tokens.padding_horizontal),
@@ -81,8 +60,6 @@ fn the_hard_coded_numbers_are_preserved_and_disagree_with_the_tokens() {
     assert_eq!(style.gap, tokens.gap, "and so does the gap");
 }
 
-/// v1 wrote `.gap(4.0)` at the call site rather than reading a token, and the token
-/// table has no field for it. Kept as a literal and made visible.
 #[test]
 fn the_column_gap_is_the_literal_v1_wrote() {
     assert_eq!(
@@ -92,8 +69,6 @@ fn the_column_gap_is_the_literal_v1_wrote() {
     );
 }
 
-/// The title's weight comes from the **typography** scale in v1, not from the list
-/// item's tokens, and it is the one field the engine cannot resolve for a kit.
 #[test]
 fn the_title_weight_comes_from_the_typography_scale() {
     let theme = fluent();
@@ -113,13 +88,9 @@ fn the_title_weight_comes_from_the_typography_scale() {
     );
 }
 
-// --- the subtitle ---------------------------------------------------------
 
-/// A subtitle is an `Option`, and the props' own `Option<String>` is what decides.
 #[test]
 fn no_subtitle_leaves_the_engine_field_empty() {
-    // The kit's own number, not the token's: this kit hard-codes it, which is what
-    // `the_hard_coded_numbers_are_preserved_and_disagree_with_the_tokens` is about.
     assert_eq!(item().resolved_style().subtitle_size, Some(12.0));
     assert!(!item().view().has_subtitle(), "and the row has one line");
 
@@ -127,9 +98,7 @@ fn no_subtitle_leaves_the_engine_field_empty() {
     assert!(with.has_subtitle(), "a subtitle makes two");
 }
 
-// --- the assembly ---------------------------------------------------------
 
-/// The composition, read through the kit: `Ripple(Pressable(Surface(row)))`.
 #[test]
 fn the_kit_hands_over_a_pressable_band() {
     let view = item().view();
@@ -155,14 +124,12 @@ fn the_kit_hands_over_a_pressable_band() {
     );
 }
 
-/// The title travels into the row, and the subtitle is optional.
 #[test]
 fn the_title_and_subtitle_travel_into_the_row() {
     assert_eq!(item().view().title(), "Wi-Fi");
     assert_eq!(item().subtitle("Home").view().title(), "Wi-Fi");
 }
 
-// --- disabled ------------------------------------------------------------
 
 #[test]
 fn disabled_reaches_the_row_and_its_ripple() {
@@ -177,9 +144,7 @@ fn disabled_reaches_the_row_and_its_ripple() {
     );
 }
 
-// --- the props -----------------------------------------------------------
 
-/// `nav` is stored and never read — v1 read it nowhere in `view()`.
 #[test]
 fn nav_is_carried_but_unread() {
     let item = item().nav(true);
@@ -191,8 +156,6 @@ fn nav_is_carried_but_unread() {
     );
 }
 
-/// The click callback is stored twice — a v1 `Box` for the props and an
-/// `Arc<dyn Fn() + Send + Sync>` for the engine — and both come from one closure.
 #[test]
 fn the_props_report_the_click_callback() {
     let hits = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -207,7 +170,6 @@ fn the_props_report_the_click_callback() {
         "the v1-shaped copy is set, so `props()` reports what v1 reported"
     );
 
-    // And the engine's copy fires: click the pressable.
     let view = item.view();
     let ripple = view.children()[0].build();
     let ripple = ripple.as_any().downcast_ref::<Ripple>().unwrap();
@@ -243,8 +205,6 @@ fn the_props_report_the_click_callback() {
     );
 }
 
-/// The slots are optional builders, so a caller with nothing to put there does not
-/// pass one at all — and the row is one child either way.
 #[test]
 fn the_slots_default_to_absent() {
     assert_eq!(item().view().children().len(), 1);
@@ -257,7 +217,6 @@ fn the_slots_default_to_absent() {
     );
 }
 
-/// Design-system colour -> engine colour, the widening the crate does.
 fn to_paint(c: floom_core_theme::tokens::color::Color) -> floom_types::Color {
     floom_types::Color {
         r: c.r,

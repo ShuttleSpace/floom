@@ -1,14 +1,3 @@
-//! A modal sheet anchored to the bottom edge, spanning the width.
-//!
-//! A dialog that slides in from an edge. Its drag handle and corner radii are style; the scrim and the dismissal are the ones a dialog already had.
-//!
-//! It lived in `floom-widgets/src/compose.rs` beside the layout vocabulary
-//! (`Stack`, `List`, `Grid`, `Conditional`, `Crossfade`). The two are not the
-//! same kind of thing: a `Stack` arranges children along an axis, which is
-//! arithmetic; this decides *what a control looks like*, which is a product
-//! decision. So it moved up a layer with the tree, the counter and the select,
-//! and the dependency runs one way -- this crate composes the engine's
-//! vocabulary rather than the other way round.
 
 use std::any::Any;
 use std::sync::atomic::Ordering;
@@ -26,9 +15,7 @@ use floom_widgets::Stack;
 use crate::overlay::Overlay;
 use crate::overlay_bookkeeping::{empty_body, OverlayHost};
 
-// ---------------------------------------------------------------------------
 // BottomSheet
-// ---------------------------------------------------------------------------
 
 /// A modal sheet anchored to the bottom edge, spanning the width.
 ///

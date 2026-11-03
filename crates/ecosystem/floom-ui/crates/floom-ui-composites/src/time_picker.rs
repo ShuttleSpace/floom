@@ -1,23 +1,3 @@
-//! `TimePicker` -- a field that shows a time, and a panel that picks one.
-//!
-//! The field is the button that opens the panel; the panel is the clock face
-//! with its steppers. The three floem-ui time-picker kits each used to carry
-//! their own copy of both; they share the engine's ones now.
-//!
-//! ## What the kits still answer
-//!
-//! The field's height, its radius, its minimum width, the panel's width, the
-//! cells' height, the paddings, the border's thickness and the two alphas,
-//! the panel's padding, its shadow, the gaps, the steppers' size, radius,
-//! fill alpha and font size, the value's font size and width, the done
-//! button's height and padding, and the text's size.
-//!
-//! ## The state is a shared cell
-//!
-//! v1 held two `RwSignal`s -- the value and `open`. 2.0's slots are shared
-//! between threads and an `RwSignal` is `Rc`-based, so a value that changes
-//! after mount cannot be a signal; it is a mutex-guarded cell instead, the
-//! same shape the engine's `SharedFlag` and `SharedBuffer` have.
 
 use std::sync::{Arc, Mutex};
 

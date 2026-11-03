@@ -1,11 +1,5 @@
 //! Cupertino floating action button: the circle, the elevation, and the click.
 //!
-//! ## The claim
-//!
-//! The button is a circle of the token's size, raised by the token's elevation,
-//! filled with `primary` and inked with `on_primary` -- and a disabled one
-//! loses both to `on_surface` at 12% and 38%. The assertions are about the
-//! painted fill, the painted shadow, and the click.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -70,7 +64,6 @@ fn the_button_is_a_circle_of_the_tokens_size() {
         .unwrap()
         .clone();
     // The size is on the *content* -- the surface is the outer box, and the
-    // circle it holds is the square inside it.
     let content = surface.children()[0].build();
     let request = content
         .as_any()
@@ -89,7 +82,6 @@ fn the_fill_is_the_accent_and_the_disabled_one_is_muted() {
     let button = CupertinoFloatingActionButton::new().with_theme(theme());
     let style = button.resolved_style();
     // The fill is the surface's: the pressable paints nothing, it is only the
-    // interaction.
     let pressable = button.view();
     let surface = pressable.children()[0].build();
     let mut surface = surface

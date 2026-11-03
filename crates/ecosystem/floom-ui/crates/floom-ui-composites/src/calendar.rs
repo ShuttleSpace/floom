@@ -1,21 +1,3 @@
-//! `Calendar` -- a month grid, and the date it shows.
-//!
-//! The header says which month and moves between months; the grid is the
-//! days. The three floem-ui calendar kits each used to carry their own copy
-//! of all of it; they share the engine's one now.
-//!
-//! ## What the kits still answer
-//!
-//! The panel's width and padding, the fill, the outline's colour and alpha,
-//! the corner radius, the header's and the cells' sizes and inks, and the
-//! two weights.
-//!
-//! ## The date and the month are shared cells
-//!
-//! Both change after mount -- a click moves them -- so they cannot live in
-//! a signal, which is `Rc`-based and cannot cross a slot boundary. They are
-//! mutex-guarded cells, the same shape the engine's `SharedFlag` and
-//! `SharedBuffer` have.
 
 use std::sync::{Arc, Mutex};
 

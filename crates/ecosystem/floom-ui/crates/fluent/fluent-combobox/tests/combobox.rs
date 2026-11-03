@@ -1,9 +1,4 @@
 //! Fluent's combobox as a kit crate: the token translation, the props round trip,
-//! and the two things this kit decides differently from Material.
-//!
-//! The 12 tests it shares with `md-combobox` are not repeated here on purpose — they
-//! are the engine's, tested in `floom-widgets/tests/combobox*.rs` and in the Material
-//! crate. What is here is what is *this kit's*.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -18,7 +13,6 @@ use floom_widgets::testkit::{AllocatingCreateContext, RecordingUpdateContext};
 use floom_core_theme::theme::Theme;
 use floom_widget_fluent_combobox::FluentCombobox;
 
-/// The field's box, so the panel's placement can be asserted against a real anchor.
 const FIELD: Rect = Rect {
     x0: 30.0,
     y0: 100.0,
@@ -37,22 +31,12 @@ fn style() -> ComboboxStyle {
     FluentCombobox::new().resolved_style()
 }
 
-// --- the one number that differs from Material ---------------------------
 
-/// **This kit wrote no panel gap, so its panel sits flush against the field.**
-///
-/// v1's Fluent combobox positioned the panel with `.absolute().inset_top(origin.y +
-/// trigger_height)` and no `margin_top`, while Material's wrote `.margin_top(4.0)`. That
-/// is a disagreement between two design systems, so it is a parameter rather than a
-/// reconciliation — and this assertion is what stops a later "just use the default"
-/// edit from quietly erasing it.
 #[test]
 fn the_panel_sits_flush_against_the_field() {
     assert_eq!(style().panel_gap, 0.0);
 }
 
-/// The control for the test above: **the engine's default is Material's 4.0**, so a kit
-/// that says nothing gets the wrong gap. This is why the parameter exists at all.
 #[test]
 fn the_engine_default_is_materials_four() {
     assert_eq!(
@@ -63,7 +47,6 @@ fn the_engine_default_is_materials_four() {
     );
 }
 
-/// And the two really place the panel differently, four pixels apart.
 #[test]
 fn the_two_kits_gap_the_panel_differently() {
     let mine = floom_ui_composites::combobox::panel_placement(style().panel_gap, 320.0);
@@ -80,18 +63,7 @@ fn the_two_kits_gap_the_panel_differently() {
     );
 }
 
-// --- the icon, which is this kit's own -----------------------------------
 
-/// **The chevron comes from this kit's own table.** That is not tidiness: `expand_more`
-/// is a different glyph in each design system's icon set, so a lookup that reached for
-/// the Material table would draw a Material chevron inside a Fluent control and
-/// nothing would fail.
-///
-/// It deliberately does **not** compare against `md-icon`, which is what I first wrote.
-/// A Fluent crate depending on Material's icon crate to prove a point about
-/// Fluent's icons is the wrong dependency: it would put Material in this crate's
-/// graph for a test, and the next person to read it would reasonably assume Fluent
-/// *needs* Material's icons. The claim is made from this kit's own table instead.
 #[test]
 fn the_chevron_comes_from_this_kits_own_table() {
     let path = floom_widget_fluent_icon::fluent_icon_path("expand_more");
@@ -103,8 +75,6 @@ fn the_chevron_comes_from_this_kits_own_table() {
     );
 }
 
-/// The engine widget the lookup hands over is built from *that* path, so the table and
-/// the mounted chevron cannot drift apart.
 #[test]
 fn the_engine_icon_uses_the_same_path_the_table_holds() {
     use floom_widgets::VectorIcon;
@@ -120,12 +90,7 @@ fn the_engine_icon_uses_the_same_path_the_table_holds() {
     );
 }
 
-// --- the theme, which no test verifies -----------------------------------
 
-/// **A kit's own design system is not selected by naming it.** `MultiTheme::new_for`
-/// ignores its argument and reads go through a process-global, so these numbers are
-/// Material's because nothing has called `set_design_system` — not because this crate
-/// says Fluent.
 #[test]
 fn the_theme_is_not_selected_by_naming_it() {
     let named_fluent = style();
@@ -140,12 +105,7 @@ fn the_theme_is_not_selected_by_naming_it() {
     );
 }
 
-// --- the tokens -----------------------------------------------------------
 
-/// The five numbers from `ComboboxTokens` are the token's, not a default's. The failure
-/// this pins is a kit silently resolving to `ComboboxStyle::default()` because
-/// `theme.component(..)` did not match — which is `unreachable!()` at runtime, so the
-/// real symptom is a combobox in the wrong metrics rather than a failure.
 #[test]
 fn the_tokens_come_from_combobox_tokens() {
     let style = style();
@@ -162,13 +122,9 @@ fn the_tokens_come_from_combobox_tokens() {
     assert_eq!(style.border_radius, tokens.border_radius);
     assert_eq!(style.min_width, tokens.min_width);
     assert_eq!(style.item_height, tokens.item_height);
-    // v1 declared this and never read it; the host needs it now.
     assert_eq!(style.panel_max_height, tokens.panel_max_height);
 }
 
-/// The numbers v1 wrote at the call site. These are the same values Material wrote —
-/// the two kits agree here — which is worth a test, because "the kits disagree about
-/// everything" is the impression the 26-line diff gives and it is not true.
 #[test]
 fn the_call_site_constants_match_v1s() {
     let style = style();
@@ -182,7 +138,6 @@ fn the_call_site_constants_match_v1s() {
     assert_eq!(style.panel_shadow_alpha, 20);
 }
 
-/// The field's border follows v1's three cases with disabled winning over open.
 #[test]
 fn the_border_follows_v1s_order() {
     let style = style();
@@ -196,10 +151,7 @@ fn the_border_follows_v1s_order() {
     );
 }
 
-// --- props ----------------------------------------------------------------
 
-/// `props()` keeps reporting what v1 reported, including the callback's presence —
-/// which is why the crate stores it twice.
 #[test]
 fn props_report_what_the_builder_set() {
     let combo = FluentCombobox::new()
@@ -216,10 +168,7 @@ fn props_report_what_the_builder_set() {
     assert!(props.on_change.is_some());
 }
 
-// --- the mounted view -----------------------------------------------------
 
-/// The viewed combobox asks for a panel **flush below** the field — this kit's own
-/// gap, not the engine's default.
 #[test]
 fn the_viewed_combobox_places_its_panel_flush_below_the_field() {
     let mut combo = FluentCombobox::new().options(options()).view();
@@ -246,8 +195,6 @@ fn the_viewed_combobox_places_its_panel_flush_below_the_field() {
     }
 }
 
-/// The style drives the placement the request carries, so a kit's gap reaches the
-/// request rather than only living in a struct nobody reads.
 #[test]
 fn the_style_drives_the_placement_the_request_carries() {
     let style = style();
@@ -260,15 +207,12 @@ fn the_style_drives_the_placement_the_request_carries() {
     );
 }
 
-/// The options reach the widget, so an untouched combobox lists them all.
 #[test]
 fn the_options_reach_the_widget() {
     let combo = FluentCombobox::new().options(options()).view();
     assert_eq!(combo.visible(), options());
 }
 
-/// And the callback fires when an option is chosen, through the `Send + Sync` handle
-/// rather than the v1 `Box<dyn Fn(..)>`.
 #[test]
 fn the_callback_fires_when_an_option_is_chosen() {
     let fired = Arc::new(AtomicUsize::new(0));
@@ -285,7 +229,6 @@ fn the_callback_fires_when_an_option_is_chosen() {
     assert_eq!(combo.selected(), Some(2));
 }
 
-/// `disabled` reaches the widget, and a disabled combobox paints differently.
 #[test]
 fn disabled_reaches_the_widget_and_changes_how_it_paints() {
     let live = FluentCombobox::new().options(options()).view();
@@ -293,8 +236,6 @@ fn disabled_reaches_the_widget_and_changes_how_it_paints() {
         .options(options())
         .disabled(true)
         .view();
-    // The trigger is a child, so the widget's own `paint` draws nothing — comparing
-    // the widgets would compare two empty scenes.
     let live_trigger = live.children().remove(0).build();
     let dead_trigger = dead.children().remove(0).build();
     let live_scene = floom_widgets::testkit::paint_snapshot(

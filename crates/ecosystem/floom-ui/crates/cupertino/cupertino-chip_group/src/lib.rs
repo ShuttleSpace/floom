@@ -1,65 +1,5 @@
 //! Cupertino chip group, ported to the Floom 2.0 widget API.
 //!
-//! A chip group is a *row* of chips, any number of which can be chosen.
-//!
-//! ## What the engine grew for this
-//!
-//! v1's chip group and v1's item group look alike and are not: a chip group is
-//! a horizontal row of pills whose label is centred, whose ink follows the
-//! choice, and whose chosen chip can be tapped off. The engine's
-//! [`SelectGroup`] was a vertical list of radio-ish rows, so four answers had
-//! to become the caller's rather than the engine's:
-//!
-//! * **The direction.** `SelectGroupStyle::axis` -- a row of chips runs the
-//!   other way from a list of items.
-//! * **A row's own state.** v1 coloured a chosen chip's **ink** as well as its
-//!   fill, and 2.0's `Surface` paints a fill while only the child knows it is
-//!   text. `row_with_state` is the door: the content is built knowing whether
-//!   *its* row is chosen.
-//! * **Where the content sits.** `SelectGroupStyle::content_placement` -- v1
-//!   centred the label in the chip (`items_center`), and a list of items does
-//!   not.
-//! * **The rules.** `toggles_off_in_single_mode` and
-//!   `mandatory_in_multiple_mode` -- v1's chip group read `mandatory` only in
-//!   the single-mode branch, and a chip can be tapped off where a radio cannot.
-//!
-//! ## What the port reproduces
-//!
-//! * the chip: 32 tall, 12 of padding at the sides, a 16 radius, 13pt text;
-//! * the palette: `surface_variant` with `on_surface` ink, and
-//!   `secondary_container` with `on_secondary_container` when chosen;
-//! * the gap between chips, from the token;
-//! * the click rules: several at once when `multiple`, one at a time
-//!   otherwise -- and the chosen one comes off when it is tapped again, unless
-//!   it is `mandatory`.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **`items_center()` on the stack.** The chips were centred against each
-//!   other in the stack's cross axis. Every chip is 32 tall, so centring them
-//!   against each other never showed; 2.0's stack stretches its children
-//!   instead, and a child with a height of its own is not stretched.
-//! * **`gap(6.0)` inside the chip.** v1's chip was a container with one child,
-//!   so the gap between its children never had anything to separate.
-//! * **`justify_center()`.** The chip is as wide as its label plus the padding,
-//!   so the label already fills the content box.
-//! * **`cursor(CursorStyle::Pointer)`.** 2.0's paint context has no cursor
-//!   vocabulary, so the pointer is not carried over; the chip is still a
-//!   `Pressable`, so it is still activatable by keyboard, which the pointer was
-//!   not.
-//!
-//! ## The one difference that is left
-//!
-//! v1 reported the selection after **every** click, including a click that
-//! changed nothing -- tapping the chosen chip of a `mandatory` group reported
-//! the same indices again. The engine reports a *change*, so that click
-//! reports nothing. The difference shows only in that one case.
-//!
-//! ## The numbers that are not tokens
-//!
-//! v1 wrote the chip's height (32), its padding (12), its radius (16) and its
-//! text size (13) as literals, and read the token only for the gap between
-//! chips. They are literals here too.
 
 use std::sync::Arc;
 
@@ -202,15 +142,11 @@ impl CupertinoChipGroup {
             // v1's chip had a height of its own: 32.
             height: Some(style.height),
             pad: style.padding_horizontal,
-            // v1 centred the label in the chip.
             content_placement: ContentPlacement::Centred,
-            // v1's chip came off when it was tapped again.
             toggles_off_in_single_mode: true,
             // v1 read `mandatory` only in the single-mode branch, so in multiple
-            // mode it did nothing.
             mandatory_in_multiple_mode: false,
             radius: style.border_radius,
-            // v1's chip had no border.
             border_width: 0.0,
             background: to_paint(style.background),
             foreground: to_paint(style.foreground),
@@ -240,7 +176,6 @@ impl CupertinoChipGroup {
             let text = label.clone();
             group = group.row_with_state(label, move |selected| {
                 // The content is built with the row's own state, so the ink
-                // follows the choice.
                 let color = if selected { selected_ink } else { ink };
                 Box::new(Text::new(text.clone()).size(font_size).color(color))
             });

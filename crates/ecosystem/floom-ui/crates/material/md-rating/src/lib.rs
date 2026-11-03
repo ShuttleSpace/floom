@@ -1,55 +1,3 @@
-//! Material rating, ported to the Floom 2.0 widget API.
-//!
-//! A rating is a row of stars: the first `value` of them are filled, the rest
-//! are empty, and tapping a star sets the value to that star's number.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a horizontal `Stack` of stars, each a `Pressable`
-//! around a slot that holds one of two glyphs -- the same `star` path in two
-//! inks. Which glyph is mounted is the engine's `Conditional`, following a
-//! shared flag, so the row follows whoever writes the flag the way v1's
-//! signal did.
-//!
-//! ## What this kit answers
-//!
-//! * the star's size and the gap between the stars: the tokens;
-//! * the filled star's ink: `secondary`; the empty one's: `outline_variant`;
-//! * the glyph: the `star` path from this kit's own icon table.
-//!
-//! ## The value, and how it is held
-//!
-//! v1 held the value in an `RwSignal<f32>` that `view()` created, so nothing
-//! outside could read it. 2.0 cannot hold it in a signal at all: a slot
-//! closure has to be `Send + Sync` and an `RwSignal` is `Rc`-based. The port
-//! holds **one shared flag per star** -- "is this star filled?" -- which is
-//! the state the paint actually needs. The filled stars are a prefix, so the
-//! number v1 held is the length of that prefix, and a click rewrites the
-//! flags rather than a number.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The pointer cursor.** v1 gave every star
-//!   `cursor(CursorStyle::Pointer)`, and `CursorStyle::Default` when the
-//!   rating was read-only. 2.0's `Pressable` does not answer
-//!   `Widget::cursor`, so the pointer is not carried over.
-//! * **The callback in the shared props.** `RatingProps::on_change` is a
-//!   `Box<dyn Fn(f32)>`, which cannot cross a `Send + Sync` slot boundary.
-//!   The kit keeps an `Arc<dyn Fn(f32) + Send + Sync>` of its own and the
-//!   props' slot stays empty.
-//! * **The accessors.** v1's Material rating had no `props()`, `theme()` or
-//!   `with_theme()` -- the other two kits had all three. The port gives all
-//!   three kits the same three, because a kit that cannot be given a theme
-//!   cannot be tested against one.
-//!
-//! ## What the port adds
-//!
-//! * **A name for every star.** 2.0's widgets publish semantics and v1's
-//!   did not; the port gives each star a name ("Rate 3 of 5"), which is an
-//!   addition rather than a translation.
-//! * **The keyboard is gated too.** v1's read-only rating guarded the click
-//!   with `if !readonly`, which covered the pointer but not the keyboard.
-//!   2.0 puts the gate on the `Pressable`, so both are covered.
 
 use std::sync::Arc;
 
@@ -67,27 +15,17 @@ use floom_core_theme::tokens::color::Color;
 use floom_widget_md_icon::{MdIcon, MD_ICON_VIEW_BOX};
 use floom_widget_runtime::theme_signal;
 
-/// The glyph the rating draws. This kit's own icon table, not a hard-coded
-/// path: the icon set is the design system's, and the three kits' tables are
-/// separate crates.
 const STAR: &str = "star";
 
 /// A callback in the shape 2.0's slots need.
 type Callback = Arc<dyn Fn(f32) + Send + Sync + 'static>;
 
-/// One star's state: the two flags that choose between its two glyphs.
-///
-/// The filled flag is "is this star filled?", which is the state v1's paint
-/// read out of the value signal. The empty flag is its complement, and it
-/// exists because the engine's `Conditional` mounts a child while a flag is
-/// true -- so showing the *other* glyph needs a flag of its own.
 #[derive(Debug, Clone)]
 struct StarState {
     filled: SharedFlag,
     empty: SharedFlag,
 }
 
-/// The rating's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialRatingStyle {
     pub design_system: &'static str,
@@ -129,8 +67,6 @@ impl MaterialRating {
         self
     }
 
-    /// How many stars the rating has. v1's `max.max(1)`: a rating with no
-    /// stars still showed one.
     pub fn max(mut self, max: usize) -> Self {
         self.props.max = max;
         self.reset_stars();
@@ -149,11 +85,6 @@ impl MaterialRating {
         self
     }
 
-    /// The shared props.
-    ///
-    /// `on_change` is deliberately absent from what it reports: the kit holds
-    /// that as an `Arc` of its own (see the field's note), and `RatingProps` is
-    /// the v1 carrier of a `Box<dyn Fn(..)>` that 2.0 cannot use.
     pub fn props(&self) -> &RatingProps {
         &self.props
     }
@@ -167,19 +98,10 @@ impl MaterialRating {
         self
     }
 
-    /// The per-star flags, for a caller that wants to read or drive the state.
-    ///
-    /// The value v1 held in a signal is these flags: the filled stars are a
-    /// prefix, so the value is the number of flags that are true.
     pub fn filled_flags(&self) -> Vec<SharedFlag> {
         self.stars.iter().map(|star| star.filled.clone()).collect()
     }
 
-    /// Rebuilds the per-star flags from the current value and maximum.
-    ///
-    /// The flags *are* the value: a star is filled when its index is below the
-    /// value, exactly as v1's paint decided. Rebuilding them keeps the two in
-    /// step whatever order the builder methods were called in.
     fn reset_stars(&mut self) {
         let max = self.props.max.max(1);
         let value = self.props.value.clamp(0.0, max as f32);
@@ -220,15 +142,11 @@ impl MaterialRating {
         let max = self.stars.len();
 
         let mut row = Stack::new(Axis::Horizontal)
-            // v1's `.flex_row().gap(gap)`.
             .gap(style.gap)
-            // v1's `.items_center()`.
             .align(Align::Start, Align::Center);
 
         for index in 0..max {
             let state = self.stars[index].clone();
-            // Every star's flags: a click rewrites them all, because the
-            // filled stars are a prefix.
             let all = self.stars.clone();
             let on_change = on_change.clone();
             let active = active;
@@ -238,13 +156,8 @@ impl MaterialRating {
             let value = index as f32 + 1.0;
 
             row = row.push(move || {
-                // The click closure is built inside the slot, so the values it
-                // takes are copied here: a slot is replayed, and a closure
-                // cannot move its own captures out.
                 let all = all.clone();
                 let on_change = on_change.clone();
-                // The two glyphs: the star filled, and the star empty. They are
-                // the same path in two inks.
                 let filled_glyph = VectorIcon::from_path_data(path, MD_ICON_VIEW_BOX)
                     .size(star_size)
                     .color(active);
@@ -252,8 +165,6 @@ impl MaterialRating {
                     .size(star_size)
                     .color(inactive);
 
-                // The slot: the engine's `Conditional` mounts the filled glyph
-                // while the star is filled, and the empty one otherwise.
                 let slot = Stack::new(Axis::Vertical)
                     .push({
                         let filled_glyph = filled_glyph.clone();
@@ -288,8 +199,6 @@ impl MaterialRating {
                     ))
                     .disabled(readonly)
                     .on_click(move || {
-                        // v1 fired the callback only when the rating was not
-                        // read-only.
                         if readonly {
                             return;
                         }

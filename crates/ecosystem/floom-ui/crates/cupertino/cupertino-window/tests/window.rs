@@ -1,15 +1,5 @@
 //! The ported Cupertino window -- a box of pages, with arrows and dots.
 //!
-//! What is tested here is the translation and the pixels: the tokens reach the
-//! style, the box is painted the surface fill and the outline, the page on
-//! show is the one that was selected, the arrows and the dots are where v1
-//! put them, and a click moves the page on.
-//!
-//! ## The tripwires
-//!
-//! `the_box_is_painted_the_surface_and_the_outline` and
-//! `the_page_on_show_is_the_one_that_was_selected` would fail if this kit
-//! stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -32,7 +22,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }

@@ -87,8 +87,6 @@ impl Services {
         let entry = Entry {
             instance: Rc::clone(&instance) as Rc<dyn Any>,
             disposal: disposal.map(|disposal| {
-                // The typed handle is captured now; the callback is exactly
-                // `Fn(Rc<T>)` so no downcast is needed later.
                 let typed = Rc::clone(&instance);
                 Box::new(move || disposal(Rc::clone(&typed))) as Disposal
             }),
@@ -256,7 +254,6 @@ mod tests {
         let theme = services.get::<Theme>().unwrap();
         assert_eq!(theme.name, "dark");
 
-        // Handles are shared: mutation through one is visible via another.
         assert!(Rc::ptr_eq(&theme, &services.require::<Theme>()));
     }
 
@@ -308,9 +305,7 @@ mod tests {
         parent.provide(Theme { name: "dark" });
 
         let scope = Scope::child(&parent);
-        // Child sees the parent's service without re-registering…
         assert_eq!(scope.get::<Theme>().unwrap().name, "dark");
-        // …and its own service stays its own.
         scope.services().provide(Session { user: "ada" });
         assert_eq!(scope.require::<Session>().user, "ada");
         assert!(
@@ -345,7 +340,7 @@ mod tests {
                 }),
             );
             assert_eq!(scope.get::<Theme>().unwrap().name, "route");
-        } // scope drops here → "route theme" disposes, parent untouched
+        }
 
         assert_eq!(*log.borrow(), vec!["route theme"]);
         assert_eq!(parent.get::<Theme>().unwrap().name, "app");

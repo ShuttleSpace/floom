@@ -1,34 +1,5 @@
 //! Cupertino icon button, ported to the Floom 2.0 widget API.
 //!
-//! ## Why this crate is now forty lines
-//!
-//! All three kits ship this component and they are the same component: **69 of 73
-//! substantive lines are identical across `md-icon_button`,
-//! `cupertino_icon_button` and `fluent_icon_button`**, and the four that differ are
-//! the type name, the `DesignSystem` handed to `MultiTheme`, and whether the theme
-//! came from `theme_signal()` or a fresh `MultiTheme`.
-//!
-//! So the shape went to the engine as [`floom_ui_composites::IconButton`] — the
-//! composition (`Ripple(Pressable(Surface(icon)))`), the disabled rule, the
-//! ripple-ink rule, and the fact that the glyph follows `disabled` while its size
-//! does not. What is left here is the translation from Cupertino's tokens to an
-//! [`IconButtonStyle`], plus the one thing the engine cannot know: that `"close"`
-//! is a path.
-//!
-//! ## What the port changed
-//!
-//! * `svg(icon)` — a v1 view that drew a path — is [`CupertinoIcon`], which is
-//!   ported, and `CupertinoIcon::resolve()` is what hands 2.0 a widget. Its
-//!   `resolved_style` colour is separate from the button's disabled state, and
-//!   `CupertinoIcon` has no notion of being inside a disabled button.
-//! * `.action(..)` became [`Pressable`] inside the engine widget. v1 wrote
-//!   `if !disabled { .. }` inside the action closure, which guarded the pointer but
-//!   not the keyboard; 2.0's gate is in `Pressable` and covers both. That is an
-//!   improvement, not a translation, and the engine suite is what keeps it.
-//! * `tokens.padding` is declared in `IconButtonTokens` and **never read by v1** —
-//!   the box is pinned to `size` and the icon is centred, so there is nothing for
-//!   padding to separate. Left unread deliberately; see the note on
-//!   `ToolbarTokens::height` in the porting plan for the same decision elsewhere.
 
 use floom_signal::{RwSignal, SignalGet};
 use std::sync::Arc;
@@ -112,7 +83,6 @@ impl CupertinoIconButton {
         // Both handles, one callback. An `Arc<dyn Fn()>` is *not* itself callable in
         // Rust's current `Fn` impls, so the props get a thin closure over the shared
         // handle rather than a widened one; the engine gets the `Send + Sync`
-        // handle, which is the one that gets mounted.
         self.props.on_click = Some(Box::new({
             let shared = shared.clone();
             move || shared()
@@ -176,7 +146,6 @@ impl CupertinoIconButton {
             // v1: the icon's `fg`, disabled branch.
             disabled_foreground: to_paint(with_alpha(on_surface, 38)),
             // v1: the `(bg, border)` disabled override, which replaced the
-            // variant's pair outright.
             disabled_background: to_paint(with_alpha(on_surface, 12)),
             disabled_border: to_paint(with_alpha(on_surface, 38)),
 

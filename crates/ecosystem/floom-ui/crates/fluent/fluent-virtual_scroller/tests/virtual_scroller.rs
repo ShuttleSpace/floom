@@ -1,15 +1,4 @@
 //! The ported Fluent virtual scroller -- a viewport over a list too long to
-//! draw, which mounts only the rows the user can see.
-//!
-//! The shape is the engine's vocabulary plus a kit-local scroller, so what is
-//! tested here is the translation, the pixels, and the one thing that makes a
-//! virtual list a virtual list: **only the window's rows are mounted**, and
-//! scrolling mounts a different window.
-//!
-//! ## The tripwires
-//!
-//! `only_the_windows_rows_are_mounted` and `scrolling_mounts_a_different_window`
-//! would fail if this kit stopped being this kit.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -34,13 +23,9 @@ const BOX: Rect = Rect {
     y1: 400.0,
 };
 
-/// A row's height, so the window's arithmetic is easy to read.
 const ROW: f32 = 44.0;
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -49,7 +34,6 @@ fn kit() -> FluentVirtualScroller {
     FluentVirtualScroller::new().with_theme(theme())
 }
 
-/// A scroller over `count` rows, each labelled with its own index.
 fn kit_with_rows(count: usize) -> FluentVirtualScroller {
     let mut kit = kit()
         .item_height(ROW)
@@ -62,7 +46,6 @@ fn kit_with_rows(count: usize) -> FluentVirtualScroller {
     kit
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -72,7 +55,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -82,7 +64,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The text a widget paints, if it paints one.
 fn text_of(widget: &dyn Widget) -> Option<String> {
     ops_of(widget).into_iter().find_map(|op| match op {
         PaintOp::Text { text, .. } => Some(text),
@@ -90,7 +71,6 @@ fn text_of(widget: &dyn Widget) -> Option<String> {
     })
 }
 
-/// A wheel of `delta` pixels.
 fn wheel(delta: f64) -> Event {
     Event::Scroll(ScrollEvent {
         delta_x: 0.0,
@@ -100,9 +80,7 @@ fn wheel(delta: f64) -> Event {
     })
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentVirtualScrollerStyle = kit().resolved_style();
@@ -111,9 +89,6 @@ fn the_tokens_and_colours_reach_the_style() {
             floom_core_theme::component_tokens::ComponentTokens::VirtualScroller(tokens) => tokens,
             _ => unreachable!(),
         };
-    // v1's rule: the prop's row height when it is positive and the token's
-    // when it is not. The props' default is 44, so the token's is the
-    // fallback rather than the number in play.
     assert_eq!(
         style.item_height,
         kit().props().item_height,
@@ -148,8 +123,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// The style reports the numbers the paint uses: the caller's row height and
-/// row gap override the tokens.
 #[test]
 fn the_style_reports_the_numbers_the_paint_uses() {
     let style = kit()
@@ -162,9 +135,7 @@ fn the_style_reports_the_numbers_the_paint_uses() {
     assert_eq!(style.viewport_height, 200.0, "the caller's viewport height");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The viewport is painted in v1's colours: the fill, and the outline.
 #[test]
 fn the_viewport_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -191,17 +162,12 @@ fn the_viewport_is_painted_v1_s_colour() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
-/// **The whole point of a virtual list.** A hundred rows are there, and the
-/// window covers eighteen of them: the viewport's worth of rows (360 / 44 =
-/// nine), plus one, plus the overscan on both sides.
 #[test]
 fn only_the_windows_rows_are_mounted() {
     let surface = kit_with_rows(100).view();
     let scroller = surface.children().remove(0).build();
     let content = scroller.children().remove(0).build();
-    // The content is the space above, the rows, and the space below.
     assert_eq!(
         content.children().len(),
         3,
@@ -216,8 +182,6 @@ fn only_the_windows_rows_are_mounted() {
     );
 }
 
-/// Scrolling mounts a different window: ten rows down, less the overscan, so
-/// the first mounted row is the sixth.
 #[test]
 fn scrolling_mounts_a_different_window() {
     let surface = kit_with_rows(100).view();
@@ -245,7 +209,6 @@ fn scrolling_mounts_a_different_window() {
     );
 }
 
-/// The scroller asks for more when the user reaches the end of the list.
 #[test]
 fn the_scroller_asks_for_more_at_the_end() {
     let calls = Arc::new(AtomicUsize::new(0));
@@ -257,8 +220,6 @@ fn the_scroller_asks_for_more_at_the_end() {
     let surface = kit.view();
     let mut scroller = surface.children().remove(0).build();
     let id = ElementId::new(0, 1);
-    // A hundred rows of 44 is 4400, and the viewport is 360, so the end is
-    // 4040 pixels down.
     let mut cx = TestEventContext::new(id, BOX, wheel(4040.0));
     scroller.event(&mut cx, id);
 
@@ -269,8 +230,6 @@ fn the_scroller_asks_for_more_at_the_end() {
     );
 }
 
-/// The props report the numbers, and the callback slot stays empty: the
-/// props' callback is a `Box<dyn Fn()>`, which cannot cross a 2.0 slot.
 #[test]
 fn the_props_report_the_numbers() {
     let kit = kit().item_height(30.0).row_gap(6.0).overscan(2);
@@ -283,10 +242,7 @@ fn the_props_report_the_numbers() {
     );
 }
 
-// --- the theme source ---
 
-/// The theme: v1's Fluent virtual scroller took a *snapshot* of its own design
-/// system, so a change of the app-wide theme does not re-theme it.
 #[test]
 fn the_theme_is_a_snapshot() {
     assert_ne!(

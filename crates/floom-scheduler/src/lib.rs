@@ -135,7 +135,6 @@ impl Scheduler {
             }
         }
 
-        // Idle only if no critical work remains.
         if self.has_critical_work() {
             return ran;
         }

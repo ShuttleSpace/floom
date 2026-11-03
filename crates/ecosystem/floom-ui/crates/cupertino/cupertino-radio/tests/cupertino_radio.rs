@@ -1,27 +1,4 @@
 //! Cupertino's radio as a kit crate: the token translation, plus the two numbers
-//! that are this kit's own rather than the tokens' -- a halo four points of
-//! padding wider than the ring, and the fact that it is hover-only.
-//!
-//! These three crates have never been compiled, which is how three kits came to
-//! disagree with themselves about a five-layer control for this long. So the
-//! point of this file is not to exercise the engine's `Radio` -- that is what
-//! `floom-ui-composites`' own radio tests are for -- but to pin the numbers *this
-//! kit wrote*, in the places where a plausible-looking edit would change a pixel.
-//!
-//! ## What this file deliberately does not assert
-//!
-//! v1 drew a focus outline around the whole control and drew no halo on focus at
-//! all. `RadioStyle` cannot express the outline, so there is nothing here to pin
-//! for it; the loss is recorded in the module doc rather than asserted, because a
-//! kit test asserting an absent field would really be a test of the engine.
-//!
-//! ## The tripwires
-//!
-//! Three of these tests would fail if the kit stopped being this kit:
-//! `the_halo_is_the_ring_plus_four_points_of_padding`,
-//! `a_disabled_radio_is_not_the_enabled_one` and
-//! `the_halo_is_not_drawn_while_disabled`. They are why the three kits stay three
-//! crates rather than becoming one.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -612,7 +589,6 @@ fn the_callback_reports_the_value_the_engine_activated_to() {
     // And the edge: a radio built already selected never re-notifies, so the
     // adapter's `!was` is always `true`. v1's toggle could also report `false` --
     // clicking a selected radio cleared it -- and that is not reachable from here
-    // because the engine has no unselect.
     let seen = Rc::new(Cell::new(None::<bool>));
     let sink = seen.clone();
     let mut already = CupertinoRadio::new("A")

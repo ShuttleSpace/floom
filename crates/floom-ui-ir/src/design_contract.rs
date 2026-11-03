@@ -177,7 +177,6 @@ pub fn compare(expected: &DesignContract, actual: &DesignContract) -> ContractDi
         }
     };
 
-    // dimensions + spacing + radius: scalars in field order.
     let dims = (&expected.dimensions, &actual.dimensions);
     diff(
         "dimensions.width".into(),
@@ -207,7 +206,6 @@ pub fn compare(expected: &DesignContract, actual: &DesignContract) -> ContractDi
         num(actual.radius.corner),
     );
 
-    // typography / colors / states: sorted unions by name.
     compare_named(
         &mut diff,
         "typography",
@@ -227,7 +225,6 @@ pub fn compare(expected: &DesignContract, actual: &DesignContract) -> ContractDi
         &states_map(actual),
     );
 
-    // animation + accessibility.
     diff(
         "animation.duration_ms".into(),
         expected.animation.duration_ms.to_string(),

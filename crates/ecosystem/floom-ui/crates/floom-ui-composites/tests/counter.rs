@@ -1,30 +1,4 @@
-//! `Counter` — the stepper, and the two stateful-stepper policies it disagrees
-//! with `Slider` about.
-//!
-//! ## Why this file is mostly about two decisions
-//!
-//! A counter is three parts and a `+`. Almost all of it is trivially true, and the
-//! parts that are not trivially true are exactly the parts worth pinning:
-//!
-//! 1. **`on_change` fires on a press that did not move the value.** That is v1's
-//!    behaviour (`let nv = clamp(..); value.set(nv); cb(nv)` — unconditionally), and
-//!    it is the *opposite* of what `Slider::set_value` does in this same crate. Both
-//!    are defensible; only one of them can be true at a time, so both are tested
-//!    here and the disagreement is named rather than smoothed over.
-//! 2. **Which bound wins when the range is inverted.** `clamp_value` applies `min`
-//!    first and `max` second, so `max` wins. An inverted range is a caller error, but
-//!    "which error you get" is still a behaviour, and `f32::clamp` would have given
-//!    the other answer — so it is spelled out rather than left to the reader.
-//!
-//! This file moved with the widget out of `floom-widgets/tests/counter.rs`, for
-//! the reason the rest of this crate's tests did: a test of a widget's behaviour
-//! belongs with the widget.
 
-//! ## The saturating arithmetic is a divergence, and it is deliberate
-//!
-//! v1 wrote `value.get() + step` on an `i64`, which panics in a debug build at
-//! `i64::MAX`. `the_engine_saturates_rather_than_panicking_at_the_extreme` pins the
-//! replacement. There is no kit to disagree with: this is arithmetic.
 
 use std::sync::{Arc, Mutex};
 

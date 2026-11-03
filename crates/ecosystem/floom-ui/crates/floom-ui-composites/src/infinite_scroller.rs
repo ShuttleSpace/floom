@@ -1,28 +1,3 @@
-//! `InfiniteScroller` -- a viewport that asks for the next page when the user
-//! reaches the end.
-//!
-//! The content is the caller's own, with a footer that is a label while a
-//! page is being fetched and an empty box otherwise. The viewport owns the
-//! scroll offset and asks for the next page when the user gets close enough
-//! to the end.
-//!
-//! The three floem-ui infinite-scroller kits each used to carry their own
-//! copy of these two widgets; they share the engine's ones now.
-//!
-//! ## The content is a widget of its own
-//!
-//! Two of its numbers change after the tree is mounted: the height the host
-//! keeps updating, and the loading flag that decides what the footer is. In
-//! 2.0 a box's size is its own `layout_request`, and a `Stack` built once
-//! keeps the size it was built with.
-//!
-//! ## The offset is the scroller's own
-//!
-//! The engine's `Scroll` keeps its offset to itself and applies one offset
-//! to its whole subtree, so a widget inside it cannot ask how far it has
-//! scrolled. This scroller therefore keeps an offset of its own and asks the
-//! host to scroll. The offset is in the engine's scroll units -- `f64`, like
-//! `ScrollOffset` -- while the content's height is a layout unit (`f32`).
 
 use std::sync::{Arc, Mutex};
 

@@ -1,20 +1,3 @@
-//! `Checkbox`'s own logic, and the claim that its default style is the pixels the
-//! engine painted before the move.
-//!
-//! These moved with the widget from `floom_widgets/tests/controls.rs`, for the
-//! reason `radio.rs` moved: a test of a widget's behaviour belongs with the
-//! widget, and this file is what has to be deleted with it.
-//!
-//! What is new here is the half the move made possible. The old file could not
-//! say "the default style is the old palette", because there was no style -- it
-//! could only assert behaviour. With `CheckboxStyle` in existence every value in
-//! its table is a promise about pixels, and the tests below are what hold it to
-//! that.
-//!
-//! The second new half is the mark. All three v1 kits drew a vector checkmark and
-//! the engine drew the character `U+2714`, so there are now two paths to prove:
-//! [`the_default_mark_is_the_engine_character_glyph`] and
-//! [`a_supplied_mark_is_painted_as_a_vector_icon`].
 
 use floom_accessibility::SemanticsState;
 use floom_core::{ElementId, Point, Rect, Widget};

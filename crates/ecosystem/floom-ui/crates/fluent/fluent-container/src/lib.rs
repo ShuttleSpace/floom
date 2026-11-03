@@ -1,21 +1,4 @@
 //! Fluent container, ported to the Floom 2.0 widget API.
-//!
-//! A container is a content wrapper: a full-width box that centres a
-//! max-width-capped, padded, surface-coloured column inside it.
-//!
-//! ## The two boxes
-//!
-//! v1 nested two `Container`s: an outer one that was full width and centred its
-//! child, and an inner one that carried the padding, the fill and the max-width
-//! cap. 2.0's `Container` is a *leaf* -- a decorated box with nothing inside it
-//! -- so the roles are spelled with the engine's own vocabulary: the outer box is
-//! a [`Stack`] that centres on the main axis, and the inner one is a
-//! [`Surface`] that fills, pads and caps.
-//!
-//! ## `fluid`
-//!
-//! A fluid container drops the max-width cap and spans its parent. v1 wrote
-//! `if !fluid { s = s.max_width(max_width) }`, and so does this.
 
 use std::sync::Arc;
 
@@ -29,7 +12,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 
-/// A builder for the container's content, replayed each time the box is built.
 pub type ChildBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -41,7 +23,6 @@ pub struct FluentContainerStyle {
     pub fluid: bool,
 }
 
-/// Fluent's container.
 pub struct FluentContainer {
     props: ContainerProps,
     theme: RwSignal<MultiTheme>,
@@ -59,25 +40,21 @@ impl FluentContainer {
         }
     }
 
-    /// Maximum content width in dp.
     pub fn max_width(mut self, max_width: f32) -> Self {
         self.props.max_width = max_width;
         self
     }
 
-    /// Horizontal padding inside the container.
     pub fn padding(mut self, padding: f32) -> Self {
         self.props.padding = padding;
         self
     }
 
-    /// When true the container spans the full width (no max-width cap).
     pub fn fluid(mut self, fluid: bool) -> Self {
         self.props.fluid = fluid;
         self
     }
 
-    /// Supply the container's content.
     pub fn child(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
         self.child = Some(Arc::new(build));
         self
@@ -107,7 +84,6 @@ impl FluentContainer {
         }
     }
 
-    /// The centred, max-width-capped content wrapper.
     pub fn view(self) -> Stack {
         let style = self.resolved_style();
         let surface = to_paint(style.surface);
@@ -117,15 +93,12 @@ impl FluentContainer {
         let child = self.child.clone();
 
         Stack::new(Axis::Horizontal)
-            // v1's outer box: `width_pct(100.0).justify_center()`.
             .request(
                 LayoutRequest::new()
                     .width_pct(100.0)
                     .main_align(Align::Center),
             )
             .push(move || {
-                // v1's inner box: `width_pct(100.0).padding(pad).background(surface)`,
-                // and the max-width cap unless the container is fluid.
                 let mut request = LayoutRequest::new()
                     .width_pct(100.0)
                     .padding(Insets::uniform(f64::from(padding)));

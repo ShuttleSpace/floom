@@ -1,107 +1,3 @@
-//! Material 3 outlined text field, ported to the 2.0 widget API.
-//!
-//! ## What the port changed
-//!
-//! * v1 was a styled `Container` wrapped around a `TextInput`, with the kit's
-//!   `value` and `focused` `RwSignal`s read inside three separate style closures
-//!   and an `Rc<Cell<bool>>` called `initialized` whose only job was to make a
-//!   `create_effect` skip its own first run. It is the engine's `TextField` now:
-//!   one `Widget` with `layout_request` and `paint`, holding the string, the
-//!   caret, the IME composition and an `InteractionState`.
-//! * Both signals are gone, and `initialized` with them. The engine owns the
-//!   value and the focus and reports through `on_change`, so there is nothing
-//!   left to keep in step and no first callback left to swallow. **No bridge was
-//!   built in their place.** v1 needed a signal because the value lived outside
-//!   the widget; a signal here would be a second source of truth for a widget
-//!   that already has one, and it would put the host rebuild back, which is the
-//!   thing v1's signal existed to avoid.
-//! * `initial_value` is now `value`, and the `value(&self) -> String` getter is
-//!   gone with the signal it read. There is exactly one write of the value
-//!   before mount, so the two names were describing one call. A mounted field
-//!   reports its own value through `TextField::text()`.
-//! * `set_value` is gone for the same reason. The engine's `TextField` has one,
-//!   and it does not fire `on_change`, because a programmatic write is not a
-//!   keystroke -- which is the very thing v1's kit could not express.
-//! * The two `FocusGained` / `FocusLost` listeners are gone. The engine's
-//!   `InteractionState.focused` is set by the host's focus dispatch, so the same
-//!   event arrives by one door instead of two, and a kit asking "am I focused?"
-//!   was reaching past its own layer.
-//! * `cursor(CursorStyle::Text)` is gone with the style layer -- `TextFieldStyle`
-//!   has no cursor field. Reported rather than papered over: the text caret is
-//!   now whatever the host applies to a focused field.
-//! * `items_center()` is gone because it no longer has anything to centre. The
-//!   engine's paint puts the text block on `(height - font_size) / 2` itself,
-//!   which is what the wrapping `Container` was doing.
-//! * `set_disabled` is gone with the style layer's generic dim. The disabled
-//!   palette is now composed per field, from this kit's own tokens, in
-//!   `resolved_style` -- which is what `TextFieldStyle` asks of a kit.
-//!
-//! ## What this kit answers, and what the other two answer instead
-//!
-//! Material thickens. Its `view()` wrote
-//! `.border(if focused.get() { 2.0 } else { 1.0 })`, so the entire difference
-//! from the other two crates is that `border_width_focused` is `2.0` rather than
-//! `1.0`. It drew no hovered rim and no focus ring, which is why
-//! `border_color_hovered` is `None` and `focus_ring` is `None` here.
-//! Cupertino tints the rim on hover instead, and Fluent rings the box on focus
-//! instead; neither of those is this kit's answer, and a test says so.
-//!
-//! The three `view()` bodies in v1 were line-for-line identical apart from those
-//! two lines, which is measured rather than remembered: with the crate name, the
-//! design-system enum and the one accessor that moved position removed, the
-//! three files differed by `border(if focused { 2.0 } else { 1.0 })` against
-//! `border(1.0)`, and a `hover` closure against a `focus` closure. Everything
-//! else they agreed on is the table `resolved_style` writes.
-//!
-//! ## The field filled its container in v1, and does not here
-//!
-//! v1 put `.width_pct(100.0)` on both the `Container` and the `TextInput`, so a
-//! text field was always as wide as its parent. The engine's `TextField` reports
-//! an *intrinsic* width -- `max(shown text + 2 x padding_horizontal,
-//! min_width)` -- and lets the host size it, so a field mounted from this kit is
-//! as wide as the text in it rather than as wide as its row.
-//!
-//! That is a real loss and it is reported rather than repaired. Putting it back
-//! is a *layout* decision, not a colour: either a width on the widget, or a host
-//! that stretches it. An `Option<f32>` on `TextFieldStyle` would be the wrong
-//! shape -- the style describes ink, and a layout policy wearing a style field is
-//! how a widget ends up with three different width answers and no note saying
-//! which is which. A host that wants a full-width field lays one out at the
-//! width it wants; the pinned height and the border radius are still this kit's.
-//!
-//! ## Two colours no v1 source ever named
-//!
-//! `placeholder_color` and `preedit_color` are not in any of the three kits' style
-//! structs, because v1's `TextInput` carried its own defaults for both and those
-//! defaults died with the v1 widget. **They are inherited from
-//! `TextFieldStyle::default()` here and nothing more.** Whether a placeholder
-//! should be `on_surface_variant` and an in-progress IME composition `primary`
-//! is a design question, and it belongs to whoever owns the theme; answering it
-//! in three kit crates would be three unreviewed decisions wearing a port's
-//! clothes. The gap is kept visible by a test rather than by a comment alone.
-//!
-//! ## The 97 that v1's `resolved_style` claimed
-//!
-//! All three kits' `resolved_style()` wrote `on_surface` at alpha **97** for the
-//! disabled rim and the disabled ink, and not one of them was ever called: v1's
-//! `view()` read `with_alpha(t.colors().on_surface, 38)` inline, three times per
-//! kit. So 38 is what these fields painted, and 38 is what this port composes.
-//! The dead struct's number is recorded here rather than quietly dropped,
-//! because it is the sort of thing that looks authoritative. Pinned by a test,
-//! along with the 4 that v1's disabled fill used.
-//!
-//! ## `MultiTheme::new_for` does not choose a design system
-//!
-//! Worth knowing before reading the tests. `MultiTheme::activate` is documented
-//! in the theme crate as a no-op placeholder, and `MultiTheme::ds()` reads a
-//! process-wide signal at access time. So `with_theme(MultiTheme::new_for(
-//! DesignSystem::Material))` does **not** make a Material field read Material's
-//! tokens: it reads whichever design system the process is currently in, and
-//! that is Material until something says otherwise. This is a property of the
-//! theme crate rather than of this kit, so nothing here works around it -- but it
-//! is the reason the tests pin the design system per thread before reading a
-//! number, and the reason "this kit's 48pt field" is currently a claim
-//! about a global rather than about the crate.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -115,24 +11,16 @@ use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_ui_composites::{TextField, TextFieldStyle};
 use floom_widget_runtime::theme_signal;
 
-/// v1's resting rim, and the focused rim of the two kits that do not thicken it.
 const BORDER_WIDTH: f32 = 1.0;
 
 /// Material's focused rim: `1.0` becomes `2.0`, and that is the whole of this
 /// kit's focus affordance. Cupertino and Fluent keep `BORDER_WIDTH`.
 const BORDER_WIDTH_FOCUSED: f32 = 2.0;
 
-/// v1's disabled ink and disabled rim: `on_surface` at 38.
 const DISABLED_ALPHA: u8 = 38;
 
-/// v1's disabled fill: `on_surface` at 4.
 const DISABLED_FILL_ALPHA: u8 = 4;
 
-/// The design-system colour at an explicit alpha, in the engine's type.
-///
-/// Written out because `with_alpha` answers in the theme crate's `Color` while
-/// `TextFieldStyle` speaks the engine's, so every resolved colour below is two
-/// types and one conversion wide.
 fn tinted(c: Color, alpha: u8) -> PaintColor {
     to_paint(with_alpha(c, alpha))
 }
@@ -147,8 +35,6 @@ impl MdTextField {
     pub fn new() -> Self {
         Self {
             props: TextFieldProps::default(),
-            // The app-wide signal, as v1 did: Material is the only one of the
-            // three kits whose text field follows a theme swap at runtime.
             theme: theme_signal(),
         }
     }
@@ -158,49 +44,16 @@ impl MdTextField {
         self
     }
 
-    /// The value the field starts with.
-    ///
-    /// v1 called this `initial_value`, and there was also a `value(&self) ->
-    /// String` getter over the same signal. The getter is gone with the signal,
-    /// so the setter takes the short name: there is one write before mount, and
-    /// this is it. A mounted field's value is `TextField::text()`.
-    ///
-    /// Nothing is clamped here any more. v1 ran `clamp_value` over this string
-    /// in three methods, all of them to keep its own `value` signal in step;
-    /// with no signal there is nothing to keep in step, and `max_length` is now
-    /// enforced by the widget on the builder path *and* on the typing path.
     pub fn value(mut self, value: impl Into<String>) -> Self {
         self.props.value = value.into();
         self
     }
 
-    /// Marks the field as holding a secret.
-    ///
-    /// **This does not mask anything, and it did not in v1 either.** All three
-    /// kits carried `is_password` on the shared props and none of their `view()`
-    /// bodies read it, so the flag has been inert since before the port; the
-    /// engine's `TextField` has no mask of its own. The prop and this builder
-    /// stay so a caller that wants a mask says so out loud rather than silently
-    /// rendering a secret in the clear, and a test says so out loud too.
-    ///
-    /// Masking is an engine feature, not a kit style field: the widget would have
-    /// to substitute the run it draws *and* the label it publishes to assistive
-    /// technology. Inventing either here would be the kit quietly disagreeing
-    /// with the widget about what the user is looking at.
     pub fn password(mut self, is_password: bool) -> Self {
         self.props.is_password = is_password;
         self
     }
 
-    /// Caps the field at `max_length` **characters**.
-    ///
-    /// v1 took a `usize` and wrote `Some(n)`, and this does the same. What
-    /// changed is what the cap reaches. v1's kit truncated only the string it
-    /// was handed -- in `initial_value`, `max_length` and `set_value` -- so
-    /// `max_length(8)` did nothing whatsoever about the eight characters the user
-    /// then typed: a half-implemented limit, shipped identically by three
-    /// designs. The engine clamps the typing path and the IME-commit path as
-    /// well, because all three arrive as character keys. See `view`.
     pub fn max_length(mut self, max_length: usize) -> Self {
         self.props.max_length = Some(max_length);
         self
@@ -229,12 +82,6 @@ impl MdTextField {
         self
     }
 
-    /// Material 3 outlined text field appearance, as the engine's `TextFieldStyle`.
-    ///
-    /// Every line in here was written by v1's `view()` style closures. Nothing
-    /// here is a number this port chose, and nothing is read from v1's dead
-    /// `resolved_style` struct -- see the module doc for what that struct
-    /// claimed and what the screen actually showed.
     pub fn resolved_style(&self) -> TextFieldStyle {
         let theme = self.theme.get();
         let ComponentTokens::TextField(tokens) = theme.component(ComponentId::TextField) else {
@@ -243,86 +90,29 @@ impl MdTextField {
         let colors = theme.colors();
 
         TextFieldStyle {
-            // --- from `TextFieldTokens`, as v1 read them ---
             height: Some(tokens.height),
             padding_horizontal: tokens.padding_horizontal,
             border_radius: tokens.border_radius,
 
-            // --- the rim ---
             border_width: BORDER_WIDTH,
             border_width_focused: BORDER_WIDTH_FOCUSED,
             border_color: to_paint(colors.outline),
             border_color_focused: to_paint(colors.primary),
-            // v1 wrote no hovered rim for this kit, so `None` -- "no variant of
-            // this kit's own", which paints the resting `outline`. The engine's
-            // default is also `None`, so this is a decision that agrees with it
-            // rather than one it carries.
             border_color_hovered: None,
             border_color_disabled: tinted(colors.on_surface, DISABLED_ALPHA),
 
-            // --- the fill ---
             background_color: to_paint(colors.surface),
             background_color_disabled: tinted(colors.on_surface, DISABLED_FILL_ALPHA),
 
-            // --- the ink ---
             text_color: to_paint(colors.on_surface),
             text_color_disabled: tinted(colors.on_surface, DISABLED_ALPHA),
             font_size: theme.typography().body.medium.font_size,
 
-            // Deliberately inherited from `TextFieldStyle::default()`. Each of
-            // these is a field v1 never named, so each is a claim this port is
-            // not making:
-            //
-            // * `vertical_padding` and `min_width` -- v1 pinned the height from
-            //   the token and filled the parent, so it had neither a derived row
-            //   height nor a width floor to express.
-            // * `background_color_hovered` and `background_color_pressed` -- v1
-            //   styled its `TextInput` with `color` and `font_size` only and
-            //   left the fill to the wrapping `Container`, which had no hover or
-            //   press rule either. So the engine's own fills apply: `#F5F7FA`
-            //   under the pointer, white while pressed. That is engine
-            //   behaviour these kits neither chose nor contradicted, and
-            //   replacing it with `None` would be a design decision about
-            //   hover that this port has no licence to make.
-            // * `placeholder_color` and `preedit_color` -- the two colours no v1
-            //   source ever named; see the module doc.
-            // --- the focus ring, drawn outside the rim ---
-            // No ring outside the box, and `None` is an answer rather than an
-            // absence of one: Material answers focus by thickening its rim
-            // (`border_width_focused` above), Cupertino by nothing at all, and
-            // Fluent's `2.0` `primary` ring is the third. Compose's `outline()`
-            // has no inset, so the two that draw one draw it flush.
             focus_ring: None,
             ..TextFieldStyle::default()
         }
     }
 
-    /// The field, ready to mount.
-    ///
-    /// ## `max_length` is now more than v1's was
-    ///
-    /// `props.max_length` crosses into the engine unchanged, and the engine
-    /// clamps three doors rather than the one v1's kit clamped: the `value()`
-    /// builder, `set_value`, and -- the widening -- `insert`, which is every
-    /// keystroke and every committed IME composition, since the runner turns an
-    /// OS `ImeCommit` into one character key-down per scalar. In v1
-    /// `max_length(8)` bounded the string you passed in and nothing you typed.
-    ///
-    /// `value` is applied before `max_length` on purpose. The engine's
-    /// `max_length` re-clamps whatever is already there, so either order ends up
-    /// with the same value, but this is the order the engine's own doc names.
-    ///
-    /// ## What is not here
-    ///
-    /// No signal, no `create_effect`, no `initialized` flag: the engine fires
-    /// `on_change` for a keystroke and for nothing else, so a field built with a
-    /// value no longer reports that value back as though the user had typed it.
-    /// And no `password` handling -- see `password`, which is honest about being
-    /// inert.
-    ///
-    /// `TextFieldProps::on_change` is a `Box<dyn Fn(&str)>` whose `Clone` impl
-    /// deliberately drops the callback, so it is moved rather than borrowed --
-    /// which works only because `view` consumes the kit.
     pub fn view(self) -> TextField {
         let style = self.resolved_style();
 
@@ -346,11 +136,4 @@ impl Default for MdTextField {
     }
 }
 
-/// The engine's `TextFieldStyle`, under this kit's old name.
-///
-/// v1's own style struct carried `border_color`, `text_color`, `height`,
-/// `padding_horizontal` and `border_radius` -- and nothing ever read it, because
-/// v1's `view()` resolved every colour from the theme inside its own style
-/// closures. The alias keeps the name resolvable for callers without pretending
-/// a struct still exists.
 pub type MdTextFieldStyle = TextFieldStyle;

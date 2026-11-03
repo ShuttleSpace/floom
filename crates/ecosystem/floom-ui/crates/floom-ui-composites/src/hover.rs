@@ -1,21 +1,3 @@
-//! `HoverBox` — a box that fills while the pointer is over it.
-//!
-//! The engine had no such thing, and three floem-ui kits each carried their
-//! own copy of it: the *shape* of a hover is the same whoever draws it, and
-//! the only thing that differs between design systems is the colour of the
-//! fill — which is the caller's answer, not the engine's.
-//!
-//! ## What it is
-//!
-//! A box around somebody else's content, with a fill painted *under* that
-//! content while the pointer rests on it. A widget paints itself before its
-//! children, so the fill lands underneath, the way v1's `Container` background
-//! did.
-//!
-//! ## The pointer event is not consumed
-//!
-//! v1's hover let the event through, so a click on the child still reached the
-//! child. This one does the same: a hover is a reaction, not a claim.
 
 use std::sync::Arc;
 

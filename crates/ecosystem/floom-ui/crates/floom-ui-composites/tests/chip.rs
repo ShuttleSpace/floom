@@ -1,8 +1,3 @@
-//! The engine's `Chip`: a pill with a label in the middle.
-//!
-//! The chip is the engine's, and the kits' decisions are the kits': this file
-//! pins the shape -- the pill's extent, the centred label, the outline, the
-//! hover fill and the click -- and nothing about a design system.
 
 use std::sync::Arc;
 use std::sync::Mutex;

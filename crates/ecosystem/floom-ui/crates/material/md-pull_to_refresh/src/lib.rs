@@ -1,97 +1,4 @@
-//! Material pull-to-refresh, ported to the Floom 2.0 widget API.
-//!
-//! A pull-to-refresh wraps a scrollable: drag the content downwards and, once
-//! the drag passes a threshold, the kit fires `on_refresh` and shows an
-//! indicator above the content until the host says the refresh is done.
-//!
-//! ## What the port uses
-//!
-//! The engine's `PullToRefresh`: the column that watches the drag and the
-//! indicator that says what would happen if the user let go now. The three
-//! floem-ui pull-to-refresh kits each used to carry their own copy of both.
-//!
-//! The engine's vocabulary, plus the two widgets the engine owns:
 
-//! ```text
-//! Surface            the tinted box: the background, the full width
-//!  └ Column          the column: the indicator, then the caller's content
-//!     ├ Indicator    the label, and the height that *is* the pull
-//!     └ content      the caller's child
-//! ```
-//!
-//! The two exist for one reason, and it is the engine's rule rather than a
-//! taste: a node's own layout request is only re-read when its *parent*
-//! reconciles, and nothing in the engine reconciles a `Stack` on its own. The
-//! indicator's height is the pull, so the column -- this kit's own widget --
-//! has to be the one that asks for the reconcile.
-//!
-//! ## The gesture is not in the port
-//!
-//! v1 detected the drag itself: a `PointerDown` listener on the wrapping
-//! container recorded the start, a `PointerMove` listener grew a `pull` signal,
-//! and a `PointerUp` listener compared the pull with the threshold. 2.0's
-//! event path cannot carry that, and the reasons are worth writing down
-//! because they are the engine's, not this kit's:
-//!
-//! * **A container cannot measure a drag over its own content.** The pointer's
-//!   position arrives in the *target's* coordinate space -- the space of the
-//!   widget under the pointer -- and a widget is never told which widget that
-//!   was. The content moves as the pull grows (the indicator's height pushes
-//!   it down), so a pull measured in the content's space feeds itself: the
-//!   pointer standing still reads as a pull of minus the pull.
-//! * **The route has a capture phase.** A container sees the pointer down
-//!   *before* the widget under the pointer does, so a container-level gesture
-//!   starts over every control inside it, and the release it takes to end the
-//!   drag is the release the control needed. v1's container saw the down only
-//!   in the bubble phase, that is, only when the control did not take it.
-//! * **There is no pointer capture.** `EventContext` has no
-//!   `request_pointer_capture`, so a drag that leaves the widget's box is
-//!   lost. v1 called `request_pointer_capture` on the way down.
-//!
-//! `floom-gesture`'s arena does not close the gap: it arbitrates competing
-//! recognizers, but a widget still has to feed it the samples and read the
-//! verdict, and it says nothing about the coordinate space or the capture.
-//!
-//! So the port carries everything the gesture *show* -- the indicator's label,
-//! its size, its ink, the height the pull gives it, the content pushed down
-//! under it, the refresh that fires past the threshold -- and leaves the drag
-//! to the caller, through [`MaterialPullToRefresh::pull_distance`]. That is
-//! the seam the engine's own drag widget would write to; the kit reads it,
-//! draws it, and fires the refresh when it passes the threshold.
-//!
-//! ## What this kit answers
-//!
-//! * the furthest the content may be pulled: the token's `max_pull`;
-//! * the drag distance that fires the refresh: the *prop's* threshold, not the
-//!   token's -- v1 read `props.threshold` and never the token, and the two
-//!   happen to share a default;
-//! * the indicator's ink: `on_surface_variant`;
-//! * the box's fill: `background`;
-//! * the label's size (13) and the indicator's tallest height (28): v1
-//!   literals, and the pull below which nothing is drawn (0.5) is one too.
-//!
-//! ## The token that never showed
-//!
-//! `PullToRefreshTokens::indicator_size` (24) is read by nobody in v1: the
-//! indicator's size was the literal 13 and its height the literal 28. The
-//! port keeps the number in the style and names it here, because a style that
-//! omits a value the kit had is indistinguishable from one that chose to leave
-//! it at a default.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The refresh fired on the release.** v1 compared the pull with the
-//!   threshold when the pointer came up. The port compares when the pull
-//!   *reaches* the threshold, because there is no release to wait for: the
-//!   drag is the caller's. The refresh re-arms when the pull goes back to
-//!   zero, which is the caller's move as well.
-//! * **The child is a slot, not a view.** v1's `child(..)` took a factory
-//!   (`impl Fn() -> AnyView`) and called it once while building the view.
-//!   2.0's takes a [`Child`], because a 2.0 widget is mounted by its parent
-//!   rather than returned.
-//! * **The accessors.** v1's pull-to-refresh had no `props()`, `theme()` or
-//!   `with_theme()`. The port gives all three kits the same three, because a
-//!   kit that cannot be given a theme cannot be tested against one.
 
 use std::sync::{Arc, Mutex};
 
@@ -109,20 +16,11 @@ use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
-/// The label's size. A v1 literal.
 const INDICATOR_FONT_SIZE: f32 = 13.0;
-/// The tallest the indicator ever gets. A v1 literal.
 const INDICATOR_MAX_HEIGHT: f32 = 28.0;
 
-/// The pull distance, shared between the kit and whoever drives the gesture.
-///
-/// The engine's shared types cover a bool (`SharedFlag`), a string
-/// (`SharedBuffer`) and a map (`SharedMap`); a *distance* is none of those, so
-/// this is the same `Arc<Mutex<f32>>` shape the engine's own `Scroll` uses for
-/// its offset.
 pub type PullDistance = floom_ui_composites::SharedNumber;
 
-/// The pull-to-refresh's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialPullToRefreshStyle {
     pub design_system: &'static str,
@@ -130,16 +28,10 @@ pub struct MaterialPullToRefreshStyle {
     pub background: Color,
     /// The indicator's ink.
     pub on_surface_variant: Color,
-    /// The furthest the content may be pulled. v1 read this token.
     pub max_pull: f32,
-    /// The drag distance that fires the refresh. v1 took this from the props,
-    /// never from the token.
     pub threshold: f32,
-    /// The token's indicator size. v1 never read it -- see the module note.
     pub indicator_size: f32,
-    /// The label's size. A v1 literal.
     pub indicator_font_size: f32,
-    /// The tallest the indicator gets. A v1 literal.
     pub indicator_max_height: f32,
 }
 
@@ -149,9 +41,6 @@ pub struct MaterialPullToRefresh {
     child: Option<Child>,
     /// Whether a refresh is in flight.
     refreshing: SharedFlag,
-    /// v1's `Box<dyn Fn()>`, kept in a shareable form so a slot closure can
-    /// hold it. The props' own slot stays filled so `props()` still reports
-    /// one.
     on_refresh: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
     /// How far the content has been pulled.
     pull: PullDistance,
@@ -177,7 +66,6 @@ impl MaterialPullToRefresh {
         self
     }
 
-    /// Whether a refresh is in flight. v1's `loading`.
     pub fn loading(mut self, loading: bool) -> Self {
         self.props.loading = loading;
         write_flag(&self.refreshing, loading);
@@ -190,10 +78,6 @@ impl MaterialPullToRefresh {
         self
     }
 
-    /// Invoked when the pull passes the threshold.
-    ///
-    /// `Send + Sync`, because 2.0's slots are shared between threads and v1's
-    /// `Box<dyn Fn()>` was not.
     pub fn on_refresh(mut self, callback: impl Fn() + Send + Sync + 'static) -> Self {
         let shared: Arc<dyn Fn() + Send + Sync + 'static> = Arc::new(callback);
         self.props.on_refresh = Some(Box::new({
@@ -204,27 +88,16 @@ impl MaterialPullToRefresh {
         self
     }
 
-    /// The shared "is a refresh in flight" flag.
-    ///
-    /// v1's `refreshing_signal()`, and the reason it cannot be an `RwSignal`:
-    /// that is `Rc`-based and cannot cross a `Send + Sync` slot boundary.
     pub fn refreshing_flag(&self) -> SharedFlag {
         self.refreshing.clone()
     }
 
-    /// Drive the kit from a flag somebody else owns.
-    ///
-    /// v1's `with_refreshing_signal(RwSignal<bool>)`.
     pub fn with_refreshing_flag(mut self, refreshing: SharedFlag) -> Self {
         self.props.loading = read_flag(&refreshing);
         self.refreshing = refreshing;
         self
     }
 
-    /// The shared pull distance: how far the content has been pulled down.
-    ///
-    /// The seam the drag writes to. See the module note for why the drag
-    /// itself is not in the port.
     pub fn pull_distance(&self) -> PullDistance {
         self.pull.clone()
     }
@@ -253,7 +126,6 @@ impl MaterialPullToRefresh {
             background: theme.colors().background,
             on_surface_variant: theme.colors().on_surface_variant,
             max_pull: tokens.max_pull,
-            // v1 read the props' threshold, never the token's.
             threshold: self.props.threshold,
             indicator_size: tokens.indicator_size,
             indicator_font_size: INDICATOR_FONT_SIZE,

@@ -1,9 +1,3 @@
-//! `Badge` — a small status indicator: a dot, or a rounded pill of text.
-//!
-//! Theme-agnostic by design. A 2.0 widget takes explicit values rather than
-//! reading a global theme signal, so resolving the palette (which design
-//! system, error colour, token sizes) is the *kit's* job — see
-//! `docs/porting-floom-ui-to-2.0.md`.
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{

@@ -1,14 +1,5 @@
 //! The ported Cupertino app bar -- an optional leading slot, a title, and
 //! optional trailing actions.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the bar is painted
-//! the colour v1 painted, and the title is drawn in v1's ink at v1's size.
-//!
-//! ## The tripwires
-//!
-//! `the_bar_is_painted_in_v1_s_colour` and `the_callers_height_wins_over_the
-//! token` would fail if this kit stopped being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Rect, Widget};
 use floom_types::Color;
@@ -29,7 +20,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -233,7 +223,6 @@ fn the_props_report_the_title() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoAppBar::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

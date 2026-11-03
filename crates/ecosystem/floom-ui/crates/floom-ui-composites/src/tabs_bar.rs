@@ -1,21 +1,3 @@
-//! `TabsBar` -- a row of tabs, one of them chosen.
-//!
-//! A row of labels, one of them chosen, with the chosen one's ink and weight
-//! following the choice. The three floem-ui tabs kits each used to carry their
-//! own copy of this; they share the engine's one now.
-//!
-//! ## What the kits still answer
-//!
-//! The bar's fill, the active and inactive inks, the two label weights, the
-//! indicator's colour and thickness, the label's size, the padding at each
-//! side of a label, and the bar's height. All of those are design-system
-//! answers; the *shape* -- a row of tabs with one chosen -- is not.
-//!
-//! ## The choice travels in a shared counter
-//!
-//! The chosen tab changes after mount -- a click moves it -- so it cannot live
-//! in a signal, which is `Rc`-based and cannot cross a slot boundary. It is an
-//! atomic counter the kit, the bar and the tabs' clicks all share.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

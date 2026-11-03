@@ -1,20 +1,4 @@
 //! The ported Fluent checkbox button -- a chip-shaped toggle: a rounded box
-//! with a check mark in it and a label beside it.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a pill that paints `surface_variant` from one
-//! that paints `primary`, and it cannot tell a mark that is transparent from one
-//! that is a grey check. Only the paint log can, so most of these tests read
-//! what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_unchecked_pill_paints_v1_s_fill_and_rim`,
-//! `the_checked_pill_paints_v1_s_fill_and_rim` and
-//! `the_mark_is_transparent_while_unchecked_and_disabled` would fail if this kit
-//! stopped being this kit -- the last one is the place Material disagrees with
-//! the other two.
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::Color;
@@ -38,9 +22,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -49,7 +30,6 @@ fn kit() -> FluentCheckboxBtn {
     FluentCheckboxBtn::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -59,7 +39,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -69,11 +48,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The pill that is mounted right now.
-///
-/// The kit holds two appearances and the engine's `Conditional` mounts one of
-/// them, so the test asks the conditionals which one is showing -- after
-/// giving them the update pass a host would give them.
 fn mounted_pill(widget: &Stack) -> Box<dyn WidgetAny> {
     for child in widget.children() {
         let mut conditional = child.build();
@@ -88,31 +62,26 @@ fn mounted_pill(widget: &Stack) -> Box<dyn WidgetAny> {
     panic!("no pill is mounted");
 }
 
-/// The pill's box.
 fn pill_surface(widget: &Stack) -> Box<dyn WidgetAny> {
     let pressable = mounted_pill(widget);
     pressable.children().remove(0).build()
 }
 
-/// The row inside the box: the mark and the label.
 fn pill_content(widget: &Stack) -> Box<dyn WidgetAny> {
     let surface = pill_surface(widget);
     surface.children().remove(0).build()
 }
 
-/// The mark.
 fn pill_mark(widget: &Stack) -> Box<dyn WidgetAny> {
     let content = pill_content(widget);
     content.children().remove(0).build()
 }
 
-/// The label.
 fn pill_label(widget: &Stack) -> Box<dyn WidgetAny> {
     let content = pill_content(widget);
     content.children().remove(1).build()
 }
 
-/// The fill and the rim the pill painted.
 fn pill_painted(widget: &Stack) -> (Option<Color>, Option<(f64, Color)>) {
     let surface = pill_surface(widget);
     let ops = ops_of(&*surface);
@@ -131,7 +100,6 @@ fn pill_painted(widget: &Stack) -> (Option<Color>, Option<(f64, Color)>) {
     (fill, rim)
 }
 
-/// The colour the mark was filled with.
 fn mark_ink(widget: &Stack) -> Option<Color> {
     let mark = pill_mark(widget);
     let ops = ops_of(&*mark);
@@ -141,7 +109,6 @@ fn mark_ink(widget: &Stack) -> Option<Color> {
     })
 }
 
-/// The text and the ink the label painted.
 fn label_painted(widget: &Stack) -> (String, f32, Color) {
     let label = pill_label(widget);
     let ops = ops_of(&*label);
@@ -155,7 +122,6 @@ fn label_painted(widget: &Stack) -> (String, f32, Color) {
         .expect("a checkbox button paints its label")
 }
 
-/// Taps the pill, the way the host would.
 fn tap(widget: &Stack) {
     let mut pressable = mounted_pill(widget);
     let mut create = AllocatingCreateContext::new();
@@ -166,9 +132,7 @@ fn tap(widget: &Stack) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentCheckboxBtnStyle = kit().resolved_style();
@@ -209,7 +173,6 @@ fn the_tokens_and_colours_reach_the_style() {
     );
 }
 
-/// The numbers v1 wrote as literals, rather than as tokens.
 #[test]
 fn the_numbers_v1_wrote_as_literals_are_literals_here() {
     let style = kit().resolved_style();
@@ -226,9 +189,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The unchecked pill: `surface_variant` with an `outline` rim.
 #[test]
 fn the_unchecked_pill_paints_v1_s_fill_and_rim() {
     let style = kit().resolved_style();
@@ -242,7 +203,6 @@ fn the_unchecked_pill_paints_v1_s_fill_and_rim() {
     );
 }
 
-/// The checked pill: `primary` with a `primary` rim.
 #[test]
 fn the_checked_pill_paints_v1_s_fill_and_rim() {
     let style = kit().resolved_style();
@@ -263,8 +223,6 @@ fn the_checked_pill_paints_v1_s_fill_and_rim() {
     );
 }
 
-/// The disabled pill: `on_surface` at 12 and at 38, and the disabled fill won
-/// over the checked one.
 #[test]
 fn the_disabled_pill_paints_v1_s_disabled_fill_and_rim() {
     let style = kit().resolved_style();
@@ -287,8 +245,6 @@ fn the_disabled_pill_paints_v1_s_disabled_fill_and_rim() {
     assert_eq!(style.disabled_border_color.a, 38, "v1's disabled rim");
 }
 
-/// The mark is the kit's own check glyph, and it is transparent while
-/// unchecked.
 #[test]
 fn the_mark_is_transparent_while_unchecked() {
     let style = kit().resolved_style();
@@ -300,7 +256,6 @@ fn the_mark_is_transparent_while_unchecked() {
     );
 }
 
-/// And it is `on_primary` while checked.
 #[test]
 fn the_mark_is_on_primary_while_checked() {
     let style = kit().resolved_style();
@@ -308,9 +263,6 @@ fn the_mark_is_on_primary_while_checked() {
     assert_eq!(mark_ink(&widget), Some(paint(style.mark_color)));
 }
 
-/// Fluent's own answer for a disabled and unchecked button: the mark is the
-/// disabled tint, because v1 wrote the disabled tint *outside* the checked
-/// branch. Material drew a transparent mark here instead.
 #[test]
 fn the_mark_is_the_disabled_tint_while_unchecked_and_disabled() {
     let style = kit().resolved_style();
@@ -326,7 +278,6 @@ fn the_mark_is_the_disabled_tint_while_unchecked_and_disabled() {
     );
 }
 
-/// The label is painted with v1's text, size and ink.
 #[test]
 fn the_label_is_painted_with_v1_s_text_size_and_ink() {
     let style = kit().resolved_style();
@@ -337,7 +288,6 @@ fn the_label_is_painted_with_v1_s_text_size_and_ink() {
     assert_eq!(ink, paint(style.label_color), "v1's `on_surface`");
 }
 
-/// And the disabled label is the dimmed ink.
 #[test]
 fn the_disabled_label_is_painted_with_v1_s_disabled_ink() {
     let style = kit().resolved_style();
@@ -350,9 +300,7 @@ fn the_disabled_label_is_painted_with_v1_s_disabled_ink() {
     );
 }
 
-// --- the state ------------------------------------------------------------
 
-/// Clicking the pill switches it on, and says so.
 #[test]
 fn clicking_the_pill_switches_it_on() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -369,7 +317,6 @@ fn clicking_the_pill_switches_it_on() {
     assert_eq!(seen.lock().unwrap().as_slice(), &[true], "v1's `cb(next)`");
 }
 
-/// Clicking it again switches it off.
 #[test]
 fn clicking_the_pill_again_switches_it_off() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -386,7 +333,6 @@ fn clicking_the_pill_again_switches_it_off() {
     assert_eq!(seen.lock().unwrap().as_slice(), &[false]);
 }
 
-/// And the pill's appearance follows the state.
 #[test]
 fn the_pill_s_appearance_follows_the_state() {
     let style = kit().resolved_style();
@@ -410,7 +356,6 @@ fn the_pill_s_appearance_follows_the_state() {
     );
 }
 
-/// A disabled pill does not answer.
 #[test]
 fn a_disabled_pill_does_not_answer() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -430,11 +375,7 @@ fn a_disabled_pill_does_not_answer() {
     assert!(seen.lock().unwrap().is_empty());
 }
 
-// --- the props ------------------------------------------------------------
 
-/// The props report the shape, and not the callback: the kit holds that as an
-/// `Arc` of its own, because 2.0's slots are `Send + Sync` and the props'
-/// `Box<dyn Fn(..)>` is not.
 #[test]
 fn the_props_report_the_shape_and_not_the_callback() {
     let kit = kit().checked(true).disabled(true).label("Notify");
@@ -444,14 +385,9 @@ fn the_props_report_the_shape_and_not_the_callback() {
     assert!(kit.props().on_change.is_none());
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// The theme: v1's Material checkbox button read the *app-wide* theme signal,
-/// so a change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentCheckboxBtn::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

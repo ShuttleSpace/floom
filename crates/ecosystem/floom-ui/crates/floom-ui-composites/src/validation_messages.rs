@@ -1,20 +1,3 @@
-//! `ValidationMessages` -- a list of error messages under a form field.
-//!
-//! The engine had no such thing, and the three floem-ui validation-message kits
-//! each carried their own copy of one: a list that re-declares its `Text`
-//! children whenever the shared list of messages changes.
-//!
-//! ## Why it re-declares its children
-//!
-//! 2.0's tree is built once. A list whose *contents* change has to say so, and
-//! the only door for that is to declare the children again -- the host visits
-//! every node each frame, so no notification has to travel.
-//!
-//! ## The messages are shared state
-//!
-//! A caller pushes and pulls the messages, so they live in a
-//! [`SharedList`] -- the engine's shared list of strings -- rather than in a
-//! signal, which cannot cross a slot boundary.
 
 use std::sync::Arc;
 

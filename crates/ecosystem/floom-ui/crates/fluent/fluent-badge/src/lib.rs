@@ -1,15 +1,4 @@
 //! Fluent badge, ported to the Floom 2.0 widget API.
-//!
-//! v1 wrapped a child with an absolutely-positioned bubble at the top-right
-//! corner. 2.0's `Badge` is the bubble itself. So what is left is the token
-//! translation: read the palette (`primary` / `on_primary`) and the
-//! `BadgeTokens`, hand them to `Badge`, and return it.
-//!
-//! See `floom-widget-md-badge`'s module docs for the full rationale of what the
-//! port drops (the overlay over a child). The only thing this kit answers
-//! differently from the other two is the palette: Fluent uses `primary` /
-//! `on_primary` where Material and Cupertino use `error` / `on_error`. That is
-//! the tripwire keeping the three kits three crates.
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::badge::BadgeProps;
@@ -52,13 +41,11 @@ impl FluentBadge {
         }
     }
 
-    /// Set the text shown inside the badge. Ignored when `dot` is set.
     pub fn content(mut self, content: impl Into<String>) -> Self {
         self.props.content = content.into();
         self
     }
 
-    /// Render as a plain dot with no text.
     pub fn dot(mut self, dot: bool) -> Self {
         self.props.dot = dot;
         self
@@ -93,7 +80,6 @@ impl FluentBadge {
         }
     }
 
-    /// Build a renderable Fluent badge bubble.
     pub fn view(self) -> Badge {
         let style = self.resolved_style();
         Badge::new()

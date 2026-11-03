@@ -1,41 +1,5 @@
 //! Cupertino card, ported to the Floom 2.0 widget API.
 //!
-//! The third card in the library, and the second one-word shape change: the card is
-//! a decorated box inside a press ripple, exactly as in `fluent-card`, but it is
-//! drawn at `t.radius().md` where Fluent uses `t.radius().xl` and Material uses
-//! `radius().xl` too. Three kits, one shape, two different radii — which is the
-//! argument for keeping the radius a *method* rather than a field.
-//!
-//! # What changed from v1
-//!
-//! ```ignore
-//! // v1
-//! let inner = Container::new(child).style(|s| s.background(..).color(..)
-//!     .padding(..).border_radius(t.radius().md).box_shadow_*);
-//! Ripple::new(inner).radius_fn(|t| t.radius().md).view()
-//! ```
-//!
-//! * the box is a [`Surface`] — filled, rounded, elevated, holding its content,
-//!   which a 2.0 `Container` cannot do because it is a leaf;
-//! * the ripple is `floom_widgets::Ripple`, a *widget* rather than a view wrapper,
-//!   so it takes its child as a replayed builder instead of a stored view;
-//! * `.color(..)` on the box has no 2.0 home: a `Surface` paints a fill, and only
-//!   the child knows it is text. See [`CupertinoCard::content_color`].
-//!
-//! # What is kept deliberately
-//!
-//! * v1 read `CardTokens::border_radius` into the style struct and never used it,
-//!   drawing the box at `t.radius().md` instead. Both are kept, and they **coincide
-//!   for Cupertino** — the token says `10.0` and `radius().md` says `10.0`. They are
-//!   still separate methods because they do *not* coincide for Material
-//!   (`12.0` against `24.0`), and one shape serves all three kits. See
-//!   `tests/card.rs::material_is_the_kit_where_the_token_and_the_drawn_radius_disagree`.
-//! * v1's default child was `Empty::new()`, i.e. "a box with nothing in it". A
-//!   childless `Surface` is already that, so the port has no child rather than an
-//!   empty one. [`CupertinoCard::surface`]'s child count is the assertion.
-//! * `BLACK` comes from `floom_core_theme::tokens::color_ext`, as it did in v1
-//!   through the glob import. It is a shared token, not a per-crate constant, and
-//!   `fluent-card`'s port briefly redefined it locally before this one corrected it.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets, Shadow};

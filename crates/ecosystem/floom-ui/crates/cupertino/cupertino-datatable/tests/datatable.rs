@@ -1,16 +1,5 @@
 //! The ported Cupertino data table -- a header row, body rows, and a click
 //! on a row.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation, the pixels and the click: the tokens reach the style, the
-//! frame and the rows are filled and ruled in v1's colours, the cells are
-//! painted in v1's ink at v1's sizes, and a clicked row answers with its
-//! index.
-//!
-//! ## The tripwires
-//!
-//! `the_cells_are_painted_in_v1_s_ink` and `a_clicked_row_answers_with_its
-//! _index` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -41,7 +30,6 @@ const ROW: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -458,7 +446,6 @@ fn a_table_with_no_callback_still_consumes_the_click() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoDataTable::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

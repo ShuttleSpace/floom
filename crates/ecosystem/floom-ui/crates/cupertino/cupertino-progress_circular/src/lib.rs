@@ -1,29 +1,5 @@
 //! Cupertino circular progress, ported to the Floom 2.0 widget API.
 //!
-//! v1 drew an SVG ring: a track circle and an accent arc over it, with the
-//! arc's length and start set by the value. 2.0's [`CircularProgress`] draws
-//! the same two things with the engine's own path and stroke, so the kit is a
-//! thin adapter over it.
-//!
-//! ## What this kit answers
-//!
-//! * **the size**: the props' size when it is set, and the token's otherwise;
-//! * **the colours**: `surface_variant` for the track, `primary` for the arc;
-//! * **the indeterminate arc**: //! **25% of the ring, starting at twelve o'clock**
-//!
-//! ## The size token is never read
-//!
-//! v1 wrote `if self.props.size > 0.0 { self.props.size } else { tokens.size }`,
-//! and the props' default size is **36.0** -- so the props always win and
-//! `ProgressCircularTokens::size` is dead. v1's own doc on `size()` said
-//! "Zero -- the default -- defers to the token", which is wrong: the default is
-//! 36.0, not 0. The rule is kept, because the rule is what v1 drew, and the
-//! lie is named here rather than corrected silently.
-//!
-//! ## The rotation
-//!
-//! //! This kit's v1 arc did not spin, so there is nothing for a host to drive and
-//! the rotation stays at zero.
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_widgets::{CircularProgress, CircularProgressStyle};

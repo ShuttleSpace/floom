@@ -33,7 +33,6 @@ impl KeyCode {
     /// Unknown or unmapped key.
     pub const NONE: Self = Self(0x00);
 
-    // --- named keys ---------------------------------------------------------
     pub const ENTER: Self = Self(0x01);
     pub const ESCAPE: Self = Self(0x02);
     pub const TAB: Self = Self(0x03);
@@ -81,7 +80,6 @@ impl KeyCode {
     pub const fn from_char(c: char) -> Self {
         let c = c as u32;
         if c >= 0x61 && c <= 0x7A {
-            // a-z → A-Z
             Self(c - 0x20)
         } else if c >= 0x20 && c <= 0x7E {
             Self(c)

@@ -19,9 +19,6 @@ mod shader;
 mod text;
 
 pub use brush::{Brush, Filter, Shadow};
-// Colour arithmetic. Re-exported at the crate root because WCAG contrast and
-// alpha compositing are asked for by name constantly and reaching into a
-// submodule for them is noise.
 pub use color::Color;
 pub use color_math::{
     TonalPalette, WCAG_AA_LARGE, WCAG_AA_NORMAL, WCAG_AAA_NORMAL, composite_over, contrast_ratio,

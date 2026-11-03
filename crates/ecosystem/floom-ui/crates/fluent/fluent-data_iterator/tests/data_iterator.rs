@@ -1,12 +1,4 @@
 //! Fluent data iterator: the container, the parts in it, and the rule between
-//! them.
-//!
-//! ## The claim
-//!
-//! A container with the items in it, an optional header and footer, and -- when
-//! `divided` -- a thin rule between consecutive items. The assertions are about
-//! what the container holds, because that is where the rule's placement lives:
-//! v1 drew it *between* the items and never before the first.
 
 use floom_core::Widget;
 use floom_types::{Color, Rect};
@@ -26,7 +18,6 @@ const BOX: Rect = Rect {
     y1: 200.0,
 };
 
-/// The Fluent theme, with Fluent selected.
 fn theme() -> MultiTheme {
     set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
@@ -46,7 +37,6 @@ fn three_items(kit: FluentDataIterator) -> FluentDataIterator {
         .item(|| Box::new(floom_widgets::Text::new("three")))
 }
 
-/// The style resolves the theme's colours and the token's numbers.
 #[test]
 fn the_style_resolves_the_theme_and_the_tokens() {
     let theme = theme();
@@ -61,7 +51,6 @@ fn the_style_resolves_the_theme_and_the_tokens() {
     assert!(style.divided, "v1's default is divided");
 }
 
-/// The container is padded, rounded and filled with the theme's surface.
 #[test]
 fn the_container_is_padded_rounded_and_filled() {
     let kit = three_items(FluentDataIterator::new().with_theme(theme()).divided(true));
@@ -87,7 +76,6 @@ fn the_container_is_padded_rounded_and_filled() {
     );
 }
 
-/// The items are in the container, in order, and the rule is between them.
 #[test]
 fn the_items_are_in_order_with_a_rule_between_them() {
     let kit = three_items(FluentDataIterator::new().with_theme(theme()).divided(true));
@@ -95,7 +83,6 @@ fn the_items_are_in_order_with_a_rule_between_them() {
     let column = surface.children()[0].build();
     let column = column.as_any().downcast_ref::<Stack>().unwrap().clone();
 
-    // Three items and two rules: the rule never comes before the first item.
     assert_eq!(column.child_count(), 5, "three items and two rules");
     let rules = (0..column.child_count())
         .filter(|i| column.children()[*i].build().as_any().is::<Divider>())
@@ -107,7 +94,6 @@ fn the_items_are_in_order_with_a_rule_between_them() {
     );
 }
 
-/// Without `divided` there is no rule at all.
 #[test]
 fn an_undivided_iterator_has_no_rules() {
     let kit = three_items(FluentDataIterator::new().with_theme(theme()).divided(false));
@@ -117,7 +103,6 @@ fn an_undivided_iterator_has_no_rules() {
     assert_eq!(column.child_count(), 3, "just the three items");
 }
 
-/// The header comes first and the footer last.
 #[test]
 fn the_header_comes_first_and_the_footer_last() {
     let kit = three_items(FluentDataIterator::new().with_theme(theme()))
@@ -143,7 +128,6 @@ fn the_header_comes_first_and_the_footer_last() {
     );
 }
 
-/// Design-system colour -> engine colour.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,

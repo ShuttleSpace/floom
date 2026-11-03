@@ -1,17 +1,3 @@
-//! Material date_adapter_provider, ported to the Floom 2.0 widget API.
-//!
-//! A provider owns the name of a date adapter and shares it with its subtree. v1 held it in an
-//! `RwSignal`; 2.0 holds it in a shared buffer, because an `RwSignal` is
-//! `Rc`-based and cannot cross a `Send + Sync` slot boundary -- the same reason
-//! the dialogs' `open_signal()` became a shared flag.
-//!
-//! ## The subtree is not re-themed
-//!
-//! v1's own note said it: because Rust uses static dispatch, a provider cannot
-//! re-theme a subtree the way a dynamically-typed framework could. It hands its
-//! descendants a typed handle and they read it. 2.0 cannot do it either, and
-//! the port does not pretend to: the handle is shared, and whoever writes it is
-//! the one who decides what the subtree shows.
 
 use std::sync::{Arc, Mutex};
 
@@ -55,9 +41,6 @@ impl MaterialDateAdapterProvider {
         self
     }
 
-    /// The shared the name of a date adapter, for the descendants that read it.
-    ///
-    /// v1's `*_signal()`: the handle a descendant reads and reacts to.
     pub fn adapter_signal(&self) -> SharedBuffer {
         self.value.clone()
     }
@@ -81,11 +64,6 @@ impl MaterialDateAdapterProvider {
         self
     }
 
-    /// The subtree, with the provider's handle beside it.
-    ///
-    /// v1 wrapped the child in a `Container` -- a box that added nothing but a
-    /// node -- and 2.0's `Container` is a leaf that cannot hold anything, so
-    /// the passthrough is a `Stack`.
     pub fn view(self) -> Stack {
         let child = self.child.clone();
         Stack::new(floom_core::Axis::Vertical).push(move || match child.clone() {

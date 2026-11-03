@@ -1,18 +1,4 @@
 //! The ported Fluent bottom navigation -- a bar of destinations, one of them
-//! chosen, with a rule along the top of the chosen one.
-//!
-//! The bar is the kit's own, because the engine has no bottom navigation (see
-//! the kit's module documentation), so what is tested here is the translation
-//! and the pixels: the tokens reach the style, the bar paints v1's fill and
-//! v1's rule, and the chosen destination is painted in v1's ink with v1's rule
-//! along its top edge.
-//!
-//! ## The tripwires
-//!
-//! `the_bar_paints_v1_s_fill_and_rule`,
-//! `the_chosen_destination_is_painted_in_v1_s_ink` and
-//! `the_chosen_destination_has_a_rule_along_its_top_edge` would fail if this
-//! kit stopped being this kit.
 
 use floom_core::{
     Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny,
@@ -45,9 +31,6 @@ const ROW: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -56,7 +39,6 @@ fn kit() -> FluentBottomNavigation {
     FluentBottomNavigation::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -66,7 +48,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -76,22 +57,17 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// An icon builder that paints a glyph, so a test can look for it.
 fn icon() -> IconBuilder {
     std::sync::Arc::new(|| Box::new(floom_widgets::Text::new("I")))
 }
 
-/// The label one destination shows.
 fn label_of(bar: &BottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
     let pressable = bar.children()[index].build();
     let destination = pressable.children().remove(0).build();
     let mut children = destination.children();
-    // The label is the destination's last child; the icon, when there is one,
-    // is the first.
     children.remove(children.len() - 1).build()
 }
 
-/// The text, the size and the ink one destination's label painted.
 fn label_painted(bar: &BottomNavigationBar, index: usize) -> (String, f32, Color) {
     let label = label_of(bar, index);
     ops_of(&*label)
@@ -105,13 +81,11 @@ fn label_painted(bar: &BottomNavigationBar, index: usize) -> (String, f32, Color
         .expect("a destination paints its label")
 }
 
-/// The destination's own box: the pressable and the content inside it.
 fn destination_of(bar: &BottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
     let pressable = bar.children()[index].build();
     pressable.children().remove(0).build()
 }
 
-/// Taps a destination, the way the host would.
 fn tap(bar: &BottomNavigationBar, index: usize) {
     let mut mounted = bar.children()[index].build();
     let pressable = mounted
@@ -132,9 +106,7 @@ fn tap(bar: &BottomNavigationBar, index: usize) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentBottomNavigationStyle = kit().resolved_style();
@@ -164,8 +136,6 @@ fn the_tokens_and_colours_reach_the_style() {
     );
 }
 
-/// v1's bar drew its rule in `with_alpha(on_surface, 12)`: a colour v1's style
-/// did not report, and the port does.
 #[test]
 fn the_rule_along_the_bar_is_the_one_v1_drew() {
     let style = kit().resolved_style();
@@ -181,9 +151,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// The props report the destinations, and not the callback: the kit holds that
-/// as an `Arc` of its own, because 2.0's slots are `Send + Sync` and the
-/// props' `Box<dyn Fn(..)>` is not.
 #[test]
 fn the_props_report_the_destinations_and_not_the_callback() {
     let kit = kit().labels(vec!["Home".into(), "Search".into()]);
@@ -195,9 +162,7 @@ fn the_props_report_the_destinations_and_not_the_callback() {
     assert!(kit.props().on_change.is_none());
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The bar paints v1's fill, and the rule along its top edge.
 #[test]
 fn the_bar_paints_v1_s_fill_and_rule() {
     let resolved = kit().resolved_style();
@@ -233,7 +198,6 @@ fn the_bar_paints_v1_s_fill_and_rule() {
     );
 }
 
-/// The label is painted in the unchosen ink, at v1's size.
 #[test]
 fn the_label_is_painted_in_v1_s_ink_and_size() {
     let resolved = kit().resolved_style();
@@ -252,7 +216,6 @@ fn the_label_is_painted_in_v1_s_ink_and_size() {
     );
 }
 
-/// The chosen destination is painted in the chosen ink.
 #[test]
 fn the_chosen_destination_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -270,7 +233,6 @@ fn the_chosen_destination_is_painted_in_v1_s_ink() {
     );
 }
 
-/// v1's Fluent destinations sized their icon, and the port does too.
 #[test]
 fn the_icon_is_sized_as_v1_sized_it() {
     let resolved = kit().resolved_style();
@@ -286,8 +248,6 @@ fn the_icon_is_sized_as_v1_sized_it() {
     );
 }
 
-/// The chosen destination has v1's rule along its top edge, and the others do
-/// not.
 #[test]
 fn the_chosen_destination_has_a_rule_along_its_top_edge() {
     let resolved = kit().resolved_style();
@@ -322,9 +282,7 @@ fn the_chosen_destination_has_a_rule_along_its_top_edge() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The bar is a row, as tall as the token says and as wide as its parent.
 #[test]
 fn the_bar_is_a_row_of_the_tokens_height() {
     let resolved = kit().resolved_style();
@@ -338,7 +296,6 @@ fn the_bar_is_a_row_of_the_tokens_height() {
     assert_eq!(request.width, Some(floom_core::Length::Pct(100.0)));
 }
 
-/// One destination per label, each growing to share the bar.
 #[test]
 fn there_is_one_destination_per_label() {
     let bar = kit()
@@ -354,7 +311,6 @@ fn there_is_one_destination_per_label() {
     );
 }
 
-/// The chosen destination is the one the props said, before mount.
 #[test]
 fn the_destination_chosen_before_mount_is_the_chosen_one() {
     let bar = kit()
@@ -364,7 +320,6 @@ fn the_destination_chosen_before_mount_is_the_chosen_one() {
     assert_eq!(bar.selected(), 1);
 }
 
-/// Tapping a destination chooses it, and the label's ink follows.
 #[test]
 fn tapping_a_destination_chooses_it() {
     let resolved = kit().resolved_style();
@@ -385,7 +340,6 @@ fn tapping_a_destination_chooses_it() {
     );
 }
 
-/// The callback reports the chosen destination.
 #[test]
 fn the_change_callback_reports_the_chosen_destination() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -399,12 +353,8 @@ fn the_change_callback_reports_the_chosen_destination() {
     assert_eq!(seen.lock().unwrap().as_slice(), &[1]);
 }
 
-/// The theme: v1's Fluent bottom navigation took a *snapshot* of its own design
-/// system's theme, so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentBottomNavigation::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

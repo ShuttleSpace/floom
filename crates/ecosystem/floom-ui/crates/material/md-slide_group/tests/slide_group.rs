@@ -1,18 +1,3 @@
-//! The ported Material slide group -- a strip of items with one of them
-//! chosen, and arrows that move the choice along the strip.
-//!
-//! ## Why the pixels and not the style
-//!
-//! The chosen item's indicator is `primary` and an unchosen item's is
-//! nothing at all, and only the paint log can tell those apart. So the tests
-//! read what was drawn.
-//!
-//! ## The tripwires
-//!
-//! `the_chosen_item_has_a_primary_indicator`,
-//! `an_unchosen_item_has_no_indicator` and
-//! `tapping_an_item_moves_the_indicator` would fail if this kit stopped being
-//! this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -39,9 +24,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -148,7 +130,6 @@ fn settle(conditional: &mut dyn WidgetAny) -> usize {
     conditional.children().len()
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -197,7 +178,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
 /// The chosen item carries a `primary` indicator along its bottom edge.
 #[test]
@@ -230,8 +210,6 @@ fn an_unchosen_item_has_no_indicator() {
     let item = item_at(&area, 2);
     let band = band_of(&*item_box_of(&*item));
 
-    // The band itself is v1's border: `outline` at alpha 0, which draws
-    // nothing.
     let ops = ops_of(&*band);
     let fill = ops.iter().find_map(|op| match op {
         PaintOp::Rect { color, .. } => Some(*color),
@@ -247,7 +225,6 @@ fn an_unchosen_item_has_no_indicator() {
         "v1's unchosen indicator: the outline at alpha 0"
     );
 
-    // And there is no bar drawn over it.
     let conditional = conditional_of(&*band);
     assert!(
         indicator_of(&*conditional).is_none(),
@@ -295,7 +272,6 @@ fn an_item_is_the_tokens_tall_and_the_literals_wide() {
 fn the_arrows_are_filled_and_inked() {
     let style = kit().resolved_style();
     let area = kit().view();
-    // The area holds the strip and then the two arrows.
     let arrow = area.children().remove(1).build();
     let surface = arrow.children().remove(0).build();
 
@@ -327,7 +303,6 @@ fn the_arrows_are_filled_and_inked() {
     assert_eq!(ink, paint(style.on_surface_variant), "and the arrows' ink");
 }
 
-// --- the structure --------------------------------------------------------
 
 /// With one item there are no arrows: v1 only drew them for more than one.
 #[test]
@@ -353,7 +328,6 @@ fn the_arrows_can_be_turned_off() {
     assert_eq!(area.children().len(), 1, "the strip and nothing else");
 }
 
-/// The strip's items touch: v1's gap was zero.
 #[test]
 fn the_items_touch() {
     let area = kit().view();
@@ -369,7 +343,6 @@ fn the_items_touch() {
     );
 }
 
-// --- the behaviour --------------------------------------------------------
 
 /// Tapping an item chooses it and says so.
 #[test]

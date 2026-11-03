@@ -1,16 +1,3 @@
-//! The ported Material textarea -- a bordered box with a text field in it,
-//! sized by the rows.
-//!
-//! The shape is the engine's vocabulary plus the engine's `TextInput`, so what
-//! is tested here is the translation and the pixels: the tokens reach the
-//! style, the box is painted in v1's colours, the text is painted at the size
-//! v1 painted it, and the dead numbers v1 wrote are still the ones the style
-//! reports.
-//!
-//! ## The tripwires
-//!
-//! `the_box_is_painted_in_v1_s_colours` and `the_dead_numbers_are_v1_s` would
-//! fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -31,9 +18,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -70,7 +54,6 @@ fn type_text<W: Widget + ?Sized>(widget: &mut W, ch: char) {
     widget.event(&mut key, id);
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -110,9 +93,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-/// The numbers v1 wrote and never drew are still the ones the style reports:
-/// the disabled ink at 97, and the token's font size rather than the size the
-/// text is painted at.
 #[test]
 fn the_dead_numbers_are_v1_s() {
     let style = kit().disabled(true).resolved_style();
@@ -137,9 +117,7 @@ fn the_dead_numbers_are_v1_s() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The box is painted in v1's colours.
 #[test]
 fn the_box_is_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -163,7 +141,6 @@ fn the_box_is_painted_in_v1_s_colours() {
     assert_eq!(rim, Some(paint(resolved.border_color)), "the box's rim");
 }
 
-/// The text is painted in v1's ink, at the size v1 painted it.
 #[test]
 fn the_text_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -202,7 +179,6 @@ fn the_box_is_as_tall_as_the_rows_ask() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
 /// Typing fires the callback, and the text is the field's.
 #[test]
@@ -280,12 +256,8 @@ fn the_props_report_the_text() {
     );
 }
 
-/// The theme: v1's Material textarea read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialTextarea::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

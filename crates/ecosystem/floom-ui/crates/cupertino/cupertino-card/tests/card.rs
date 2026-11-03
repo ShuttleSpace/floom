@@ -1,10 +1,5 @@
 //! The ported Fluent card.
 //!
-//! The second card in the library, and the one that proves a *ported* shape had to
-//! grow: `md-card` is a decorated box and this one is a decorated box **inside a
-//! press ripple**. So this suite is as much about the composition — surface, then
-//! ripple over it, with the content inside the surface and not beside it — as about
-//! the tokens.
 
 use floom_core::{Widget, WidgetAny};
 use floom_types::Rect;

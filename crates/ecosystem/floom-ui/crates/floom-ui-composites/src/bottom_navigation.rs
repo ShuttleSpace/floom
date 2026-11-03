@@ -1,38 +1,3 @@
-//! `BottomNavigationBar` -- a bar of destinations, one of them chosen.
-//!
-//! A row of destinations: an icon above a label, the label's ink following
-//! the choice, and a rule along the bar's top edge. The three floem-ui bottom
-//! navigation kits each used to carry their own copy of this bar and of the
-//! destination inside it; they share the engine's one now.
-//!
-//! ## What the kits still answer
-//!
-//! The bar's fill, the chosen and unchosen inks, the rule's colour and
-//! thickness, the bar's height, the smallest a destination may be, the icon's
-//! size, the label's size, the gap between the icon and the label. All of
-//! those are design-system answers; the *shape* -- a bar of destinations with
-//! one chosen -- is not.
-//!
-//! ## The three kits did not agree on everything
-//!
-//! v1's kits differed in ways that are not a theme's answer, so they are
-//! three fields here rather than one:
-//!
-//! * **the icon's size.** Cupertino and Fluent held the icon in a box of a
-//!   given size; Material did not, and left the icon to size itself. So the
-//!   engine's `icon_size` is an `Option`.
-//! * **the rule along a chosen destination's top edge.** Fluent drew one;
-//!   the other two did not. So the engine's `indicator` is an `Option`.
-//! * **the fill under a destination while the pointer is over it.** Only
-//!   Cupertino had one, and only when the destination was *not* the chosen
-//!   one. So the engine's `hover_color` is an `Option`.
-//!
-//! ## The choice travels in a shared counter
-//!
-//! The chosen destination changes after mount -- a tap moves it -- so it
-//! cannot live in a signal, which is `Rc`-based and cannot cross a slot
-//! boundary. It is an atomic counter the kit, the bar and the destinations'
-//! clicks all share.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

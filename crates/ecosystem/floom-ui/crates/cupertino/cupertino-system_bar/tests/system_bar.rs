@@ -1,15 +1,5 @@
 //! The ported Cupertino system bar -- the thin status strip at the top of the
 //! application shell.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the bar is painted
-//! in v1's colour, the dark variant swaps the fill, and the content keeps the
-//! colour it was given instead of inheriting the bar's.
-//!
-//! ## The tripwires
-//!
-//! `the_bar_is_painted_v1_s_colour` and `the_dark_variant_swaps_the_fill`
-//! would fail if this kit stopped being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Rect, Widget, WidgetAny};
 use floom_types::{Color, Insets};
@@ -32,7 +22,6 @@ const BAR: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -264,7 +253,6 @@ fn the_published_height_defaults_to_the_token() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoSystemBar::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

@@ -1,5 +1,3 @@
-//! HarmonyOS control variants: capsules whose corner is derived from the
-//! control's own height.
 
 use floom_design::{
     ControlSize, InteractionState, Props, StyleSetBuilder, StyleSetExt, Variant, composite_over,

@@ -1,47 +1,3 @@
-//! Material 3 autocomplete, ported to the Floom 2.0 widget API.
-//!
-//! ## What this is, relative to a combobox
-//!
-//! A combobox and an autocomplete share 93% of their code and differ in exactly one
-//! way: **an autocomplete's field accepts text that is not an option.** Everything else —
-//! the field, the chevron, the filter, the rows, the panel placement — is the engine's
-//! [`floom_ui_composites::Combobox`], promoted once and shared by both.
-//!
-//! That one difference moves two things, and both live here rather than in the engine:
-//!
-//! * **the callback's payload.** A combobox reports an `Option<usize>`; this reports an
-//!   `Option<String>`, because "the user typed kiwi, which is not on the list" is a real
-//!   answer and an index cannot express it. The engine's index-based `on_change` is
-//!   therefore *adapted* here rather than replaced.
-//! * **the commit point.** Losing focus reconciles the typed text against the list, which
-//!   is [`floom_ui_composites::commit`]. v1 wrote that rule out at four lines; here it is one
-//!   call.
-//!
-//! ## The one behaviour the port cannot reproduce
-//!
-//! **v1 committed on `FocusLost`, and 2.0 has no way for a parent to observe a child's
-//! focus.** So [`MdAutocomplete::commit`] is public: a caller wires it to whatever it
-//! does have — a wrapper's blur handler, an `Escape` key on a parent, the end of a
-//! search — and the rule inside it is the engine's, tested there.
-//!
-//! That is a real loss of fidelity and it is stated rather than papered over. The
-//! alternative — committing on every keystroke — would be a different control: the field
-//! would snap its selection to whatever the text currently matches, which is not what an
-//! autocomplete does.
-//!
-//! ## The silent exact match
-//!
-//! Committing text that exactly matches an option moves the selection and **reports
-//! nothing**. That is v1's behaviour, preserved, and it is why `Commit::Unchanged` is a
-//! named variant in the engine rather than an absence of code. See
-//! `floom_widgets::combobox::commit`.
-//!
-//! ## Material's `.margin_top(4.0)`
-//!
-//! Material is the only one of the three kits that wrote a panel gap; Cupertino and
-//! Fluent wrote none. `panel_gap` is a parameter and 4.0 is the default here *because it
-//! is the only one of the three that wrote a number* — a default invented here would have
-//! been a fourth opinion.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -70,7 +26,6 @@ pub struct MdAutocomplete {
     /// The field's shared buffer — the commit rule needs the typed text, and 2.0 has
     /// one buffer rather than a signal both halves could read.
     query: floom_widgets::SharedBuffer,
-    /// v1's `Box<dyn Fn(Option<String>)>`, kept so `props()` still reports it.
     on_change: Option<std::sync::Arc<dyn Fn(Option<String>) + Send + Sync + 'static>>,
 }
 
@@ -107,11 +62,6 @@ impl MdAutocomplete {
         self
     }
 
-    /// Called with the *text*, not an index.
-    ///
-    /// That is the whole difference from a combobox's callback, and it is why the
-    /// engine's index-based `on_change` is adapted rather than handed through: "kiwi" is
-    /// a legitimate answer from this field and has no index.
     pub fn on_change(mut self, callback: impl Fn(Option<String>) + Send + Sync + 'static) -> Self {
         self.props.on_change = Some(Box::new({
             let shared = std::sync::Arc::new(callback);
@@ -144,16 +94,6 @@ impl MdAutocomplete {
         self.query.clone()
     }
 
-    /// Reconcile the typed text against the options, the way losing focus did.
-    ///
-    /// **Public because 2.0 cannot do it for us**: v1 hung this on the field's
-    /// `FocusLost`, and there is no way for a parent to observe a child's focus. A caller
-    /// wires this to whatever it does have — a wrapper's blur handler, an `Escape`, the
-    /// end of a search.
-    ///
-    /// Returns whether anything was reported, so a caller can tell "committed and said
-    /// so" from "committed silently" — and the second case is real, because an exact
-    /// match moves the selection without saying anything.
     pub fn commit(&self) -> bool {
         let outcome = commit(&self.pick, &self.query, &self.props.options);
         match outcome {
@@ -173,8 +113,6 @@ impl MdAutocomplete {
         let changed = select(&self.pick, &self.query, &self.props.options, index);
         if changed {
             if let Some(on_change) = &self.on_change {
-                // An index becomes its text, which is this control's whole difference
-                // from a combobox.
                 on_change(self.props.options.get(index).cloned());
             }
         }
@@ -191,18 +129,13 @@ impl MdAutocomplete {
         let on_surface = theme.colors().on_surface;
         let outline = theme.colors().outline;
         ComboboxStyle {
-            // --- from `AutocompleteTokens`, whose six fields are exactly
-            //     `ComboboxTokens`' six ---
             height: tokens.height,
             padding_horizontal: tokens.padding_horizontal,
             border_radius: tokens.border_radius,
             min_width: tokens.min_width,
             item_height: tokens.item_height,
-            // v1 declared this and never read it; the host needs it now, because a
-            // panel request is a bound the content is laid out against and clipped to.
             panel_max_height: tokens.panel_max_height,
 
-            // --- v1's call-site constants, Material's values ---
             trigger_gap: 8.0,
             row_padding_horizontal: 12.0,
             panel_gap: 4.0,
@@ -216,7 +149,6 @@ impl MdAutocomplete {
             panel_shadow_alpha: 20,
             border_width: 1.0,
 
-            // --- resolved theme colours ---
             surface: to_paint(surface),
             on_surface: to_paint(on_surface),
             on_surface_variant: to_paint(theme.colors().on_surface_variant),
@@ -226,11 +158,6 @@ impl MdAutocomplete {
         }
     }
 
-    /// The control, ready to mount.
-    ///
-    /// A [`Combobox`] — the engine's — with its index-based callback adapted to this
-    /// control's text-based one. The adaptation is the port: v1's two v1 crates differed
-    /// here and now they do not, because the difference is one `map`.
     pub fn view(self) -> Combobox {
         let options = self.props.options.clone();
         let on_change = self.on_change.clone();
@@ -245,9 +172,6 @@ impl MdAutocomplete {
         .disabled(self.props.disabled);
         if let Some(on_change) = on_change {
             combo = combo.on_change(move |index| {
-                // `None` cannot happen from a row click — the engine only reports an
-                // index — but it is handled rather than unwrapped, because a callback
-                // that panics is worse than one that says "cleared".
                 on_change(index.and_then(|index| options.get(index).cloned()));
             });
         }

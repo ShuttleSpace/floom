@@ -1,13 +1,3 @@
-//! The composites that host a scroll viewport, and the state they keep.
-//!
-//! A tab strip and an accordion panel are both "one of several, and the chosen
-//! one shows more", and both are normally put inside a scroll viewport. What is
-//! asserted here is that the choice survives frames, reconciles and a
-//! re-anchored offset -- the three ways a composite's state can be lost when its
-//! subtree is rebuilt around it.
-//!
-//! This used to be the tail of `floom-widgets/tests/scroll.rs`, carrying the
-//! widgets it exercises along with it.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;

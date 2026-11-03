@@ -1,42 +1,5 @@
 //! Cupertino's checkbox as a kit crate: the token translation, plus the numbers
 //! that are this kit's own rather than the tokens'.
-//!
-//! This crate has never been compiled, which is how three kits came to disagree
-//! with themselves about a five-layer control for this long. So the point of this
-//! file is not to exercise the engine's `Checkbox` -- that is what
-//! `floom-ui-composites`' own checkbox tests are for -- but to pin the numbers
-//! *this kit wrote*, in the places where a plausible-looking edit would change a
-//! pixel.
-//!
-//! ## The dead 97, and why it is asserted against
-//!
-//! v1 had a `resolved_style` that reported the disabled rim as `on_surface` at
-//! **97**, and a `view()` that painted `on_surface` at **38**. Nothing ever read
-//! the struct -- every kit resolved its colours inline -- so 97 is a number that
-//! was never once on a screen. It is named here and asserted *against*, so a
-//! later reader who finds it in git history knows which one was painted and the
-//! trap cannot re-arm itself.
-//!
-//! ## What this kit's identity actually is
-//!
-//! Every colour of the indicator, the mark and the label is shared by all three
-//! kits; what is this kit's alone is a state layer **four points of padding wider
-//! than the indicator** (tinted `primary`@10), gated on hover alone and suppressed
-//! while disabled -- and a 2px `primary` focus ring, where Material answers focus with
-//! its layer instead.
-//!
-//! ## The tripwires
-//!
-//! These tests would fail if the kit stopped being this kit:
-//! * `the_layer_is_the_indicator_plus_four_points_of_padding` -- Material's is a
-//!   flat 40.
-//! * `the_layer_is_primary_at_10` -- the one number that separates this
-//!   kit from its sibling.
-//! * `only_the_hover_gate_is_open_and_the_layer_is_suppressed_while_disabled` --
-//!   Material opens all three and suppresses none.
-//! * `the_focus_affordance_is_a_ring_around_the_whole_control` -- Material draws
-//!   no ring.
-//! They are why the three kits stay three crates rather than becoming one.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -1012,7 +975,6 @@ fn this_kit_does_not_resolve_to_materials_layer_or_focus() {
     let style = style();
 
     // What Material resolves: a flat 40 circle with a pressed tint, gated on all
-    // three and never suppressed.
     let material_layer = StateLayer {
         color: style.layer.color,
         color_pressed: Some(style.layer.color),

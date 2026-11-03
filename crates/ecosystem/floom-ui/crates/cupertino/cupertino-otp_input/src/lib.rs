@@ -1,83 +1,5 @@
 //! Cupertino OTP input, ported to the Floom 2.0 widget API.
 //!
-//! An OTP input is a row of single-character boxes bound to one master code:
-//! typing in a box writes that character into the code, and the host can read
-//! or overwrite the whole code. When the input is masked, the box shows a dot
-//! while the real character stays in the code.
-//!
-//! ## What the port uses
-//!
-//! The engine's [`TextInput`] for each box, the engine's `SharedBuffer` for
-//! the master code, and the engine's vocabulary -- a `Surface` for each box, a
-//! `Stack` for the row -- for everything else.
-//!
-//! ## What this kit answers
-//!
-//! * the box's size, the corner radius, the gap between the boxes and the
-//!   character's size: the tokens;
-//! * the character's ink: `on_surface`; the box's fill: `surface`; the rim:
-//!   `outline`;
-//! * the rim's width: 1, a v1 literal;
-//! * the mask glyph: `•`, a v1 literal.
-//!
-//! ## The style struct v1 did not have
-//!
-//! v1's OTP input had no `resolved_style` at all: the colours were resolved
-//! inside a `style` closure and never reported. The port adds
-//! [`CupertinoOtpInputStyle`], which reports the tokens, the colours the paint
-//! uses, and the two numbers that decide what the widget *is* -- how many
-//! boxes there are and whether they are masked.
-//!
-//! ## The master code, and the one direction that does not come back
-//!
-//! v1's `code_signal()` was a signal the host could write, and a pair of
-//! effects kept the boxes and the code in step: one read the boxes and wrote
-//! the code, the other read the code and wrote the boxes. The port keeps the
-//! first direction exactly -- typing in a box writes the code and fires
-//! `on_change` -- and closes the second with [`CupertinoOtpInput::code_writer`],
-//! a handle that writes the code *and* the boxes together.
-//!
-//! The gap that leaves is the *automatic* re-sync. v1's effect ran on every
-//! change of the code, so a host that wrote the signal saw the boxes follow
-//! on the next tick. In 2.0 a kit's `view()` is a composition of engine
-//! widgets, and nothing in that composition observes an external write and
-//! pushes it into the boxes: there is no per-frame hook a kit can reach. The
-//! engine piece that would close it is a widget that owns the boxes and syncs
-//! them in its own `update` -- which is `floom-ui-composites`' business, and
-//! not a kit's.
-//!
-//! ## The quirk v1 had, and the port does not
-//!
-//! Because v1's two effects read each other, the code was always *packed to
-//! the left*: a character typed into the third box with the first two empty
-//! moved to the first box on the next tick, because the code held the
-//! characters in order and the boxes took them from the code in order. The
-//! port's `on_change` still reports the same string v1 did -- the boxes'
-//! characters, left to right, with the empty ones left out -- but the
-//! character stays in the box it was typed into, because nothing re-reads the
-//! code back into the boxes.
-//!
-//! ## The theme
-//!
-//! v1's Cupertino OTP input took a *snapshot* of its own design system, so a
-//! change of the app-wide theme did not reach it. The port keeps that.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **A disabled box still takes keystrokes.** v1's `TextInput` had a
-//!   `disabled` flag; the engine's has none. The port keeps the *code* from
-//!   moving while the input is disabled, and the box's own text still shows
-//!   what was typed into it.
-//! * **The cursor.** v1's boxes asked for no cursor at all, and the engine's
-//!   `TextInput` answers with the platform arrow.
-//! * **`justify_center` and `items_center`.** The engine's `TextInput` has no
-//!   alignment, so the port centres the character by padding instead: the
-//!   horizontal padding from the measured width of the glyph the box shows,
-//!   the vertical from the font size. A character whose line box is taller
-//!   than its size sits a little high, and the padding is exact for the
-//!   digits an OTP is made of rather than for every glyph.
-//! * **`with_theme()`.** v1's OTP input had `props()` and `theme()` but no
-//!   `with_theme()`. The port gives all three kits the same three.
 
 use std::sync::{Arc, Mutex};
 
@@ -260,7 +182,6 @@ impl CupertinoOtpInput {
         Arc::new(move |text: &str| {
             // The code first: the boxes' own handlers compare what they
             // recompute against it, and v1's code was the host's value until
-            // the boxes had something to say about it.
             write_text(&code, text);
             let chars: Vec<char> = text.chars().collect();
             {
@@ -313,7 +234,6 @@ impl CupertinoOtpInput {
 
         let mut row = Stack::new(Axis::Horizontal)
             .gap(style.gap)
-            // v1's row was `items_center`.
             .align(Align::Start, Align::Center);
 
         for index in 0..self.boxes.len() {
@@ -352,7 +272,6 @@ impl CupertinoOtpInput {
                                     font_size,
                                     color: text_color,
                                     // The box carries the fill and the
-                                    // rim; the text input is the text.
                                     background: None,
                                     border_width: 0.0,
                                     radius: 0.0,
@@ -369,12 +288,9 @@ impl CupertinoOtpInput {
                                 move |text: String| {
                                     // A disabled input does not move: v1's
                                     // `TextInput` refused the keyboard, and
-                                    // the engine's has no such flag.
                                     if disabled {
                                         return;
                                     }
-                                    // v1 took the box's first character
-                                    // and ignored the mask glyph itself.
                                     let ch = text
                                         .chars()
                                         .next()
@@ -394,8 +310,6 @@ impl CupertinoOtpInput {
                                         }
                                     }
                                     // The code is the boxes' characters,
-                                    // left to right, with the empty ones
-                                    // left out -- v1's rule.
                                     let new_code: String = read_reals(&reals)
                                         .into_iter()
                                         .filter(|slot| !slot.is_empty())
@@ -416,9 +330,6 @@ impl CupertinoOtpInput {
                                         }
                                     }
                                     // The mask goes back on. v1's code ->
-                                    // boxes effect did this a tick later;
-                                    // here it is immediate, because there
-                                    // is no second effect to do it.
                                     if masked && !ch.is_empty() {
                                         write_text(&buffer, MASK);
                                     }

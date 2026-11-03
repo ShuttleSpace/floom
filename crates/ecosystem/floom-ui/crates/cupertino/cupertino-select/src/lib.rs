@@ -1,28 +1,5 @@
 //! Cupertino's select (dropdown), ported to the Floom 2.0 widget API.
 //!
-//! ## What the port kept, and from where
-//!
-//! v1's own `view()` was a hand-built dropdown: an `RwSignal<bool>` for open,
-//! an `Overlay::new(panel)` positioned from a `LayoutChangedListener`, and one
-//! `Label` per option rebuilt on every hover. All of that is the engine's
-//! [`Select`] now -- the overlay, the keyboard, the highlight -- so what is left
-//! here is the token translation plus the one value that is not a token.
-//!
-//! Two of v1's numbers survived into the port and are worth naming:
-//!
-//! * the hovered row is `primary`@**12**, where Material and Fluent use
-//!   `on_surface`@8. That is a different *source* colour, which is why
-//!   [`SelectStyle`] carries resolved colours rather than an alpha over one
-//!   theme colour.
-//! * a disabled trigger is a *fill* change here (`on_surface`@4) and a *border*
-//!   change in Material. Same state, opposite mechanism.
-//!
-//! ## The chevron
-//!
-//! The icon name is this kit's, because three kits' icon sets disagree on what
-//! "expand" looks like. `cupertino-icon` is still a v1 crate, so its path data
-//! now lives in `floom-widget-cupertino-icon-paths` -- data has no v1
-//! dependency, and the SVG wrapper it also exports is what the v1 half uses.
 
 use floom_signal::{RwSignal, SignalGet};
 
@@ -122,7 +99,6 @@ impl CupertinoSelect {
             panel_shadow_blur: 12.0,
             panel_shadow_spread: 1.0,
 
-            // --- base colours ---
             surface: to_paint(surface),
             on_surface: to_paint(on_surface),
             outline: to_paint(outline),
@@ -135,14 +111,11 @@ impl CupertinoSelect {
             panel_border: to_paint(Color::rgba(0, 0, 0, 0)),
             panel_shadow: to_paint(Color::rgba(0, 0, 0, 24)),
 
-            // --- the interactive bands ---
-            //
             // This is the kit's one real disagreement with Material: a hovered
             // row is `primary`@12 here and `on_surface`@8 there.
             hover_row: to_paint(with_alpha(primary, 12)),
             selected_row: to_paint(with_alpha(primary, 24)),
 
-            // --- disabled, which is a fill change here ---
             disabled_text: to_paint(with_alpha(on_surface, 97)),
             disabled_chevron: to_paint(with_alpha(on_surface, 97)),
             disabled_border: to_paint(with_alpha(on_surface, 38)),
@@ -166,7 +139,6 @@ impl CupertinoSelect {
         // style's. `VectorIcon::from_path_data` takes the path the v1 crate
         // still hands to SVG, so nothing is parsed twice.
         // The path data is authored in a 24x24 view box, which is the one thing
-        // `from_path_data` needs besides the string.
         select = select.chevron(VectorIcon::from_path_data(
             cupertino_icon_path("expand_more"),
             Rect::from_origin_size(Point::new(0.0, 0.0), Size::new(24.0, 24.0)),

@@ -1,18 +1,4 @@
 //! The ported Fluent slide group -- a strip of items with one of them
-//! chosen, and arrows that move the choice along the strip.
-//!
-//! ## Why the pixels and not the style
-//!
-//! The chosen item's indicator is `primary` and an unchosen item's is
-//! nothing at all, and only the paint log can tell those apart. So the tests
-//! read what was drawn.
-//!
-//! ## The tripwires
-//!
-//! `the_chosen_item_has_a_primary_indicator`,
-//! `an_unchosen_item_has_no_indicator` and
-//! `tapping_an_item_moves_the_indicator` would fail if this kit stopped being
-//! this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -39,21 +25,16 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
 
-/// The kit, with three items in the strip.
 fn kit() -> FluentSlideGroup {
     FluentSlideGroup::new()
         .with_theme(theme())
         .items(vec![item("one"), item("two"), item("three")])
 }
 
-/// One item of the strip: the caller's own content.
 fn item(label: &'static str) -> floom_core::Child {
     floom_core::Child::new(
         floom_core::ChildKey::index(0),
@@ -62,7 +43,6 @@ fn item(label: &'static str) -> floom_core::Child {
     )
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -72,7 +52,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -82,34 +61,27 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The strip of items inside the area.
 fn row_of(area: &Stack) -> Box<dyn WidgetAny> {
     area.children().remove(0).build()
 }
 
-/// One item of the strip: the pressable around it.
 fn item_at(area: &Stack, index: usize) -> Box<dyn WidgetAny> {
     let row = row_of(area);
     row.children().remove(index).build()
 }
 
-/// The box an item is drawn in.
 fn item_box_of(item: &dyn WidgetAny) -> Box<dyn WidgetAny> {
     item.children().remove(0).build()
 }
 
-/// The indicator band along an item's bottom edge.
 fn band_of(item_box: &dyn WidgetAny) -> Box<dyn WidgetAny> {
     item_box.children().remove(1).build()
 }
 
-/// The conditional that follows the choice, inside the band.
 fn conditional_of(band: &dyn WidgetAny) -> Box<dyn WidgetAny> {
     band.children().remove(0).build()
 }
 
-/// The indicator itself: the bar the conditional mounts when the item is the
-/// chosen one.
 fn indicator_of(conditional: &dyn WidgetAny) -> Option<Box<dyn WidgetAny>> {
     let mut children = conditional.children();
     if children.is_empty() {
@@ -119,7 +91,6 @@ fn indicator_of(conditional: &dyn WidgetAny) -> Option<Box<dyn WidgetAny>> {
     }
 }
 
-/// Taps one of the items, the way the host would.
 fn tap(item: &mut dyn WidgetAny) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = item.create(&mut create);
@@ -132,8 +103,6 @@ fn tap(item: &mut dyn WidgetAny) {
     }
 }
 
-/// Runs one update pass over a conditional, the way the host does, so that it
-/// reads the flag it follows.
 fn settle(conditional: &mut dyn WidgetAny) -> usize {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = conditional.create(&mut create);
@@ -146,9 +115,7 @@ fn settle(conditional: &mut dyn WidgetAny) -> usize {
     conditional.children().len()
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentSlideGroupStyle = kit().resolved_style();
@@ -195,9 +162,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The chosen item carries a `primary` indicator along its bottom edge.
 #[test]
 fn the_chosen_item_has_a_primary_indicator() {
     let style = kit().selected(1).resolved_style();
@@ -220,7 +185,6 @@ fn the_chosen_item_has_a_primary_indicator() {
     );
 }
 
-/// An unchosen item's indicator is nothing at all.
 #[test]
 fn an_unchosen_item_has_no_indicator() {
     let style = kit().resolved_style();
@@ -228,8 +192,6 @@ fn an_unchosen_item_has_no_indicator() {
     let item = item_at(&area, 2);
     let band = band_of(&*item_box_of(&*item));
 
-    // The band itself is v1's border: `outline` at alpha 0, which draws
-    // nothing.
     let ops = ops_of(&*band);
     let fill = ops.iter().find_map(|op| match op {
         PaintOp::Rect { color, .. } => Some(*color),
@@ -245,7 +207,6 @@ fn an_unchosen_item_has_no_indicator() {
         "v1's unchosen indicator: the outline at alpha 0"
     );
 
-    // And there is no bar drawn over it.
     let conditional = conditional_of(&*band);
     assert!(
         indicator_of(&*conditional).is_none(),
@@ -253,7 +214,6 @@ fn an_unchosen_item_has_no_indicator() {
     );
 }
 
-/// The indicator is as thick as the token says.
 #[test]
 fn the_indicator_is_the_tokens_thick() {
     let style = kit().resolved_style();
@@ -270,7 +230,6 @@ fn the_indicator_is_the_tokens_thick() {
     );
 }
 
-/// An item is as tall as the token says and at least 120 wide.
 #[test]
 fn an_item_is_the_tokens_tall_and_the_literals_wide() {
     let style = kit().resolved_style();
@@ -288,12 +247,10 @@ fn an_item_is_the_tokens_tall_and_the_literals_wide() {
     );
 }
 
-/// The arrows are filled with the surface and inked in the surface variant.
 #[test]
 fn the_arrows_are_filled_and_inked() {
     let style = kit().resolved_style();
     let area = kit().view();
-    // The area holds the strip and then the two arrows.
     let arrow = area.children().remove(1).build();
     let surface = arrow.children().remove(0).build();
 
@@ -325,9 +282,7 @@ fn the_arrows_are_filled_and_inked() {
     assert_eq!(ink, paint(style.on_surface_variant), "and the arrows' ink");
 }
 
-// --- the structure --------------------------------------------------------
 
-/// With one item there are no arrows: v1 only drew them for more than one.
 #[test]
 fn there_are_no_arrows_for_one_item() {
     let area = FluentSlideGroup::new()
@@ -337,21 +292,18 @@ fn there_are_no_arrows_for_one_item() {
     assert_eq!(area.children().len(), 1, "the strip and nothing else");
 }
 
-/// With three items there are the strip and the two arrows.
 #[test]
 fn the_arrows_are_shown_for_more_than_one_item() {
     let area = kit().view();
     assert_eq!(area.children().len(), 3, "the strip and the two arrows");
 }
 
-/// The arrows can be turned off.
 #[test]
 fn the_arrows_can_be_turned_off() {
     let area = kit().show_arrows(false).view();
     assert_eq!(area.children().len(), 1, "the strip and nothing else");
 }
 
-/// The strip's items touch: v1's gap was zero.
 #[test]
 fn the_items_touch() {
     let area = kit().view();
@@ -367,9 +319,7 @@ fn the_items_touch() {
     );
 }
 
-// --- the behaviour --------------------------------------------------------
 
-/// Tapping an item chooses it and says so.
 #[test]
 fn tapping_an_item_chooses_it_and_says_so() {
     let seen: Arc<Mutex<Vec<usize>>> = Arc::new(Mutex::new(Vec::new()));
@@ -384,8 +334,6 @@ fn tapping_an_item_chooses_it_and_says_so() {
     assert_eq!(*seen.lock().unwrap(), vec![2], "the item that was tapped");
 }
 
-/// The indicator follows the choice: the tapped item gains one and the
-/// chosen one loses it.
 #[test]
 fn tapping_an_item_moves_the_indicator() {
     let area = kit().selected(0).view();
@@ -416,7 +364,6 @@ fn tapping_an_item_moves_the_indicator() {
     );
 }
 
-/// A mandatory group ignores a tap on the item that is already chosen.
 #[test]
 fn a_mandatory_group_ignores_a_tap_on_the_chosen_item() {
     let seen: Arc<Mutex<Vec<usize>>> = Arc::new(Mutex::new(Vec::new()));
@@ -436,7 +383,6 @@ fn a_mandatory_group_ignores_a_tap_on_the_chosen_item() {
     );
 }
 
-/// The props report what the caller set.
 #[test]
 fn the_props_report_what_the_caller_set() {
     let kit = kit().show_arrows(false).mandatory(true);

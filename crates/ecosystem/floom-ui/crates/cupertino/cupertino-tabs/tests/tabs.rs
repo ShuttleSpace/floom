@@ -1,14 +1,5 @@
 //! The ported Cupertino tabs -- a row of labels, with the active one marked.
 //!
-//! The shape is the engine's vocabulary around a bar of the kit's own, so what
-//! is tested here is the translation and the pixels: the tokens reach the
-//! style, the two labels are painted in v1's inks at v1's sizes, the indicator
-//! is under the active tab and nowhere else, and a click moves the highlight.
-//!
-//! ## The tripwires
-//!
-//! `the_labels_are_painted_in_v1_s_inks` and `only_the_active_tab_has_the_indicator`
-//! would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -33,7 +24,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -248,7 +238,6 @@ fn the_label_box_is_the_tabs_height_with_the_tokens_padding() {
     let mut tabs = tab_widgets(&kit);
 
     // The tab, then the stack that holds the label and the indicator, and the
-    // label's own slot.
     let mut tab = slots_of(&mut *tabs.remove(0)).remove(0).1;
     let (request, _) = slots_of(&mut *tab).remove(0);
 

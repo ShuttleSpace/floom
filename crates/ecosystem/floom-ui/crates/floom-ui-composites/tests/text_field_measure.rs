@@ -1,14 +1,3 @@
-//! A text field's intrinsic extent, measured through a real host.
-//!
-//! This is the half of `floom-app/tests/composite_measure.rs` that belongs to the
-//! widget rather than to the crate, for the reason `radio_measure.rs` belongs to
-//! `Radio`: the widget moved, and so did the measurement that pins it.
-//!
-//! The assertions below are worth as much *now* as they were before the move,
-//! because `layout_request` reads the style for the first time. They still hold
-//! the engine's numbers -- 120px floor, 2x 8px inset, the row height derived
-//! from the font -- which is the claim that the default style is the old
-//! layout as well as the old pixels.
 
 use floom_app::{NodeId, WidgetHost};
 use floom_layout::LayoutStyle;

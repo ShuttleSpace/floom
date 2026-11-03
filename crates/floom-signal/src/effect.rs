@@ -296,7 +296,6 @@ where
         let effect_scope = Scope(effect_id, PhantomData);
         let (result, new_value) = effect_scope.enter(|| (effect.compute)(None));
 
-        // set new value
         *effect.value.borrow_mut() = Some(new_value);
 
         *runtime.current_effect.borrow_mut() = None;
@@ -330,7 +329,6 @@ where
     fn run(&self) -> bool {
         let curr_value = self.value.borrow_mut().take();
 
-        // run the effect
         let new_value = (self.f)(curr_value);
 
         *self.value.borrow_mut() = Some(new_value);
@@ -365,7 +363,6 @@ where
     fn run(&self) -> bool {
         let curr_value = self.value.borrow_mut().take();
 
-        // run the effect
         let (i, t) = (self.compute)(curr_value);
         let new_value = (self.on_change)(i, t);
 

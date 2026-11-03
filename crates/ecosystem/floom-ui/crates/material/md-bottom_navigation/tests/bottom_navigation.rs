@@ -1,16 +1,3 @@
-//! The ported Material bottom navigation -- a bar of destinations, one of them
-//! chosen.
-//!
-//! The bar is the kit's own, because the engine has no bottom navigation (see
-//! the kit's module documentation), so what is tested here is the translation
-//! and the pixels: the tokens reach the style, the bar paints v1's fill and
-//! v1's rule, and the chosen destination's label is painted in v1's ink.
-//!
-//! ## The tripwires
-//!
-//! `the_bar_paints_v1_s_fill_and_rule` and
-//! `the_chosen_destination_s_label_is_painted_in_v1_s_ink` would fail if this
-//! kit stopped being this kit.
 
 use floom_core::{
     Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny,
@@ -43,9 +30,6 @@ const ROW: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -89,8 +73,6 @@ fn label_of(bar: &BottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
     let pressable = bar.children()[index].build();
     let destination = pressable.children().remove(0).build();
     let mut children = destination.children();
-    // The label is the destination's last child; the icon, when there is one,
-    // is the first.
     children.remove(children.len() - 1).build()
 }
 
@@ -129,7 +111,6 @@ fn tap(bar: &BottomNavigationBar, index: usize) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -181,9 +162,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-/// The props report the destinations, and not the callback: the kit holds that
-/// as an `Arc` of its own, because 2.0's slots are `Send + Sync` and the
-/// props' `Box<dyn Fn(..)>` is not.
 #[test]
 fn the_props_report_the_destinations_and_not_the_callback() {
     let kit = kit().labels(vec!["Home".into(), "Search".into()]);
@@ -195,9 +173,7 @@ fn the_props_report_the_destinations_and_not_the_callback() {
     assert!(kit.props().on_change.is_none());
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The bar paints v1's fill, and the rule along its top edge.
 #[test]
 fn the_bar_paints_v1_s_fill_and_rule() {
     let resolved = kit().resolved_style();
@@ -233,7 +209,6 @@ fn the_bar_paints_v1_s_fill_and_rule() {
     );
 }
 
-/// The label is painted in the unchosen ink, at v1's size.
 #[test]
 fn the_label_is_painted_in_v1_s_ink_and_size() {
     let resolved = kit().resolved_style();
@@ -270,8 +245,6 @@ fn the_chosen_destination_s_label_is_painted_in_v1_s_ink() {
     );
 }
 
-/// v1's Material destinations did not size the icon, so the port does not
-/// either: the token is reported and never spent.
 #[test]
 fn the_icon_is_not_sized_as_v1_did_not_size_it() {
     let bar = kit().labels(vec!["Home".into()]).icons(vec![icon()]).view();
@@ -286,7 +259,6 @@ fn the_icon_is_not_sized_as_v1_did_not_size_it() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The bar is a row, as tall as the token says and as wide as its parent.
 #[test]
@@ -379,12 +351,8 @@ fn the_change_callback_reports_the_chosen_destination() {
     assert_eq!(seen.lock().unwrap().as_slice(), &[1]);
 }
 
-/// The theme: v1's Material bottom navigation read the *app-wide* theme
-/// signal, so a change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialBottomNavigation::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

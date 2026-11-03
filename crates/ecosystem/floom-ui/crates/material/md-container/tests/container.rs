@@ -1,12 +1,3 @@
-//! Material container: the two boxes, and what each of them carries.
-//!
-//! ## The claim
-//!
-//! A container is two boxes. The outer one is full width and centres its
-//! content; the inner one carries the padding, the fill and the max-width cap.
-//! v1 nested two `Container`s to say that, and 2.0 says it with a `Stack` and a
-//! `Surface` -- so the assertions are about the two layout requests, which is
-//! where the two roles can be told apart.
 
 use floom_core::{ElementId, Widget};
 use floom_types::{Color, Length, Rect};
@@ -24,13 +15,6 @@ const BOX: Rect = Rect {
     y1: 300.0,
 };
 
-/// The Material theme, with Material selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time. So a test that wants Material's own values has to
-/// select Material, and `set_design_system` writes a thread-local, so the
-/// selection is this test's alone.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)

@@ -1,16 +1,4 @@
 //! The ported Fluent sheet -- a panel on the edge of the window, over a
-//! scrim, that the caller shows and hides.
-//!
-//! The sheet is the engine's `Dialog` composite with the scrim and the panel
-//! as its card, so what is tested here is the translation and the pixels: the
-//! tokens reach the style, the scrim and the panel are painted in v1's
-//! colours, the panel is sized and rounded the way each side asks, and the
-//! shared flag is what opens and closes it.
-//!
-//! ## The tripwires
-//!
-//! `the_scrim_is_black_at_160` and `the_open_flag_opens_and_closes_the_sheet`
-//! would fail if this kit stopped being this kit.
 
 use floom_core::{ElementId, Length, Rect, Widget};
 use floom_types::Color;
@@ -24,7 +12,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_fluent_sheet::{FluentSheet, FluentSheetStyle};
 
-/// A viewport, because a sheet covers the window rather than its own box.
 const VIEWPORT: Rect = Rect {
     x0: 0.0,
     y0: 0.0,
@@ -35,9 +22,6 @@ const VIEWPORT: Rect = Rect {
 const ID: ElementId = ElementId::new(1, 1);
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -46,7 +30,6 @@ fn kit() -> FluentSheet {
     FluentSheet::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -56,14 +39,7 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The panel inside the card the host mounts.
-///
-/// Opened through the engine's own door, so the test sees what the host would
-/// have built: the scrim, then the aligned stack, then the panel.
 fn panel_of(kit: FluentSheet) -> Box<dyn floom_core::WidgetAny> {
-    // v1 hid the sheet while it was closed, so the panel and the scrim
-    // only exist while it is up: the flag opens it before the host would
-    // have built anything.
     let flag = kit.open_flag();
     floom_widgets::write_flag(&flag, true);
     let mut dialog = kit.view();
@@ -73,8 +49,6 @@ fn panel_of(kit: FluentSheet) -> Box<dyn floom_core::WidgetAny> {
     assert!(!opened.is_empty(), "the sheet asked for an overlay");
     match opened[0] {
         OverlayCall::Open { content, .. } => {
-            // The card is the scrim; it holds the aligned stack, which holds
-            // the panel.
             let stack = content.children().remove(0).build();
             stack.children().remove(0).build()
         }
@@ -82,7 +56,6 @@ fn panel_of(kit: FluentSheet) -> Box<dyn floom_core::WidgetAny> {
     }
 }
 
-/// The panel's paint ops.
 fn panel_ops(kit: FluentSheet) -> Vec<PaintOp> {
     let panel = panel_of(kit);
     let mut create = AllocatingCreateContext::new();
@@ -93,11 +66,7 @@ fn panel_ops(kit: FluentSheet) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The scrim's paint ops: the card the host mounts.
 fn scrim_ops(kit: FluentSheet) -> Vec<PaintOp> {
-    // v1 hid the sheet while it was closed, so the panel and the scrim
-    // only exist while it is up: the flag opens it before the host would
-    // have built anything.
     let flag = kit.open_flag();
     floom_widgets::write_flag(&flag, true);
     let mut dialog = kit.view();
@@ -117,9 +86,7 @@ fn scrim_ops(kit: FluentSheet) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentSheetStyle = kit().resolved_style();
@@ -169,8 +136,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// v1 wrote `with_alpha(scrim_color, 160)`, which *replaces* the scrim token's
-/// own alpha rather than multiplying it. The token's alpha never showed.
 #[test]
 fn the_scrim_is_black_at_160() {
     let resolved = kit().resolved_style();
@@ -196,9 +161,7 @@ fn the_scrim_is_black_at_160() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The panel is painted the surface colour.
 #[test]
 fn the_panel_is_painted_the_surface_colour() {
     let resolved = kit().resolved_style();
@@ -210,7 +173,6 @@ fn the_panel_is_painted_the_surface_colour() {
     assert_eq!(fill, Some(paint(resolved.panel_color)), "the panel's fill");
 }
 
-/// A bottom sheet spans the width and is rounded.
 #[test]
 fn a_bottom_sheet_spans_the_width_and_is_rounded() {
     let resolved = kit().resolved_style();
@@ -234,7 +196,6 @@ fn a_bottom_sheet_spans_the_width_and_is_rounded() {
     );
 }
 
-/// A side sheet is the token's width, full height, and not rounded.
 #[test]
 fn a_side_sheet_is_the_tokens_width_and_full_height() {
     let resolved = kit().resolved_style();
@@ -263,7 +224,6 @@ fn a_side_sheet_is_the_tokens_width_and_full_height() {
     );
 }
 
-/// The panel's padding is the token's.
 #[test]
 fn the_panel_is_padded_with_the_token() {
     let resolved = kit().resolved_style();
@@ -278,7 +238,6 @@ fn the_panel_is_padded_with_the_token() {
     );
 }
 
-/// An elevated sheet casts the shadow v1 asked for; a flat one does not.
 #[test]
 fn an_elevated_sheet_casts_the_shadow() {
     let resolved = kit().resolved_style();
@@ -308,9 +267,7 @@ fn an_elevated_sheet_casts_the_shadow() {
     );
 }
 
-// --- the presence ---------------------------------------------------------
 
-/// The shared flag is what opens and closes the sheet.
 #[test]
 fn the_open_flag_opens_and_closes_the_sheet() {
     let kit = kit();
@@ -333,8 +290,6 @@ fn the_open_flag_opens_and_closes_the_sheet() {
     );
 }
 
-/// `open_flag()` hands back the same allocation. `Arc::ptr_eq`, because two
-/// independent flags would pass every behavioural test and then diverge.
 #[test]
 fn the_flag_is_one_allocation() {
     let kit = kit();
@@ -345,7 +300,6 @@ fn the_flag_is_one_allocation() {
     );
 }
 
-/// The props report the side, the elevation and the open state.
 #[test]
 fn the_props_report_the_side_and_the_elevation() {
     let kit = kit().side(SheetSide::Start).elevated(false).open(true);
@@ -355,14 +309,9 @@ fn the_props_report_the_side_and_the_elevation() {
     assert!(kit.is_open(), "and the flag agrees with the prop");
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// The theme: v1's Fluent sheet took a *snapshot* of its own design system,
-/// so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentSheet::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),
@@ -370,9 +319,6 @@ fn the_theme_is_a_snapshot_of_its_own_design_system() {
     );
 }
 
-/// v1's Fluent sheet rounded its panel to the theme's small radius while its
-/// own style reported the token -- and the two were not the same number. The
-/// port reports both, and paints the theme's.
 #[test]
 fn the_painted_radius_is_the_themes_and_the_token_is_reported_too() {
     let resolved = kit().resolved_style();

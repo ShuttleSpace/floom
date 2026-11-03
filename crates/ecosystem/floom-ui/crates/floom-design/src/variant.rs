@@ -1,4 +1,3 @@
-//! The control vocabulary all four design systems map onto.
 
 use floom_style::StyleState;
 

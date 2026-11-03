@@ -1,46 +1,5 @@
 //! Cupertino chip, ported to the Floom 2.0 widget API.
 //!
-//! v1's chip was a `Container` holding a `Label`: a pill with a label in the
-//! middle, in one of three appearances -- disabled, selected, or neither --
-//! and a click that a disabled chip ignores.
-//!
-//! ## What the engine grew
-//!
-//! **A `Chip` composite.** v1's chip was one box with the label's ink on the
-//! box (`color(fg)`) and the label centred in it (`items_center`). 2.0's
-//! `Surface` paints a fill and only the child knows it is text, and a box's
-//! content sits at the padding's edge rather than in the middle, so the pill
-//! and its centred label are one widget in the engine now -- see
-//! `floom_ui_composites::Chip`.
-//!
-//! ## What this kit answers
-//!
-//! | appearance | fill | ink |
-//! | --- | --- | --- |
-//! | disabled | `on_surface`@4 | `on_surface`@97 |
-//! | selected | `primary` | `on_primary` |
-//! | neither | `surface_variant` | `on_surface` |
-//!
-//! This kit is the one with an **outline** -- 1px, `primary` when the chip is
-//! chosen and `outline` otherwise -- and the one with a **hover fill**:
-//! `primary`@200 when chosen, `on_surface`@16 otherwise. The other two kits
-//! have neither, and that disagreement is the reason these stay three crates.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **`gap(6.0)`.** The token is "the gap between the leading icon (if any)
-//!   and the label", and v1's chip has no icon, so the gap never had anything
-//!   to separate. The style still reports it.
-//! * **`cursor(CursorStyle::Default)` while disabled.** 2.0's paint context has
-//!   no cursor vocabulary, so neither cursor is carried over.
-//! * **The hover fill of a disabled chip.** v1 named one -- `on_surface`@4 --
-//!   but a disabled chip does not hover, so it never showed; 2.0's chip does
-//!   not answer the pointer while disabled, which is the same answer.
-//!
-//! ## The alpha numbers
-//!
-//! `on_surface`@4, `on_surface`@97 and `primary`@200 are v1's numbers, and
-//! they are *bytes* of alpha rather than percentages.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -170,7 +129,6 @@ impl CupertinoChip {
         let selected = self.props.selected;
         let disabled = self.props.disabled;
         let theme = self.theme.get();
-        // v1's hover fill, which is this kit's alone.
         let hover = if disabled {
             with_alpha(theme.colors().on_surface, 4)
         } else if selected {

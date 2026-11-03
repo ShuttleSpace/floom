@@ -1,15 +1,3 @@
-//! The ported Material hover -- a box that fills while the pointer is over it.
-//!
-//! The box is the kit's own, because the engine has no "fills while the pointer
-//! is over it" widget (see the kit's module documentation), so what is tested
-//! here is the translation and the pixels: the tokens reach the style, the fill
-//! is the colour v1 painted, and the callback reports the hover.
-//!
-//! ## The tripwires
-//!
-//! `the_fill_is_painted_in_v1_s_colour` and
-//! `the_callback_reports_the_hover` would fail if this kit stopped being this
-//! kit.
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
 use floom_types::{Color, PointerPhase};
@@ -31,9 +19,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 10.0, y: 10.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -84,7 +69,6 @@ fn fill_painted(hover: &HoverBox) -> Option<Color> {
     })
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -117,10 +101,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The box paints no fill until the pointer is over it, and then paints
-/// v1's fill.
 #[test]
 fn the_fill_is_painted_in_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -149,7 +130,6 @@ fn the_fill_is_painted_in_v1_s_colour() {
     );
 }
 
-/// The fill covers the whole box, the way v1's container background did.
 #[test]
 fn the_fill_covers_the_whole_box() {
     let mut hover = kit()
@@ -166,7 +146,6 @@ fn the_fill_covers_the_whole_box() {
     assert_eq!(bounds, BOX);
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The child is mounted inside the box.
 #[test]
@@ -225,12 +204,8 @@ fn the_props_report_no_callback() {
     assert!(kit.props().on_hover_change.is_none());
 }
 
-/// The theme: v1's Material hover read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialHover::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

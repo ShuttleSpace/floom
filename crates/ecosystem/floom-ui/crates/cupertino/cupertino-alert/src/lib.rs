@@ -1,33 +1,5 @@
 //! Cupertino alert banner, ported to the Floom 2.0 widget API.
 //!
-//! ## No new engine capability was needed
-//!
-//! This is the first of the six remaining `MdIcon::view()` callers, and it turned
-//! out to need **nothing** from the engine: the banner is a [`Surface`] holding a
-//! [`Stack`] of two more stacks and some [`Text`], and the dismiss affordance is a
-//! bare pressable icon. Every piece already exists — which is worth recording,
-//! because the six were treated as one batch and they are not: `alert` is a
-//! composition, and `select` at 60% cross-kit overlap is a different thing again.
-//!
-//! ## What the port changed
-//!
-//! * `CupertinoIcon::new("close").size(20.0).view().style(..).on_event(Click, ..)` — the
-//!   `.view()` had no 2.0 meaning, and the chain after it was v1's
-//!   `Decorators`. In 2.0 the icon *is* a widget, and a clickable one is that widget
-//!   inside a [`Pressable`]. The v1 chain also set a pointer cursor, which 2.0's
-//!   `PaintContext` has no vocabulary for; recorded rather than worked around, as it
-//!   was for `md-item_group`'s rows.
-//! * v1 mounted an **empty `Label`** as the dismiss slot when the alert was not
-//!   dismissible, so the row always had two children. Here the slot is simply
-//!   absent when there is nothing to put in it — the row has one child instead of
-//!   two, and the eight-pixel gap that followed the empty label disappears with it.
-//!   That is a visible difference: v1's non-dismissible banner was 8px narrower in
-//!   its content than it needed to be. It is v1's bug, not a translation choice,
-//!   and it is pinned by a test.
-//! * `Label::new(..)` is [`Text`], `.style(|s| s.color(..))` is `.color(..)`, and
-//!   `.font_weight(FontWeight::Bold.to_floom())` needed the same three-way
-//!   `FontWeight` crossing that `md-list_item` documented: v1's `to_floom()` returns
-//!   a `parley` weight, and 2.0's `Text::weight` takes `floom_types::FontWeight`.
 
 use std::sync::Arc;
 
@@ -286,7 +258,6 @@ impl CupertinoAlert {
                     // The row: the content, and the dismiss affordance *only if there
                     // is one*. v1 mounted an empty `Label` here when the alert was not
                     // dismissible, so the row always had two children and the 8px gap
-                    // was spent on nothing.
                     let mut row = Stack::new(Axis::Horizontal)
                         .gap(CONTENT_DISMISS_GAP)
                         .align(Align::Start, Align::Center)

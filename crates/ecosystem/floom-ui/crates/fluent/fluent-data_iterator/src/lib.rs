@@ -1,14 +1,4 @@
 //! Fluent data iterator, ported to the Floom 2.0 widget API.
-//!
-//! A container that lays out a sequence of items with an optional header and
-//! footer, and optionally a thin rule between consecutive items.
-//!
-//! ## The divider
-//!
-//! v1 drew the rule as a one-pixel-high box in the theme's outline colour,
-//! between the items. 2.0's [`Divider`] is that rule with the corners named,
-//! and the port uses it: a rule between the items, never before the first or
-//! after the last, which is what v1's `if divided && i > 0` said.
 
 use std::sync::Arc;
 
@@ -23,7 +13,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 
-/// A builder for one item, replayed each time it is mounted.
 pub type ItemBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -36,7 +25,6 @@ pub struct FluentDataIteratorStyle {
     pub divided: bool,
 }
 
-/// Fluent's data iterator.
 pub struct FluentDataIterator {
     props: DataIteratorProps,
     theme: RwSignal<MultiTheme>,
@@ -58,13 +46,11 @@ impl FluentDataIterator {
         }
     }
 
-    /// Append an item.
     pub fn item(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
         self.items.push(Arc::new(build));
         self
     }
 
-    /// The band above the items.
     pub fn header(
         mut self,
         build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
@@ -73,7 +59,6 @@ impl FluentDataIterator {
         self
     }
 
-    /// The band below the items.
     pub fn footer(
         mut self,
         build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
@@ -82,7 +67,6 @@ impl FluentDataIterator {
         self
     }
 
-    /// Draw a thin rule between consecutive items.
     pub fn divided(mut self, divided: bool) -> Self {
         self.props.divided = divided;
         self
@@ -117,7 +101,6 @@ impl FluentDataIterator {
         }
     }
 
-    /// The container, ready to mount.
     pub fn view(self) -> Surface {
         let style = self.resolved_style();
         let outline = to_paint(style.outline);
@@ -131,16 +114,11 @@ impl FluentDataIterator {
             column = column.push(move || header());
         }
         for (index, item) in items.iter().enumerate() {
-            // v1: `if divided && i > 0` -- a rule between the items, never before
-            // the first.
             if divided && index > 0 {
                 let outline = outline;
                 column = column.push(move || {
                     Box::new(
                         Divider::new()
-                            // v1's rule was a one-pixel band at the *top* of its
-                            // box, and `RuleAlignment::Start` is the engine's
-                            // name for exactly that.
                             .thickness(1.0)
                             .alignment(RuleAlignment::Start)
                             .color(outline),
@@ -162,7 +140,6 @@ impl FluentDataIterator {
                     .width_pct(100.0),
             )
             .background(to_paint(style.surface))
-            // v1's literal 8.0.
             .radius(8.0)
             .push(move || Box::new(column.clone()))
     }

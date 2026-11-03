@@ -1,24 +1,3 @@
-//! `DatePicker` -- a field that shows a date, and a calendar that picks one.
-//!
-//! The field is the button that opens the calendar; the calendar is the
-//! month grid with its arrows. The three floem-ui date-picker kits each used
-//! to carry their own copy of both; they share the engine's ones now.
-//!
-//! ## What the kits still answer
-//!
-//! The field's height, its radius, its minimum width, the panel's width, the
-//! cells' size, the header's font size, the paddings, the border's thickness
-//! and the two alphas, the panel's padding, its shadow, the gaps, the
-//! weekday's and the arrow's font sizes, the arrow's padding, the text's size
-//! and the hover's alpha.
-//!
-//! ## The state is a shared cell
-//!
-//! v1 held three `RwSignal`s -- the value, `open` and the displayed month.
-//! 2.0's slots are shared between threads and an `RwSignal` is `Rc`-based, so
-//! a value that changes after mount cannot be a signal; it is a mutex-guarded
-//! cell instead, the same shape the engine's `SharedFlag` and `SharedBuffer`
-//! have.
 
 use std::sync::{Arc, Mutex};
 

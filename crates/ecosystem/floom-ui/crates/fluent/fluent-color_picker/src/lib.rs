@@ -1,71 +1,6 @@
 //! Fluent colour picker, ported to the Floom 2.0 widget API.
-//!
-//! A colour picker is a square of colour -- saturation across, value down --
-//! under a hue strip and an alpha strip, with a preview of the chosen colour
-//! and a field that spells it out in hex.
-//!
-//! ## What the port uses
-//!
-//! The engine's `ColorPicker`: the square, the two strips, the preview and
-//! the hex field, with each area painting itself and handling its own drag.
-//! 2.0 keeps a mounted child's widget when its key survives a rebuild -- so
-//! an area that read the colour when it was built would keep the colour it
-//! was built with -- and the areas are the reason.
-//!
-//! The engine's brush. v1 drew the square and the two strips as inline SVG
-//! documents -- a `<linearGradient>` for the white ramp, another for the black
-//! one, and a third for the hue -- and handed the markup to an SVG widget.
-//! 2.0 has no SVG pipeline, but it does have a linear brush, so the port
-//! paints the same gradients with the same stops at the same offsets: the
-//! picture is the same, the mechanism is not.
-//!
-//! ## What this kit answers
-//!
-//! * the square's size, the strips' height, the thumb's size and the corner
-//!   radius: the tokens;
-//! * the picker's fill: `surface`; its border: `outline` at 80;
-//! * the hex field's ink: `on_surface`; its placeholder's: `on_surface_variant`;
-//! * the thumb's border: white.
-//!
-//! ## The numbers v1 wrote as literals
-//!
-//! The picker's padding (12), the gap under the square and under each strip
-//! (12), the gap between the preview and the field (12), the preview's size
-//! (40), the field's width (120) and its text size (14), the border's
-//! thickness (1), and the thumb's border (2).
-//!
-//! ## The differences this port names rather than reproduces
-//!
-//! * **The square's box.** v1's outer box was `width(sv_width)` with a padding
-//!   of 12, so its content box was 24 narrower than the 240-wide square it
-//!   held and the square overflowed it. The port's outer box is
-//!   `sv_width + 24` wide, so the square fits inside the padding.
-//! * **The hex is committed as it is typed.** v1 committed the field on
-//!   focus-lost; 2.0's text input has no focus-lost event, so the port
-//!   commits whenever the text parses -- and only when the parsed colour is
-//!   not the one already held, so a colour dragged in the square does not
-//!   report itself twice.
-//! * **A drag that leaves the area ends.** v1 asked the host for pointer
-//!   capture, so a drag that ran off the square kept tracking. 2.0's
-//!   `EventContext` has no capture door, so the drag ends where the pointer
-//!   leaves the area.
-//!
-//! ## The theme source
-//!
-//! v1's Fluent colour picker took a *snapshot* of its own design system --
-//! `MultiTheme::new_for(DesignSystem::Fluent)` -- so a change of the
-//! app-wide theme does not reach it. The port keeps that.
 
-//! ## What v1 wrote that this port does not carry
 //!
-//! * **`color_signal()` was an `RwSignal<Color>`.** 2.0's shared state is a
-//!   mutex-guarded cell, the same shape the engine's `SharedFlag` and
-//!   `SharedBuffer` have, because a value that changes after mount cannot be
-//!   held in a signal.
-//! * **The accessors.** v1's Fluent colour picker had no `props()`,
-//!   `theme()` or `with_theme()`. The port gives all three kits the same
-//!   three, because a kit that cannot be given a theme cannot be tested
-//!   against one.
 
 use std::sync::{Arc, Mutex};
 
@@ -81,27 +16,12 @@ use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::WHITE;
 
-/// The chosen colour, shared between the kit and the tree it built.
-///
-/// v1 held an `RwSignal<Color>` and a `RwSignal<String>` for the hex. 2.0's
-/// slots are shared between threads and an `RwSignal` is `Rc`-based, so a
-/// value that changes after mount cannot be a signal; these are
-/// mutex-guarded cells instead, the same shape the engine's `SharedFlag` and
-/// `SharedBuffer` have.
 pub type SharedColor = floom_ui_composites::SharedColor;
 
-/// The hex text, shared with the text input.
 pub type SharedHex = floom_ui_composites::SharedHex;
 
-/// The colour v1 started on.
 const DEFAULT_COLOR: PaintColor = PaintColor::rgb(33, 150, 243);
 
-/// The colour picker's appearance, in the terms v1 used.
-///
-/// The first block is v1's own list. The second block is what v1's paint used
-/// but v1's style never reported -- the padding, the border's thickness, the
-/// margins, the preview's size and the field's width and size. A style that
-/// does not say what the widget draws is not the widget's output.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FluentColorPickerStyle {
     pub design_system: &'static str,
@@ -113,42 +33,24 @@ pub struct FluentColorPickerStyle {
     pub slider_height: f32,
     pub thumb_size: f32,
     pub radius: f32,
-    // --- what v1's paint used and v1's style did not report ---
-    /// The hex field's ink.
     pub on_surface_variant: Color,
-    /// The picker's padding. v1's `.padding(12.0)`.
     pub padding: f32,
-    /// The border's thickness. v1's `.border(1.0)`.
     pub border_width: f32,
-    /// The border's alpha. v1's `with_alpha(outline, 80)`.
     pub border_alpha: u8,
-    /// The gap above each of the strips and above the preview row.
-    /// v1's `.margin_top(12.0)`.
     pub margin_top: f32,
-    /// The gap between the preview and the hex field. v1's `.gap(12.0)`.
     pub row_gap: f32,
-    /// The preview's size. v1's `.size(40.0, 40.0)`.
     pub preview_size: f32,
-    /// The hex field's width. v1's `.width(120.0)`.
     pub hex_width: f32,
-    /// The hex field's text size. v1's `.font_size(14.0)`.
     pub hex_font_size: f32,
-    /// The thumb's border. v1's `.border(2.0)`.
     pub thumb_border_width: f32,
-    /// The thumb's border colour. v1's `WHITE`.
     pub thumb_border_color: Color,
 }
 
-/// Fluent's colour picker.
 pub struct FluentColorPicker {
     props: ColorPickerProps,
     theme: RwSignal<MultiTheme>,
-    /// The chosen colour, shared with the tree it builds.
     color: SharedColor,
-    /// The hex text, shared with the text input.
     hex: SharedHex,
-    /// The callback, held as a `Send + Sync` handle because the tree's slots
-    /// have to be.
     on_change: Option<Arc<dyn Fn(Color) + Send + Sync>>,
 }
 
@@ -165,7 +67,6 @@ impl FluentColorPicker {
         }
     }
 
-    /// The colour to start on.
     pub fn value(self, value: Color) -> Self {
         let value = to_paint(value);
         if let Ok(mut guard) = self.color.lock() {
@@ -177,17 +78,11 @@ impl FluentColorPicker {
         self
     }
 
-    /// Whether the alpha strip is shown.
     pub fn show_alpha(mut self, show_alpha: bool) -> Self {
         self.props.show_alpha = show_alpha;
         self
     }
 
-    /// Called with the colour the user chose.
-    ///
-    /// `Send + Sync` is required, not incidental: 2.0 rebuilds a widget inside
-    /// a slot closure the host may hand between threads, so the callback has
-    /// to be both clonable and thread-safe to be rebuilt into the tree.
     pub fn on_change(mut self, callback: impl Fn(Color) + Send + Sync + 'static) -> Self {
         self.on_change = Some(Arc::new(callback));
         self
@@ -206,13 +101,10 @@ impl FluentColorPicker {
         self
     }
 
-    /// The chosen colour, shared with the tree: the 2.0 answer to v1's
-    /// `color_signal()`.
     pub fn color(&self) -> SharedColor {
         self.color.clone()
     }
 
-    /// The hex text, shared with the field.
     pub fn hex(&self) -> SharedHex {
         self.hex.clone()
     }
@@ -246,7 +138,6 @@ impl FluentColorPicker {
         }
     }
 
-    /// The picker, ready to mount.
     pub fn view(self) -> Surface {
         let style = self.resolved_style();
         let mut picker = ColorPicker::new()
@@ -287,7 +178,6 @@ impl Default for FluentColorPicker {
     }
 }
 
-/// Engine colour -> theme colour.
 fn from_paint(c: PaintColor) -> Color {
     Color {
         r: c.r,

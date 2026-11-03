@@ -1,15 +1,4 @@
 //! The ported Fluent OTP input -- a row of single-character boxes bound to
-//! one master code.
-//!
-//! The shape is the engine's vocabulary plus the engine's `TextInput`, so what
-//! is tested here is the translation and the pixels: the tokens reach the
-//! style, the boxes are painted in v1's colours at v1's sizes, typing writes
-//! the code, and a masked box shows a dot.
-//!
-//! ## The tripwires
-//!
-//! `the_boxes_are_painted_in_v1_s_colours` and `typing_writes_the_code` would
-//! fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -30,9 +19,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -41,7 +27,6 @@ fn kit() -> FluentOtpInput {
     FluentOtpInput::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -51,7 +36,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of<W: Widget + ?Sized>(widget: &W) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -61,7 +45,6 @@ fn ops_of<W: Widget + ?Sized>(widget: &W) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// A character typed into a box.
 fn type_text<W: Widget + ?Sized>(widget: &mut W, ch: char) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -69,7 +52,6 @@ fn type_text<W: Widget + ?Sized>(widget: &mut W, ch: char) {
     widget.event(&mut key, id);
 }
 
-/// The text a box paints.
 fn painted_text<W: Widget + ?Sized>(widget: &W) -> Option<(String, f32, Color)> {
     ops_of(widget).into_iter().find_map(|op| match op {
         PaintOp::Text {
@@ -79,14 +61,11 @@ fn painted_text<W: Widget + ?Sized>(widget: &W) -> Option<(String, f32, Color)> 
     })
 }
 
-/// The text input inside a box.
 fn input_of(box_widget: &dyn WidgetAny) -> Box<dyn WidgetAny> {
     box_widget.children().remove(0).build()
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentOtpInputStyle = kit().resolved_style();
@@ -118,9 +97,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The boxes are painted in v1's colours, at v1's sizes.
 #[test]
 fn the_boxes_are_painted_in_v1_s_colours() {
     let resolved = kit().length(3).resolved_style();
@@ -161,7 +138,6 @@ fn the_boxes_are_painted_in_v1_s_colours() {
     );
 }
 
-/// The character is painted in v1's ink, at v1's size.
 #[test]
 fn the_character_is_painted_in_v1_s_ink() {
     let resolved = kit().length(3).resolved_style();
@@ -177,7 +153,6 @@ fn the_character_is_painted_in_v1_s_ink() {
     assert_eq!(ink, paint(resolved.text_color), "v1's ink");
 }
 
-/// A masked box shows a dot, and the real character stays in the code.
 #[test]
 fn a_masked_box_shows_a_dot() {
     let kit = kit().length(3).masked(true);
@@ -197,7 +172,6 @@ fn a_masked_box_shows_a_dot() {
     );
 }
 
-/// The gap between the boxes is the token's.
 #[test]
 fn the_gap_between_the_boxes_is_the_token_s_gap() {
     let resolved = kit().resolved_style();
@@ -208,9 +182,7 @@ fn the_gap_between_the_boxes_is_the_token_s_gap() {
     assert_eq!(request.gap, Some(resolved.gap), "the token's gap");
 }
 
-// --- the structure --------------------------------------------------------
 
-/// Typing in a box writes the code and fires the callback.
 #[test]
 fn typing_writes_the_code() {
     let seen: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
@@ -241,8 +213,6 @@ fn typing_writes_the_code() {
     );
 }
 
-/// The code is the boxes' characters, left to right, with the empty ones left
-/// out -- v1's rule.
 #[test]
 fn the_code_skips_the_empty_boxes() {
     let kit = kit().length(3);
@@ -259,7 +229,6 @@ fn the_code_skips_the_empty_boxes() {
     );
 }
 
-/// The writer pushes the code into the boxes.
 #[test]
 fn the_writer_pushes_the_code_into_the_boxes() {
     let kit = kit().length(3);
@@ -282,7 +251,6 @@ fn the_writer_pushes_the_code_into_the_boxes() {
     assert_eq!(text, "1", "and the first box shows the first character");
 }
 
-/// A disabled input does not move the code.
 #[test]
 fn a_disabled_input_does_not_move_the_code() {
     let seen: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
@@ -314,8 +282,6 @@ fn a_disabled_input_does_not_move_the_code() {
     );
 }
 
-/// The props report the shape, and the shared props' own callback slot stays
-/// empty: the kit keeps a shareable copy of its own.
 #[test]
 fn the_props_report_the_shape() {
     let kit = kit().length(4).masked(true).disabled(true);
@@ -329,12 +295,8 @@ fn the_props_report_the_shape() {
     );
 }
 
-/// The theme: v1's Fluent OTP input took a *snapshot* of its own design system,
-/// so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentOtpInput::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

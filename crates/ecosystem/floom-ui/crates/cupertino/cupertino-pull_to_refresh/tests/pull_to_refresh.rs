@@ -1,16 +1,5 @@
 //! The ported Cupertino pull-to-refresh -- a drag that fires a refresh and an
 //! indicator above the content.
-//!
-//! The shape is the engine's vocabulary plus the two widgets the kit needs for
-//! the pull, so what is tested here is the translation and the pixels: the
-//! tokens reach the style, the indicator is painted in v1's ink at v1's size,
-//! and the indicator is absent when v1 would have drawn nothing.
-//!
-//! ## The tripwires
-//!
-//! `the_indicator_is_painted_in_v1_s_ink_at_v1_s_size` and
-//! `the_indicator_is_absent_until_there_is_something_to_say` would fail if
-//! this kit stopped being this kit.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -36,7 +25,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -296,7 +284,6 @@ fn the_props_report_the_threshold() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoPullToRefresh::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

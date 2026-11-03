@@ -1,85 +1,3 @@
-//! Material calendar, ported to the Floom 2.0 widget API.
-//!
-//! A calendar is a month of days: a header that says which month and moves it,
-//! a row of weekday letters, and six weeks of day cells, one of which is the
-//! selected date.
-//!
-//! ## What the port uses
-//!
-//! The engine's `Calendar`: the month grid, the header that moves between
-//! months, and the day cells. The three floem-ui calendar kits each used to
-//! carry their own copy of all of it.
-//!
-//! The engine's vocabulary: a [`Surface`] for the panel, a [`Stack`] for the
-//! column and for the rows, a [`Text`] for the labels, and a [`Pressable`] for
-//! the day cells and the two header buttons. The one thing the kit carries is
-//! the **body** -- the header, the weekday row and the grid -- because the
-//! state the calendar draws (the selected date, and the month on display)
-//! changes after the tree is mounted, and a `Stack` built once cannot answer
-//! that: the day numbers and the selection are baked into the widgets it
-//! holds.
-//!
-//! ## What this kit answers
-//!
-//! * the day cell's size, the panel's width, and the three font sizes: the
-//!   tokens;
-//! * the panel's fill: `surface`; its outline: `outline` at 120;
-//! * the selected day's fill: `primary`; its number: `on_primary`; every
-//!   other day's number: `on_surface`; the weekday letters and the week
-//!   numbers: `on_surface_variant`.
-//!
-//! ## The token that never showed
-//!
-//! `CalendarTokens::header_height` is declared and never read: v1's header was
-//! a row of text, not a bar of a fixed height, and the port's header is the
-//! same row of text. v1's style did not report it either, so the port's does
-//! not.
-//!
-//! ## The numbers v1 wrote as literals
-//!
-//! The header buttons' size (18) and their padding (4).
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The day cells' hover.** v1 wrote
-//!   `.hover(|s| s.background(with_alpha(primary, 16)))` on every cell. 2.0's
-//!   `Pressable` owns the interaction state and paints no background of its
-//!   own, and there is no hover background for a cell that is not one of the
-//!   engine's own composites. The hover is named rather than faked.
-//! * **The day cells' pointer cursor.** v1 asked for a pointer over a cell.
-//!   2.0's `Pressable` does not report a cursor -- the engine's `Button` does,
-//!   and a `Button` is a label rather than a cell. The cursor is named rather
-//!   than faked.
-//! * **The callback is not in the props.** `CalendarProps::on_change` is a
-//!   `Box<dyn Fn(CalendarDate)>`, which is not `Send + Sync`, and 2.0's slots
-//!   are. The kit keeps its own `Arc<dyn Fn(CalendarDate) + Send + Sync>` and
-//!   the props' slot stays empty, so `props()` reports `None` where v1
-//!   reported `Some`.
-//! * **The accessors.** v1's Material calendar had no `props()`, `theme()` or
-//!   `with_theme()`. The port gives all three kits the same three, because a
-//!   kit that cannot be given a theme cannot be tested against one.
-//!
-//! ## The state v1 held in signals
-//!
-//! v1 held the selected date and the month on display in two `RwSignal`s.
-//! `RwSignal` is `Rc`-based and cannot cross a 2.0 slot boundary, so the port
-//! holds two shared cells instead, and the engine has no shared type for a
-//! date -- the kit carries its own.
-//!
-//! ## The cells v1 hid
-//!
-//! v1 drew all 42 cells and *hid* the ones that fall outside the month. A
-//! hidden cell took no room, so the month's days spread across the row. The
-//! port does not mount those cells at all, which is the same picture by a
-//! shorter road.
-//!
-//! ## Where a month picker would go
-//!
-//! v1's calendar is an inline panel: the month moves with the two header
-//! buttons, and there is no picker to open. The port keeps it that way. The
-//! engine's `Popup` and `Overlay` are how a *caller* would make this a layer
-//! -- a date field that opens a calendar in a popup -- and the kit does not
-//! use them, because v1's calendar had no layer of its own to build.
 
 use std::sync::{Arc, Mutex};
 
@@ -121,7 +39,6 @@ fn to_theme_date(value: floom_ui_composites::CalendarDate) -> ThemeDate {
     }
 }
 
-/// The calendar's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialCalendarStyle {
     pub design_system: &'static str,
@@ -161,10 +78,6 @@ pub struct MaterialCalendar {
     value: SharedDate,
     /// The month on display, shared with the cells.
     view_month: SharedMonth,
-    /// The kit's own handle on the callback.
-    ///
-    /// Not the props': `CalendarProps::on_change` is a `Box<dyn Fn(CalendarDate)>`,
-    /// and 2.0's slots are `Send + Sync`.
     on_change: Option<Arc<dyn Fn(CalendarDate) + Send + Sync + 'static>>,
 }
 
@@ -180,7 +93,6 @@ impl MaterialCalendar {
         }
     }
 
-    /// The selected date. v1 also moved the month on display to it.
     pub fn value(mut self, value: CalendarDate) -> Self {
         self.props.value = to_theme_date(value);
         floom_ui_composites::write_value(&self.value, value);

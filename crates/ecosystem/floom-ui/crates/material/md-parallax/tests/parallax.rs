@@ -1,16 +1,3 @@
-//! The ported Material parallax -- a layer that moves more slowly than the
-//! page it sits on.
-//!
-//! The shape is a kit-local widget, because the effect needs a translate and
-//! the engine has none in its layout vocabulary. So what is tested here is the
-//! translation and the motion: the factor reaches the style, the layer
-//! declares the translate v1 wrote, and a moved offset is a new declaration.
-//!
-//! ## The tripwires
-//!
-//! `the_layer_moves_the_content_by_the_scroll_times_the_factor` and
-//! `a_moved_offset_re_declares_the_motion` would fail if this kit stopped
-//! being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Widget};
 use floom_types::CompositorProp;
@@ -27,9 +14,6 @@ use floom_widget_md_parallax::{
 const ID: ElementId = ElementId::new(1, 1);
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -48,7 +32,6 @@ fn token_factor() -> f32 {
     tokens.factor
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The factor is the caller's when it is above zero.
 #[test]
@@ -72,8 +55,6 @@ fn a_factor_that_is_not_positive_falls_back_to_the_token() {
     );
 }
 
-/// v1's props default already carries a positive factor, so the rule never
-/// reaches the token.
 #[test]
 fn the_default_factor_never_reaches_the_token() {
     let kit = kit();
@@ -94,9 +75,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the motion -----------------------------------------------------------
 
-/// The layer declares the translate v1 wrote: `-scroll * factor` on Y.
 #[test]
 fn the_layer_moves_the_content_by_the_scroll_times_the_factor() {
     let scroll = shared_scroll(100.0);
@@ -188,7 +167,6 @@ fn the_content_is_mounted_under_the_layer() {
     assert_eq!(layer.children().len(), 1, "the content");
 }
 
-// --- the props ------------------------------------------------------------
 
 /// The props report the factor.
 #[test]
@@ -196,14 +174,9 @@ fn the_props_report_the_factor() {
     assert_eq!(kit().factor(0.4).props().factor, 0.4);
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// The theme: v1's Material parallax read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialParallax::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

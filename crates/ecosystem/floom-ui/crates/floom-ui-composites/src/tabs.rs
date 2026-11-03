@@ -1,14 +1,3 @@
-//! A tab bar plus the panel for the active tab.
-//!
-//! A selectable strip and the content it selects. Which indicator, how tall the strip and what the inactive label looks like are three kits' answers to the same question.
-//!
-//! It lived in `floom-widgets/src/compose.rs` beside the layout vocabulary
-//! (`Stack`, `List`, `Grid`, `Conditional`, `Crossfade`). The two are not the
-//! same kind of thing: a `Stack` arranges children along an axis, which is
-//! arithmetic; this decides *what a control looks like*, which is a product
-//! decision. So it moved up a layer with the tree, the counter and the select,
-//! and the dependency runs one way -- this crate composes the engine's
-//! vocabulary rather than the other way round.
 
 use std::any::Any;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -23,9 +12,7 @@ use floom_core::{
 use floom_widgets::primitives::SemanticsHint;
 use floom_widgets::{Button, Stack};
 
-// ---------------------------------------------------------------------------
 // Tabs
-// ---------------------------------------------------------------------------
 
 /// A tabbed navigation: a selectable bar plus the panel for the active tab.
 ///

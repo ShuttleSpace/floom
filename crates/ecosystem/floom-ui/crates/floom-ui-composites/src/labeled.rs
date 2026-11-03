@@ -1,11 +1,3 @@
-//! A semantics wrapper for boxes a test or an agent needs to *name*.
-//!
-//! The engine's composition model paints backgrounds with `Container` leaves
-//! and stacks text beside them, so a styled region has no widget of its own to
-//! publish a label. [`Labeled`] fills that gap: it contributes a labelled
-//! semantics node whose bounds are the region's bounds, holds one child slot,
-//! and paints nothing. Screen galleries and evaluation harnesses hang it over
-//! everything they later address by name.
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{

@@ -693,7 +693,6 @@ pub fn get_first_selection_after(
         }
     }
 
-    // TODO it's silly to store the whole thing in memory, we only need the first element.
     let mut positions = ins
         .inserted_subset()
         .complement_iter()

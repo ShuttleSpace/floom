@@ -1,20 +1,3 @@
-//! `Slider`: a continuous or stepped value selector along the horizontal axis.
-//!
-//! It moved out of `floom-widgets/src/controls.rs` for the same reason `Select`
-//! and `Counter` did, and the reason sharpened as it went: what a slider *does*
-//! is primitive -- clamping, quantising, the drag, the keyboard walk -- but
-//! what it *looks like* is a design decision, and the old `paint` had no way to
-//! express one. It hard-coded `#E2E8F0` for the track, `#2B6CB0` for the fill,
-//! a white thumb, a 4px track and a 16px thumb, so Material, Fluent and
-//! Cupertino had no way to agree on a slider except by not using this one. The
-//! appearance now lives in [`SliderStyle`], and the widget lives one layer up
-//! beside the other composites that needed the same move.
-//!
-//! Everything except `paint` came across unchanged: the same revision model,
-//! the same drag and keyboard handling, the same quantisation, the same
-//! semantics. `SliderStyle::default()` *is* the engine's old hard-coded palette,
-//! so a `Slider` built without a style still paints exactly what it painted
-//! before.
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{

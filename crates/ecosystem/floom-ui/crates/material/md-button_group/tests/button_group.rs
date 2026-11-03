@@ -1,12 +1,3 @@
-//! Material button group: the joined and the unjoined shapes.
-//!
-//! ## The claim
-//!
-//! A button group is a filled surface with the buttons inside it. v1 wrote the
-//! joined case as three separate conditionals -- no gap, the token's radius on
-//! the outer surface, and no padding inside it -- and the unjoined case as the
-//! token's gap, no radius, and 4dp of padding. All of that is kept, and the
-//! assertions are about the surface's own decoration and the stack inside it.
 
 use floom_core::Widget;
 use floom_types::{Color, Insets};
@@ -18,13 +9,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_md_button_group::MaterialButtonGroup;
 
-/// The Material theme, with Material selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time. So a test that wants Material's own values has to
-/// select Material, and `set_design_system` writes a thread-local, so the
-/// selection is this test's alone.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)

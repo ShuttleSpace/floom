@@ -1,10 +1,3 @@
-//! The ported Material 3 toolbar.
-//!
-//! The toolbar is the first ported component that brings its **own content**, so
-//! it is the first one whose tests are about composition as much as decoration:
-//! where the leading icon lands relative to the title, where the title lands
-//! relative to the trailing actions, and whether the `Medium` weight and the
-//! 64px-plus-full-width request actually reach the engine.
 
 use floom_core::Widget;
 use floom_types::{Insets, Rect, Size};
@@ -51,8 +44,6 @@ fn the_bar_declares_its_own_height_and_full_width() {
         "and the full width of its parent, which v1 wrote as `width_pct(100.0)`: {request:?}"
     );
 
-    // And the surface actually carries it, rather than the caller having to put
-    // it on the slot.
     let surface = toolbar().view();
     let declared = surface
         .layout_request()
@@ -63,9 +54,6 @@ fn the_bar_declares_its_own_height_and_full_width() {
 
 #[test]
 fn the_title_carries_the_medium_weight() {
-    // The whole point of the `font_weight` capability, seen from a kit: the title
-    // is `Medium`, and the style struct says so in data rather than the widget
-    // builder hard-coding it.
     let style = toolbar().title("Settings").resolved_style();
     assert_eq!(
         style.title_weight,
@@ -79,10 +67,6 @@ fn the_title_carries_the_medium_weight() {
 
 #[test]
 fn the_token_weight_conversion_does_not_repeat_the_theme_bug() {
-    // `floom_core_theme`'s own `FontWeight::to_floom` maps both `ExtraBold` and
-    // `Black` onto parley's `EXTRA_BOLD`, so the two are indistinguishable there.
-    // It has no call site in any of the three kits, so it is recorded rather than
-    // changed; the kit's own conversion must not inherit it.
     use floom_core::FontWeight as W;
     let convert = |w: floom_core_theme::tokens::typography::FontWeight| match w {
         floom_core_theme::tokens::typography::FontWeight::ExtraBold => W::ExtraBold,
@@ -101,8 +85,6 @@ fn the_leading_icon_is_optional() {
         toolbar().leading_widget('m').glyph() == 'm',
         "an icon renders when one was named"
     );
-    // v1 substituted `Empty` for a missing leading icon; 2.0 pushes no child at
-    // all, which is the same answer without a node.
     let group = toolbar().title("Settings").leading_group();
     assert_eq!(
         group.child_count(),
@@ -174,9 +156,6 @@ fn the_padding_comes_from_the_token() {
 
 #[test]
 fn the_bar_height_is_the_prop_not_the_token() {
-    // Both exist: `ToolbarProps::height` (default 48) and `ToolbarTokens::height`
-    // (default 48). v1 read the prop and left the token unread, so reading the
-    // token here would be a behaviour change rather than a fix.
     let bar = toolbar().height(72.0);
     assert_eq!(bar.resolved_style().height, 72.0);
     assert_eq!(
@@ -186,9 +165,6 @@ fn the_bar_height_is_the_prop_not_the_token() {
     );
 }
 
-/// The control for `an_unelevated_bar_has_no_shadow…`: the elevation flag is what
-/// decides, not the theme, so a theme that turns elevation on cannot add a shadow
-/// to a bar that did not ask for one.
 #[test]
 fn the_shadow_follows_the_props_and_not_the_theme() {
     let theme = MultiTheme::new_for(floom_core_theme::global_theme::DesignSystem::default());
@@ -198,10 +174,6 @@ fn the_shadow_follows_the_props_and_not_the_theme() {
     assert!(raised.shadow().is_some());
 }
 
-/// The whole translation in one assertion: the v1 view was
-/// `Container::new(Stack::horizontal((left, actions)).style(..))` styled with a
-/// background, a height, a full width and padding. All four have to be *on the
-/// surface*, and the two groups inside it.
 #[test]
 fn the_ported_bar_carries_everything_v1_styled_onto_one_widget() {
     let surface = toolbar()
@@ -220,10 +192,6 @@ fn the_ported_bar_carries_everything_v1_styled_onto_one_widget() {
     assert_eq!(surface.child_count(), 1);
 }
 
-/// A `SceneRecorder` paints one widget; the bar's structure is a `Stack`, so
-/// painting the surface is what puts the row's own children into the scene. This
-/// is the check that the row really is horizontal and centred, which no snapshot
-/// of the bar alone would show.
 #[test]
 fn the_row_is_horizontal_and_centred() {
     let surface = toolbar().title("Settings").leading("menu").view();
@@ -232,9 +200,6 @@ fn the_row_is_horizontal_and_centred() {
     surface.paint(&mut recorder, id);
     recorder.finish();
 
-    // The surface paints its fill and asks its row to paint; the recorder does not
-    // descend into a child widget, so what is assertable here is that the bar
-    // itself contributed geometry inside its own bounds rather than nothing.
     let ops = recorder.ops();
     assert!(
         !ops.is_empty(),

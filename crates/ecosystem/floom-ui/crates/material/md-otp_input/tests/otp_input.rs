@@ -1,15 +1,3 @@
-//! The ported Material OTP input -- a row of single-character boxes bound to
-//! one master code.
-//!
-//! The shape is the engine's vocabulary plus the engine's `TextInput`, so what
-//! is tested here is the translation and the pixels: the tokens reach the
-//! style, the boxes are painted in v1's colours at v1's sizes, typing writes
-//! the code, and a masked box shows a dot.
-//!
-//! ## The tripwires
-//!
-//! `the_boxes_are_painted_in_v1_s_colours` and `typing_writes_the_code` would
-//! fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -30,9 +18,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -84,7 +69,6 @@ fn input_of(box_widget: &dyn WidgetAny) -> Box<dyn WidgetAny> {
     box_widget.children().remove(0).build()
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -118,9 +102,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The boxes are painted in v1's colours, at v1's sizes.
 #[test]
 fn the_boxes_are_painted_in_v1_s_colours() {
     let resolved = kit().length(3).resolved_style();
@@ -161,7 +143,6 @@ fn the_boxes_are_painted_in_v1_s_colours() {
     );
 }
 
-/// The character is painted in v1's ink, at v1's size.
 #[test]
 fn the_character_is_painted_in_v1_s_ink() {
     let resolved = kit().length(3).resolved_style();
@@ -208,7 +189,6 @@ fn the_gap_between_the_boxes_is_the_token_s_gap() {
     assert_eq!(request.gap, Some(resolved.gap), "the token's gap");
 }
 
-// --- the structure --------------------------------------------------------
 
 /// Typing in a box writes the code and fires the callback.
 #[test]
@@ -241,8 +221,6 @@ fn typing_writes_the_code() {
     );
 }
 
-/// The code is the boxes' characters, left to right, with the empty ones left
-/// out -- v1's rule.
 #[test]
 fn the_code_skips_the_empty_boxes() {
     let kit = kit().length(3);
@@ -329,12 +307,8 @@ fn the_props_report_the_shape() {
     );
 }
 
-/// The theme: v1's Material OTP input read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialOtpInput::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

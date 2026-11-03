@@ -1,10 +1,3 @@
-//! Material application root: the box, and the content in it.
-//!
-//! ## The claim
-//!
-//! The root is a full-viewport box in the app's background colour, holding the
-//! shell's bars and the main region. The assertions are about the painted fill
-//! and the box's own extent.
 
 use floom_core::Widget;
 use floom_signal::SignalGet;
@@ -23,11 +16,6 @@ const BOX: Rect = Rect {
     y1: 600.0,
 };
 
-/// The Material theme, with Material selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time.
 fn theme() -> MultiTheme {
     set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
@@ -88,8 +76,6 @@ fn building_the_root_initialises_the_layout_signal() {
     let _ = floom_core_theme::layout::layout_signal();
     let app = MaterialApp::new().with_theme(theme());
     let _ = app.view();
-    // The signal exists and is readable: the shell pieces publish into it, and
-    // `main` reads it to inset itself.
     let _ = floom_core_theme::layout::layout_signal().get();
 }
 

@@ -1,11 +1,4 @@
 //! The ported Fluent icon button.
-//!
-//! The engine suite (`floom-widgets/tests/icon_button.rs`) owns the *shape*; this
-//! suite owns the *translation*, which is the only thing left in this crate. So
-//! every assertion here is one v1 read: the token it came from, the arithmetic v1
-//! did on it, and where it ended up.
-//!
-//! Read together with the engine suite they cover both halves; neither alone would.
 
 use floom_core::Widget;
 use floom_core_theme::global_theme::DesignSystem;
@@ -16,13 +9,6 @@ use floom_widgets::{Pressable, Ripple, Surface};
 
 use floom_widget_fluent_icon_button::FluentIconButton;
 
-/// Activate a design system and build the button against it.
-///
-/// `MultiTheme::new_for(ds)` does **not** select `ds` — it reads a process-global at
-/// every access — so a test that wants Material's numbers has to say so. See the
-/// porting plan's correction 9; `floom_card`-style helpers that call `new_for` and
-/// assume it works are the single most common way a kit test ends up measuring
-/// Material.
 fn fluent() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
@@ -33,9 +19,7 @@ fn button() -> FluentIconButton {
     FluentIconButton::new("close")
 }
 
-// --- the tokens reach the engine ------------------------------------------
 
-/// The four scalar reads, straight from `IconButtonTokens`.
 #[test]
 fn the_tokens_reach_the_engine_style() {
     let theme = fluent();
@@ -56,9 +40,6 @@ fn the_tokens_reach_the_engine_style() {
     );
 }
 
-/// v1: `let btn_size = size.unwrap_or(tokens.size);`. An explicit size *replaces*
-/// the token rather than scaling it, and leaves the icon's size alone — which is
-/// why a test that scaled both would pass on one kit and fail on another.
 #[test]
 fn an_explicit_size_replaces_the_token_and_leaves_the_glyph() {
     let token_size = button().resolved_style().size;
@@ -73,27 +54,7 @@ fn an_explicit_size_replaces_the_token_and_leaves_the_glyph() {
     assert_ne!(resized.size, token_size, "and the two really do differ");
 }
 
-/// # The control group could not fail, and that is the finding
-///
-/// This assertion reads the *global* design system, which the test itself sets
-/// immediately above. So it passes whatever the crate's `new()` seeds its
-/// `RwSignal` with: mutating `DesignSystem::Fluent` to `Material` leaves all 14
-/// tests green, because every read goes through the global rather than the seed.
-///
 /// That is correction 9 biting a control group written to catch a different bug. A
-/// test that cannot fail is worse than no test, because it reads as coverage. The
-/// honest fix is not to keep it but to say what it does and does not establish:
-///
-/// * it **does** pin that the crate's translations read `on_surface_variant` and
-///   `primary` from whatever theme is active;
-/// * it **does not** pin that `Fluent` is the kit that gets activated — nothing in
-///   this crate can, because `MultiTheme::new_for` ignores its argument.
-///
-/// So the crate's own design system is unverified by test, and the only thing that
-/// could verify it is a `MultiTheme` that actually carried its design system. Until
-/// that exists, a kit can be wired to the wrong theme and no assertion here will
-/// notice. Recorded in `docs/porting-floem-ui-to-2.0.md` rather than papered over
-/// with a test that passes for the wrong reason.
 #[test]
 fn the_crate_really_reads_fluent_tokens() {
     let style = button().resolved_style();
@@ -111,11 +72,7 @@ fn the_crate_really_reads_fluent_tokens() {
     );
 }
 
-// --- the variant table ----------------------------------------------------
 
-/// v1's three `(bg, border)` pairs, against the theme's own colours. The text
-/// variant's transparency is the assertion: Material's text and outlined variants
-/// share a transparent *fill*, so only the border tells them apart.
 #[test]
 fn the_variant_table_matches_v1s_three_pairs() {
     let theme = fluent();
@@ -142,9 +99,6 @@ fn the_variant_table_matches_v1s_three_pairs() {
     );
 }
 
-/// v1's ripple ink rule: `on_primary` for contained, `on_surface` for the other
-/// two. A single ink for all three would make the contained button's ink invisible
-/// against its own fill, which is exactly why the rule exists.
 #[test]
 fn the_ripple_ink_follows_v1s_rule() {
     let theme = fluent();
@@ -169,10 +123,7 @@ fn the_ripple_ink_follows_v1s_rule() {
     );
 }
 
-// --- the disabled rule ----------------------------------------------------
 
-/// v1's disabled override: two *different* alphas of `on_surface`, and the
-/// variant's pair replaced outright.
 #[test]
 fn the_disabled_colours_are_two_alphas_of_on_surface() {
     let theme = fluent();
@@ -200,11 +151,7 @@ fn the_disabled_colours_are_two_alphas_of_on_surface() {
     );
 }
 
-// --- the variant crossing the boundary ------------------------------------
 
-/// The props' enum and the engine's are separate types, and the translation is
-/// total and in order. Worth a test because a new arm added to one and not the
-/// other would otherwise be a silent wrong answer rather than a compile error.
 #[test]
 fn every_props_variant_maps_to_an_engine_variant() {
     for (props, expected) in [
@@ -229,12 +176,7 @@ fn every_props_variant_maps_to_an_engine_variant() {
     }
 }
 
-// --- the assembled button -------------------------------------------------
 
-/// The composition, read through the *kit*: the crate's job is to hand over a
-/// style and an icon, and the engine's is to assemble them. Both are asserted from
-/// here so a kit that built the wrong thing could not pass by only testing the
-/// engine.
 #[test]
 fn the_kit_hands_the_engine_a_pressable_box() {
     let view = button().view();
@@ -264,25 +206,6 @@ fn the_kit_hands_the_engine_a_pressable_box() {
     );
 }
 
-/// The button's colour wins over the icon's own — and this kit can see it.
-///
-/// `FluentIcon`'s own `resolved_style().color` is `on_surface`, while the
-/// button's enabled `foreground` is `on_surface_variant`. So the override is
-/// *observable* here: the mounted glyph carries the button's colour and not the
-/// icon's own.
-///
-/// That is the state this test wanted to be in and could not be for a while. Both
-/// `*-icon_button` kits were written as line-for-line copies of `md-icon_button`,
-/// Material icon and all, and Material's icon foreground is `on_surface_variant`
-/// — exactly the button's foreground. With both kits on Material's icon the two
-/// were equal, so an enabled button could not tell an override from no override,
-/// and an earlier version of this test asserting they *differed* failed. The
-/// assertion was weakened to `==` to match, with the agreement pinned as a control.
-///
-/// Now that each kit names its own glyph, the difference is back, and the
-/// enabled path pins the override for real. The control is gone because the thing
-/// it controlled no longer holds: see `a_disabled_buttons_glyph_is_the_disabled_foreground`
-/// for the path that was already observable.
 #[test]
 fn the_glyph_takes_the_buttons_colour_and_not_the_icons_own() {
     let style = button().resolved_style();
@@ -300,7 +223,6 @@ fn the_glyph_takes_the_buttons_colour_and_not_the_icons_own() {
     );
 }
 
-/// A disabled button's glyph is the disabled foreground, for the same reason.
 #[test]
 fn a_disabled_buttons_glyph_is_the_disabled_foreground() {
     let style = button().disabled(true).resolved_style();
@@ -313,8 +235,6 @@ fn a_disabled_buttons_glyph_is_the_disabled_foreground() {
     );
 }
 
-/// The glyph's size is the token's, and the box's size is the token's too — v1
-/// sized both from `tokens`, with only the *box* overridable.
 #[test]
 fn the_glyph_is_sized_from_the_icon_token() {
     let style = button().resolved_style();
@@ -322,8 +242,6 @@ fn the_glyph_is_sized_from_the_icon_token() {
     assert_eq!(view.icon().edge(), style.icon_size);
 }
 
-/// `view()` is idempotent in the sense that matters: two calls produce two buttons
-/// that agree, rather than one of them having consumed a shared resource.
 #[test]
 fn two_views_agree() {
     let a = button().view();
@@ -333,11 +251,7 @@ fn two_views_agree() {
     assert_eq!(a.icon().edge(), b.icon().edge());
 }
 
-// --- props ----------------------------------------------------------------
 
-/// `props()` reports what v1 reported, including the click callback — which is
-/// stored twice (a `Box<dyn Fn()>` for the props, an `Arc<dyn Fn() + Send + Sync>`
-/// for the engine). Both from one closure.
 #[test]
 fn the_props_report_the_click_callback() {
     let hits = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -353,12 +267,6 @@ fn the_props_report_the_click_callback() {
         "the v1-shaped copy is set, so `props()` reports what v1 reported"
     );
 
-    // And the engine's copy is the one that fires: click the pressable.
-    //
-    // Both wrappers are reached by mutable borrow rather than cloned: `Ripple` and
-    // `Pressable` are deliberately not `Clone`, because a `Pressable` carries a
-    // callback that is not `Send + Sync` and a second copy would be a second node
-    // pretending to be the first.
     let view = button.view();
     let mut ripple = view.children()[0].build();
     let mut inner = {
@@ -399,7 +307,6 @@ fn the_props_report_the_click_callback() {
     );
 }
 
-/// A button with no callback stays a button.
 #[test]
 fn a_button_with_no_callback_is_fine() {
     assert!(button().props().on_click.is_none());
@@ -407,7 +314,6 @@ fn a_button_with_no_callback_is_fine() {
     assert_eq!(view.children().len(), 1, "and it still assembles");
 }
 
-/// Design-system colour -> engine colour, the same widening the crate does.
 fn to_paint(c: floom_core_theme::tokens::color::Color) -> floom_types::Color {
     floom_types::Color {
         r: c.r,

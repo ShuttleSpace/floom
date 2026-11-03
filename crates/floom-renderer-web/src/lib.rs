@@ -116,13 +116,10 @@ impl Presenter for WebPresenter {
             frame_number: self.frames,
         };
         self.renderer.begin_frame(&info);
-        // The registry drives text (glyph-run rasterisation) and image blits;
-        // the renderer itself is damage-aware, so an unchanged frame skips.
         self.renderer
             .render_scene_with_resources(scene, scene.damage(), resources);
         self.renderer.end_frame();
 
-        // Push the freshly rasterized pixels onto the live canvas.
         canvas::blit(self.renderer.pixels(), self.width, self.height);
     }
 

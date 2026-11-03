@@ -1,17 +1,4 @@
 //! The ported Fluent skeleton loader -- the grey placeholder shown while
-//! content loads.
-//!
-//! ## Why the pixels and not the style
-//!
-//! The style can say what colour a block was *given*; only the paint log can
-//! say that the block was painted in it, at what size, and with what corner
-//! radius. So the tests read the paint.
-//!
-//! ## The tripwires
-//!
-//! `the_circle_is_a_circle`, `the_text_is_a_column_of_lines` and
-//! `the_animated_prop_changes_nothing` would fail if this kit stopped being
-//! this kit.
 
 use floom_core::{ElementId, Length, Rect, Widget, WidgetAny};
 use floom_types::Color;
@@ -32,9 +19,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -50,7 +34,6 @@ fn tokens() -> floom_core_theme::component_tokens::SkeletonTokens {
     }
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -60,7 +43,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -70,15 +52,12 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The placeholder inside the outer box.
 fn content_of(kit: FluentSkeletonLoader) -> Box<dyn WidgetAny> {
     let outer = kit.view();
     outer.children().remove(0).build()
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens reach the style.
 #[test]
 fn the_tokens_reach_the_style() {
     let style: FluentSkeletonStyle = kit().resolved_style();
@@ -102,8 +81,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// The outer width is the type's own: a card is 200 wide, a rectangle 160,
-/// and anything else 240.
 #[test]
 fn the_outer_width_is_the_types_own() {
     for (skeleton_type, width) in [
@@ -121,7 +98,6 @@ fn the_outer_width_is_the_types_own() {
     }
 }
 
-/// An explicit width wins over the type's default.
 #[test]
 fn an_explicit_width_wins() {
     let style = kit()
@@ -131,9 +107,7 @@ fn an_explicit_width_wins() {
     assert_eq!(style.outer_width, 300.0);
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The circle is a circle of the avatar's size.
 #[test]
 fn the_circle_is_a_circle() {
     let style = kit().skeleton_type(SkeletonType::Circle).resolved_style();
@@ -161,7 +135,6 @@ fn the_circle_is_a_circle() {
     assert_eq!(radius, 9999.0, "9999 is a circle whatever the size");
 }
 
-/// The rectangle is two text lines tall.
 #[test]
 fn the_rectangle_is_two_lines_tall() {
     let style = kit().skeleton_type(SkeletonType::Rect).resolved_style();
@@ -188,7 +161,6 @@ fn the_rectangle_is_two_lines_tall() {
     assert_eq!(radius, style.corner_radius, "the token's corner radius");
 }
 
-/// The card is the card's size, with the card's radius.
 #[test]
 fn the_card_is_the_card_size() {
     let style = kit().skeleton_type(SkeletonType::Card).resolved_style();
@@ -211,9 +183,7 @@ fn the_card_is_the_card_size() {
     assert_eq!(radius, style.card_radius, "the card's own radius");
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The text placeholder is a column of lines.
 #[test]
 fn the_text_is_a_column_of_lines() {
     let style = kit()
@@ -243,7 +213,6 @@ fn the_text_is_a_column_of_lines() {
     );
 }
 
-/// The avatar is a circle and at most three lines.
 #[test]
 fn the_avatar_is_a_circle_and_at_most_three_lines() {
     let row = content_of(kit().skeleton_type(SkeletonType::Avatar).lines(9));
@@ -257,7 +226,6 @@ fn the_avatar_is_a_circle_and_at_most_three_lines() {
     );
 }
 
-/// `animated` changes nothing: nothing shimmers.
 #[test]
 fn the_animated_prop_changes_nothing() {
     let still = ops_of(&*content_of(
@@ -272,7 +240,6 @@ fn the_animated_prop_changes_nothing() {
     );
 }
 
-/// The props report what the caller set.
 #[test]
 fn the_props_report_what_the_caller_set() {
     let kit = kit()

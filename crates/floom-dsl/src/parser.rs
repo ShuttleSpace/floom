@@ -116,8 +116,8 @@ impl Parser {
         if !is_block {
             return Ok(Vec::new());
         }
-        self.bump(); // `bindings`
-        self.bump(); // `{`
+        self.bump();
+        self.bump();
         let mut out = Vec::new();
         while !matches!(
             self.peek(),
@@ -136,7 +136,7 @@ impl Parser {
                 ty_span,
             });
         }
-        self.bump(); // `}`
+        self.bump();
         Ok(out)
     }
 
@@ -174,8 +174,8 @@ impl Parser {
                 break;
             }
             if is_event {
-                self.bump(); // `on`
-                self.bump(); // `:`
+                self.bump();
+                self.bump();
                 let (event, _) = self.ident("an event name")?;
                 self.expect(Token::Eq, "`=` after the event name")?;
                 let (handler, handler_span) = self.ident("a handler name")?;
@@ -186,7 +186,7 @@ impl Parser {
                     value_span: handler_span,
                 });
             } else {
-                self.bump(); // the property name
+                self.bump();
                 self.expect(Token::Eq, "`=` after the property name")?;
                 let (value, value_span) = self.literal()?;
                 attrs.push(AstAttr {
@@ -206,7 +206,7 @@ impl Parser {
                 ..
             })
         ) {
-            self.bump(); // `{`
+            self.bump();
             while !matches!(
                 self.peek(),
                 Some(Spanned {
@@ -216,7 +216,7 @@ impl Parser {
             ) {
                 children.push(self.node()?);
             }
-            self.bump(); // `}`
+            self.bump();
         }
 
         Ok(AstNode {

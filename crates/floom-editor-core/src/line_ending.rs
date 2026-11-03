@@ -4,7 +4,6 @@ use lapce_xi_rope::{DeltaBuilder, Rope, RopeDelta};
 use memchr::{memchr, memchr2};
 use std::sync::LazyLock;
 
-// Cached ropes for the two line endings
 static CR_LF: LazyLock<Rope> = LazyLock::new(|| Rope::from("\r\n"));
 static LF: LazyLock<Rope> = LazyLock::new(|| Rope::from("\n"));
 
@@ -109,8 +108,6 @@ pub enum LineEndingDetermination {
     Unknown,
 }
 impl LineEndingDetermination {
-    // TODO: should we just do a simpler routine of checking the first few lines?
-    // Based off of xi-rope's line-ending determination logic
     pub fn determine(text: &Rope) -> Self {
         let mut crlf = false;
         let mut lf = false;
@@ -319,19 +316,15 @@ impl<'a, I: Iterator<Item = &'a str>> Iterator for LoneCrChunkSearch<'a, I> {
                     // Check if the next character is '\n' (indicating \r\n)
                     self.chunk_pos += x + 1;
                     if self.chunk_pos < chunk.len() && chunk.as_bytes()[self.chunk_pos] == b'\n' {
-                        // Skip \r\n sequences
                         self.chunk_pos += 1;
                     } else if let Some(chunk_b) = self.get_chunk() {
                         let chunk_b = &chunk_b.as_bytes()[self.chunk_pos..];
                         if chunk_b.starts_with(b"\n") {
-                            // Skip \r\n sequences across chunks
                             self.chunk_pos += 1;
                         } else {
-                            // Lone \r
                             return Some(offset);
                         }
                     } else {
-                        // Lone \r at the end
                         return Some(offset);
                     }
                 }

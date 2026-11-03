@@ -1,16 +1,5 @@
 //! The ported Cupertino expansion panels — the *stateful* reference port.
 //!
-//! Where `md-card`'s test proved the theme→style→widget translation and
-//! `md-button`'s pinned an interaction, this one pins what only a component that
-//! *changes after mount* has: that the theme's tokens reach the engine widget,
-//! that the panels and their bodies survive being shared into the tree, and that
-//! the design system's single-panel rule is still in force after the trip.
-//!
-//! The state machine's own behaviour — mount, unmount, reconcile, and the two
-//! things this port could not carry over — is pinned where it lives, in
-//! `floom-widgets`' `compose::accordion_tests`. A kit test can only reach the
-//! public surface of the engine widget, which is the right boundary: this file
-//! proves the *translation*, not the engine.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -373,7 +362,6 @@ fn the_header_is_padded_at_the_sides() {
     let style = CupertinoExpansionPanels::new().resolved_style();
     let accordion = panels(1).resolve();
     // The panel holds the header, the header holds a pressable, and the
-    // pressable holds the header's row.
     let leaf = accordion.children()[0].build();
     let pressable = leaf.children().remove(0).build();
     let row = pressable.children().remove(0).build();

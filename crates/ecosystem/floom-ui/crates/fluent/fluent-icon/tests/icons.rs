@@ -1,9 +1,4 @@
 //! The icon path table and the engine widget built from it.
-//!
-//! The table itself did not change in this port — it never depended on v1 — so most of
-//! these tests are about the two things that *did*: the normalisation that decides
-//! whether a name resolves, and the fact that the fallback is a drawn circle rather than
-//! nothing.
 
 use floom_types::{ElementId, Rect};
 
@@ -19,8 +14,6 @@ const BOX: Rect = Rect {
     y1: 24.0,
 };
 
-/// A named icon resolves to real path data. The control for everything below: if this
-/// failed, every other assertion here would pass vacuously.
 #[test]
 fn a_named_icon_resolves_to_real_path_data() {
     for name in ["menu", "close", "expand_more", "chevron_right"] {
@@ -28,9 +21,6 @@ fn a_named_icon_resolves_to_real_path_data() {
             !fluent_icon_path(name).is_empty(),
             "{name:?} resolves to something"
         );
-        // I first asserted "no spaces", which is wrong: SVG path data uses spaces as
-        // argument separators (`M3 18h18v-2H3v2z`). What actually distinguishes it from
-        // prose or markup is a command letter and no tag.
         let path = fluent_icon_path(name);
         assert!(
             path.chars().any(|c| c.is_ascii_uppercase()),
@@ -40,12 +30,6 @@ fn a_named_icon_resolves_to_real_path_data() {
     }
 }
 
-/// Names are normalised, so the three spellings of one icon agree.
-///
-/// v1 wrote `name.to_lowercase().replace(['_', '-', ' '], "")` before the match. That
-/// line is the whole reason a caller can pass `"expand_more"` and a kit can pass
-/// `"expandmore"` and both land on the same icon — easy to lose in a port, and its
-/// loss is invisible until someone uses the other spelling.
 #[test]
 fn names_are_normalised_before_the_lookup() {
     let canonical = fluent_icon_path("expand_more");
@@ -59,8 +43,6 @@ fn names_are_normalised_before_the_lookup() {
     assert_eq!(fluent_icon_path("EXPAND_MORE"), canonical, "all caps");
 }
 
-/// **An unknown name draws a filled circle, not nothing.** That is v1's `FALLBACK`, and
-/// it is kept deliberately: a missing icon that draws a dot is visibly wrong, where an
 /// empty box looks like a spacing bug. The cost is that a typo is not a crash.
 #[test]
 fn an_unknown_name_falls_back_to_a_drawn_shape() {
@@ -76,8 +58,6 @@ fn an_unknown_name_falls_back_to_a_drawn_shape() {
     );
 }
 
-/// The SVG wrapper and the path agree — they are two views of one table, and a port
-/// that rewrote one of them would leave them quietly inconsistent.
 #[test]
 fn the_svg_wrapper_contains_the_same_path() {
     let svg = fluent_icon_svg("close");
@@ -91,13 +71,11 @@ fn the_svg_wrapper_contains_the_same_path() {
     );
 }
 
-/// The view box is 24x24, which is a property of the data rather than of any widget.
 #[test]
 fn the_view_box_is_the_sets_own() {
     assert_eq!(VIEW_BOX, BOX);
 }
 
-/// And the engine widget the kit actually uses is built from that table and paints.
 #[test]
 fn the_engine_icon_paints() {
     let icon = fluent_icon("close");
@@ -108,8 +86,6 @@ fn the_engine_icon_paints() {
     );
 }
 
-/// A  for an unknown name still paints — which is the whole reason the
-/// fallback is a circle.
 #[test]
 fn an_unknown_name_still_paints() {
     let icon = fluent_icon("definitely_not_an_icon");
@@ -120,7 +96,6 @@ fn an_unknown_name_still_paints() {
     );
 }
 
-/// The type is the engine's, so a kit can hand it to  unchanged.
 #[test]
 fn the_icon_is_an_engine_vector_icon() {
     fn takes(_: &VectorIcon) {}

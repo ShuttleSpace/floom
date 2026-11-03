@@ -1,32 +1,3 @@
-//! `Tooltip` — a hint that appears over a control while the pointer rests on it.
-//!
-//! Theme-agnostic by design, like [`Badge`]: a 2.0 widget takes explicit values
-//! rather than reading a global theme signal, so resolving the palette and the
-//! token sizes is the *kit's* job.
-//!
-//! ## The shape of the thing
-//!
-//! A tooltip is three decisions and nothing else:
-//!
-//! * **what it says** — one line of text,
-//! * **what it looks like** — a rounded box with the text in it,
-//! * **where it appears** — under the control, a gap below it, as wide as the
-//!   text and no wider.
-//!
-//! The third one is the reason this is a widget and not a box: the bubble has
-//! to *measure* the text to know how wide it is, and the width is what makes it
-//! a bubble rather than a bar.
-//!
-//! ## Where it lives
-//!
-//! The bubble is an **overlay**: it is asked of the host, positioned against
-//! the control's own box, and laid over whatever is underneath rather than
-//! pushing it around. That is the difference between a tooltip and a caption.
-//!
-//! Without a host to ask, the bubble falls back to sitting in the tree under
-//! the control, where it is as wide as its text and moves the layout as it
-//! appears. The fallback is the degraded path, and the host decides which one
-//! an app gets.
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{

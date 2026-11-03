@@ -77,48 +77,17 @@ impl FluentIcon {
         }
     }
 
-    /// The path data for this kit's named glyph.
-    ///
-    /// A kit's icon table is data, so a caller that wants the `d` attribute
-    /// rather than a widget reads it here instead of unwrapping a `VectorIcon`.
     pub fn path_data(&self) -> &'static str {
         fluent_icon_path(&self.props.name)
     }
 
-    /// The icon as an engine `VectorIcon`.
-    ///
-    /// This is the 2.0 replacement for v1's `view()`. Total and unwrap-free: an
-    /// unknown name gives the set's fallback, because that is what the path table
-    /// returns.
     pub fn resolve(&self) -> VectorIcon {
         fluent_icon(&self.props.name)
     }
 }
 
-// ---------------------------------------------------------------------------
-// The Floom 2.0 surface, added without removing the v1 one
-// ---------------------------------------------------------------------------
-//
-// I first *replaced* this file with a 2.0-only version, and that broke five crates that
-// are still v1: `cupertino-alert`, `cupertino-dialog`, `fluent-alert`, `fluent-dialog`
-// and `fluent-stepper` all call `FluentIcon::new(..).view()`. The floem-ui workspace went
-// from three error crates to eight.
-//
-// The mistake was treating "this crate is being ported" as "this crate's consumers have
-// been ported". They have not — the port proceeds one shape at a time and the v1 tree
-// is still there underneath. So the fix is to **add** a 2.0 surface and leave the v1 one
-// alone, which is what the porting rule actually says: never reintroduce a v1 `floom`
-// dependency into a ported crate, not never keep one in a crate that is still v1.
-//
-// The v1 widget below stays for its v1 callers. The three functions above it are what a
 // ported kit uses, and note that they resolve **no theme at all** — which is the point:
-// 2.0's icon is a widget the caller holds and restyles, not a builder that resolves a
-// design system on the caller's behalf.
 
-/// The box every icon in this set is authored in.
-///
-/// Named rather than inlined, because it is a property of the *data*: the table, the
-/// engine widget built from it, and the test that checks the fallback all read it.
 pub const VIEW_BOX: Rect = Rect {
     x0: 0.0,
     y0: 0.0,
@@ -126,14 +95,6 @@ pub const VIEW_BOX: Rect = Rect {
     y1: 24.0,
 };
 
-/// The named icon, as an engine `VectorIcon`.
-///
-/// Total and unwrap-free: an unknown name gives the set's fallback, because that is
-/// what the path table returns and inventing a second notion of "missing" here would be
-/// a second answer to the same question.
 pub fn fluent_icon(name: &str) -> VectorIcon {
-    // `from_path_data` rather than `new(parse_path_data(..))`: the engine already has
-    // the pair, and a kit that spells it the long way is a kit whose icon table and
-    // every other icon in the workspace are parsed by two different-looking routes.
     VectorIcon::from_path_data(fluent_icon_path(name), VIEW_BOX)
 }

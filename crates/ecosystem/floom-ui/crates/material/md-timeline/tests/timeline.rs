@@ -1,15 +1,3 @@
-//! The ported Material timeline -- a column of entries, each a dot with a line
-//! running down from it.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the dot and the
-//! line are painted in v1's colours at v1's sizes, and the last entry's line
-//! is the width v1 gave it.
-//!
-//! ## The tripwires
-//!
-//! `the_dot_and_the_line_are_painted_in_v1_s_colours` and
-//! `the_last_entry_has_no_line` would fail if this kit stopped being this kit.
 
 use floom_core::{ElementId, Rect, Widget};
 use floom_types::Color;
@@ -28,9 +16,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -59,7 +44,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -93,21 +77,15 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The dot and the line are painted in v1's colours, at v1's sizes.
 #[test]
 fn the_dot_and_the_line_are_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
-    // Two entries, so the first one is not the last: the last entry's line is
-    // the width v1 gave it, which is none.
     let column = kit()
         .item("Started", "The first entry")
         .item("Finished", "The second entry")
         .view();
 
-    // The column holds the entries; the first entry holds the dot column and
-    // the text column.
     let row = column.children().remove(0).build();
     let dot_column = row.children().remove(0).build();
 
@@ -149,7 +127,6 @@ fn the_dot_and_the_line_are_painted_in_v1_s_colours() {
     );
 }
 
-/// The title and the description are painted in v1's ink, at v1's sizes.
 #[test]
 fn the_title_and_the_description_are_painted_in_v1_s_ink() {
     let column = kit()
@@ -198,7 +175,6 @@ fn the_title_and_the_description_are_painted_in_v1_s_ink() {
     );
 }
 
-/// The last entry has no line under it: v1 gave it a width of zero.
 #[test]
 fn the_last_entry_has_no_line() {
     let column = kit().item("One", "First").item("Two", "Second").view();
@@ -217,8 +193,6 @@ fn the_last_entry_has_no_line() {
     );
 }
 
-/// v1's `item_gap` was written on a container that held one child, so the
-/// entries were stacked with no gap between them.
 #[test]
 fn the_entries_have_no_gap_between_them() {
     let column = kit().item("One", "First").item("Two", "Second").view();
@@ -241,12 +215,8 @@ fn the_props_report_the_entries() {
     assert_eq!(kit.props().items[1].description, "Second");
 }
 
-/// The theme: v1's Material timeline read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialTimeline::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

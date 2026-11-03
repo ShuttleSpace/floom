@@ -1,8 +1,3 @@
-//! The surface composites, driven through a real host.
-//!
-//! These moved out of `floom-app/tests/reconcile.rs` with the widgets they
-//! exercise. A test of a widget's behaviour belongs with the widget, and this
-//! file is what has to be deleted with it.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

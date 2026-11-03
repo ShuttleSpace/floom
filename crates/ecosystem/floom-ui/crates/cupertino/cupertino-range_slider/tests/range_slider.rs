@@ -1,17 +1,5 @@
 //! The ported Cupertino range slider -- a track with two thumbs, and the band
 //! between them.
-//!
-//! The engine has no range slider, so the widget is the kit's own; what is
-//! tested here is therefore the translation *and* the widget: the tokens reach
-//! the style, the track, the band and the two thumbs are painted in v1's
-//! colours at v1's sizes, and a drag moves the nearer thumb and stops at the
-//! other one.
-//!
-//! ## The tripwires
-//!
-//! `the_track_the_band_and_the_two_thumbs_are_painted` and
-//! `a_drag_moves_the_nearer_thumb` would fail if this kit stopped being this
-//! kit.
 
 use floom_core::{ElementId, Event, Point, Rect, Widget};
 use floom_types::{Color, PointerEvent};
@@ -35,7 +23,6 @@ const TRACK: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -218,7 +205,6 @@ fn a_drag_moves_the_nearer_thumb() {
     let mut widget = kit().low(25.0).high(75.0).view();
     let id = allocate(&widget);
     // 20 is a tenth of the way along a 200 wide track: nearer the low thumb
-    // than the high one.
     let consumed = dispatch(
         &mut widget,
         id,
@@ -337,7 +323,6 @@ fn the_two_values_are_shared_with_the_caller() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoRangeSlider::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

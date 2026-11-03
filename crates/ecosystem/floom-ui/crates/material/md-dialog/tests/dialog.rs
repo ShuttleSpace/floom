@@ -1,22 +1,3 @@
-//! Material's dialog as a kit crate.
-//!
-//! ## What this file can and cannot reach
-//!
-//! The close button and the action buttons live inside the card, which the host mounts
-//! from an overlay's content factory. Driving a click on them needs a host that
-//! hit-tests and dispatches — so at *kit* level those callbacks are not reachable, the
-//! same limitation that cost the combobox its row hover fill.
-//!
-//! What is reachable, and what therefore carries the claims:
-//!
-//! * the shared flag, in every direction — `open`, `close`, `is_open`, `open_flag`,
-//!   `with_open_flag`;
-//! * the request the mounted view makes: a **modal** dialog over the viewport, which is
-//!   the behaviour change this port makes (v1 closed on an outside click; the host does
-//!   not light-dismiss a modal overlay);
-//! * the card the kit supplies, which carries v1's title row and close button — checked
-//!   structurally, because an unmounted `Stack` paints none of its children's ink;
-//! * and the token translation, including the nine-variant `FontWeight` mapping.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -44,12 +25,7 @@ fn dialog() -> MdDialog {
         .content("This cannot be undone.")
 }
 
-// --- the shared flag, in every direction ----------------------------------
 
-/// The flag is the truth about whether the dialog is up, in both directions.
-///
-/// This is the whole of correction 11 in one assertion: v1 stored `open` in an
-/// `RwSignal<bool>`, and here it is an `Arc<Mutex<bool>>` that a caller can hold.
 #[test]
 fn open_and_is_open_read_and_write_one_flag() {
     let mut dialog = dialog();
@@ -71,16 +47,12 @@ fn close_reports_whether_it_changed_anything() {
     assert!(!dialog.is_open());
 }
 
-/// **`open_flag` hands out the same allocation.** `Arc::ptr_eq`, because two independent
-/// flags holding the same value would pass every behavioural test above and then
-/// quietly diverge — which is the bug a shared flag is supposed to prevent.
 #[test]
 fn the_flag_is_one_allocation() {
     let dialog = dialog();
     assert!(Arc::ptr_eq(&dialog.open_flag(), &dialog.open_flag()));
 }
 
-/// `with_open_flag` is v1's `with_open_signal`, and it *shares* rather than copies.
 #[test]
 fn a_flag_from_outside_is_shared_not_copied() {
     let external = write_flag(&floom_widgets::shared_flag(false), true);
@@ -90,7 +62,6 @@ fn a_flag_from_outside_is_shared_not_copied() {
     let mut dialog = dialog().with_open_flag(flag.clone());
     assert!(Arc::ptr_eq(&flag, &dialog.open_flag()), "one allocation");
 
-    // A dialog and the button that opens it: the button writes, the dialog follows.
     write_flag(&flag, true);
     assert!(dialog.is_open(), "so an external trigger opens it");
 
@@ -107,15 +78,7 @@ fn taking_an_external_flag_seeds_the_props() {
     assert!(dialog.props().open, "so `props()` agrees with the flag");
 }
 
-// --- the request the mounted view makes ----------------------------------
 
-/// A flag set to true asks the host for a **modal** dialog over the viewport.
-///
-/// `modal: true` is the behaviour change this port makes, so it is asserted rather than
-/// assumed: v1's dialog closed when the user clicked outside it, because its scrim
-/// covered the window and carried an `on_event(Click)`. The host deliberately does not
-/// light-dismiss a modal overlay, so the two disagree — and the host's rule is the right
-/// one, because a widget cannot see a press that lands outside itself.
 #[test]
 fn the_viewed_dialog_asks_for_a_modal_dialog_over_the_viewport() {
     let mut view = dialog().open(true).view();
@@ -154,9 +117,6 @@ fn a_shut_dialog_asks_for_nothing() {
     assert!(!cx.opened_any_overlay());
 }
 
-/// **A host dismissal clears the caller's flag**, which is the engine's wiring but is
-/// worth seeing from the kit: a caller watching the flag sees the dialog close, rather
-/// than a dialog that comes straight back.
 #[test]
 fn a_host_dismissal_clears_the_caller_s_flag() {
     let mut dialog = dialog().open(true);
@@ -212,12 +172,7 @@ fn the_flag_opens_it_again_after_a_dismissal() {
     );
 }
 
-// --- the card the kit supplies -------------------------------------------
 
-/// The card is a `Surface`, because v1's card was a boxed surface with a max width, a
-/// padding, a radius and a shadow. Checked by downcast rather than by painting: an
-/// unmounted `Stack` paints none of its children's ink, so a scene-based assertion here
-/// would be vacuous.
 #[test]
 fn the_card_is_a_bordered_surface() {
     let mut view = dialog().open(true).view();
@@ -233,11 +188,7 @@ fn the_card_is_a_bordered_surface() {
     );
 }
 
-// --- the token translation -----------------------------------------------
 
-/// The three numbers from `DialogTokens` are the token's. The failure this pins is a kit
-/// silently resolving to a default because `theme.component(..)` did not match — which is
-/// `unreachable!()` at runtime, so the symptom is a dialog in the wrong metrics.
 #[test]
 fn the_tokens_come_from_dialog_tokens() {
     let style = dialog().resolved_style();
@@ -254,8 +205,6 @@ fn the_tokens_come_from_dialog_tokens() {
     assert_eq!(style.border_radius, tokens.border_radius);
 }
 
-/// The numbers v1 wrote at the call site. None of them are tokens, and all of them are
-/// design decisions.
 #[test]
 fn the_call_site_numbers_are_v1s() {
     let style = dialog().resolved_style();
@@ -268,9 +217,6 @@ fn the_call_site_numbers_are_v1s() {
     assert_eq!(style.shadow_alpha, 30, "v1's `with_alpha(black, 30)`");
 }
 
-/// **The body text is lighter than the title, at alpha 222.** That asymmetry is the
-/// reason the number is a field rather than a constant in a `color(..)` call: a reader
-/// comparing the two lines would otherwise assume one of them is wrong.
 #[test]
 fn the_content_is_deliberately_lighter_than_the_title() {
     let style = dialog().resolved_style();
@@ -285,7 +231,6 @@ fn the_content_is_deliberately_lighter_than_the_title() {
     assert_eq!(style.on_surface.a, 255, "the title is at full strength");
 }
 
-/// The three type sizes come from the theme's ramp, at the roles v1 named.
 #[test]
 fn the_type_sizes_come_from_the_roles_v1_named() {
     let style = dialog().resolved_style();
@@ -298,21 +243,13 @@ fn the_type_sizes_come_from_the_roles_v1_named() {
     assert_eq!(style.action_size, typography.label.large.font_size);
 }
 
-/// **v1's shadow is black at alpha 30**, like the combobox panel's at 20 — two different
-/// numbers for the same idea, and both worth keeping as written.
 #[test]
 fn the_shadow_is_black_at_v1s_alpha() {
     let style = dialog().resolved_style();
     assert_eq!(style.shadow_alpha, 30);
 }
 
-// --- the second FontWeight mapping ---------------------------------------
 
-/// All nine variants, named rather than routed through a dependency's numeric weight.
-///
-/// The mapping lives in the kit rather than the engine because the theme's enum is in
-/// `floom-core-theme`, which the engine does not depend on. Public because a translation
-/// decision is the kind of thing a test has to be able to reach.
 #[test]
 fn all_nine_theme_weights_map_by_name() {
     use floom_core_theme::tokens::typography::FontWeight as Theme;
@@ -337,13 +274,6 @@ fn all_nine_theme_weights_map_by_name() {
     }
 }
 
-/// **`Black` goes to 900 here and to 800 in v1.** v1's `to_floom()` returned a
-/// `parley::style::FontWeight`, and parley's table has no 900, so `Black` landed on
-/// `EXTRA_BOLD`.
-///
-/// Unverifiable from here — no call site in any kit reads `Black` — and it is a bug fix
-/// rather than a translation. It is deliberately the *only* place the two answers differ,
-/// so that a reader comparing them finds one difference rather than a pattern.
 #[test]
 fn black_maps_to_900_where_v1_mapped_it_to_800() {
     use floom_core_theme::tokens::typography::FontWeight as Theme;
@@ -362,12 +292,6 @@ fn black_maps_to_900_where_v1_mapped_it_to_800() {
     );
 }
 
-/// And the action's weight is the theme's `label.large`, not a hard-coded Medium.
-///
-/// v1 wrote `FontWeight::Medium.to_floom()` literally, so a theme that changed
-/// `label.large`'s weight would have been ignored. Reading it from the ramp is the same
-/// decision as reading the size from the ramp, and it is worth a test because the two
-/// lines look interchangeable and only one of them reads the theme.
 #[test]
 fn the_action_weight_comes_from_the_ramp_not_from_a_literal() {
     let style = dialog().resolved_style();
@@ -380,11 +304,7 @@ fn the_action_weight_comes_from_the_ramp_not_from_a_literal() {
     );
 }
 
-// --- props ----------------------------------------------------------------
 
-/// `props()` keeps reporting what v1 reported: a callback for `on_close`, and one entry
-/// per action. The callbacks are stored twice — v1-shaped for `props()`, `Send + Sync`
-/// for the engine — which is why `props().on_change`-style reporting still works.
 #[test]
 fn props_report_the_v1_shaped_callbacks() {
     let fired = Arc::new(AtomicUsize::new(0));
@@ -420,11 +340,7 @@ fn actions_accumulate() {
     assert_eq!(dialog.props().actions.len(), 3);
 }
 
-// --- the theme, which no test verifies -----------------------------------
 
-/// **Nothing here verifies that this is Material's theme.** `MultiTheme::new_for`
-/// ignores its argument and reads go through a process-global, so these numbers are
-/// Material's because nothing has called `set_design_system`.
 #[test]
 fn the_theme_is_not_selected_by_naming_it() {
     let material = dialog().resolved_style();

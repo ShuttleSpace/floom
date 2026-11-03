@@ -1,16 +1,4 @@
 //! The ported Fluent empty state -- an icon, a title, a description, and
-//! whatever the caller wants under them.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the three lines are
-//! painted in v1's ink at v1's sizes, and the lines that v1 left out are left
-//! out here too.
-//!
-//! ## The tripwires
-//!
-//! `the_three_lines_are_painted_in_v1_s_ink` and
-//! `an_empty_icon_and_description_leave_no_line` would fail if this kit stopped
-//! being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Rect, Widget};
 use floom_types::Color;
@@ -29,9 +17,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -40,7 +25,6 @@ fn kit() -> FluentEmptyState {
     FluentEmptyState::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -50,7 +34,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The surface's fill.
 fn surface_fill(kit: FluentEmptyState) -> Option<Color> {
     let surface = kit.view();
     let mut create = AllocatingCreateContext::new();
@@ -65,7 +48,6 @@ fn surface_fill(kit: FluentEmptyState) -> Option<Color> {
     })
 }
 
-/// The lines the column holds: their text, their size and their ink.
 fn lines(kit: FluentEmptyState) -> Vec<(String, f32, Color)> {
     let surface = kit.view();
     let column = surface.children().remove(0).build();
@@ -89,9 +71,7 @@ fn lines(kit: FluentEmptyState) -> Vec<(String, f32, Color)> {
     out
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the ink reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentEmptyStateStyle = kit().resolved_style();
@@ -136,9 +116,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The surface is painted the colour v1 painted.
 #[test]
 fn the_surface_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -149,7 +127,6 @@ fn the_surface_is_painted_v1_s_colour() {
     );
 }
 
-/// The three lines are painted in v1's ink at v1's sizes.
 #[test]
 fn the_three_lines_are_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -182,8 +159,6 @@ fn the_three_lines_are_painted_in_v1_s_ink() {
     );
 }
 
-/// v1 left out the icon and the description when they were empty, and so does
-/// this.
 #[test]
 fn an_empty_icon_and_description_leave_no_line() {
     let lines = lines(kit().title("Nothing here"));
@@ -191,7 +166,6 @@ fn an_empty_icon_and_description_leave_no_line() {
     assert_eq!(lines[0].0, "Nothing here");
 }
 
-/// The caller's child is mounted under the text.
 #[test]
 fn the_callers_child_is_mounted_under_the_text() {
     let child = Child::new(ChildKey::index(0), LayoutRequest::new(), || {
@@ -206,7 +180,6 @@ fn the_callers_child_is_mounted_under_the_text() {
     );
 }
 
-/// The props report the text.
 #[test]
 fn the_props_report_the_text() {
     let kit = kit()
@@ -218,12 +191,8 @@ fn the_props_report_the_text() {
     assert_eq!(kit.props().description, "Try something else");
 }
 
-/// The theme: v1's Fluent empty state took a *snapshot* of its own design
-/// system, so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentEmptyState::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

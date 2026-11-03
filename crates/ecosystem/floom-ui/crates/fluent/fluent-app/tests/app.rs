@@ -1,10 +1,4 @@
 //! Fluent application root: the box, and the content in it.
-//!
-//! ## The claim
-//!
-//! The root is a full-viewport box in the app's background colour, holding the
-//! shell's bars and the main region. The assertions are about the painted fill
-//! and the box's own extent.
 
 use floom_core::Widget;
 use floom_signal::SignalGet;
@@ -23,17 +17,11 @@ const BOX: Rect = Rect {
     y1: 600.0,
 };
 
-/// The Fluent theme, with Fluent selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time.
 fn theme() -> MultiTheme {
     set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
 
-/// The root fills its box and is painted in the app's background colour.
 #[test]
 fn the_root_is_a_full_viewport_box_in_the_background_colour() {
     let app = FluentApp::new().with_theme(theme());
@@ -64,7 +52,6 @@ fn the_root_is_a_full_viewport_box_in_the_background_colour() {
     );
 }
 
-/// The content goes inside the root.
 #[test]
 fn the_content_goes_inside_the_root() {
     let app = FluentApp::new()
@@ -81,19 +68,14 @@ fn the_content_goes_inside_the_root() {
     );
 }
 
-/// Building the root initialises the process-wide layout signal, which the shell
-/// pieces publish their sizes into.
 #[test]
 fn building_the_root_initialises_the_layout_signal() {
     let _ = floom_core_theme::layout::layout_signal();
     let app = FluentApp::new().with_theme(theme());
     let _ = app.view();
-    // The signal exists and is readable: the shell pieces publish into it, and
-    // `main` reads it to inset itself.
     let _ = floom_core_theme::layout::layout_signal().get();
 }
 
-/// Design-system colour -> engine colour.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,

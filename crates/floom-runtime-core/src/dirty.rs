@@ -87,7 +87,6 @@ impl DirtySet {
     }
 }
 
-/// Free function alias matching the plan sketch.
 pub fn invalidate(
     set: &mut DirtySet,
     arena: &ElementArena,
@@ -97,7 +96,6 @@ pub fn invalidate(
     set.invalidate(arena, id, flags)
 }
 
-/// Free function alias matching the plan sketch.
 pub fn propagate_layout(set: &mut DirtySet, arena: &ElementArena, id: ElementId) -> bool {
     set.propagate_layout(arena, id)
 }

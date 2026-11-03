@@ -1,19 +1,4 @@
 //! The ported Cupertino form -- the caller's own fields, an error summary, and a
-//! submit button that only answers while the form is valid.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a submit button that paints `primary` from one
-//! that paints `surface_variant`, and it cannot tell a summary that says
-//! "Name is required" from an empty one. Only the paint log can, so most of
-//! these tests read what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_valid_submit_button_paints_primary_and_the_invalid_one_does_not`,
-//! `the_submit_button_does_not_answer_while_the_form_is_invalid` and
-//! `the_error_messages_are_painted_in_the_error_ink` would fail if this kit
-//! stopped being this kit.
 
 use floom_core::{
     Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny,
@@ -40,7 +25,6 @@ const AT: Point = Point { x: 20.0, y: 20.0 };
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -459,7 +443,6 @@ fn the_props_report_the_shape_and_not_the_callback() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoForm::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

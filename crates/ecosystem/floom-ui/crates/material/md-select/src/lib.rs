@@ -1,17 +1,3 @@
-//! Material 3 select (dropdown), ported to the Floom 2.0 widget API.
-//!
-//! ## What the port changed
-//!
-//! * v1's `RwSignal` state (`selected`, `open`) became the engine's `Select` widget
-//!   which manages its own open/closed state and selection.
-//! * v1's `Overlay::new(panel)` plus a `LayoutChangedListener` for positioning
-//!   became the engine's built-in overlay handling via `Select::open_popup`.
-//! * v1's `List` of `AnyView`s became the engine's `SelectPopup` which is a proper
-//!   widget with hit-testing and keyboard navigation.
-//! * v1's `MdIcon::view()` became `MdIcon::resolve()` returning a `VectorIcon`.
-//!
-//! The engine's `Select` handles the trigger, the popup, and the selection state.
-//! This crate provides Material's token translation and styling.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -36,12 +22,6 @@ fn resolve_icon(name: &str) -> Option<floom_widgets::VectorIcon> {
 pub struct MdSelect {
     props: SelectProps,
     theme: RwSignal<MultiTheme>,
-    /// The chevron, as a *name* rather than a `VectorIcon`.
-    ///
-    /// It is resolved at `view()` so the kit can pick its own glyph without
-    /// `MdSelect` holding a widget it does not own yet. It defaults to
-    /// Material's `arrow_drop_down`, which is the answer this kit gives to a
-    /// question the other two answer differently.
     icon: String,
 }
 
@@ -116,7 +96,6 @@ impl MdSelect {
         let primary = theme.colors().primary;
 
         SelectStyle {
-            // --- from `SelectTokens` ---
             height: tokens.height,
             padding_horizontal: tokens.padding_horizontal,
             border_radius: tokens.border_radius,
@@ -125,7 +104,6 @@ impl MdSelect {
             panel_max_height: tokens.panel_max_height,
             icon_size: tokens.icon_size,
 
-            // --- v1's call-site constants, Material's values ---
             trigger_gap: 8.0,
             row_padding_horizontal: 12.0,
             panel_gap: 0.0,
@@ -135,32 +113,20 @@ impl MdSelect {
             panel_shadow_blur: 8.0,
             panel_shadow_spread: 1.0,
 
-            // --- base colours ---
             surface: to_paint(surface),
             on_surface: to_paint(on_surface),
             placeholder: to_paint(on_surface_variant),
             outline: to_paint(outline),
             chevron: to_paint(on_surface_variant),
-            // Material is the only kit whose panel has a border: `outline`@120.
             panel_border: to_paint(with_alpha(outline, 120)),
             panel_shadow: to_paint(Self::shadow()),
 
-            // --- the interactive bands, which are alphas over a source colour ---
-            //
-            // `SelectStyle` takes resolved colours rather than `alpha: u8`, and
-            // this is where the three kits' disagreement actually lives: a
-            // hovered row is `on_surface`@8 in Material and Fluent but `primary`
-            // @12 in Cupertino. That is a different *source* colour, so no
-            // alpha field could have carried it -- the kit composes it.
             hover_row: to_paint(with_alpha(on_surface, 8)),
             selected_row: to_paint(with_alpha(primary, 24)),
 
-            // --- disabled, also composed ---
             disabled_text: to_paint(with_alpha(on_surface_variant, 97)),
             disabled_chevron: to_paint(with_alpha(on_surface_variant, 97)),
             disabled_border: to_paint(with_alpha(outline, 97)),
-            // A disabled Material trigger keeps its surface: the disabled state is
-            // a *border* change here, where Cupertino's is a fill change.
             disabled_background: to_paint(surface),
         }
     }
@@ -188,9 +154,6 @@ impl MdSelect {
             .disabled(disabled)
             .placeholder(self.props.placeholder);
 
-        // The chevron is a *shape*, and three kits' icon sets disagree on what
-        // "expand" looks like, so the engine has no default. A kit that names
-        // none gets no chevron at all rather than a glyph chosen for it.
         if let Some(icon) = resolve_icon(&self.icon) {
             select = select.chevron(icon);
         }
@@ -214,5 +177,4 @@ impl Default for MdSelect {
     }
 }
 
-/// Type alias for the engine's `SelectStyle`, re-exported for `floom-elements` compatibility.
 pub type MdSelectStyle = SelectStyle;

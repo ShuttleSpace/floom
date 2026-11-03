@@ -1,78 +1,5 @@
 //! Cupertino table, ported to the Floom 2.0 widget API.
 //!
-//! A table is a header row plus body rows in a shared grid: every cell takes
-//! an equal share of the row's width, the rows may be striped, and the whole
-//! table may be dense.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary, three deep:
-//!
-//! * a [`Surface`] for the table's own frame -- the outline and the corner
-//!   radius v1 put on the container;
-//! * a vertical `Stack` for the rows;
-//! * a [`Surface`] per row -- the row's fill and its bottom rule -- holding
-//!   the cells directly, each cell a `Stack` that pads the [`Text`] it holds.
-//!
-//! The cell is a box rather than a bare text because 2.0's `Text` is a leaf:
-//! a leaf's padding does not inset the text, which is drawn at the box's own
-//! origin. v1's cell was a `Label` with `padding(cell_padding)`, and the text
-//! sat inside that padding; here the padding lives on the box that holds the
-//! text, which is the same drawing.
-//!
-//! There is nothing here that a widget could own and the vocabulary does not
-//! already say.
-//!
-//! ## What this kit answers
-//!
-//! * the header's and the rows' heights, the cells' padding, the frame's
-//!   border width and radius, the minimum width and the two font sizes: the
-//!   tokens (`TableTokens`);
-//! * the header's fill: `surface_variant`; the plain rows': `surface`; the
-//!   striped rows': `surface_variant`;
-//! * the header cells' ink: `on_surface`; the body cells': `on_surface_variant`;
-//! * the frame and the row rules: `outline`;
-//! * the header cells' weight: the typography scale's `label.large`.
-//!
-//! ## The dense factors v1 wrote as literals
-//!
-//! v1 shrank a dense row to `row_height * 0.78` and a dense header to
-//! `header_height * 0.82`. The port does the same, and the style reports the
-//! heights the table is actually drawn at -- which is what v1's paint did and
-//! what v1's (absent) style could not say.
-//!
-//! ## The style v1 did not have
-//!
-//! v1's table had no style struct at all: the tokens were read inside
-//! `view()` and never reported. The port's style reports them, because a
-//! component whose numbers cannot be read is a component that cannot be
-//! tested against a theme.
-//!
-//! ## The theme
-//!
-//! v1's Cupertino table took a *snapshot* of its own design system rather
-//! than reading the app-wide signal, so a change of theme does not reach it.
-//! That difference is v1's, and it is kept.
-//!
-//! The snapshot names a design system it does not pin: `MultiTheme` reads
-//! the *current* design system at read time, so a Cupertino table in an app
-//! whose active design system is Material shows Material's colours. That is
-//! v1's behaviour too -- the same `MultiTheme` v1 snapshotted -- and it is
-//! kept rather than papered over.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The header has no rule under it.** v1 put `border_bottom` on the body
-//!   rows only, so the header sits directly on the frame's own outline. A
-//!   table whose header is separated from the body by a rule is a different
-//!   component, so the port keeps v1's answer.
-//! * **The frame has no fill.** v1's container carried the outline and the
-//!   radius and no background; the rows supply the colour. The port's frame
-//!   is a `Surface` with no `background(..)` for the same reason.
-//! * **The accessors.** v1's table had `props()` and `theme()` but no
-//!   `resolved_style()` and no `with_theme()`. The port gives all three kits
-//!   the same three, because a kit that cannot be given a theme cannot be
-//!   tested against one.
 
 use floom_core::LayoutRequest;
 use floom_signal::{RwSignal, SignalGet};
@@ -196,7 +123,6 @@ impl CupertinoTable {
             on_surface: theme.colors().on_surface,
             on_surface_variant: theme.colors().on_surface_variant,
             outline: theme.colors().outline,
-            // v1's dense factors, applied to the tokens.
             header_height: if dense {
                 tokens.header_height * DENSE_HEADER_FACTOR
             } else {
@@ -230,11 +156,9 @@ impl CupertinoTable {
         let padding = Insets::uniform(f64::from(style.cell_padding));
 
         // v1's `list(..)`: the header row first, then the body rows, with no
-        // gap between them.
         let mut body = Stack::new(Axis::Vertical).gap(0.0);
 
         // The header row. v1 gave it the surface-variant fill and *no* rule
-        // under it.
         let header_cells: Vec<(LayoutRequest, Stack)> = headers
             .iter()
             .map(|header| {
@@ -282,7 +206,6 @@ impl CupertinoTable {
         }
 
         // The frame: v1's `Container::new(list(..))` with an outline, a radius
-        // and a minimum width -- and no fill of its own.
         Surface::new()
             .request(LayoutRequest::new().min_width(style.min_width))
             .border(style.border_width, to_paint(style.outline))

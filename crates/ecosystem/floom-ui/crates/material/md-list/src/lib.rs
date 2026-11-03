@@ -1,41 +1,3 @@
-//! Material 3 list, ported to the Floom 2.0 widget API.
-//!
-//! v1 was a `Container` of `Label` rows, each with a hovered background and a
-//! click listener. The row is the engine's `ListItemRow` now -- a `Pressable`
-//! with interaction state, which is what any hover answer would have to read --
-//! so what is left is the token translation and the container's own numbers.
-//!
-//! ## What v1 drew that this port cannot
-//!
-//! **The row's hovered background.** v1 wrote
-//! `.hover(|s| s.background(with_alpha(primary, 8)))` on every row.
-//! `ListItemStyle` has one static `background`, and `ListItemRow` owns the
-//! interaction state without exposing a variant of it. So the hover is gone, and
-//! it is reported rather than approximated: a `background_hovered` on
-//! `ListItemStyle` is a decision about a component three kits use for three
-//! different reasons, and `RadioStyle` is the precedent for *not* carrying a
-//! variant the engine cannot answer.
-//!
-//! **The container's horizontal padding.** v1 put `.padding(8.0)` on a
-//! `Container`, which paints a background and a radius and holds no children --
-//! it is a leaf. The pattern in this engine for "a painted box with content over
-//! it" is a `Stack` whose first child is an `absolute_fill` `Container` and whose
-//! remaining children are `Spacer`s and the content. That gives the vertical
-//! inset exactly. The horizontal inset is dropped rather than faked, because
-//! there is no way to indent the rows without shrinking them, and every row
-//! already draws a wider `padding_horizontal` of its own.
-//!
-//! ## What this kit answers, and what the other two answer instead
-//!
-//! | | container radius | row hover |
-//! | --- | --- | --- |
-//! | Material | `8.0`, hardcoded | `primary`@8 |
-//! | Cupertino | `radius().md` | `primary`@8 |
-//! | Fluent | `radius().md` | `primary`@8 |
-//!
-//! The radius is the only number this kit owns outright. v1 hardcoded it rather
-//! than reading `radius()`, which is exactly the disagreement, so it is a field
-//! here rather than a value read a second time in a second place.
 
 use floom_core::Axis;
 use floom_core::LayoutRequest;
@@ -54,11 +16,6 @@ use floom_widgets::compose::Stack;
 use floom_widgets::primitives::{Container, Spacer};
 use std::sync::Arc;
 
-/// The row's geometry, drawn from `ListTokens`.
-///
-/// Carried separately from the style because a row is built inside a closure and
-/// the resolved style is `Copy` anyway, but the geometry is what `ListItemStyle`
-/// takes field-by-field.
 #[derive(Debug, Clone, Copy)]
 pub struct MdRowGeometry {
     pub height: f32,
@@ -76,10 +33,6 @@ pub struct MdListStyle {
     pub padding_horizontal: f32,
     pub min_width: f32,
     pub gap: f32,
-    /// The row's fill while hovered. All three kits wrote `primary`@8 and none
-    /// of the three can draw it -- see the module doc. Carried anyway, because a
-    /// style that omits a value the kit had is indistinguishable from one that
-    /// chose to leave it at a default.
     pub hover_color: Color,
     /// The container's corner radius.
     pub border_radius: f32,
@@ -145,8 +98,6 @@ impl MdList {
             min_width: tokens.min_width,
             gap: tokens.gap,
             hover_color: with_alpha(theme.colors().primary, 8),
-            // v1 hardcoded `8.0` rather than reading `radius()`, which is the
-            // whole of this kit's container answer against the other two.
             border_radius: 8.0,
             label_font_size: theme.typography().body.medium.font_size,
         }
@@ -164,9 +115,6 @@ impl MdList {
         );
         let items = self.props.items;
 
-        // A `Container` is a leaf in this engine, so "a filled box with content
-        // in it" is a `Stack` whose first child fills it absolutely, then the
-        // vertical padding, then the rows.
         let mut stack = Stack::new(Axis::Vertical)
             .gap(gap)
             .request(LayoutRequest::new().min_width(min_width))

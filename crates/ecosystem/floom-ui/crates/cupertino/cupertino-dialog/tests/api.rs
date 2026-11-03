@@ -1,33 +1,5 @@
 //! What this crate's API *is* now, replacing v1's neutral-contract test.
 //!
-//! v1's `api.rs` asserted five things about `CupertinoDialog`'s style struct. Four of them
-//! are about surface this port does not have, and saying why is more useful than the
-//! assertions were:
-//!
-//! | v1 field | here |
-//! |---|---|
-//! | `design_system: &'static str` | **dropped** |
-//! | `scrim_color` | **dropped** — the host owns the scrim |
-//! | `container_color` | `surface` |
-//! | `content_color` | `on_surface` plus a separate `content_alpha` |
-//! | `border_radius` | kept, but **not** from `DialogTokens` in this kit |
-//!
-//! ## Why each
-//!
-//! * `design_system` was a string nothing read. Dropping it is the same trade
-//!   `md-treeview` and `md-combobox` made: a kit style struct that differs only by a name
-//!   is a second thing to keep in step.
-//! * **`scrim_color` is the interesting one.** v1's dialog drew its own dimmed backdrop
-//!   over the window. 2.0's `OverlayKind::Dialog` is *modal*, and the host draws the
-//!   scrim — which is also why clicking outside no longer closes the dialog, since the
-//!   host deliberately does not light-dismiss a modal overlay. So this field is gone
-//!   because the responsibility moved to the host, not because it was inconvenient.
-//! * `content_color` was `with_alpha(on_surface, 222)` folded into one colour. Splitting
-//!   the alpha out is what lets a test say the body text is *deliberately* lighter than
-//!   the title, which a single colour cannot express.
-//!
-//! The two v1 tests' *intent* is kept: the builder chain is neutral, and the style
-//! resolves from the kit's theme.
 
 use floom_core_theme::theme::Theme;
 

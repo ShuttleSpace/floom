@@ -1,10 +1,4 @@
 //! Fluent kbd: the keycap's shape, and the text inside it.
-//!
-//! ## The claim
-//!
-//! v1 drew a `Container` holding a `Label`; 2.0 draws a `Surface` holding a
-//! `Text`. The assertions are about the painted surface -- its fill, its
-//! padding, its radius, and its border -- and about the painted text.
 
 use floom_core::Widget;
 use floom_types::{Color, Rect};
@@ -23,13 +17,6 @@ const BOX: Rect = Rect {
     y1: 32.0,
 };
 
-/// The Fluent theme, with Fluent selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time. So a test that wants Fluent's own values has to
-/// select Fluent, and `set_design_system` writes a thread-local, so the
-/// selection is this test's alone.
 fn theme() -> MultiTheme {
     set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
@@ -43,7 +30,6 @@ fn tokens() -> floom_core_theme::component_tokens::KbdTokens {
     }
 }
 
-/// The style resolves the theme's colours and the token's numbers.
 #[test]
 fn the_style_resolves_the_theme_and_the_tokens() {
     let theme = theme();
@@ -57,8 +43,6 @@ fn the_style_resolves_the_theme_and_the_tokens() {
     assert_eq!(style.font_size, tokens().font_size);
 }
 
-/// The `mono` prop is carried and reported, and not honoured: 2.0's text layer
-/// has no font family at all, so there is nothing to ask for.
 #[test]
 fn the_mono_flag_is_carried_and_reported() {
     let kit = FluentKbd::new().with_theme(theme()).mono(true);
@@ -67,7 +51,6 @@ fn the_mono_flag_is_carried_and_reported() {
     assert_eq!(kit.props().mono, true);
 }
 
-/// The surface carries the fill, the padding and the radius.
 #[test]
 fn the_surface_carries_the_fill_and_the_padding() {
     let b = FluentKbd::new().with_theme(theme()).content("x");
@@ -104,7 +87,6 @@ fn the_surface_carries_the_fill_and_the_padding() {
     );
 }
 
-/// The text is the theme's ink at the token's size.
 #[test]
 fn the_text_is_the_themes_ink_at_the_tokens_size() {
     let b = FluentKbd::new().with_theme(theme()).content("x");
@@ -115,7 +97,6 @@ fn the_text_is_the_themes_ink_at_the_tokens_size() {
     let mut recorder = SceneRecorder::new(BOX);
     surface.paint(&mut recorder, id);
     recorder.finish();
-    // The text is the surface's *child*, and a widget paints only itself.
     let mut text = surface.children()[0].build();
     let mut create = AllocatingCreateContext::new();
     let text_id = text.create(&mut create);
@@ -135,7 +116,6 @@ fn the_text_is_the_themes_ink_at_the_tokens_size() {
     assert_eq!(color, to_engine(style.text_color));
 }
 
-/// Design-system colour -> engine colour.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,

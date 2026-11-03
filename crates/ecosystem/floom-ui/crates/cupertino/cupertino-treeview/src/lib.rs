@@ -1,33 +1,5 @@
 //! Cupertino tree view, ported to the Floom 2.0 widget API.
 //!
-//! ## Why this crate is a token translation
-//!
-//! 87% cross-kit overlap, and the shared part is where all the difficulty lives: the
-//! expansion state, the flattening, and the fact that expanding a node changes
-//! *which rows exist*. So that went to the engine as
-//! [`floom_ui_composites::TreeView`]; what is left here is Cupertino's numbers and its icon
-//! names.
-//!
-//! ## What the port changed
-//!
-//! * v1's `svg(move || cupertino_icon_svg(chevron_name))` became a `VectorIcon` from
-//!   this kit's own table, because v1 handed out SVG *markup* and the engine draws
-//!   path data. In 2.0 the icon is a widget and a clickable one is that widget inside
-//!   a [`Pressable`], which is the work v1's `Decorators` chain did on the `svg` call.
-//!   v1's pointer cursor is gone for the fourth time in this port; 2.0's `PaintContext`
-//!   has no cursor vocabulary.
-//! * the tree's expansion state moved from a `RwSignal<Vec<TreeviewNode>>` that v1
-//!   mutated in place to the engine's shared forest, for the reason
-//!   `floom_ui_composites::TreeView` gives: no row can own an answer that changes how many
-//!   rows follow it.
-//! * `Empty::new().style(..)` for a childless node's expander and for a node with no
-//!   icon became an **empty box of the same size** rather than an absent one, because
-//!   v1 used them to keep the labels aligned — a tree where a missing icon shifts
-//!   every label below it is a different component.
-//! * `TreeviewTokens::item_gap` is declared and **never read by v1** — `flatten`
-//!   built one flat list and the gap lived on the container. Kept in
-//!   [`TreeviewStyle::item_gap`] and left unused, for the same reason
-//!   `ToolbarTokens::height` is.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;

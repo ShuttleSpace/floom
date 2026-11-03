@@ -1,12 +1,5 @@
 //! Cupertino button group: the joined and the unjoined shapes.
 //!
-//! ## The claim
-//!
-//! A button group is a filled surface with the buttons inside it. v1 wrote the
-//! joined case as three separate conditionals -- no gap, the token's radius on
-//! the outer surface, and no padding inside it -- and the unjoined case as the
-//! token's gap, no radius, and 4dp of padding. All of that is kept, and the
-//! assertions are about the surface's own decoration and the stack inside it.
 
 use floom_core::Widget;
 use floom_types::{Color, Insets};

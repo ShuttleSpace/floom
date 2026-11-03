@@ -1,18 +1,4 @@
 //! The ported Cupertino breadcrumbs -- a row of labels separated by dividers,
-//! where the last label is the current location and the earlier ones lead back.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a current item that is painted in `on_surface`
-//! from an ordinary one that is not, nor tell a divider from an item. Only the
-//! paint log can, so most of these tests read what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_current_item_is_painted_in_on_surface_and_the_others_are_not`,
-//! `the_divider_is_painted_in_the_outline_variant` and
-//! `the_current_item_is_not_a_link` would fail if this kit stopped being this
-//! kit.
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::{Color, FontWeight};
@@ -36,7 +22,6 @@ const AT: Point = Point { x: 20.0, y: 20.0 };
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -312,7 +297,6 @@ fn clicking_the_current_item_reports_nothing() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoBreadcrumbs::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

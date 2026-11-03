@@ -1,79 +1,5 @@
 //! Cupertino range slider, ported to the Floom 2.0 widget API.
 //!
-//! A range slider is a track with two thumbs: a low one and a high one. The
-//! band between them is the selection, and dragging either thumb moves it --
-//! the low thumb stops at the high one, and the high thumb stops at the low
-//! one.
-//!
-//! ## What the port uses
-//!
-//! A kit-local widget. The engine's `Slider` is a *single*-valued control: it
-//! paints a track, a fill that runs from the left end to its value, and one
-//! thumb. A range slider needs a fill that starts where the low thumb is, and
-//! `SliderStyle` has no way to say that -- its fill always starts at zero.
-//! Two engine sliders side by side would be two tracks, two fills and two
-//! drags, which is not this component.
-//!
-//! So the port carries the widget itself, on the engine's own contract: a
-//! [`floom_core::Widget`] with a `layout_request`, a `paint`, and pointer
-//! handling in `event`, reading the same `Event` / `EventContext` /
-//! `PaintContext` vocabulary the engine's `Slider` reads.
-//!
-//! ## What the port uses
-//!
-//! The engine's [`RangeSlider`]: a track with two thumbs. The engine's own
-//! `Slider` is a *single*-valued control -- it paints a fill that runs from the
-//! left end to its value, and it has no way to say that the fill should start
-//! where the low thumb is -- so two engine sliders side by side would be two
-//! tracks, two fills and two drags, which is not this component. The engine
-//! grew the two-valued one for this, and the three kits now say only what
-//! they answer: the track's colour, the band's colour, the thumbs' colour and
-//! the three sizes.
-//!
-//! ## What this kit answers
-//!
-//! * the track's thickness, the thumb's size and the thumb's radius: the
-//!   tokens;
-//! * the track's colour: `surface_variant`; the band and the two thumbs:
-//!   `primary`;
-//! * the disabled palette: `surface_variant` and `primary` at 120 alpha, which
-//!   is what v1's three style closures composed.
-//!
-//! ## What v1 had that this port does not carry
-//!
-//! * **The style struct.** v1's range slider had none: no `resolved_style`,
-//!   no `MdRangeSliderStyle`. The port *adds* one, and the fields it carries
-//!   are the ones the paint uses.
-//! * **The two signals.** v1 handed out `low_signal()` and `high_signal()`.
-//!   A 2.0 slot closure is `Send + Sync` and an `RwSignal` is `Rc`-based, so
-//!   the two values live in the engine's `SharedMap` instead, under the keys
-//!   `low` and `high`. The map holds strings, so the two values travel as
-//!   their decimal text; `f32`'s `Display` round-trips exactly, so nothing is
-//!   lost -- but this is the engine's map shape, not a typed handle.
-//! * **The pointer capture.** v1 asked for pointer capture on the way down,
-//!   so a drag that left the track kept tracking. 2.0's `EventContext` has no
-//!   capture request -- the engine's own `Slider` has the same gap -- so a
-//!   drag that leaves the track ends at the edge.
-//! * **The callback's shape.** v1's was `Box<dyn Fn((f32, f32))>`; the port's
-//!   is `Arc<dyn Fn((f32, f32)) + Send + Sync>`, because a callback that
-//!   reaches a 2.0 slot has to cross a thread boundary. The props' own
-//!   `on_change` slot stays empty: the shared props type is
-//!   `Box<dyn Fn((f32, f32))>` and cannot hold the `Send + Sync` handle the
-//!   kit uses.
-//! * **The step of zero.** v1 divided by `step` without looking at it, so a
-//!   zero step produced `NaN`. The port quantises only for a positive step,
-//!   which is the rule the engine's own `Slider` uses.
-//!
-//! ## The numbers v1 wrote as literals
-//!
-//! None: every number v1's range slider used came from the tokens.
-//!
-//! ## The theme
-//!
-//! Cupertino takes a snapshot of its own design system, which is what v1 did:
-//! a change of the app-wide theme does not reach this slider. Material reads
-//! the app-wide theme signal instead, so that a change of theme re-themes it
-//! along with everything else.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -284,7 +210,6 @@ impl CupertinoRangeSlider {
         };
         let colors = theme.colors();
         // v1's disabled palette, composed in its three style closures: the
-        // track and the band at 120 alpha.
         let (track, fill, thumb) = if self.props.disabled {
             (
                 with_alpha(colors.surface_variant, 120),

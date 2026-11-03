@@ -1,15 +1,3 @@
-//! A component gallery: every variant × size × state rendered into one scene.
-//!
-//! The gallery exists to make "this design system's variants are
-//! distinguishable" a *measurable* claim. A screenshot of one button proves
-//! nothing; a grid in which every cell is derived from the same table, snapped
-//! as one scene, turns any accidental collapse (two variants resolving
-//! identically, a state overlay that swallows the rest values) into a diff.
-//!
-//! The cells are painted from [`StyleProps`] only. Text labels are *not* drawn,
-//! because the headless renderer has no font resource; the sample's identity is
-//! recoverable from [`GallerySample::label`] instead, and the systems snapshot
-//! those labels alongside the scene.
 
 use floom_scene::{Scene, SceneNode};
 use floom_style::StyleProps;

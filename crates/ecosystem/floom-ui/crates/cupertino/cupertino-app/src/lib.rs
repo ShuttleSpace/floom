@@ -1,20 +1,5 @@
 //! Cupertino application root, ported to the Floom 2.0 widget API.
 //!
-//! The root of an application: a full-viewport box in the app's background
-//! colour, with the shell's bars and the main region inside it.
-//!
-//! ## The layout signal is still initialised
-//!
-//! v1 called `layout_signal()` while building the view, and the shell pieces --
-//! the app bar, the footer, the navigation drawer -- publish their sizes into
-//! it for `main` to inset itself by. Dropping that would leave the content
-//! under the bars, so the port keeps it.
-//!
-//! ## The box
-//!
-//! v1's `Container` was both a decoration and a holder. 2.0's `Container` is a
-//! leaf -- a decorated box with nothing inside it -- so the root is a `Surface`,
-//! which holds the content and paints the background.
 
 use std::sync::Arc;
 
@@ -65,7 +50,6 @@ impl CupertinoApp {
     /// The application root, ready to mount.
     pub fn view(self) -> Surface {
         // Initialise the process-wide layout signal for the whole app, as v1 did:
-        // the shell pieces publish their sizes into it.
         let _ = layout_signal();
 
         let theme = self.theme;

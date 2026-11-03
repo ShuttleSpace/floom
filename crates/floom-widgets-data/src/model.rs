@@ -97,10 +97,6 @@ impl Column {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Cell values
-// ---------------------------------------------------------------------------
-
 /// One cell's value.
 #[derive(Debug, Clone, PartialEq)]
 pub enum CellValue {
@@ -189,10 +185,6 @@ impl CellValue {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Sorting
-// ---------------------------------------------------------------------------
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum SortDirection {
     #[default]
@@ -274,10 +266,6 @@ pub fn sorted_order(model: &dyn TableModel, sort: Option<SortSpec>) -> Vec<usize
     });
     order
 }
-
-// ---------------------------------------------------------------------------
-// Selection
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum SelectionMode {
@@ -523,10 +511,6 @@ impl<K: RowKey> SelectionModel<K> {
     }
 }
 
-// ---------------------------------------------------------------------------
-// The model contract
-// ---------------------------------------------------------------------------
-
 /// Row/cell storage behind a view.
 ///
 /// Deliberately tiny: a model answers "how many rows" and "what is in this
@@ -613,10 +597,6 @@ impl TableModel for VecTable {
         true
     }
 }
-
-// ---------------------------------------------------------------------------
-// Editing
-// ---------------------------------------------------------------------------
 
 /// A completed cell edit, in the form an undo stack needs.
 #[derive(Debug, Clone, PartialEq)]

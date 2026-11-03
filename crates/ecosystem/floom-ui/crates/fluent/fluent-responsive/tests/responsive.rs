@@ -1,10 +1,4 @@
 //! Fluent responsive box: the ratio, and the fill.
-//!
-//! ## The claim
-//!
-//! A responsive box keeps a width-to-height ratio, and 2.0's `LayoutRequest`
-//! grew `aspect_ratio` so that it can say so. The assertions are about the
-//! request the box makes and the fill it paints.
 
 use floom_core::Widget;
 use floom_types::{Color, Length, Rect};
@@ -22,14 +16,11 @@ const BOX: Rect = Rect {
     y1: 180.0,
 };
 
-/// The Fluent theme, with Fluent selected.
 fn theme() -> MultiTheme {
     set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
 
-/// The ratio reaches the layout request, which is the whole point of the
-/// component: a fixed height would be wrong at every width but one.
 #[test]
 fn the_ratio_reaches_the_layout_request() {
     let surface = FluentResponsive::new(16.0 / 9.0).with_theme(theme()).view();
@@ -48,14 +39,12 @@ fn the_ratio_reaches_the_layout_request() {
     );
 }
 
-/// The ratio is on the props, so a caller can read it back.
 #[test]
 fn the_ratio_is_on_the_props() {
     let kit = FluentResponsive::new(4.0 / 3.0);
     assert_eq!(kit.props().aspect_ratio, 4.0 / 3.0);
 }
 
-/// The box is filled with the theme's surface variant.
 #[test]
 fn the_box_is_filled_with_the_surface_variant() {
     let kit = FluentResponsive::new(1.0).with_theme(theme());
@@ -77,7 +66,6 @@ fn the_box_is_filled_with_the_surface_variant() {
     );
 }
 
-/// The content goes inside the box.
 #[test]
 fn the_content_goes_inside_the_box() {
     let surface = FluentResponsive::new(1.0)
@@ -94,7 +82,6 @@ fn the_content_goes_inside_the_box() {
     );
 }
 
-/// Design-system colour -> engine colour.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,

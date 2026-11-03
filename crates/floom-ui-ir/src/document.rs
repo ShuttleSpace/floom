@@ -77,7 +77,6 @@ impl UiDocument {
     /// is half of a two-node cycle is *also* unreachable from the root; saying
     /// "cycle" is what an author can act on, so cycles are reported first.
     pub fn validate(&self) -> Result<(), IrError> {
-        // 1. Keys: legal, and unique.
         let mut index: HashMap<&str, usize> = HashMap::with_capacity(self.nodes.len());
         for (i, node) in self.nodes.iter().enumerate() {
             if !NodeKey::is_valid(node.key.as_str()) {
@@ -92,14 +91,12 @@ impl UiDocument {
             }
         }
 
-        // 2. The root must be one of them.
         if !index.contains_key(self.root.as_str()) {
             return Err(IrError::MissingRoot {
                 root: self.root.to_string(),
             });
         }
 
-        // 3. Binding names are unique before anything resolves against them.
         let mut bindings: HashMap<&str, &Binding> = HashMap::with_capacity(self.bindings.len());
         for binding in &self.bindings {
             if bindings.insert(binding.name.as_str(), binding).is_some() {
@@ -109,10 +106,8 @@ impl UiDocument {
             }
         }
 
-        // 4. Per-node properties and events.
         self.validate_props_and_events()?;
 
-        // 5. Slots: children exist, and each child has one parent.
         let mut parent: HashMap<&str, &str> = HashMap::with_capacity(self.nodes.len());
         for node in &self.nodes {
             let mut slot_names: HashSet<&str> = HashSet::new();
@@ -141,8 +136,6 @@ impl UiDocument {
             }
         }
 
-        // 6. Cycles. Every node has at most one parent by now, so a cycle is a
-        //    parent chain that returns to where it started.
         for node in &self.nodes {
             let mut seen: HashSet<String> = HashSet::new();
             let mut current = Some(node.key.as_str());
@@ -156,8 +149,6 @@ impl UiDocument {
             }
         }
 
-        // 7. Reachability from the root. A node nothing claims is a node the
-        //    document pretends to have but can never render.
         let mut reachable: HashSet<&str> = HashSet::new();
         let mut stack = vec![self.root.as_str()];
         while let Some(key) = stack.pop() {
@@ -178,7 +169,6 @@ impl UiDocument {
             });
         }
 
-        // 8. References resolve, and resolve to the right namespace.
         self.resolve_bindings(&bindings)?;
 
         Ok(())

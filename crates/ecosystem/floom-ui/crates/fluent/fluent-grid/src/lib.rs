@@ -1,21 +1,4 @@
 //! Fluent grid, ported to the Floom 2.0 widget API.
-//!
-//! A grid is a set of cells in rows of equal width. v1 built the rows itself:
-//! chunk the children, wrap each cell so it grows, and stack the rows with a
-//! gap. 2.0's [`Grid`] does the chunking, so the kit is a thin adapter over it.
-//!
-//! ## The padding of the last row
-//!
-//! v1 padded the last row with empty cells so that every row held the same
-//! number of cells, and each cell grew by a share of the row. Without that, the
-//! last row's cells would divide the whole width between them and be wider
-//! than the rows above -- so the kit pads the item list before handing it over.
-//!
-//! ## The cells
-//!
-//! v1 wrapped each cell in a box that grew (`flex_grow(1.0)`). 2.0 says the same
-//! thing as the cell's own layout request, and the engine's `Grid` applies it
-//! to every cell.
 
 use std::sync::Arc;
 
@@ -26,7 +9,6 @@ use floom_widgets::Grid;
 use floom_core_theme::props::grid::GridProps;
 use floom_core_theme::theme::MultiTheme;
 
-/// A builder for one cell, replayed each time the grid is built.
 pub type CellBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -36,7 +18,6 @@ pub struct FluentGridStyle {
     pub cols: usize,
 }
 
-/// Fluent's grid.
 pub struct FluentGrid {
     props: GridProps,
     theme: RwSignal<MultiTheme>,
@@ -54,25 +35,21 @@ impl FluentGrid {
         }
     }
 
-    /// Number of equal-width columns per row.
     pub fn cols(mut self, cols: usize) -> Self {
         self.props.cols = cols;
         self
     }
 
-    /// Gap between columns within a row.
     pub fn gap(mut self, gap: f32) -> Self {
         self.props.gap = gap;
         self
     }
 
-    /// Gap between rows.
     pub fn row_gap(mut self, row_gap: f32) -> Self {
         self.props.row_gap = row_gap;
         self
     }
 
-    /// Add one cell to the grid (repeatable).
     pub fn child(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
         self.children.push(Arc::new(build));
         self
@@ -99,22 +76,17 @@ impl FluentGrid {
         }
     }
 
-    /// The grid: rows of equal-width cells.
     pub fn view(self) -> Grid<(u64, CellBuilder)> {
         let style = self.resolved_style();
         let cols = style.cols.max(1);
         let mut children = self.children;
 
-        // v1 padded the last row with empty cells, so that every row held the
-        // same number of cells and each cell grew by a share of the row.
         while !children.is_empty() && children.len() % cols != 0 {
             children.push(Arc::new(|| {
                 Box::new(floom_widgets::Text::new(String::new()))
             }));
         }
 
-        // The index is the cell's key, so a row remounts only when its
-        // membership changes.
         let items: Vec<(u64, CellBuilder)> = children
             .into_iter()
             .enumerate()
@@ -123,7 +95,6 @@ impl FluentGrid {
 
         Grid::new(cols, items, |(index, _)| *index, |(_, build)| build())
             .gap(style.gap, style.row_gap)
-            // v1 wrapped every cell so it grew: `flex_grow(1.0)`.
             .item_layout(LayoutRequest::new().grow(1.0))
     }
 }

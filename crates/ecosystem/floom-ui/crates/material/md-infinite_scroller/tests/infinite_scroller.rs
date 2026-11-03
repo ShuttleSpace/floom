@@ -1,16 +1,3 @@
-//! The ported Material infinite scroller -- a viewport that asks for more when
-//! the user reaches the end of the content.
-//!
-//! The shape is the engine's vocabulary plus a kit-local scroller, so what is
-//! tested here is the translation and the pixels: the tokens reach the style,
-//! the viewport is painted in v1's colours, the loading footer shows v1's
-//! label, and the scroller asks for the next page at the end of the content.
-//!
-//! ## The tripwires
-//!
-//! `the_viewport_is_painted_v1_s_colour` and
-//! `the_scroller_asks_for_more_at_the_end` would fail if this kit stopped
-//! being this kit.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -37,9 +24,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -88,7 +72,6 @@ fn wheel(delta: f64) -> Event {
     })
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -130,9 +113,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The viewport is painted in v1's colours: the fill, and the outline.
 #[test]
 fn the_viewport_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -159,7 +140,6 @@ fn the_viewport_is_painted_v1_s_colour() {
     );
 }
 
-/// The loading footer shows v1's label, in v1's ink, at v1's size.
 #[test]
 fn the_loading_footer_shows_v1_s_label() {
     let resolved = kit().resolved_style();
@@ -201,7 +181,6 @@ fn the_idle_footer_is_an_empty_box() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The scroller asks for the next page when the user reaches the end.
 #[test]
@@ -218,7 +197,6 @@ fn the_scroller_asks_for_more_at_the_end() {
     let surface = kit.view();
     let mut scroller = surface.children().remove(0).build();
     let id = ElementId::new(0, 1);
-    // The content is 1000 tall in a 360 viewport, so the end is 640 pixels down.
     let mut cx = TestEventContext::new(id, BOX, wheel(640.0));
     scroller.event(&mut cx, id);
 
@@ -256,9 +234,6 @@ fn the_loading_flag_guards_the_re_fire() {
     );
 }
 
-/// A content height the host grows after mount is taken up: the scroller
-/// re-declares its content, because a box's size is its own layout request
-/// and only a reconcile re-reads it.
 #[test]
 fn a_grown_content_height_is_taken_up() {
     let height = shared_height(0.0);
@@ -305,14 +280,9 @@ fn the_loading_flag_is_the_hosts_to_write() {
     );
 }
 
-// --- the theme source -----------------------------------------------------
 
-/// The theme: v1's Material infinite scroller read the *app-wide* theme
-/// signal, so a change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialInfiniteScroller::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

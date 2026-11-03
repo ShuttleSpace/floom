@@ -129,8 +129,7 @@ pub trait SignalTrack<T> {
         signal.subscribe();
     }
 
-    /// If the signal isn't disposed,
-    // subscribes to the current running effect to this Signal.
+    /// If the signal isn't disposed, subscribes to the current running effect.
     #[cfg_attr(debug_assertions, track_caller)]
     fn try_track(&self) {
         if let Some(signal) = self.id().signal() {

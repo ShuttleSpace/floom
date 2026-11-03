@@ -1,4 +1,3 @@
-//! Material 3 button variants across the six interaction states.
 
 use floom_design::{
     ControlSize, InteractionState, Props, StyleSetBuilder, Variant, composite_over,

@@ -1,10 +1,3 @@
-//! The engine's [`ListItemRow`]: the structure, the optional slots, and the three
-//! facts about it that a kit cannot express.
-//!
-//! v1's row is one `Container` holding a horizontal stack of up to three things —
-//! a leading slot, a two-line text column, a trailing slot — wrapped in a press
-//! ripple with *sharp* corners. These tests pin that structure, because all three
-//! of the kits depend on it and none of them states it.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

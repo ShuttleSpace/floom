@@ -1,11 +1,3 @@
-//! Material's select as a kit crate: the token translation, and the numbers
-//! this kit wrote that the other two wrote differently.
-//!
-//! Material is the reference kit here, so its values are also the engine
-//! defaults for several fields — which is exactly why the Cupertino and Fluent
-//! tests use those defaults as their controls. Where a default *is* Material's
-//! number, this file says so instead of pretending the assertion is a
-//! discovery.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -37,7 +29,6 @@ fn alpha_of(color: floom_types::Color) -> u8 {
     color.a
 }
 
-// --- Material's answers ---------------------------------------------------
 
 /// A hovered row is `on_surface`@8. Cupertino's is `primary`@12, so this
 /// assertion is on the *rgb* too, not just the alpha.
@@ -50,9 +41,6 @@ fn the_hover_row_is_on_surface_at_eight() {
     assert_ne!(style().hover_row.r, colors.primary.r);
 }
 
-/// Material's panel is the only one with a border: `outline`@120. This value is
-/// also `SelectStyle::default()`'s, which is what lets the other two kits use
-/// "the default has a border" as the control for their own missing one.
 #[test]
 fn the_panel_border_is_outline_at_120() {
     let theme = theme();
@@ -86,9 +74,6 @@ fn the_placeholder_and_the_chevron_are_the_full_on_surface_variant() {
     assert_eq!(alpha_of(style.placeholder), 255);
 }
 
-/// A disabled Material trigger keeps `surface` and dims its border to
-/// `outline`@97 — so the disabled state is a *border* change here, where
-/// Cupertino's is a fill change (`on_surface`@4).
 #[test]
 fn a_disabled_trigger_keeps_the_surface_and_dims_the_border() {
     let theme = theme();
@@ -100,7 +85,6 @@ fn a_disabled_trigger_keeps_the_surface_and_dims_the_border() {
     assert_eq!(alpha_of(style().disabled_chevron), 97);
 }
 
-// --- what is shared -------------------------------------------------------
 
 #[test]
 fn the_geometry_is_the_select_tokens() {
@@ -119,7 +103,6 @@ fn the_geometry_is_the_select_tokens() {
     assert_eq!(style.icon_size, tokens.icon_size);
 }
 
-/// v1's call-site constants, all three of which the engine now reads.
 #[test]
 fn the_call_site_constants_survived() {
     let style = style();
@@ -130,9 +113,6 @@ fn the_call_site_constants_survived() {
     assert_eq!(style.border_width, 1.0);
 }
 
-/// See the same test in the Cupertino kit for why this is here: the theme
-/// crate's `activate` is a placeholder, so a kit's identity lives in its
-/// constants and not in the tokens it reads.
 #[test]
 fn the_three_design_systems_still_resolve_identical_tokens() {
     let material_theme = theme();
@@ -143,7 +123,6 @@ fn the_three_design_systems_still_resolve_identical_tokens() {
     assert_eq!(cupertino.on_surface_variant, material.on_surface_variant);
 }
 
-// --- mounting -------------------------------------------------------------
 
 #[test]
 fn mounting_carries_the_options_the_selection_and_the_placeholder() {
@@ -213,21 +192,10 @@ fn choosing_reports_the_index() {
     assert!(select.select(1), "the index is in range");
     assert_eq!(seen.load(Ordering::SeqCst), 2, "the chosen index became 2");
 
-    // Re-picking the open row still reports, which is what lets a kit treat the
-    // choice as a confirmation rather than only as a change. This is the
-    // opposite of what `Slider::set_value` does, and both are pinned on purpose.
     assert!(select.select(1), "re-picking reports too");
     assert_eq!(seen.load(Ordering::SeqCst), 2, "same index, reported again");
 }
 
-/// The callback carries a plain index, not an `Option`.
-///
-/// v1's select reported `Option<usize>` because its `RwSignal` could be cleared,
-/// and the engine's cannot: `Select::choose` writes `Some(index)` on every
-/// successful pick, so there is no "unchoose" state to carry. This test is
-/// here so the difference is recorded rather than quietly assumed — it pins the
-/// `+ 1` encoding the kit uses, which only works because the value is never
-/// `None`.
 #[test]
 fn the_callback_carries_a_plain_index() {
     let seen = Arc::new(AtomicUsize::new(0));

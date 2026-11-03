@@ -1,47 +1,5 @@
 //! Cupertino 3 autocomplete, ported to the Floom 2.0 widget API.
 //!
-//! ## What this is, relative to a combobox
-//!
-//! A combobox and an autocomplete share 93% of their code and differ in exactly one
-//! way: **an autocomplete's field accepts text that is not an option.** Everything else —
-//! the field, the chevron, the filter, the rows, the panel placement — is the engine's
-//! [`floom_ui_composites::Combobox`], promoted once and shared by both.
-//!
-//! That one difference moves two things, and both live here rather than in the engine:
-//!
-//! * **the callback's payload.** A combobox reports an `Option<usize>`; this reports an
-//!   `Option<String>`, because "the user typed kiwi, which is not on the list" is a real
-//!   answer and an index cannot express it. The engine's index-based `on_change` is
-//!   therefore *adapted* here rather than replaced.
-//! * **the commit point.** Losing focus reconciles the typed text against the list, which
-//!   is [`floom_ui_composites::commit`]. v1 wrote that rule out at four lines; here it is one
-//!   call.
-//!
-//! ## The one behaviour the port cannot reproduce
-//!
-//! **v1 committed on `FocusLost`, and 2.0 has no way for a parent to observe a child's
-//! focus.** So [`CupertinoAutocomplete::commit`] is public: a caller wires it to whatever it
-//! does have — a wrapper's blur handler, an `Escape` key on a parent, the end of a
-//! search — and the rule inside it is the engine's, tested there.
-//!
-//! That is a real loss of fidelity and it is stated rather than papered over. The
-//! alternative — committing on every keystroke — would be a different control: the field
-//! would snap its selection to whatever the text currently matches, which is not what an
-//! autocomplete does.
-//!
-//! ## The silent exact match
-//!
-//! Committing text that exactly matches an option moves the selection and **reports
-//! nothing**. That is v1's behaviour, preserved, and it is why `Commit::Unchanged` is a
-//! named variant in the engine rather than an absence of code. See
-//! `floom_widgets::combobox::commit`.
-//!
-//! ## Cupertino's `.margin_top(4.0)`
-//!
-//! Cupertino is the only one of the three kits that wrote a panel gap; Cupertino and
-//! Fluent wrote none. `panel_gap` is a parameter and 4.0 is the default here *because it
-//! is the only one of the three that wrote a number* — a default invented here would have
-//! been a fourth opinion.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -177,7 +135,6 @@ impl CupertinoAutocomplete {
         if changed {
             if let Some(on_change) = &self.on_change {
                 // An index becomes its text, which is this control's whole difference
-                // from a combobox.
                 on_change(self.props.options.get(index).cloned());
             }
         }
@@ -224,7 +181,6 @@ impl CupertinoAutocomplete {
             panel_shadow_alpha: 20,
             border_width: 1.0,
 
-            // --- resolved theme colours ---
             surface: to_paint(surface),
             on_surface: to_paint(on_surface),
             on_surface_variant: to_paint(theme.colors().on_surface_variant),

@@ -1,42 +1,3 @@
-//! Material 3 toolbar, ported to the Floom 2.0 widget API.
-//!
-//! # What changed from v1
-//!
-//! v1 built a view by composing and styling:
-//!
-//! ```ignore
-//! Container::new(Stack::horizontal((left, actions)).style(|s| s.items_center().justify_between()))
-//!     .style(move |s| s.width_pct(100.0).height(h).padding(pad).background(..))
-//! ```
-//!
-//! 2.0 has no style closure and no `IntoView`, so the same three ideas become
-//! three different things:
-//!
-//! * the bar is a [`Surface`] — a filled box that holds children and pads them,
-//!   which v1's `Container` only did because it was both;
-//! * the two groups are a [`Stack`] with `Align::SpaceBetween` on the main axis
-//!   (v1's `justify_between`) and `Align::Center` across it (v1's `items_center`);
-//! * the trailing actions are a **builder closure** rather than an
-//!   `impl IntoView`, because 2.0 slots are replayable `Fn`s, not values.
-//!
-//! `MdToolbar::view` still returns the whole bar, content included. That is a
-//! deliberate exception to "composition is declared by the parent": *where* the
-//! leading icon sits relative to the trailing actions is what makes a toolbar a
-//! toolbar, so it is the component's business rather than the caller's.
-//!
-//! Two capabilities this component was the first to need are now in the engine:
-//! `FontWeight` (the `Medium` title) and `Surface::request` (a 64px bar that is
-//! also the full width of its parent).
-//!
-//! # What was kept deliberately
-//!
-//! * The title's `Medium` weight and the leading icon's hardcoded 22px are v1
-//!   literals, not tokens, and they are still literals here. A port that quietly
-//!   promoted them to tokens would change what the component draws.
-//! * The bar's height comes from `ToolbarProps::height`, and `ToolbarTokens`
-//!   also has a `height` field — which v1 never read. Reading the token instead
-//!   would be a behaviour change, so the token stays unread and says so in
-//!   [`ToolbarTokensHeightNote`] below rather than being silently preferred.
 
 use floom_core::{FontWeight as EngineFontWeight, LayoutRequest, WidgetAny};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -58,25 +19,14 @@ const BLACK: Color = Color {
     a: 255,
 };
 
-/// The gap between the leading icon and the title, in logical pixels. A v1
-/// `.style(|s| s.gap(4.0))` literal.
 const LEADING_GAP: f32 = 4.0;
 
-/// The leading icon's font size, in logical pixels. A v1 literal, not a token.
 const LEADING_ICON_SIZE: f32 = 22.0;
 
-/// The blur of the elevation shadow, in logical pixels. v1 wrote
-/// `box_shadow_blur(6.0).box_shadow_spread(0.0).box_shadow_color(black @ 30%)`
-/// — note there is no offset, so the shadow is a symmetric halo rather than a
-/// drop below the bar.
 const ELEVATION_BLUR: f32 = 6.0;
 
-/// The alpha of that shadow, matching v1's `with_alpha(BLACK, 30)`.
 const ELEVATION_ALPHA: u8 = 30;
 
-/// Marks [`ToolbarTokens::height`] as deliberately unread. See the module note.
-///
-/// [`ToolbarTokens::height`]: floom_core_theme::component_tokens::toolbar::ToolbarTokens::height
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ToolbarTokensHeightNote;
 
@@ -91,30 +41,8 @@ impl ToolbarTokensHeightNote {
     }
 }
 
-/// A builder for the trailing actions, replayed each time the bar is built.
-///
-/// 2.0 slots are `Fn`s, not stored values: a widget tree is rebuilt far more often
-/// than it is created, so a child held as a value would have to be a pre-built
-/// `Box<dyn Widget>` that could only ever be mounted once.
-///
-/// An [`Arc`] rather than a `Box`, for a reason the compiler states: the bar's own
-/// slot is itself a replayed `Fn`, so every rebuild needs its own copy of the
-/// actions closure to move into the inner slot. A `Box` cannot be cloned and a
-/// borrowed one would not be `'static`.
 pub type ActionsBuilder = std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
-/// The theme's weight -> the engine's.
-///
-/// The theme's own `FontWeight::to_floom` returns *parley's* weight, which a kit
-/// crate has no business naming: the engine's [`floom_core::FontWeight`] is what
-/// `Text` takes, and it is renderer-neutral.
-///
-/// Worth recording: `to_floom` maps `Black` to `EXTRA_BOLD` (800) rather than
-/// `BLACK` (900), and maps `ExtraBold` to `EXTRA_BOLD` too — so the two are
-/// indistinguishable there. Neither is reachable from any of the three kits
-/// (`FontWeight::Black` has no call site in material, cupertino or fluent), so
-/// the mapping is left alone rather than "fixed" where nothing could observe the
-/// change. This conversion does not repeat it.
 fn to_engine_weight(w: floom_core_theme::tokens::typography::FontWeight) -> EngineFontWeight {
     use floom_core::FontWeight as W;
     use floom_core_theme::tokens::typography::FontWeight as T;
@@ -179,11 +107,6 @@ impl MdToolbar {
         self
     }
 
-    /// Supply the trailing actions slot (icon buttons, menus, and so on).
-    ///
-    /// v1 took `impl IntoView`, which is a *value*. 2.0 takes a builder, because a
-    /// slot is replayed on every rebuild and a stored view could not be mounted
-    /// twice. Callers that already have a widget write `move || Box::new(..)`.
     pub fn actions(
         mut self,
         build: impl Fn() -> Box<dyn floom_core::WidgetAny> + Send + Sync + 'static,
@@ -223,13 +146,6 @@ impl MdToolbar {
         }
     }
 
-    /// The bar's own extent: its height, and the full width of its parent.
-    ///
-    /// v1 wrote `.width_pct(100.0).height(h)` on the bar's own style. In 2.0 a
-    /// decorated box declares its own extent through
-    /// [`Surface::request`](floom_widgets::Surface::request), so this stays on the
-    /// surface rather than being pushed onto the caller's slot for it — one box's
-    /// styling on one widget.
     pub fn request(&self) -> LayoutRequest {
         let style = self.resolved_style();
         LayoutRequest::new().height(style.height).width_pct(100.0)
@@ -239,10 +155,6 @@ impl MdToolbar {
         Insets::uniform(f64::from(self.resolved_style().padding))
     }
 
-    /// The elevation shadow, or `None` for an unelevated bar.
-    ///
-    /// `None` rather than a zero-blur transparent shadow, because a bar with no
-    /// elevation should not carry a shadow op at all.
     pub fn shadow(&self) -> Option<Shadow> {
         self.resolved_style().elevated.then(|| Shadow {
             color: to_paint(with_alpha(BLACK, ELEVATION_ALPHA)),
@@ -253,16 +165,6 @@ impl MdToolbar {
         })
     }
 
-    /// The leading icon, if this toolbar has one.
-    ///
-    /// v1 rendered the glyph through `Label::new(ic)`; 2.0's [`Icon`] is the same
-    /// thing with the accessibility default spelled out (decorative unless
-    /// labelled).
-    ///
-    /// Takes the glyph as an argument rather than reading `self`, because a 2.0
-    /// slot is a **replayed** `Fn`: it runs again on every rebuild, so anything it
-    /// captures has to be cloneable data rather than a widget built once. See
-    /// [`Self::leading_group`].
     pub fn leading_widget(&self, glyph: char) -> Icon {
         let content = to_paint(self.resolved_style().content);
         Icon::new(glyph).size(LEADING_ICON_SIZE).color(content)
@@ -277,17 +179,6 @@ impl MdToolbar {
             .color(to_paint(style.content))
     }
 
-    /// The leading group — icon and title, side by side, vertically centred.
-    ///
-    /// Built from plain data rather than from `self`, and that is not a stylistic
-    /// choice: 2.0's `push` takes `impl Fn() -> Box<dyn WidgetAny> + Send + Sync`,
-    /// and `MdToolbar` holds an `RwSignal`, which is `Rc`-based and therefore
-    /// neither. A slot that closed over `self` could not be built at all. So the
-    /// theme is resolved first and the closure captures `String`s, `f32`s and
-    /// colours — all of which are `Send + Sync` and cloneable.
-    ///
-    /// Exposed because a caller composing the bar by hand should not have to
-    /// restate the gap or the alignment to get the same arrangement.
     pub fn leading_group(&self) -> Stack {
         let style = self.resolved_style();
         leading_group_of(
@@ -299,13 +190,6 @@ impl MdToolbar {
         )
     }
 
-    /// The whole bar: the filled box, its padding, its extent, and its two groups.
-    ///
-    /// The trailing actions are pushed only when the caller supplied them. v1
-    /// substituted an empty view, which with `justify_between` put an invisible
-    /// box at the far end — and, being a *child*, it also meant the title was no
-    /// longer the only thing deciding the bar's contents. With one child
-    /// `SpaceBetween` places it at the start edge, which is the right answer.
     pub fn view(self) -> Surface {
         let style = self.resolved_style();
         let request = self.request();
@@ -317,7 +201,6 @@ impl MdToolbar {
         let leading = self.props.leading.as_deref().and_then(|s| s.chars().next());
         let title_size = style.title_font_size;
         let title_weight = style.title_weight;
-        // Last, because it moves: everything above borrows `self`.
         let actions = self.actions;
 
         let mut surface = Surface::new()
@@ -341,10 +224,6 @@ impl MdToolbar {
     }
 }
 
-/// The whole bar as a function over plain data.
-///
-/// Free-standing because both the surface's slot and any caller composing by hand
-/// need it, and neither may capture a built widget.
 fn bar_of(
     leading: Option<char>,
     title: &str,
@@ -371,10 +250,6 @@ fn bar_of(
     bar
 }
 
-/// The leading group as a free function over plain data.
-///
-/// Separate from [`MdToolbar::leading_group`] because both callers need it and
-/// neither can capture a widget: a slot is rebuilt, not stored.
 fn leading_group_of(
     leading: Option<char>,
     title: &str,

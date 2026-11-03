@@ -1,15 +1,3 @@
-//! The ported Material time picker -- a field, and the panel that opens under
-//! it.
-//!
-//! The panel is a host overlay, so what is tested here is the translation, the
-//! field's pixels, the request the picker makes of the host, and the panel's
-//! own arithmetic: the hour wraps over twenty-four and the minute over sixty.
-//!
-//! ## The tripwires
-//!
-//! `the_panel_is_asked_of_the_host_below_the_field` and
-//! `the_hour_wraps_over_twenty_four` would fail if this kit stopped being this
-//! kit.
 
 use floom_core::{ElementId, Event, OverlayKind, Point, Rect, Widget};
 use floom_types::{Color, PointerEvent};
@@ -33,9 +21,6 @@ const FIELD: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -119,7 +104,6 @@ fn hour_down(style: &MaterialTimePickerStyle, panel: Rect) -> Rect {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -165,8 +149,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-/// The numbers v1 wrote as literals are reported, because v1's paint used them
-/// and v1's style did not report them.
 #[test]
 fn the_literals_v1_wrote_are_reported() {
     let style = kit().resolved_style();
@@ -186,10 +168,7 @@ fn the_literals_v1_wrote_are_reported() {
     assert_eq!(style.done_height, 32.0, "v1's 'Done' button");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The field is painted in v1's colours: the border, the fill inside it, and
-/// the time.
 #[test]
 fn the_field_is_painted_in_v1_s_colours() {
     let style = kit().resolved_style();
@@ -212,7 +191,6 @@ fn the_field_is_painted_in_v1_s_colours() {
     assert_eq!(texts[0].2, paint(style.on_surface), "v1's ink for a time");
 }
 
-/// With nothing chosen, the placeholder shows in v1's other ink.
 #[test]
 fn the_placeholder_is_painted_in_the_variant_ink() {
     let style = kit().resolved_style();
@@ -222,9 +200,7 @@ fn the_placeholder_is_painted_in_the_variant_ink() {
     assert_eq!(texts[0].2, paint(style.on_surface_variant));
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The panel is asked of the host, under the field and as wide as v1's panel.
 #[test]
 fn the_panel_is_asked_of_the_host_below_the_field() {
     let style = kit().resolved_style();
@@ -282,8 +258,6 @@ fn the_panel_draws_the_hour_the_minute_and_done() {
     );
     let mut cx = RecordingUpdateContext::with_bounds(FIELD);
     widget.update(&mut cx, id);
-    // The vector is held in a local: a borrow of a temporary would not
-    // outlive the statement.
     let opened = cx.opened_overlays();
     let OverlayCall::Open {
         bounds, content, ..
@@ -297,8 +271,6 @@ fn the_panel_draws_the_hour_the_minute_and_done() {
     recorder.finish();
     let texts = texts(recorder.ops());
 
-    // The hour and the minute are both "00" when nothing is chosen, so they
-    // are counted rather than matched.
     assert_eq!(
         texts.iter().filter(|(text, _, _)| text == "00").count(),
         2,
@@ -308,7 +280,6 @@ fn the_panel_draws_the_hour_the_minute_and_done() {
         texts.iter().any(|(text, _, _)| text == "Done"),
         "the button: {texts:?}"
     );
-    // The four steppers: two signs, twice each.
     let signs = texts
         .iter()
         .filter(|(text, _, _)| text == "\u{2212}" || text == "+")
@@ -316,8 +287,6 @@ fn the_panel_draws_the_hour_the_minute_and_done() {
     assert_eq!(signs, 4, "two steppers on each of the two rows: {texts:?}");
 }
 
-/// The hour wraps over twenty-four, as v1 did: from zero, stepping down gives
-/// twenty-three.
 #[test]
 fn the_hour_wraps_over_twenty_four() {
     let style = kit().resolved_style();
@@ -335,15 +304,10 @@ fn the_hour_wraps_over_twenty_four() {
         FIELD,
         Event::Pointer(PointerEvent::primary_up(Point::new(10.0, 10.0))),
     );
-    // A host with no overlays: the panel is mounted in the tree instead, which
-    // is the only way a test can hold on to it.
     let mut cx = RecordingUpdateContext::without_overlay_support();
     widget.update(&mut cx, id);
     let children = widget.children();
     assert_eq!(children.len(), 1, "the in-tree fallback");
-    // The in-tree fallback puts the panel on the overlay's layer, so the panel
-    // is one level deeper than the picker: the layer, then the panel the
-    // layer holds.
     let layer = children[0].build();
     let mut panel = layer.children().remove(0).build();
 
@@ -387,7 +351,6 @@ fn a_disabled_picker_does_not_answer() {
     );
 }
 
-/// The props report what v1 reported.
 #[test]
 fn the_props_report_the_time_and_the_placeholder() {
     let kit = kit()
@@ -408,12 +371,8 @@ fn the_props_report_the_time_and_the_placeholder() {
     assert!(kit.props().disabled);
 }
 
-/// The theme: v1's Material time picker read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialTimePicker::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

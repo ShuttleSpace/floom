@@ -61,7 +61,6 @@ pub fn from_winit_modifier_state(modifiers_state: ModifiersState) -> Modifiers {
 pub fn from_winit_key(winit_key: winit::keyboard::Key) -> Key {
     use winit::keyboard::Key as WK;
     use winit::keyboard::NamedKey as WNK;
-    // TODO: I'm guessing I did something wrong here
     match winit_key {
         WK::Character(c) => Key::Character(c.to_string()),
         WK::Unidentified(_) => Key::Named(NamedKey::Unidentified),

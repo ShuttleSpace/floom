@@ -1,29 +1,3 @@
-//! `ColorPicker` -- a square, two strips, a preview and a hex field.
-//!
-//! The square is saturation across and value down; the strips are the hue
-//! and the opacity. Each area paints itself and handles its own drag,
-//! because 2.0 keeps a mounted child's widget when its key survives a
-//! rebuild -- so an area that read the colour when it was built would keep
-//! the colour it was built with.
-//!
-//! The three floem-ui colour-picker kits each used to carry their own copy
-//! of all of this; they share the engine's one now.
-//!
-//! ## What the kits still answer
-//!
-//! The square's and the strips' sizes, the thumb's size, the corner radius,
-//! the three inks, the hex field's ink, and the numbers v1's paint used and
-//! v1's style never reported: the padding, the border's thickness and
-//! alpha, the margins, the row's gap, the preview's size, the hex field's
-//! width and text size, and the thumb's border.
-//!
-//! ## The colour and the hex are shared cells
-//!
-//! v1 held an `RwSignal<Color>` and an `RwSignal<String>` for the hex. 2.0's
-//! slots are shared between threads and an `RwSignal` is `Rc`-based, so a
-//! value that changes after mount cannot be a signal; these are mutex-guarded
-//! cells instead, the same shape the engine's `SharedFlag` and `SharedBuffer`
-//! have.
 
 use std::sync::{Arc, Mutex};
 

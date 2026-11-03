@@ -1,12 +1,3 @@
-//! Material circular progress: the ring, and the two numbers this kit owns.
-//!
-//! ## The claim
-//!
-//! v1 drew an SVG ring -- a track circle and an accent arc over it. 2.0's
-//! `CircularProgress` draws the same two things, so the kit is a thin adapter
-//! and the assertions are about the two numbers it decides: the indeterminate
-//! arc's *length* and *start*, which are where this kit and the other two
-//! disagree.
 
 use floom_core::Widget;
 use floom_types::{Color, Length, Rect};
@@ -26,13 +17,6 @@ const BOX: Rect = Rect {
     y1: 48.0,
 };
 
-/// The Material theme, with Material selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time. So a test that wants Material's own values has to
-/// select Material, and `set_design_system` writes a thread-local, so the
-/// selection is this test's alone.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
@@ -83,9 +67,6 @@ fn the_props_size_wins_over_the_tokens() {
         .resolved_style();
     assert_eq!(style.size, 64.0, "v1: the props' size when it is set");
 
-    // The default is the *props'* 36.0, not zero -- so v1's
-    // `if props.size > 0.0 { props.size } else { tokens.size }` never reached
-    // the token, and `ProgressCircularTokens::size` was dead in all three kits.
     let style = MaterialProgressCircular::new()
         .with_theme(theme())
         .resolved_style();
@@ -126,8 +107,6 @@ fn the_indeterminate_arc_is_the_shape_this_kit_asks_for() {
     );
 }
 
-/// The determinate arc starts at twelve o'clock, whatever the indeterminate one
-/// does -- that is v1's `transform="rotate(-90 ..)"`.
 #[test]
 fn the_determinate_arc_starts_at_twelve_oclock() {
     let ring = MaterialProgressCircular::new()

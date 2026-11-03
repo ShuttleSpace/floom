@@ -1,21 +1,5 @@
 //! The ported Cupertino chip -- a pill with a label in the middle, in one of
 //! three appearances.
-//!
-//! The pill and its centred label are the engine's `Chip`; what is tested here
-//! is the *translation*: the tokens reach the engine, the palette is the one
-//! v1 used, and the pixels say so.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a chip that paints the unchosen fill with the
-//! chosen ink from one that has them the right way round. Only the paint log
-//! can, so these tests read what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_three_appearances_are_the_ones_v1_drew` and
-//! `the_outline_is_the_one_v1_drew` would fail if this kit stopped being
-//! this kit.
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
@@ -40,7 +24,6 @@ const AT: Point = Point { x: 20.0, y: 20.0 };
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }

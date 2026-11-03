@@ -1,16 +1,4 @@
 //! The ported Fluent pull-to-refresh -- a drag that fires a refresh and an
-//! indicator above the content.
-//!
-//! The shape is the engine's vocabulary plus the two widgets the kit needs for
-//! the pull, so what is tested here is the translation and the pixels: the
-//! tokens reach the style, the indicator is painted in v1's ink at v1's size,
-//! and the indicator is absent when v1 would have drawn nothing.
-//!
-//! ## The tripwires
-//!
-//! `the_indicator_is_painted_in_v1_s_ink_at_v1_s_size` and
-//! `the_indicator_is_absent_until_there_is_something_to_say` would fail if
-//! this kit stopped being this kit.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -34,9 +22,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -45,7 +30,6 @@ fn kit() -> FluentPullToRefresh {
     FluentPullToRefresh::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -55,21 +39,17 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The column the kit's box holds.
 fn column(kit: FluentPullToRefresh) -> Box<dyn floom_core::WidgetAny> {
     let view = kit.view();
     view.children().remove(0).build()
 }
 
-/// The indicator the column holds.
 fn indicator(kit: FluentPullToRefresh) -> Box<dyn floom_core::WidgetAny> {
     let column = column(kit);
     column.children().remove(0).build()
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentPullToRefreshStyle = kit().resolved_style();
@@ -103,7 +83,6 @@ fn the_tokens_and_colours_reach_the_style() {
     );
 }
 
-/// The threshold v1 used was the prop's, never the token's.
 #[test]
 fn the_threshold_is_the_props_not_the_token() {
     let style = kit().resolved_style();
@@ -125,9 +104,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The box is painted the colour v1 painted.
 #[test]
 fn the_box_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -145,15 +122,12 @@ fn the_box_is_painted_v1_s_colour() {
     assert_eq!(fill, Some(paint(resolved.background)), "the box's fill");
 }
 
-/// The indicator is painted in v1's ink at v1's size.
 #[test]
 fn the_indicator_is_painted_in_v1_s_ink_at_v1_s_size() {
     let resolved = kit().resolved_style();
     let kit = kit();
-    // A pull, so that there is an indicator to paint.
     *kit.pull_distance().lock().unwrap() = 20.0;
     let indicator = indicator(kit);
-    // The label is the indicator's only child.
     let label = indicator.children().remove(0).build();
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = label.create(&mut create);
@@ -175,7 +149,6 @@ fn the_indicator_is_painted_in_v1_s_ink_at_v1_s_size() {
     assert_eq!(ink, paint(resolved.on_surface_variant), "v1's label ink");
 }
 
-/// The refreshing state shows v1's other label.
 #[test]
 fn the_refreshing_state_shows_v1_s_other_label() {
     let kit = kit().loading(true);
@@ -197,9 +170,7 @@ fn the_refreshing_state_shows_v1_s_other_label() {
     assert_eq!(text, "↻ Refreshing…", "v1's label while refreshing");
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The indicator is absent until there is something to say.
 #[test]
 fn the_indicator_is_absent_until_there_is_something_to_say() {
     let indicator = indicator(kit());
@@ -209,7 +180,6 @@ fn the_indicator_is_absent_until_there_is_something_to_say() {
     );
 }
 
-/// The pull is the indicator's height, and the content is pushed down under it.
 #[test]
 fn the_pull_is_the_indicator_s_height() {
     let kit = kit();
@@ -225,7 +195,6 @@ fn the_pull_is_the_indicator_s_height() {
     );
 }
 
-/// The content is the column's other child.
 #[test]
 fn the_content_is_the_column_s_other_child() {
     let child = floom_core::Child::new(
@@ -237,7 +206,6 @@ fn the_content_is_the_column_s_other_child() {
     assert_eq!(column.children().len(), 2, "the indicator and the content");
 }
 
-/// The refresh fires when the pull passes the threshold.
 #[test]
 fn the_refresh_fires_when_the_pull_passes_the_threshold() {
     let fired = Arc::new(AtomicUsize::new(0));
@@ -263,7 +231,6 @@ fn the_refresh_fires_when_the_pull_passes_the_threshold() {
     );
 }
 
-/// A pull that has not reached the threshold fires nothing.
 #[test]
 fn a_pull_short_of_the_threshold_fires_nothing() {
     let fired = Arc::new(AtomicUsize::new(0));
@@ -284,19 +251,14 @@ fn a_pull_short_of_the_threshold_fires_nothing() {
     );
 }
 
-/// The props report the threshold.
 #[test]
 fn the_props_report_the_threshold() {
     let kit = kit().threshold(64.0);
     assert_eq!(kit.props().threshold, 64.0);
 }
 
-/// The theme: v1's Fluent pull-to-refresh took a *snapshot* of its own
-/// design system, so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentPullToRefresh::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

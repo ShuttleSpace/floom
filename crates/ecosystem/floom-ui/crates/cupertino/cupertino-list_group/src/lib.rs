@@ -1,46 +1,5 @@
 //! Cupertino list group, ported to the Floom 2.0 widget API.
 //!
-//! A list group is a titled, collapsible group of rows. v1 built it as a
-//! clickable header over a stack of rows that appeared and disappeared with an
-//! `RwSignal<bool>`.
-//!
-//! ## What the port uses
-//!
-//! The header-plus-body shape, the chevron that changes with the state, and the
-//! body that is mounted only while the group is open -- that is the engine's
-//! [`Accordion`], and one list group is one accordion with a single panel. The
-//! engine owns the open/close state, so the kit does not need a signal of its
-//! own, and the toggle callback is the accordion's `on_change`.
-//!
-//! ## Where the padding lives
-//!
-//! v1 padded the *items* -- each row took `indent` or `content_padding` of
-//! horizontal padding -- and the stack around them took the vertical padding.
-//! The accordion's own `content_padding` would put that inset on the body box
-//! on *all four* sides, and v1 had no horizontal inset there, so the
-//! accordion's is left at zero and the kit's own stack carries the vertical
-//! one.
-//!
-//! ## What v1 drew that this port does not
-//!
-//! * **The outline around the header row.** v1 put a 1px outline on the
-//!   *header* -- `border(1.0).border_color(with_alpha(outline, 30))` -- so the
-//!   outline was the header row's own box. 2.0's accordion draws the outline
-//!   around the *panel*: the header and, while it is open, the rows. The box
-//!   that would have to carry the header's outline is a leaf, and a leaf
-//!   cannot hold the row it would be outlining; the engine says as much, and
-//!   outlining the panel is what Material 3's outlined expansion panel does.
-//!   The width and the colour are v1's; the shape is the engine's.
-//! * **`cursor(CursorStyle::Pointer)` on the header.** 2.0's paint context has
-//!   no cursor vocabulary, so the pointer is not carried over; the header is
-//!   still a `Pressable`, so it is still activatable by keyboard, which the
-//!   pointer was not.
-//!
-//! ## The chevron
-//!
-//! The indicator is this design system's own glyph: `expand_more` and
-//! `chevron_right` are different drawings in each icon table, and a lookup that
-//! reached for another system's table would draw a foreign chevron.
 
 use std::sync::Arc;
 
@@ -248,21 +207,18 @@ impl CupertinoListGroup {
                 },
                 move || {
                     // v1's items: a vertical stack, each row padded, with the stack
-                    // itself padded vertically.
                     let mut stack = Stack::new(Axis::Vertical)
                         .gap(row_gap)
                         // v1: `padding_vert(content_padding)` on the stack that
                         // holds the items. The accordion's own `content_padding`
                         // would inset the body box on *all four* sides, and v1 had
                         // no horizontal inset there -- the rows carried their own --
-                        // so the vertical inset belongs here.
                         .request(LayoutRequest::new().padding_vert(f64::from(vertical_padding)));
                     for label in items.iter() {
                         let label = label.clone();
                         let color = item_color;
                         stack = stack.push(move || {
                             // The slot is a replayed `Fn`, so the label is cloned
-                            // again for the inner slot that draws it.
                             let label = label.clone();
                             Box::new(
                                 Stack::new(Axis::Horizontal)
@@ -274,7 +230,6 @@ impl CupertinoListGroup {
                                     )
                                     .push(move || {
                                         // The slot is a replayed `Fn`, so it borrows
-                                        // the label rather than moving it out.
                                         Box::new(
                                             Text::new(label.clone())
                                                 .size(item_font_size)
@@ -289,7 +244,6 @@ impl CupertinoListGroup {
             );
 
         // v1 seeded the expanded flag from the props, and the engine's
-        // accordion starts closed.
         accordion.set_open(0, self.props.expanded);
 
         if let Some(on_toggle) = on_toggle {

@@ -1,14 +1,3 @@
-//! The ported Material snackbar -- a bar at the bottom of the page with a
-//! message in it.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the bar is painted
-//! in v1's colours, and the bar is only there while the snackbar is up.
-//!
-//! ## The tripwires
-//!
-//! `the_bar_is_painted_in_v1_s_colours` and `the_bar_is_only_there_while_the
-//! _snackbar_is_up` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -33,9 +22,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -54,10 +40,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The bar, once the snackbar is up.
-///
-/// The bar is mounted by the engine's `Conditional`, so it appears in an
-/// update pass -- the way the host does it every frame.
 fn bar(overlay: &Overlay) -> Option<Box<dyn WidgetAny>> {
     let mut conditional = overlay.children().remove(0).build();
     let mut create = AllocatingCreateContext::new();
@@ -132,7 +114,6 @@ fn press_action(surface: &Box<dyn WidgetAny>) {
     action.event(&mut up, id);
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -170,16 +151,12 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The bar is painted in v1's colours.
 #[test]
 fn the_bar_is_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
     let overlay = kit()
         .message("Saved")
-        // v1 hid the bar while the snackbar was closed, so the bar is
-        // only there to look at while it is up.
         .with_open_flag(floom_widgets::shared_flag(true))
         .view();
     let surface = bar(&overlay).expect("the bar is up");
@@ -195,15 +172,12 @@ fn the_bar_is_painted_in_v1_s_colours() {
     );
 }
 
-/// The action is painted in v1's ink, at v1's size.
 #[test]
 fn the_action_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
     let overlay = kit()
         .message("Saved")
         .action_label(Some("Undo".into()))
-        // v1 hid the bar while the snackbar was closed, so the bar is
-        // only there to look at while it is up.
         .with_open_flag(floom_widgets::shared_flag(true))
         .view();
     let surface = bar(&overlay).expect("the bar is up");
@@ -214,7 +188,6 @@ fn the_action_is_painted_in_v1_s_ink() {
     );
 }
 
-// --- the rules ------------------------------------------------------------
 
 /// The bar is only there while the snackbar is up.
 #[test]
@@ -260,8 +233,6 @@ fn the_action_closes_the_snackbar() {
 fn there_is_no_action_without_a_label() {
     let overlay = kit()
         .message("Saved")
-        // v1 hid the bar while the snackbar was closed, so the bar is
-        // only there to look at while it is up.
         .with_open_flag(floom_widgets::shared_flag(true))
         .view();
     let surface = bar(&overlay).expect("the bar is up");
@@ -294,12 +265,8 @@ fn the_props_report_the_message() {
     assert!(kit.props().action_label.is_none());
 }
 
-/// The theme: v1's Material snackbar read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialSnackbar::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

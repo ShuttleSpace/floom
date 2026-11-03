@@ -88,7 +88,6 @@ impl WindowEventReducer {
     ) -> Option<WindowEventTranslation> {
         const PRIMARY_MOUSE: PointerInfo = PointerInfo {
             pointer_id: Some(PointerId::PRIMARY),
-            // TODO: Maybe transmute device.
             persistent_device_id: None,
             pointer_type: PointerType::Mouse,
         };
@@ -153,7 +152,6 @@ impl WindowEventReducer {
 
                 let info = PointerInfo {
                     pointer_id: PointerId::new(finger_id.into_raw() as u64),
-                    // TODO: Maybe transmute device.
                     persistent_device_id: None,
                     pointer_type: PointerType::Touch,
                 };
@@ -177,7 +175,6 @@ impl WindowEventReducer {
             } => {
                 let info = PointerInfo {
                     pointer_id: PointerId::new(finger_id.into_raw() as u64),
-                    // TODO: Maybe transmute device.
                     persistent_device_id: None,
                     pointer_type: PointerType::Touch,
                 };

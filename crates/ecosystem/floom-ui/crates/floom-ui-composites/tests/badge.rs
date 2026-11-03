@@ -1,9 +1,3 @@
-//! Scene and semantics snapshots for `Badge`, the first Stage B widget.
-//!
-//! `Badge` establishes the porting pattern for the floem-ui component library:
-//! a theme-agnostic 2.0 widget that takes explicit values, with palette
-//! resolution left to the design-system kits. See
-//! `docs/porting-floem-ui-to-2.0.md`.
 
 use floom_core::{Length, Rect, Widget};
 use floom_ui_composites::Badge;

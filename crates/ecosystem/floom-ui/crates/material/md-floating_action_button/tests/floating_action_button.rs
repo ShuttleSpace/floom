@@ -1,11 +1,3 @@
-//! Material floating action button: the circle, the elevation, and the click.
-//!
-//! ## The claim
-//!
-//! The button is a circle of the token's size, raised by the token's elevation,
-//! filled with `primary` and inked with `on_primary` -- and a disabled one
-//! loses both to `on_surface` at 12% and 38%. The assertions are about the
-//! painted fill, the painted shadow, and the click.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -69,8 +61,6 @@ fn the_button_is_a_circle_of_the_tokens_size() {
         .downcast_ref::<floom_widgets::Surface>()
         .unwrap()
         .clone();
-    // The size is on the *content* -- the surface is the outer box, and the
-    // circle it holds is the square inside it.
     let content = surface.children()[0].build();
     let request = content
         .as_any()
@@ -88,8 +78,6 @@ fn the_button_is_a_circle_of_the_tokens_size() {
 fn the_fill_is_the_accent_and_the_disabled_one_is_muted() {
     let button = MaterialFloatingActionButton::new().with_theme(theme());
     let style = button.resolved_style();
-    // The fill is the surface's: the pressable paints nothing, it is only the
-    // interaction.
     let pressable = button.view();
     let surface = pressable.children()[0].build();
     let mut surface = surface
@@ -102,7 +90,6 @@ fn the_fill_is_the_accent_and_the_disabled_one_is_muted() {
     let mut recorder = SceneRecorder::new(BOX);
     surface.paint(&mut recorder, id);
     recorder.finish();
-    // The button is a circle, so the fill is a *rounded* rect.
     let fill = recorder.ops().iter().find_map(|op| match op {
         PaintOp::Rect { color, .. } => Some(*color),
         PaintOp::RoundedRect { color, .. } => Some(*color),
@@ -124,8 +111,6 @@ fn the_fill_is_the_accent_and_the_disabled_one_is_muted() {
     );
 }
 
-/// The elevation is the shadow v1 wrote: a blur of 2 + the elevation, a spread
-/// of 1, and a black ink at 30%.
 #[test]
 fn the_elevation_is_the_shadow_v1_wrote() {
     let button = MaterialFloatingActionButton::new().with_theme(theme());

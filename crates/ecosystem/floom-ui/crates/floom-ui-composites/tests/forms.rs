@@ -1,9 +1,3 @@
-//! `floom-forms` x the composite controls.
-//!
-//! This file is both halves of `floom-app/tests/forms.rs`, which no longer exists:
-//! the form model is generic over the control, so the `Select` binding came up
-//! here with its widget, and the `TextField` binding came up with this move.
-//! Same test, same rules, one control each side of the layering.
 
 use floom_forms::{rules, FieldBinding, FormController};
 use floom_ui_composites::{Select, TextField};

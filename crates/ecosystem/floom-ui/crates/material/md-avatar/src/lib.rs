@@ -1,15 +1,3 @@
-//! Material avatar, ported to the Floom 2.0 widget API.
-//!
-//! An avatar is a circle (or, in Material's case, a rounded square) with a piece
-//! of text in it. v1 spelled it as a `Container` holding a `Label`; 2.0 spells
-//! it a [`Surface`] holding a [`Text`], which is the same two things with the
-//! roles named: the surface is the shape, the text is the initials.
-//!
-//! ## What this kit answers
-//!
-//! * **the shape**: a **circle** -- Material wrote the literal `9999.0` and Cupertino asked the theme for `radius().full`, which is the same number;
-//! * **the palette**: `primary_container` for the shape and `on_primary_container` for the text;
-//! * **the type**: the text at the token's size, at the default weight.
 
 use floom_core::LayoutRequest;
 use floom_signal::{RwSignal, SignalGet};
@@ -54,16 +42,6 @@ impl MaterialAvatar {
         self
     }
 
-    /// The avatar's diameter in dp.
-    ///
-    /// The *props'* default is 40, not zero, so the rule below never reaches
-    /// `AvatarTokens::size` -- and that token is dead in all three kits, for
-    /// the same reason the circular progress's was. v1 wrote
-    /// `if props.size > 0.0 { props.size } else { tokens.size }`; the props'
-    /// default is 40, so the props always won. The rule is kept, because the
-    /// rule is what v1 drew, and the dead token is named rather than quietly
-    /// switched. (For Fluent it shows: its token says 36, and its avatar was
-    /// 40 all the same.)
     pub fn size(mut self, size: f32) -> Self {
         self.props.size = size;
         self
@@ -91,7 +69,6 @@ impl MaterialAvatar {
             design_system: DESIGN_SYSTEM,
             background: theme.colors().primary_container,
             text_color: theme.colors().on_primary_container,
-            // v1: the props' size when it is set, the token's otherwise.
             size: if self.props.size > 0.0 {
                 self.props.size
             } else {
@@ -121,7 +98,6 @@ impl MaterialAvatar {
             .background(to_paint(style.background))
             .radius(radius)
             .push(move || {
-                // The slot is a replayed `Fn`, so the text is cloned per mount.
                 Box::new(
                     Text::new(content.clone())
                         .size(font_size)

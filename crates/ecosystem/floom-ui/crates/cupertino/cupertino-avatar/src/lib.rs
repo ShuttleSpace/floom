@@ -1,15 +1,5 @@
 //! Cupertino avatar, ported to the Floom 2.0 widget API.
 //!
-//! An avatar is a circle (or, in Cupertino's case, a rounded square) with a piece
-//! of text in it. v1 spelled it as a `Container` holding a `Label`; 2.0 spells
-//! it a [`Surface`] holding a [`Text`], which is the same two things with the
-//! roles named: the surface is the shape, the text is the initials.
-//!
-//! ## What this kit answers
-//!
-//! * **the shape**: a **circle** -- Material wrote the literal `9999.0` and Cupertino asked the theme for `radius().full`, which is the same number;
-//! * **the palette**: `surface_variant` for the shape and `on_surface` for the text;
-//! * **the type**: the text at the token's size, at the default weight.
 
 use floom_core::LayoutRequest;
 use floom_signal::{RwSignal, SignalGet};

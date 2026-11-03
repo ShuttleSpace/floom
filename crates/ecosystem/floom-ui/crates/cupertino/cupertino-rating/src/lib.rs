@@ -1,58 +1,5 @@
 //! Cupertino rating, ported to the Floom 2.0 widget API.
 //!
-//! A rating is a row of stars: the first `value` of them are filled, the rest
-//! are empty, and tapping a star sets the value to that star's number.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a horizontal `Stack` of stars, each a `Pressable`
-//! around a slot that holds one of two glyphs -- the same `star` path in two
-//! inks. Which glyph is mounted is the engine's `Conditional`, following a
-//! shared flag, so the row follows whoever writes the flag the way v1's
-//! signal did.
-//!
-//! ## What this kit answers
-//!
-//! * the star's size and the gap between the stars: the tokens;
-//! * the filled star's ink: the system yellow `rgb(255, 204, 0)`, a v1
-//!   literal, not a theme colour;
-//! * the empty star's ink: `outline`;
-//! * the glyph: the `star` path from this kit's own icon table.
-//!
-//! ## The value, and how it is held
-//!
-//! v1 held the value in an `RwSignal<f32>` that `view()` created, so nothing
-//! outside could read it. 2.0 cannot hold it in a signal at all: a slot
-//! closure has to be `Send + Sync` and an `RwSignal` is `Rc`-based. The port
-//! holds **one shared flag per star** -- "is this star filled?" -- which is
-//! the state the paint actually needs. The filled stars are a prefix, so the
-//! number v1 held is the length of that prefix, and a click rewrites the
-//! flags rather than a number.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The pointer cursor.** v1 gave every star
-//!   `cursor(CursorStyle::Pointer)`, and `CursorStyle::Default` when the
-//!   rating was read-only. 2.0's `Pressable` does not answer
-//!   `Widget::cursor`, so the pointer is not carried over.
-//! * **The callback in the shared props.** `RatingProps::on_change` is a
-//!   `Box<dyn Fn(f32)>`, which cannot cross a `Send + Sync` slot boundary.
-//!   The kit keeps an `Arc<dyn Fn(f32) + Send + Sync>` of its own and the
-//!   props' slot stays empty.
-//!
-//! ## What the port adds
-//!
-//! * **A name for every star.** 2.0's widgets publish semantics and v1's
-//!   did not; the port gives each star a name ("Rate 3 of 5"), which is an
-//!   addition rather than a translation.
-//! * **The keyboard is gated too.** v1's read-only rating guarded the click
-//!   with `if !readonly`, which covered the pointer but not the keyboard.
-//!   2.0 puts the gate on the `Pressable`, so both are covered.
-//!
-//! ## The accessors
-//!
-//! v1's Cupertino rating already had `props()`, `theme()` and `with_theme()`.
-//! The port gives Material the same three, so the three kits are one shape.
 
 use std::sync::Arc;
 
@@ -247,11 +194,9 @@ impl CupertinoRating {
             row = row.push(move || {
                 // The click closure is built inside the slot, so the values it
                 // takes are copied here: a slot is replayed, and a closure
-                // cannot move its own captures out.
                 let all = all.clone();
                 let on_change = on_change.clone();
                 // The two glyphs: the star filled, and the star empty. They are
-                // the same path in two inks.
                 let filled_glyph = VectorIcon::from_path_data(path, VIEW_BOX)
                     .size(star_size)
                     .color(active);
@@ -296,7 +241,6 @@ impl CupertinoRating {
                     .disabled(readonly)
                     .on_click(move || {
                         // v1 fired the callback only when the rating was not
-                        // read-only.
                         if readonly {
                             return;
                         }

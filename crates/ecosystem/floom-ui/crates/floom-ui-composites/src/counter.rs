@@ -1,32 +1,3 @@
-//! `Counter` — the `- / value / +` stepper.
-//!
-//! ## Why it is here rather than in a kit
-//!
-//! All three kits build the same control out of the same parts. Measured across
-//! `md_counter`, `cupertino_counter` and `fluent_counter`: after normalising the
-//! kit names away, the three sources differ in **five lines, all of them the
-//! theme signal** — Material reads the process-global `theme_signal()`, while
-//! Cupertino and Fluent each build their own `RwSignal<MultiTheme>`. Every design
-//! value comes from `CounterTokens`, and the one literal (`font_size(16.0)` on
-//! the value readout) is the same literal in all three.
-//!
-//! So the three kits agree, completely, and there is no disagreement to preserve.
-//! What is left in each of them is a translation from design tokens to
-//! `CounterStyle` plus that one literal — about forty lines each.
-//!
-//! That agreement is the reason this widget was promoted rather than ported three
-//! times, and it is *not* a reason for it to be in the engine. Where a component
-//! lives is a question of who is allowed to decide what it is; the fact that all
-//! three design systems happen to answer the same way says nothing about that.
-//! So it moved up a layer with the tree, the navigation rail and the select.
-//!
-//! ## What is here rather than in a kit
-//!
-//! * the structure — a bordered band, three parts, the middle one centred;
-//! * **the clamping**, which is the only real state machine in the component:
-//!   the value is clamped whenever a bound changes, and each step is applied and
-//!   *then* clamped;
-//! * that `on_change` fires **even when the value did not move** (see below).
 
 use std::sync::{Arc, Mutex};
 

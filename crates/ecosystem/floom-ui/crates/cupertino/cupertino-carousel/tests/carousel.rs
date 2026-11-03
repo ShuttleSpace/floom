@@ -1,15 +1,5 @@
 //! The ported Cupertino carousel -- one slide at a time, with arrows and dots.
 //!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the area is
-//! painted in v1's colours, the dots are painted in the colours v1 gave
-//! them, and only the current slide is mounted.
-//!
-//! ## The tripwires
-//!
-//! `the_dots_are_painted_in_v1_s_colours` and
-//! `only_the_current_slide_is_mounted` would fail if this kit stopped being
-//! this kit.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -37,7 +27,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -145,7 +134,6 @@ fn the_tokens_and_colours_reach_the_style() {
 #[test]
 fn the_height_is_the_prop_s_when_it_is_positive() {
     // The token's height, read from the token: the three kits' tokens do not
-    // agree on it.
     let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Carousel)
     {
         floom_core_theme::component_tokens::ComponentTokens::Carousel(tokens) => tokens,
@@ -351,7 +339,6 @@ fn the_props_report_the_switches() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoCarousel::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

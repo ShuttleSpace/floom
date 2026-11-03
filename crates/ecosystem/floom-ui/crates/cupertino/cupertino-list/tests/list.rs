@@ -1,10 +1,5 @@
 //! Cupertino's list as a kit crate: the token translation, plus the numbers that
 //! are this kit's own rather than the tokens'.
-//!
-//! See `floom-widget-md-list`'s test module for the full rationale. The one
-//! number this kit answers differently from Material is the container radius:
-//! Cupertino reads `radius().md` where Material hardcodes `8.0`. That is the
-//! tripwire that keeps the three kits three crates.
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;

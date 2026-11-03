@@ -1,16 +1,5 @@
 //! The ported Cupertino calendar -- a month of days, with the selected date
 //! picked out.
-//!
-//! The shape is the engine's vocabulary plus a kit-local body, so what is
-//! tested here is the translation and the pixels: the tokens reach the style,
-//! the panel is painted in v1's colours, the title names the month, the
-//! selected day is filled in `primary` and every other day is not, and
-//! clicking a day picks it.
-//!
-//! ## The tripwires
-//!
-//! `the_selected_day_is_filled_and_the_others_are_not` and
-//! `clicking_a_day_picks_it` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -35,7 +24,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -96,7 +84,6 @@ fn cell_widget(kit: CupertinoCalendar, label: &str) -> Box<dyn WidgetAny> {
         for column in 0..row.children().len() {
             let cell = row.children().remove(column).build();
             // The cell is a pressable around the round box that holds the
-            // number.
             let surface = cell.children().remove(0).build();
             let text = surface.children().remove(0).build();
             let painted = text_of(&*text);
@@ -341,7 +328,6 @@ fn the_props_report_the_date() {
     );
 }
 
-// --- the theme source ---
 
 /// The theme: v1's Cupertino calendar took a *snapshot* of its own design
 /// system, so a change of the app-wide theme does not re-theme it.

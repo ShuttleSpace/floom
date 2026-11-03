@@ -1,25 +1,3 @@
-//! `VirtualScroller` -- a viewport that mounts only the rows it can show.
-//!
-//! The list is a plain list of rows; the scroller mounts the window of them
-//! that the viewport covers, and leaves the rest unmounted. The content's
-//! height stays the whole list's height, so the scrollbar is honest.
-//!
-//! The three floem-ui virtual-scroller kits each used to carry their own
-//! copy of this viewport; they share the engine's one now.
-//!
-//! ## The offset is the scroller's own
-//!
-//! The engine's `Scroll` keeps its offset to itself and applies one offset
-//! to its whole subtree, so a widget inside it cannot ask how far it has
-//! scrolled. This scroller therefore keeps an offset of its own and asks the
-//! host to scroll: the offset is in the engine's own units -- `f64`, like
-//! `ScrollOffset` -- and it is the scroller's business, not the caller's.
-//!
-//! ## The rows to mount for an offset
-//!
-//! v1's window, exactly: the first row is the one the viewport is on, less
-//! the overscan; the count is the viewport's worth of rows, plus one, plus
-//! the overscan on both sides.
 
 use std::sync::{Arc, Mutex};
 

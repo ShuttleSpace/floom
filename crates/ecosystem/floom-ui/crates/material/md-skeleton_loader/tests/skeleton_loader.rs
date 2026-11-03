@@ -1,17 +1,3 @@
-//! The ported Material skeleton loader -- the grey placeholder shown while
-//! content loads.
-//!
-//! ## Why the pixels and not the style
-//!
-//! The style can say what colour a block was *given*; only the paint log can
-//! say that the block was painted in it, at what size, and with what corner
-//! radius. So the tests read the paint.
-//!
-//! ## The tripwires
-//!
-//! `the_circle_is_a_circle`, `the_text_is_a_column_of_lines` and
-//! `the_animated_prop_changes_nothing` would fail if this kit stopped being
-//! this kit.
 
 use floom_core::{ElementId, Length, Rect, Widget, WidgetAny};
 use floom_types::Color;
@@ -32,9 +18,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -76,7 +59,6 @@ fn content_of(kit: MaterialSkeletonLoader) -> Box<dyn WidgetAny> {
     outer.children().remove(0).build()
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens reach the style.
 #[test]
@@ -131,7 +113,6 @@ fn an_explicit_width_wins() {
     assert_eq!(style.outer_width, 300.0);
 }
 
-// --- the pixels -----------------------------------------------------------
 
 /// The circle is a circle of the avatar's size.
 #[test]
@@ -211,7 +192,6 @@ fn the_card_is_the_card_size() {
     assert_eq!(radius, style.card_radius, "the card's own radius");
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The text placeholder is a column of lines.
 #[test]

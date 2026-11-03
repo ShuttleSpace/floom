@@ -1,71 +1,8 @@
 //! Cupertino colour picker, ported to the Floom 2.0 widget API.
 //!
-//! A colour picker is a square of colour -- saturation across, value down --
-//! under a hue strip and an alpha strip, with a preview of the chosen colour
-//! and a field that spells it out in hex.
-//!
-//! ## What the port uses
-//!
-//! The engine's `ColorPicker`: the square, the two strips, the preview and
-//! the hex field, with each area painting itself and handling its own drag.
-//! 2.0 keeps a mounted child's widget when its key survives a rebuild -- so
-//! an area that read the colour when it was built would keep the colour it
-//! was built with -- and the areas are the reason.
-//!
-//! The engine's brush. v1 drew the square and the two strips as inline SVG
-//! documents -- a `<linearGradient>` for the white ramp, another for the black
-//! one, and a third for the hue -- and handed the markup to an SVG widget.
-//! 2.0 has no SVG pipeline, but it does have a linear brush, so the port
-//! paints the same gradients with the same stops at the same offsets: the
-//! picture is the same, the mechanism is not.
-//!
-//! ## What this kit answers
-//!
-//! * the square's size, the strips' height, the thumb's size and the corner
-//!   radius: the tokens;
-//! * the picker's fill: `surface`; its border: `outline` at 80;
-//! * the hex field's ink: `on_surface`; its placeholder's: `on_surface_variant`;
-//! * the thumb's border: white.
-//!
-//! ## The numbers v1 wrote as literals
-//!
-//! The picker's padding (12), the gap under the square and under each strip
-//! (12), the gap between the preview and the field (12), the preview's size
-//! (40), the field's width (120) and its text size (14), the border's
-//! thickness (1), and the thumb's border (2).
-//!
-//! ## The differences this port names rather than reproduces
-//!
-//! * **The square's box.** v1's outer box was `width(sv_width)` with a padding
-//!   of 12, so its content box was 24 narrower than the 240-wide square it
-//!   held and the square overflowed it. The port's outer box is
-//!   `sv_width + 24` wide, so the square fits inside the padding.
-//! * **The hex is committed as it is typed.** v1 committed the field on
-//!   focus-lost; 2.0's text input has no focus-lost event, so the port
-//!   commits whenever the text parses -- and only when the parsed colour is
-//!   not the one already held, so a colour dragged in the square does not
-//!   report itself twice.
-//! * **A drag that leaves the area ends.** v1 asked the host for pointer
-//!   capture, so a drag that ran off the square kept tracking. 2.0's
-//!   `EventContext` has no capture door, so the drag ends where the pointer
-//!   leaves the area.
-//!
-//! ## The theme source
-//!
-//! v1's Cupertino colour picker took a *snapshot* of its own design system --
-//! `MultiTheme::new_for(DesignSystem::Cupertino)` -- so a change of the
-//! app-wide theme does not reach it. The port keeps that.
 
 //! ## What v1 wrote that this port does not carry
 //!
-//! * **`color_signal()` was an `RwSignal<Color>`.** 2.0's shared state is a
-//!   mutex-guarded cell, the same shape the engine's `SharedFlag` and
-//!   `SharedBuffer` have, because a value that changes after mount cannot be
-//!   held in a signal.
-//! * **The accessors.** v1's Cupertino colour picker had no `props()`,
-//!   `theme()` or `with_theme()`. The port gives all three kits the same
-//!   three, because a kit that cannot be given a theme cannot be tested
-//!   against one.
 
 use std::sync::{Arc, Mutex};
 

@@ -1,14 +1,4 @@
 //! The ported Fluent tabs -- a row of labels, with the active one marked.
-//!
-//! The shape is the engine's vocabulary around a bar of the kit's own, so what
-//! is tested here is the translation and the pixels: the tokens reach the
-//! style, the two labels are painted in v1's inks at v1's sizes, the indicator
-//! is under the active tab and nowhere else, and a click moves the highlight.
-//!
-//! ## The tripwires
-//!
-//! `the_labels_are_painted_in_v1_s_inks` and `only_the_active_tab_has_the_indicator`
-//! would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -31,9 +21,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -42,7 +29,6 @@ fn kit() -> FluentTabs {
     FluentTabs::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -52,10 +38,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The paint ops of one widget's whole subtree.
-///
-/// Every node is updated first: a widget that has to notice a change says so
-/// in `update`, so a tree that is only walked has not noticed anything yet.
 fn ops_of_tree(widget: &mut dyn WidgetAny) -> Vec<PaintOp> {
     let mut out = Vec::new();
     collect_ops(widget, &mut out);
@@ -77,7 +59,6 @@ fn collect_ops(widget: &mut dyn WidgetAny, out: &mut Vec<PaintOp>) {
     }
 }
 
-/// The tabs of a bar, one widget each.
 fn tab_widgets(kit: &FluentTabs) -> Vec<Box<dyn WidgetAny>> {
     kit.view()
         .children()
@@ -86,11 +67,6 @@ fn tab_widgets(kit: &FluentTabs) -> Vec<Box<dyn WidgetAny>> {
         .collect()
 }
 
-/// A widget's children, after it has been updated, with the layout each slot
-/// asks for.
-///
-/// The layout is on the *slot*, not on the widget: 2.0's parent declares what
-/// a child's slot asks for, and the child answers with what it is.
 fn slots_of(widget: &mut dyn WidgetAny) -> Vec<(LayoutRequest, Box<dyn WidgetAny>)> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -103,7 +79,6 @@ fn slots_of(widget: &mut dyn WidgetAny) -> Vec<(LayoutRequest, Box<dyn WidgetAny
         .collect()
 }
 
-/// The text run in a set of paint ops: its text, its size and its ink.
 fn text_of(ops: &[PaintOp]) -> (String, f32, Color) {
     ops.iter()
         .find_map(|op| match op {
@@ -115,7 +90,6 @@ fn text_of(ops: &[PaintOp]) -> (String, f32, Color) {
         .expect("the label is painted")
 }
 
-/// The fill in a set of paint ops, if there is one.
 fn fill_of(ops: &[PaintOp]) -> Option<Color> {
     ops.iter().find_map(|op| match op {
         PaintOp::Rect { color, .. } => Some(*color),
@@ -124,7 +98,6 @@ fn fill_of(ops: &[PaintOp]) -> Option<Color> {
     })
 }
 
-/// Clicks a tab: a press and a release over the same spot.
 fn click(tab: &mut dyn WidgetAny) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = tab.create(&mut create);
@@ -135,9 +108,7 @@ fn click(tab: &mut dyn WidgetAny) {
     tab.event(&mut cx, id);
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentTabsStyle = kit().resolved_style();
@@ -174,9 +145,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The two labels are painted in v1's inks, at v1's size.
 #[test]
 fn the_labels_are_painted_in_v1_s_inks() {
     let resolved = kit().resolved_style();
@@ -200,8 +169,6 @@ fn the_labels_are_painted_in_v1_s_inks() {
     );
 }
 
-/// The indicator is under the active tab and nowhere else: v1 hid it on an
-/// inactive tab, and 2.0 builds the tab that carries it.
 #[test]
 fn only_the_active_tab_has_the_indicator() {
     let resolved = kit().resolved_style();
@@ -223,15 +190,12 @@ fn only_the_active_tab_has_the_indicator() {
     );
 }
 
-/// The label's box is the tab's height with the token's padding at each side.
 #[test]
 fn the_label_box_is_the_tabs_height_with_the_tokens_padding() {
     let resolved = kit().resolved_style();
     let kit = kit().tab("One");
     let mut tabs = tab_widgets(&kit);
 
-    // The tab, then the stack that holds the label and the indicator, and the
-    // label's own slot.
     let mut tab = slots_of(&mut *tabs.remove(0)).remove(0).1;
     let (request, _) = slots_of(&mut *tab).remove(0);
 
@@ -255,9 +219,7 @@ fn the_label_box_is_the_tabs_height_with_the_tokens_padding() {
     assert_eq!(padding.bottom, 0.0, "v1 padded the label sideways only");
 }
 
-// --- the structure --------------------------------------------------------
 
-/// Clicking a tab moves the highlight and calls the callback.
 #[test]
 fn clicking_a_tab_moves_the_highlight() {
     let seen = Arc::new(Mutex::new(Vec::<usize>::new()));
@@ -278,7 +240,6 @@ fn clicking_a_tab_moves_the_highlight() {
     );
     assert_eq!(kit.active(), Some(1), "the shared selection moved");
 
-    // And the bar the kit builds now marks the second tab.
     let mut tabs = tab_widgets(&kit);
     let active = ops_of_tree(&mut *tabs.remove(1));
     let (_, _, ink) = text_of(&active);
@@ -289,7 +250,6 @@ fn clicking_a_tab_moves_the_highlight() {
     );
 }
 
-/// The tab that was selected before the bar was built is the active one.
 #[test]
 fn the_selected_tab_is_the_active_one() {
     let kit = kit().tab("One").tab("Two").selected(1);
@@ -300,9 +260,6 @@ fn the_selected_tab_is_the_active_one() {
     assert_eq!(ink, paint(kit.resolved_style().active_color));
 }
 
-/// The props report the tabs, and the callback slot stays empty: the kit
-/// holds the callback, because the props' is a `Box<dyn Fn(usize)>` and 2.0's
-/// slots are shared between threads.
 #[test]
 fn the_props_report_the_tabs() {
     let kit = kit().tab("One").tab("Two");
@@ -314,11 +271,7 @@ fn the_props_report_the_tabs() {
     );
 }
 
-// --- the theme source -----------------------------------------------------
 
-/// The theme: v1's Fluent tabs took a snapshot of their own design system's
-/// theme rather than reading the app-wide signal, so an app-wide theme
-/// change does not re-theme them.
 #[test]
 fn the_theme_is_a_snapshot_not_the_app_wide_signal() {
     assert_ne!(

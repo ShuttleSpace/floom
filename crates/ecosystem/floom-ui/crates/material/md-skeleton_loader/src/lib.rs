@@ -1,73 +1,3 @@
-//! Material skeleton loader, ported to the Floom 2.0 widget API.
-//!
-//! A skeleton loader is the placeholder shown while content is loading: a
-//! grey block, or a stack of grey lines, in the shape the content will take.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a [`Surface`] for each block, a vertical `Stack`
-//! for a column of them, and a horizontal `Stack` for the avatar and its
-//! lines. Nothing here is a shape the engine does not already have.
-//!
-//! ## What this kit answers
-//!
-//! * the blocks' fill: the token's `color`;
-//! * a block's corner radius: the token's `corner_radius`, and a card's: the
-//!   token's `card_radius`;
-//! * a text line's height: the token's `text_height`; a circle's and the
-//!   avatar's diameter: the token's `avatar_size`; the gap between the
-//!   avatar and its lines: the token's `gap`.
-//!
-//! ## The theme it reads
-//!
-//! Material's theme is the *app-wide* signal, the same one every other
-//! Material kit reads, so a change of theme re-themes the placeholder with
-//! everything else. The Cupertino and Fluent kits take a snapshot instead.
-//!
-//! ## What the three kits disagree about
-//!
-//! Only the theme they read: the tokens, the colours and the literals above
-//! are the same in all three, so the three kits are the same code under three
-//! names, and what differs between them is the palette the theme hands out.
-//!
-//! ## The shimmer that is not there
-//!
-//! v1's `animated` prop asked for a shimmer, and v1's own comment said the
-//! build had no animation frame hook, so nothing shimmered: the placeholder
-//! was a steady block. 2.0 has no shimmer either, and this port says so
-//! plainly rather than pretending: **the placeholder never shimmers.** The
-//! `animated` prop and its setter are kept, because v1's props carried them,
-//! and they change nothing about what is drawn.
-//!
-//! ## The style v1 under-reported
-//!
-//! v1's style reported the fill and the outer width and nothing else, though
-//! the paint used six more numbers: the two corner radii, the line height,
-//! the avatar's diameter and the gap. The port's style reports all of them,
-//! because a style that does not say what the widget draws is not the widget's
-//! output.
-//!
-//! ## The width the bars had no base for
-//!
-//! v1's text bars asked for `width_pct(100)` inside a column that shrank to
-//! fit -- v1's `items_start()` on the outer box -- so the percentage had no
-//! definite box to be a percentage of. The port gives the column the same
-//! percentage of the outer box, so the bars are as wide as the box, which is
-//! what v1's own numbers asked for.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The list.** v1 built its columns with `list(..)`, which is a column
-//!   *and* a selection widget: the arrow keys moved a selection through the
-//!   lines, `Enter` accepted it, and the framework's default theme gave each
-//!   line a padding, a radius and a hover and selected background. 2.0's
-//!   `Stack` is a column and nothing else. Nothing in a skeleton was ever
-//!   clickable, so what is lost is a keyboard selection over grey blocks --
-//!   and the default theme's dressing of a list item, which belonged to v1's
-//!   app theme rather than to this kit.
-//! * **The accessors.** v1's skeleton loaders had no `props()`, `theme()` or
-//!   `with_theme()`. The port gives them all three, because a kit that cannot
-//!   be given a theme cannot be tested against one.
 
 use floom_core::{LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
@@ -93,7 +23,6 @@ const CARD_HEIGHT: f32 = 120.0;
 /// rectangle. A v1 literal.
 const DEFAULT_OUTER_WIDTH: f32 = 240.0;
 
-/// The skeleton's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialSkeletonStyle {
     pub design_system: &'static str,
@@ -151,10 +80,6 @@ impl MaterialSkeletonLoader {
         self
     }
 
-    /// Whether the placeholder should shimmer.
-    ///
-    /// Kept for parity with v1's props. Nothing shimmers: see the module's
-    /// note on the shimmer that is not there.
     pub fn animated(mut self, animated: bool) -> Self {
         self.props.animated = animated;
         self
@@ -191,10 +116,6 @@ impl MaterialSkeletonLoader {
         }
     }
 
-    /// Build a static skeleton placeholder.
-    ///
-    /// `animated` is accepted for API parity; this Floom build has no animation
-    /// frame hook, so the placeholder is rendered as a steady block.
     pub fn view(self) -> Surface {
         let style = self.resolved_style();
         let props = self.props;
@@ -202,7 +123,6 @@ impl MaterialSkeletonLoader {
             .request(
                 LayoutRequest::new()
                     .width(style.outer_width)
-                    // v1's `.items_start()`.
                     .cross_align(Align::Start),
             )
             .push(move || content_of(&props, &style))
@@ -258,11 +178,8 @@ fn content_of(props: &SkeletonLoaderProps, style: &MaterialSkeletonStyle) -> Box
             )
         }
         SkeletonType::Text => {
-            // v1's `list(bars)`: a column of lines.
             let lines = props.lines.max(1);
             let mut column = Stack::new(Axis::Vertical)
-                // The bars are a percentage of this column, so the column
-                // needs a definite width: see the module's note.
                 .request(LayoutRequest::new().width_pct(100.0));
             for _ in 0..lines {
                 column = column.push({
@@ -290,7 +207,6 @@ fn content_of(props: &SkeletonLoaderProps, style: &MaterialSkeletonStyle) -> Box
                 )
                 .background(fill)
                 .radius(CIRCLE_RADIUS);
-            // v1: at most three lines beside the avatar.
             let lines = props.lines.max(1).min(3);
             let mut column = Stack::new(Axis::Vertical).gap(style.gap);
             for _ in 0..lines {
@@ -308,17 +224,12 @@ fn content_of(props: &SkeletonLoaderProps, style: &MaterialSkeletonStyle) -> Box
                     }
                 });
             }
-            // v1's `Stack::horizontal((circle, right))`: the circle, the lines
-            // beside it, and the gap between them.
             Box::new(
                 Stack::new(Axis::Horizontal)
                     .gap(style.gap)
-                    // v1's `.items_center()`.
                     .align(Align::Start, Align::Center)
                     .request(LayoutRequest::new().width_pct(100.0))
                     .push(move || Box::new(circle.clone()))
-                    // The column takes the room the circle left, so the bars
-                    // have a definite width to be a percentage of.
                     .push_layout(LayoutRequest::new().grow(1.0), move || {
                         Box::new(column.clone())
                     }),

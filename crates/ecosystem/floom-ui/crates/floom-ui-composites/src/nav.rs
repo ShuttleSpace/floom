@@ -1,29 +1,3 @@
-//! Navigation ↔ widget binding.
-//!
-//! Moved here from `floom-widgets`, where a navigation host had no business
-//! being: it is a composition of boxes and page lifetimes, not a primitive, and
-//! an engine that ships one is making a product decision inside the layer that
-//! is supposed to have none. See `Cargo.toml` for the layering argument.
-//!
-//! [`floom-navigation`](floom_navigation) is deliberately widget-free: it
-//! models page stacks as data. This module is the glue that renders that data
-//! through the composite layer — a [`NavHost`] whose children are the
-//! navigator's pages, keyed by stable page key so per-page widget state
-//! survives pushes and pops.
-//!
-//! ```text
-//! NavHandle (app owns)          NavHost (in the tree)
-//! ┌────────────────────┐        ┌──────────────────────────┐
-//! │ Mutex<Navigator>   │◀─read──│ children(): pages keyed  │
-//! │ dirty: AtomicBool  │◀─set───│ by page key, absolute-fill│
-//! └────────────────────┘        └──────────────────────────┘
-//! ```
-//!
-//! The app mutates navigation through the [`NavHandle`] (which also raises the
-//! dirty flag); the widget's `update` sees the flag and marks its children
-//! dirty, so the next `frame()` reconciles the page set. The popped page stays
-//! mounted while [`Navigator::exiting`] holds it — the exit-transition window
-//! — and unmounts when the app calls [`NavHandle::finish_exit`].
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};

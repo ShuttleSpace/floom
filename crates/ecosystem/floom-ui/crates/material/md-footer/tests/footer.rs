@@ -1,11 +1,3 @@
-//! The ported Material 3 footer.
-//!
-//! The footer is the component that needed [`Edges`]: v1 styled it
-//! `.border_color(outline_variant).border_top(tokens.border)`, and a four-sided
-//! stroke cannot say "top". So this suite is as much about that one line as about
-//! the theme → style → widget translation, and it pins the parts that a
-//! `Container` (a leaf) could not have carried at all: the padding, the content
-//! inside the box, and the bar's own extent.
 
 use floom_core::{Edges, Widget};
 use floom_types::{Insets, Rect};
@@ -36,7 +28,6 @@ fn tokens() -> floom_core_theme::component_tokens::FooterTokens {
     }
 }
 
-// --- the separator --------------------------------------------------------
 
 /// The line this whole port exists for: a rule along the **top** edge, at the
 /// theme's thickness, in the theme's outline colour.
@@ -51,8 +42,6 @@ fn the_separator_is_a_top_border_at_the_token_thickness() {
         Edges::TOP,
         "and only the top edge: a footer is not a box outlined all round"
     );
-    // The colour is `outline_variant`, not `outline` — v1's
-    // `border_color(t.colors().outline_variant)`.
     let theme = MultiTheme::new_for(DesignSystem::Material);
     use floom_core_theme::theme::Theme;
     assert_eq!(colour.r, theme.colors().outline_variant.r);
@@ -71,8 +60,6 @@ fn the_separator_reaches_the_surface_as_a_top_edge() {
     assert_eq!(border.edges(), Edges::TOP);
     assert_eq!(border.width(), tokens().border);
 
-    // The mutation this catches: passing `Edges::ALL` would draw a box around a
-    // footer, which looks wrong at every size.
     assert_ne!(border.edges(), Edges::ALL);
 }
 
@@ -87,7 +74,6 @@ fn an_unbordered_footer_has_no_separator_at_all() {
     );
 }
 
-// --- the box --------------------------------------------------------------
 
 #[test]
 fn the_bar_declares_its_own_height_and_full_width() {
@@ -103,8 +89,6 @@ fn the_bar_declares_its_own_height_and_full_width() {
     );
 }
 
-/// v1's `items_center()`. In 2.0 the *child* is centred, so this lives on the
-/// box's request rather than on a fill — and the surface carries it.
 #[test]
 fn the_content_is_centred_on_both_axes() {
     use floom_widgets::Align;
@@ -132,7 +116,6 @@ fn the_padding_is_inside_the_box_not_on_the_child() {
     );
 }
 
-// --- props versus tokens -------------------------------------------------
 
 #[test]
 fn the_props_win_over_the_tokens_and_the_tokens_win_by_default() {
@@ -154,7 +137,6 @@ fn the_props_win_over_the_tokens_and_the_tokens_win_by_default() {
     );
 }
 
-// --- elevation ------------------------------------------------------------
 
 #[test]
 fn only_an_elevated_footer_casts_a_shadow() {
@@ -173,11 +155,7 @@ fn only_an_elevated_footer_casts_a_shadow() {
         .is_some());
 }
 
-// --- content --------------------------------------------------------------
 
-/// v1's `Container::new(child)` held the child *inside* the decorated box. In
-/// 2.0 that is what `Surface` is for, and this is the assertion that would have
-/// failed if the port had used a `Container` — which cannot hold anything.
 #[test]
 fn the_content_goes_inside_the_box() {
     let empty = footer().view();
@@ -189,9 +167,6 @@ fn the_content_goes_inside_the_box() {
     assert_eq!(filled.child_count(), 1, "the caller's content is inside");
 }
 
-/// The control for the above, and the reason the padding assertion matters: a
-/// `Container` would have reported no children *and* held the padding unread, so
-/// "one child inside" is the thing that distinguishes a surface from a rectangle.
 #[test]
 fn a_bordered_elevated_bar_with_content_still_declares_all_three() {
     let surface = footer()
@@ -207,11 +182,7 @@ fn a_bordered_elevated_bar_with_content_still_declares_all_three() {
     assert_eq!(surface.child_count(), 1, "content");
 }
 
-// --- the layout registry --------------------------------------------------
 
-/// v1 published the footer's height to a process-wide signal, and `md-main` reads
-/// it to inset the content region. Dropping it would overlap every footer's
-/// content, so the port keeps it — and this is the test that says so.
 #[test]
 fn building_the_footer_publishes_its_height() {
     let _ = layout_signal().get().footer;
@@ -238,7 +209,6 @@ fn the_published_height_defaults_to_the_token() {
     let _ = LayoutSlot::Footer;
 }
 
-// --- painting -------------------------------------------------------------
 
 /// The whole translation in one snapshot: a filled bar, at the token's extent,
 /// with the separator band along its top edge.

@@ -1,16 +1,3 @@
-//! The ported Material stepper -- a row of numbered steps, a tick behind the
-//! current one, and a connector between each pair.
-//!
-//! The engine has no stepper, and its tree is built once, so what is tested
-//! here is the translation *and* the widget: the tokens reach the style, the
-//! markers and the labels are painted in v1's colours, and a change of
-//! selection asks the host to rebuild the row.
-//!
-//! ## The tripwires
-//!
-//! `the_current_step_is_filled_and_the_ones_ahead_are_not` and
-//! `a_change_of_selection_asks_for_a_new_row` would fail if this kit stopped
-//! being this kit.
 
 use floom_core::{ElementId, Event, Point, Rect, Widget, WidgetAny};
 use floom_types::{Color, PointerEvent};
@@ -33,9 +20,6 @@ const ROW: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -73,11 +57,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// Dispatch an event to a widget held behind a trait object.
-///
-/// The testkit's own `dispatch` takes a `&mut dyn Widget`, and the stepper's
-/// steps are held as `Box<dyn WidgetAny>`; this is the same thing without the
-/// upcast.
 fn dispatch_any(widget: &mut dyn WidgetAny, id: ElementId, bounds: Rect, event: Event) -> bool {
     let mut cx = TestEventContext::new(id, bounds, event);
     widget.event(&mut cx, id)
@@ -137,7 +116,6 @@ fn connector_fill(row: &dyn Widget, index: usize) -> Option<Color> {
     })
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens reach the style.
 #[test]
@@ -174,8 +152,6 @@ fn the_colours_reach_the_style() {
     assert_eq!(style.outline_variant, colors.outline_variant);
 }
 
-/// The numbers v1 wrote as literals are in the style, because v1's style did
-/// not report them and the paint used them.
 #[test]
 fn the_literals_are_in_the_style() {
     let style = kit().resolved_style();
@@ -200,7 +176,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-/// The props report the two flags v1 had.
 #[test]
 fn the_props_report_the_flags() {
     let kit = kit().editable(true).non_linear(true);
@@ -208,7 +183,6 @@ fn the_props_report_the_flags() {
     assert!(kit.props().non_linear);
 }
 
-// --- the structure --------------------------------------------------------
 
 /// Three steps and two connectors: the row alternates.
 #[test]
@@ -218,7 +192,6 @@ fn the_row_has_a_connector_between_each_pair_of_steps() {
     assert_eq!(row.children().len(), 5, "three steps and two connectors");
 }
 
-/// The row is padded the way v1 padded it.
 #[test]
 fn the_row_is_padded_the_way_v1_padded_it() {
     let widget = kit().items(steps(&["One"])).view();
@@ -243,7 +216,6 @@ fn the_gap_between_the_steps_is_the_tokens() {
     assert_eq!(request.gap, Some(kit().resolved_style().gap));
 }
 
-// --- the pixels -----------------------------------------------------------
 
 /// The current step and the one behind it are filled; the ones ahead are not.
 #[test]
@@ -357,7 +329,6 @@ fn the_connectors_follow_the_selection() {
     );
 }
 
-// --- the interaction ------------------------------------------------------
 
 /// A change of selection asks the host for a new row: 2.0's tree is built
 /// once, so the row's colours cannot follow the selection otherwise.
@@ -373,7 +344,6 @@ fn a_change_of_selection_asks_for_a_new_row() {
         "nothing moved, so nothing is rebuilt"
     );
 
-    // The selection moves.
     widget.set_selected(1);
 
     let mut update = RecordingUpdateContext::new();
@@ -402,7 +372,6 @@ fn a_click_on_an_editable_step_moves_the_selection() {
         .view();
     let row = row_of(&widget);
 
-    // The first step is behind the current one, so it is the clickable one.
     let mut step = row.children().remove(0).build();
     assert!(
         step.as_any().downcast_ref::<Pressable>().is_some(),
@@ -431,9 +400,6 @@ fn a_click_on_an_editable_step_moves_the_selection() {
     );
 }
 
-/// A step that is not clickable is not a pressable at all: v1's rule was that
-/// only the steps behind the current one answer, unless the stepper is
-/// non-linear.
 #[test]
 fn a_step_that_may_not_be_clicked_is_not_a_pressable() {
     let widget = kit().items(steps(&["One", "Two"])).selected(1).view();
@@ -463,14 +429,9 @@ fn a_non_linear_stepper_makes_every_step_clickable() {
     );
 }
 
-// --- the theme source -----------------------------------------------------
 
-/// The theme: v1's Material stepper read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialStepper::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

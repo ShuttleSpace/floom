@@ -1,45 +1,5 @@
 //! Cupertino list item, ported to the Floom 2.0 widget API.
 //!
-//! ## Why this crate is now a token translation
-//!
-//! **90 of 107 substantive lines** are identical across the three kits' v1
-//! `list_item`s, and the row's whole structure is in that shared part. So the shape
-//! went to the engine as [`floom_ui_composites::ListItemRow`]; what is left here is
-//! Cupertino's five numbers, its two colours, and the title's font weight.
-//!
-//! ## The one place this kit is *not* like its two siblings
-//!
-//! Material is the only kit that reads its own token table for the row's height and
-//! font sizes:
-//!
-//! | | `min_height` | `title_font_size` | `subtitle_font_size` |
-//! |---|---|---|---|
-//! | Material | `tokens.*` | `tokens.*` | `tokens.*` |
-//! | Cupertino | `44.0` literal | `17.0` literal | `15.0` literal` |
-//! | Fluent | `40.0` literal | `14.0` literal | `12.0` literal |
-//!
-//! and the token table says `56.0 / 16.0 / 14.0` for *every* kit
-//! (`ListItemTokens::default()`), so the other two disagree with the tokens they
-//! have. That is preserved rather than fixed: see the note on the engine widget.
-//!
-//! ## What the port changed
-//!
-//! * `min_height(..)` needed a capability that did not exist. 2.0's
-//!   `LayoutRequest` had `width`/`height` — both *definite* sizes — and nothing for
-//!   a floor, so a row that must be at least a touch target but may grow with its
-//!   content had nowhere to say so. `min_width`/`min_height` were added, with a
-//!   host-level suite in `floom-app/tests/min_size.rs` that proves the floor holds
-//!   *and* that content taller than it still grows.
-//! * `Label::new(..)` is [`floom_widgets::Text`], and `.style(|s| s.color(..))`
-//!   became `.color(..)` on the widget. The title's `font_weight` came from the
-//!   typography scale, not the list-item tokens, and is resolved here.
-//! * `.action(move || if !disabled { .. })` became [`Pressable`] inside the engine
-//!   widget, whose `disabled` gate covers the keyboard as well as the pointer.
-//!   v1's in-closure guard covered only the pointer.
-//! * `ListItemProps::nav` is **never read** by v1's `view()`. The prop's own doc
-//!   claims "extra trailing affordance space + hover affordance", neither of which
-//!   exists. Kept unread, and recorded here rather than quietly dropped: the same
-//!   decision is recorded for `ToolbarTokens::height`.
 
 use std::sync::Arc;
 

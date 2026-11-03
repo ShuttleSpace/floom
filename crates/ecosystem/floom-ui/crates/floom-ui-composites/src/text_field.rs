@@ -1,34 +1,3 @@
-//! `TextField`: single-line text input, with the ink the three kits disagree on.
-//!
-//! It moved out of `floom-widgets/src/controls.rs` for the same reason `Select`,
-//! `Counter`, `Slider` and `Radio` did. What a text field *does* is primitive --
-//! hold a string, keep a caret in it, answer Backspace and the arrows, own an
-//! IME composition and render the preedit inline, report itself to assistive
-//! technology -- but what it *looks like* is a design decision, and the old
-//! `paint` had no way to express one. It hard-coded a white fill that shifted to
-//! `#F5F7FA` under the pointer, a `#9AA5B1` placeholder, black committed text
-//! and a `#2B6CB0` underlined preedit at 14px, with square corners, no rim and
-//! no focus affordance at all.
-//!
-//! ## Only the paint is new
-//!
-//! The IME state machine, the character/byte caret split, the committed text
-//! drawn as two runs around the caret, the underlined preedit and the semantics
-//! all move across verbatim. [`TextFieldStyle`] reaches exactly four places in
-//! `paint` -- the fill, the rim, the focus ring and the ink -- plus
-//! `layout_request`, which reads it for the same reason the `Slider` and `Radio`
-//! ports did: a kit's 56pt field measured at the engine's 14 is measured wrong.
-//!
-//! ## The default is the old pixels, not a design decision
-//!
-//! [`TextFieldStyle::default`] is a snapshot of what the old `paint` wrote
-//! inline. Two of those values read as odd until the field docs are in place.
-//! `border_width` is `0.0` because the engine drew no rim at all -- it filled
-//! the whole bounds and stopped -- and `background_color_disabled` is white at
-//! half alpha rather than white, because the old fill went through
-//! `floom_widgets::resolved_color`, which ranks disabled first and halves alpha.
-//! A `TextField` built without a style still paints what it painted before the
-//! move.
 
 use crate::focus::FocusRing;
 use floom_accessibility::SemanticsRole;

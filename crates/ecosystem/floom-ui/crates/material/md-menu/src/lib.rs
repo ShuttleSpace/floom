@@ -1,54 +1,3 @@
-//! Material menu, ported to the Floom 2.0 widget API.
-//!
-//! A menu is a list of choices in a floating panel: the panel appears over the
-//! page, a row is filled while the pointer is over it, and choosing a row runs
-//! its callback and closes the menu.
-//!
-//! ## What the engine grew
-//!
-//! **A `Menu` composite.** v1's menu was an overlay holding a container of
-//! labels, hidden by a signal and shown by the same signal. 2.0's host owns the
-//! overlay layers, so the panel is asked of the host and sized by the engine
-//! (the widest row, clamped to the tokens' bounds) -- and the row that is
-//! filled, the row that is clicked and the menu closing are all one widget's
-//! business now, rather than three kits' worth of event handlers.
-//!
-//! ## What this kit answers
-//!
-//! * the panel's fill: `surface`; the rows' ink: `on_surface`;
-//! * a hovered row: `on_surface` at 8;
-//! * the panel's width, the row's height and the panel's padding: the tokens;
-//! * the row's padding (12 at the sides, 8 above and below) and the panel's
-//!   radius (4): v1 literals.
-//!
-//! ## What the port's style carries that v1's did not
-//!
-//! v1's `MdMenuStyle` reported five numbers, and its paint used more than
-//! that: the maximum width, the radius, the shadow, the hovered row's colour,
-//! the row's padding and the row's text size were all in the markup and none
-//! of them in the style. The port's style reports all of them, because a style
-//! that does not say what the widget draws is not the widget's output.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **`open_signal()` was an `RwSignal<bool>`.** 2.0's shared state is a
-//!   `SharedFlag`, and the menu and the thing that opens it share one.
-//! * **`item(..)` took a `Box<dyn Fn()>`.** The engine's slots are
-//!   `Send + Sync`, so the callback is `Fn() + Send + Sync`.
-//! * **The menu's own position.** v1's panel went into an overlay at the
-//!   overlay's origin, and the caller chose where that was by choosing the
-//!   slot the menu was declared in. 2.0 keeps that: the caller still chooses
-//!   the slot, and the host does the arithmetic.
-//! * **The row's text is not centred.** v1 put it `padding_vert` below the
-//!   row's top edge, in a row twice as tall as the text; the port reproduces
-//!   that, because the padding is in v1's markup and a row whose label sits
-//!   above its middle is v1's doing.
-//!
-//! ## The one thing v1's style did not have
-//!
-//! `design_system`. The other two kits' styles name theirs and this one's did
-//! not; the port gives all three the same field, so a caller can read which
-//! design system a style came from.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -64,7 +13,6 @@ use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_widget_runtime::theme_signal;
 
-/// The menu's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialMenuStyle {
     pub design_system: &'static str,
@@ -135,12 +83,6 @@ impl MaterialMenu {
         self
     }
 
-    /// The flag that says whether the menu is up.
-    ///
-    /// v1's `open_signal()` handed out an `RwSignal<bool>`. 2.0's shared state
-    /// is a `SharedFlag` -- a bool behind an `Arc<Mutex<bool>>` -- because a
-    /// value that changes after mount cannot be held in a signal and read
-    /// during render.
     pub fn open_flag(&self) -> SharedFlag {
         self.open.clone()
     }
@@ -152,10 +94,6 @@ impl MaterialMenu {
         self
     }
 
-    /// Choose the row at `index`, as if it had been clicked.
-    ///
-    /// v1's `select(..)` did the same: it ran the row's callback and nothing
-    /// else -- it did not close the menu.
     pub fn select(&self, index: usize) {
         if let Some(item) = self.props.items.get(index) {
             if let Some(callback) = &item.on_select {
@@ -164,7 +102,6 @@ impl MaterialMenu {
         }
     }
 
-    /// The menu's appearance, in the terms v1 used.
     pub fn resolved_style(&self) -> MaterialMenuStyle {
         let theme = self.theme.get();
         let ComponentTokens::Menu(tokens) = theme.component(ComponentId::Menu) else {
@@ -174,21 +111,15 @@ impl MaterialMenu {
             design_system: "material",
             container_color: theme.colors().surface,
             text_color: theme.colors().on_surface,
-            // v1's hovered row: `with_alpha(on_surface, 8)`.
             hover_color: with_alpha(theme.colors().on_surface, 8),
             min_width: tokens.min_width,
             max_width: tokens.max_width,
             item_height: tokens.item_height,
-            // v1's row: `padding_horiz(12.0).padding_vert(8.0)`.
             item_padding_horizontal: 12.0,
             item_padding_vertical: 8.0,
-            // v1's row: `font_size(t.typography().label.large.font_size)`.
             item_font_size: theme.typography().label.large.font_size,
             padding: tokens.padding,
-            // v1's panel: `border_radius(4.0)`.
             radius: 4.0,
-            // v1's panel: `box_shadow_blur(12.0).box_shadow_spread(1.0)
-            // .box_shadow_color(with_alpha(black, 24))`.
             shadow: Shadow {
                 color: to_paint(with_alpha(Color::rgba(0, 0, 0, 255), 24)),
                 blur: 12.0,

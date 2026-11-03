@@ -1,9 +1,3 @@
-//! The engine's `Tooltip`: a bubble that comes up while the pointer rests on
-//! the control.
-//!
-//! The state machine here is small -- a hover opens the bubble, leaving closes
-//! it -- and the shape is the interesting part: the bubble hugs its text, and
-//! the gap is the space *between* the control and the bubble.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget};
 use floom_types::{Insets, PointerPhase};

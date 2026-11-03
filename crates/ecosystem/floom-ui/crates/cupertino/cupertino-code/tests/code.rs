@@ -1,10 +1,5 @@
 //! Cupertino code: the code chip's shape, and the text inside it.
 //!
-//! ## The claim
-//!
-//! v1 drew a `Container` holding a `Label`; 2.0 draws a `Surface` holding a
-//! `Text`. The assertions are about the painted surface -- its fill, its
-//! padding, its radius -- and about the painted text.
 
 use floom_core::Widget;
 use floom_types::{Color, Rect};

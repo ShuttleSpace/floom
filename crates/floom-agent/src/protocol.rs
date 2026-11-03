@@ -49,7 +49,6 @@ pub struct AgentResponse {
 /// exactly these two halves and nothing else.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Command {
-    // --- inspection -------------------------------------------------------
     /// Every live node with its role, state and geometry, in mount order.
     Tree,
     /// What the accessibility tree publishes, sorted for a stable panel order.
@@ -65,7 +64,6 @@ pub enum Command {
     /// The AI-friendly component schema (Task 25.2).
     Schema,
 
-    // --- control ----------------------------------------------------------
     /// A click on whatever `selector` resolves to.
     Tap { selector: Selector },
     /// Focus `selector` and commit `text` — the path a real keyboard's

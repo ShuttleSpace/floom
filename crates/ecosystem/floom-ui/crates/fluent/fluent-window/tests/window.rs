@@ -1,15 +1,4 @@
 //! The ported Fluent window -- a box of pages, with arrows and dots.
-//!
-//! What is tested here is the translation and the pixels: the tokens reach the
-//! style, the box is painted the surface fill and the outline, the page on
-//! show is the one that was selected, the arrows and the dots are where v1
-//! put them, and a click moves the page on.
-//!
-//! ## The tripwires
-//!
-//! `the_box_is_painted_the_surface_and_the_outline` and
-//! `the_page_on_show_is_the_one_that_was_selected` would fail if this kit
-//! stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -30,9 +19,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -41,7 +27,6 @@ fn kit() -> FluentWindow {
     FluentWindow::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -51,7 +36,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -61,7 +45,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The fill in a set of paint ops, if there is one.
 fn fill_of(ops: &[PaintOp]) -> Option<Color> {
     ops.iter().find_map(|op| match op {
         PaintOp::Rect { color, .. } => Some(*color),
@@ -70,7 +53,6 @@ fn fill_of(ops: &[PaintOp]) -> Option<Color> {
     })
 }
 
-/// The stroke in a set of paint ops, if there is one.
 fn stroke_of(ops: &[PaintOp]) -> Option<(f64, Color)> {
     ops.iter().find_map(|op| match op {
         PaintOp::Path { stroke, .. } => stroke.map(|(width, color)| (width, color)),
@@ -78,7 +60,6 @@ fn stroke_of(ops: &[PaintOp]) -> Option<(f64, Color)> {
     })
 }
 
-/// The text run in a set of paint ops: its text, its size and its ink.
 fn text_of(ops: &[PaintOp]) -> (String, f32, Color) {
     ops.iter()
         .find_map(|op| match op {
@@ -90,14 +71,12 @@ fn text_of(ops: &[PaintOp]) -> (String, f32, Color) {
         .expect("something was painted")
 }
 
-/// A page: a slot that builds a text.
 fn page(index: usize, text: &'static str) -> Child {
     Child::new(ChildKey::index(index), LayoutRequest::new(), move || {
         Box::new(floom_widgets::Text::new(text))
     })
 }
 
-/// Clicks a widget: a press and a release over the same spot.
 fn click(widget: &mut dyn WidgetAny) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -108,9 +87,7 @@ fn click(widget: &mut dyn WidgetAny) {
     widget.event(&mut cx, id);
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentWindowStyle = kit().resolved_style();
@@ -165,9 +142,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The box is painted the surface fill, with v1's outline.
 #[test]
 fn the_box_is_painted_the_surface_and_the_outline() {
     let resolved = kit().resolved_style();
@@ -187,9 +162,7 @@ fn the_box_is_painted_the_surface_and_the_outline() {
     assert_eq!(colour, paint(resolved.border_color), "v1's outline colour");
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The page on show is the one that was selected.
 #[test]
 fn the_page_on_show_is_the_one_that_was_selected() {
     let viewer = kit()
@@ -197,14 +170,12 @@ fn the_page_on_show_is_the_one_that_was_selected() {
         .selected(1)
         .view();
     let mut children = viewer.children();
-    // The page, then the two arrows: v1 put the arrows over the pages.
     assert_eq!(children.len(), 3, "the page and the two arrows");
     let shown = children.remove(0).build();
     let (text, _, _) = text_of(&ops_of(&*shown));
     assert_eq!(text, "Two", "the page that was selected");
 }
 
-/// The arrows are there when there is more than one page, and not otherwise.
 #[test]
 fn the_arrows_are_there_when_there_is_more_than_one_page() {
     let one = kit().items(vec![page(0, "One")]).view();
@@ -220,7 +191,6 @@ fn the_arrows_are_there_when_there_is_more_than_one_page() {
     assert_eq!(none.children().len(), 1, "the page alone");
 }
 
-/// The dots are there when they are asked for, and one per page.
 #[test]
 fn the_dots_are_there_when_they_are_asked_for() {
     let viewer = kit()
@@ -228,13 +198,11 @@ fn the_dots_are_there_when_they_are_asked_for() {
         .show_dots(true)
         .view();
     let mut children = viewer.children();
-    // The page, the two arrows and the dots.
     assert_eq!(children.len(), 4, "the page, the arrows and the dots");
     let row = children.remove(3).build();
     assert_eq!(row.children().len(), 2, "one dot per page");
 }
 
-/// Clicking the next arrow moves the page on and calls the callback.
 #[test]
 fn clicking_the_next_arrow_moves_the_page_on() {
     let seen = Arc::new(Mutex::new(Vec::<usize>::new()));
@@ -255,15 +223,12 @@ fn clicking_the_next_arrow_moves_the_page_on() {
     );
     assert_eq!(viewer.index(), 1, "the page moved on");
 
-    // And the page on show is the second one.
     let mut children = viewer.children();
     let shown = children.remove(0).build();
     let (text, _, _) = text_of(&ops_of(&*shown));
     assert_eq!(text, "Two", "the second page is on show");
 }
 
-/// Clicking the previous arrow at the first page wraps around, because v1's
-/// window was continuous by default.
 #[test]
 fn clicking_the_previous_arrow_wraps_around() {
     let viewer = kit().items(vec![page(0, "One"), page(1, "Two")]).view();
@@ -273,7 +238,6 @@ fn clicking_the_previous_arrow_wraps_around() {
     assert_eq!(viewer.index(), 1, "v1's continuous window wrapped around");
 }
 
-/// The props report the flags.
 #[test]
 fn the_props_report_the_flags() {
     let kit = kit()
@@ -287,11 +251,7 @@ fn the_props_report_the_flags() {
     assert!(!kit.props().continuous);
 }
 
-// --- the theme source -----------------------------------------------------
 
-/// The theme: v1's Fluent window took a snapshot of its own design system's
-/// theme rather than reading the app-wide signal, so an app-wide theme
-/// change does not re-theme it.
 #[test]
 fn the_theme_is_a_snapshot_not_the_app_wide_signal() {
     assert_ne!(

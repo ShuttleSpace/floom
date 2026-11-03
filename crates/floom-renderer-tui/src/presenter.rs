@@ -113,8 +113,6 @@ impl<W: Write> Presenter for TuiPresenter<W> {
     }
 
     fn present(&mut self, scene: &Scene, resources: &ResourceRegistry) {
-        // The runner calls `present`; route it through the incremental path so a
-        // live terminal repaints in patches, not in full every frame.
         self.present_internal(scene, resources);
     }
 

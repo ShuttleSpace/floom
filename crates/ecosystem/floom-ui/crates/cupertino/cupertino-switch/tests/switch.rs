@@ -1,16 +1,5 @@
 //! Cupertino switch: v1's geometry and colours, exactly.
 //!
-//! ## Why this suite is mostly assertions about tokens
-//!
-//! The three v1 kits wrote the same switch — measured: their `resolved_style()`
-//! bodies are byte-identical once naming is stripped. So there is no per-kit
-//! behaviour to test, only that the engine reproduces one shared shape.
-//!
-//! What matters is that the shape is v1's and not the engine's default. The
-//! engine derives 40x20 with a full-height flush knob; v1 drew 52x32 with a 24
-//! knob inset 2px on both ends. Both tests below state which is which, because
-//! an adapter that quietly fell back to the default would render a
-//! plausible-looking switch that is 20% narrower than the one it replaced.
 
 use floom_core::{ElementId, Widget};
 use floom_signal::SignalUpdate;
@@ -229,7 +218,6 @@ fn the_checked_flag_reaches_the_engine() {
 #[test]
 fn the_disabled_flag_reaches_the_engine() {
     // The control: the flag defaults to enabled, so the second assertion below
-    // is "and not this" rather than a restatement.
     assert!(
         !cupertino().switch().interaction().disabled,
         "a fresh switch is interactive"

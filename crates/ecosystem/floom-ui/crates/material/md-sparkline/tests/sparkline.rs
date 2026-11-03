@@ -1,14 +1,3 @@
-//! The ported Material 3 sparkline -- a compact bar chart of a series.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the bars are
-//! painted in v1's colour at v1's sizes, and the gap between them is the
-//! prop v1 used for it rather than the token.
-//!
-//! ## The tripwires
-//!
-//! `the_bars_are_painted_in_v1_s_colour` and `the_bars_have_v1_s_heights`
-//! would fail if this kit stopped being this kit.
 
 use floom_core::{ElementId, LayoutRequest, Rect, Widget, WidgetAny};
 use floom_types::Color;
@@ -27,9 +16,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -85,7 +71,6 @@ fn bar_fill(bar: &dyn WidgetAny) -> Option<Color> {
     })
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -129,8 +114,6 @@ fn the_props_win_over_the_tokens() {
     assert_eq!(kit().height(30.0).resolved_style().height, 30.0);
 }
 
-/// The gap is the *props'* `line_width`, and the token's own bar width is
-/// only reported -- v1 never read it.
 #[test]
 fn the_gap_is_the_props_line_width_and_not_the_tokens() {
     let style = kit().line_width(6.0).resolved_style();
@@ -155,7 +138,6 @@ fn the_bar_width_is_computed_from_the_width_and_the_gap() {
         .width(100.0)
         .height(50.0)
         .resolved_style();
-    // (100 - 4 * 2) / 3
     assert!(
         (style.bar_width - 92.0 / 3.0).abs() < 1e-4,
         "the bar's width: {}",
@@ -202,10 +184,7 @@ fn the_props_report_the_series() {
     assert_eq!(kit.props().line_width, 6.0);
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The bars are painted in v1's colour: a translucent primary by default, and
-/// a solid one when `fill` is off.
 #[test]
 fn the_bars_are_painted_in_v1_s_colour() {
     let sparkline = kit().values(vec![1.0, 2.0]).view();
@@ -232,8 +211,6 @@ fn the_bars_are_painted_in_v1_s_colour() {
     }
 }
 
-/// The bars have v1's heights: the value's share of the range, times the
-/// rendered height, with a floor of 2.
 #[test]
 fn the_bars_have_v1_s_heights() {
     let sparkline = kit()
@@ -257,7 +234,6 @@ fn the_bars_have_v1_s_heights() {
     );
 }
 
-/// The bars have the width v1 computed.
 #[test]
 fn the_bars_have_v1_s_width() {
     let sparkline = kit()
@@ -275,9 +251,7 @@ fn the_bars_have_v1_s_width() {
     }
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The sparkline declares the rendered size v1 gave it.
 #[test]
 fn the_sparkline_declares_its_rendered_size() {
     let request = kit().width(120.0).height(30.0).view();
@@ -286,7 +260,6 @@ fn the_sparkline_declares_its_rendered_size() {
     assert_eq!(request.height.and_then(|h| h.px()), Some(30.0));
 }
 
-/// The gap between the bars is the one v1 wrote.
 #[test]
 fn the_gap_between_the_bars_is_v1_s() {
     let request = kit().line_width(6.0).view();
@@ -294,14 +267,9 @@ fn the_gap_between_the_bars_is_v1_s() {
     assert_eq!(request.gap, Some(6.0), "the props' `line_width`");
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// v1's Material sparkline read the *app-wide* theme signal, so a change of
-/// theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialSparkline::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

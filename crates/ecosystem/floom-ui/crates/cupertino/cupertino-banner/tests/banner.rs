@@ -1,16 +1,5 @@
 //! The ported Cupertino banner -- a tinted strip with an icon, a message and an
 //! action.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the strip is painted
-//! v1's tint, the three pieces are painted in v1's inks at v1's sizes, and the
-//! slots v1 filled with an empty view are absent here.
-//!
-//! ## The tripwires
-//!
-//! `the_strip_is_painted_v1_s_tint` and
-//! `a_banner_without_an_icon_or_an_action_has_one_child` would fail if this kit
-//! stopped being this kit.
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
@@ -33,7 +22,6 @@ const AT: Point = Point { x: 20.0, y: 20.0 };
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -391,7 +379,6 @@ fn single_line_is_carried_but_never_truncates() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoBanner::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

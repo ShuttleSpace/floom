@@ -1,8 +1,3 @@
-//! `Select` and the option list it opens.
-//!
-//! These moved with the widget from `floom-widgets/tests/controls.rs`, for the
-//! reason `nav_host.rs` and the rest moved: a test of a widget's behaviour
-//! belongs with the widget, and this file is what has to be deleted with it.
 
 use std::cell::Cell;
 use std::rc::Rc;

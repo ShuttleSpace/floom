@@ -1,16 +1,5 @@
 //! The ported Cupertino infinite scroller -- a viewport that asks for more when
 //! the user reaches the end of the content.
-//!
-//! The shape is the engine's vocabulary plus a kit-local scroller, so what is
-//! tested here is the translation and the pixels: the tokens reach the style,
-//! the viewport is painted in v1's colours, the loading footer shows v1's
-//! label, and the scroller asks for the next page at the end of the content.
-//!
-//! ## The tripwires
-//!
-//! `the_viewport_is_painted_v1_s_colour` and
-//! `the_scroller_asks_for_more_at_the_end` would fail if this kit stopped
-//! being this kit.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -39,7 +28,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -305,7 +293,6 @@ fn the_loading_flag_is_the_hosts_to_write() {
     );
 }
 
-// --- the theme source ---
 
 /// The theme: v1's Cupertino infinite scroller took a *snapshot* of its own design
 /// system, so a change of the app-wide theme does not re-theme it.

@@ -1,19 +1,5 @@
 //! The ported Cupertino file input -- a bordered trigger box, a trigger label and
 //! a readout of the path that was chosen.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a box that paints `surface` from one that paints
-//! `surface` at 4 alpha, and it cannot tell a readout that says "No file chosen"
-//! from one that says the path. Only the paint log can, so most of these tests
-//! read what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_box_is_painted_with_v1_s_fill_and_rim`,
-//! `the_readout_says_no_file_chosen_when_there_is_no_path` and
-//! `the_trigger_reports_the_current_path_when_it_is_clicked` would fail if this
-//! kit stopped being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
@@ -36,7 +22,6 @@ const AT: Point = Point { x: 20.0, y: 20.0 };
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -393,7 +378,6 @@ fn the_props_report_the_shape_and_not_the_callback() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoFileInput::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

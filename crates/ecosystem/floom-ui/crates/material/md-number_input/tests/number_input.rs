@@ -1,15 +1,3 @@
-//! The ported Material number input -- a text field with a `-` and a `+`
-//! beside it.
-//!
-//! The shape is the engine's vocabulary plus the engine's `TextInput`, so what
-//! is tested here is the translation and the pixels: the tokens reach the
-//! style, the field is painted in v1's colours at v1's sizes, the two steppers
-//! answer, and a disabled one does not.
-//!
-//! ## The tripwires
-//!
-//! `the_field_is_painted_in_v1_s_colours` and `the_stepper_moves_the_number`
-//! would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -30,9 +18,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -98,7 +83,6 @@ fn row_of(field: &dyn floom_core::WidgetAny) -> Box<dyn floom_core::WidgetAny> {
     field.children().remove(0).build()
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -159,9 +143,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The field is painted in v1's colours, at v1's sizes.
 #[test]
 fn the_field_is_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -200,7 +182,6 @@ fn the_field_is_painted_in_v1_s_colours() {
     );
 }
 
-/// The text is painted in v1's ink, at v1's size.
 #[test]
 fn the_text_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -225,7 +206,6 @@ fn the_text_is_painted_in_v1_s_ink() {
     assert_eq!(ink, paint(resolved.text_color), "v1's ink");
 }
 
-/// The two steppers are tiles of the token's size, filled with v1's colour.
 #[test]
 fn the_two_steppers_are_tiles_of_the_token_s_size() {
     let resolved = kit().resolved_style();
@@ -254,7 +234,6 @@ fn the_two_steppers_are_tiles_of_the_token_s_size() {
             Some(paint(resolved.button_background)),
             "the tile's fill"
         );
-        // A widget paints only itself, so the glyph is the tile's *child*.
         let mark = tile.children().remove(0).build();
         let text = ops_of(&*mark)
             .iter()
@@ -267,9 +246,7 @@ fn the_two_steppers_are_tiles_of_the_token_s_size() {
     }
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The label sits above the field, and the gap between them is v1's.
 #[test]
 fn the_label_sits_above_the_field() {
     let view = kit().label("Quantity").view();
@@ -457,7 +434,6 @@ fn a_disabled_stepper_does_not_answer() {
     );
 }
 
-/// The disabled palette is v1's: the ink and the rim at 38, the fill at 4.
 #[test]
 fn the_disabled_palette_is_v1_s() {
     let style = kit().disabled(true).resolved_style();
@@ -506,12 +482,8 @@ fn the_props_report_the_number() {
     );
 }
 
-/// The theme: v1's Material number input read the *app-wide* theme signal, so
-/// a change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialNumberInput::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

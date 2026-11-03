@@ -1,14 +1,4 @@
 //! The ported Fluent menu -- a panel of rows, up while a flag says so.
-//!
-//! The state machine is the engine's; what is tested here is the translation
-//! and the pixels: the tokens reach the engine's style, the panel is painted
-//! the colour v1 painted, and v1's own numbers -- the row's padding, the
-//! hovered row's fill, the panel's radius -- are the ones the port uses.
-//!
-//! ## The tripwires
-//!
-//! `the_menu_paints_v1_s_appearance` and `the_hovered_row_is_v1_s_fill` would
-//! fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -32,13 +22,9 @@ const BOX: Rect = Rect {
     y1: 200.0,
 };
 
-/// A point over the first row.
 const OVER_FIRST: Point = Point { x: 10.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -47,7 +33,6 @@ fn kit() -> FluentMenu {
     FluentMenu::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -57,8 +42,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The update pass, on a context that refuses overlays -- so the panel is in
-/// the tree and a test can paint it.
 fn tick(menu: &mut Menu) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = menu.create(&mut create);
@@ -66,7 +49,6 @@ fn tick(menu: &mut Menu) {
     menu.update(&mut cx, id);
 }
 
-/// The menu, open, with its panel in the tree.
 fn open_menu(kit: FluentMenu) -> Menu {
     let mut menu = kit.view();
     floom_widgets::write_flag(&menu.open_flag(), true);
@@ -74,9 +56,7 @@ fn open_menu(kit: FluentMenu) -> Menu {
     menu
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the engine's style.
 #[test]
 fn the_tokens_and_colours_reach_the_engine_style() {
     let style: FluentMenuStyle = kit().resolved_style();
@@ -123,7 +103,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// The hovered row's fill is this kit's own: v1 used `on_surface` at 8
 #[test]
 fn the_hovered_row_is_v1_s_fill() {
     assert_eq!(
@@ -133,7 +112,6 @@ fn the_hovered_row_is_v1_s_fill() {
     );
 }
 
-/// The panel's radius is this kit's own: v1 read the theme's `sm` radius
 #[test]
 fn the_panel_radius_is_v1_s() {
     assert_eq!(
@@ -143,9 +121,7 @@ fn the_panel_radius_is_v1_s() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The panel is painted the colour v1 painted, and the rows in v1's ink.
 #[test]
 fn the_menu_paints_v1_s_appearance() {
     let resolved = kit().resolved_style();
@@ -174,7 +150,6 @@ fn the_menu_paints_v1_s_appearance() {
     assert_eq!(ink, Some(paint(resolved.text_color)), "and the rows' ink");
 }
 
-/// The row the pointer is over is filled with v1's hovered colour.
 #[test]
 fn the_hovered_row_is_filled_when_the_pointer_arrives() {
     let resolved = kit().resolved_style();
@@ -202,9 +177,7 @@ fn the_hovered_row_is_filled_when_the_pointer_arrives() {
     );
 }
 
-// --- the rules ------------------------------------------------------------
 
-/// Choosing a row runs its callback.
 #[test]
 fn choosing_a_row_runs_its_callback() {
     let seen = Arc::new(Mutex::new(Vec::new()));
@@ -214,7 +187,6 @@ fn choosing_a_row_runs_its_callback() {
     assert_eq!(seen.lock().unwrap().as_slice(), &[0]);
 }
 
-/// The flag the menu shares with its caller is the one that opens it.
 #[test]
 fn the_open_flag_is_shared_with_the_caller() {
     let flag = floom_widgets::shared_flag(false);
@@ -231,7 +203,6 @@ fn the_open_flag_is_shared_with_the_caller() {
     );
 }
 
-/// The props report the items and the open state.
 #[test]
 fn the_props_report_the_items() {
     let kit = kit().item("One", || {}).item("Two", || {});
@@ -240,12 +211,8 @@ fn the_props_report_the_items() {
     assert!(!kit.props().open, "and the menu starts closed");
 }
 
-/// The theme: v1's Fluent menu took a *snapshot* of its own design system, so
-/// a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentMenu::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

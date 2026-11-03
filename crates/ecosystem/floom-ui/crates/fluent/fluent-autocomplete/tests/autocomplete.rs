@@ -1,9 +1,4 @@
 //! Fluent's autocomplete as a kit crate: the text-shaped callback, the commit point,
-//! and the one thing v1 could do that this port cannot reproduce on its own.
-//!
-//! The engine's own coverage is in `floom-widgets/tests/combobox*.rs` and is not repeated
-//! here. What is here is what is *this crate's*: it is a combobox whose callback speaks
-//! text, and whose commit point the caller has to drive.
 
 use std::sync::{Arc, Mutex};
 
@@ -21,7 +16,6 @@ fn options() -> Vec<String> {
         .collect()
 }
 
-/// An autocomplete that records what it was told.
 fn recording() -> (FluentAutocomplete, Arc<Mutex<Vec<Option<String>>>>) {
     let seen = Arc::new(Mutex::new(Vec::new()));
     let sink = seen.clone();
@@ -31,11 +25,7 @@ fn recording() -> (FluentAutocomplete, Arc<Mutex<Vec<Option<String>>>>) {
     (combo, seen)
 }
 
-// --- the payload is text, not an index -----------------------------------
 
-/// **Choosing an option reports its text.** That single difference from a combobox is
-/// the whole reason this crate exists rather than being `md-combobox` with a different
-/// name: an index cannot express what this field is allowed to hold.
 #[test]
 fn choosing_an_option_reports_its_text() {
     let (mut combo, seen) = recording();
@@ -47,7 +37,6 @@ fn choosing_an_option_reports_its_text() {
     );
 }
 
-/// And the field reads what was chosen, as it does for a combobox.
 #[test]
 fn choosing_fills_the_field() {
     let (mut combo, _) = recording();
@@ -56,9 +45,6 @@ fn choosing_fills_the_field() {
     assert_eq!(combo.pick().lock().unwrap().selected, Some(2));
 }
 
-/// The mounted widget's callback is **adapted**, not handed through: the engine reports
-/// an index and the caller receives text. This drives the real path — the engine's
-/// `select`, which is what a row click does.
 #[test]
 fn the_mounted_widget_adapts_the_index_to_text() {
     let (combo, seen) = recording();
@@ -71,10 +57,7 @@ fn the_mounted_widget_adapts_the_index_to_text() {
     );
 }
 
-// --- the commit point -----------------------------------------------------
 
-/// Free text is reported when it matches nothing, because holding something that is not
-/// on the list is what this control is for.
 #[test]
 fn committing_free_text_reports_what_was_typed() {
     let (combo, seen) = recording();
@@ -93,7 +76,6 @@ fn committing_free_text_reports_what_was_typed() {
     );
 }
 
-/// An emptied field clears the selection and reports "nothing selected".
 #[test]
 fn committing_an_empty_field_clears_and_reports_none() {
     let (mut combo, seen) = recording();
@@ -109,10 +91,6 @@ fn committing_an_empty_field_clears_and_reports_none() {
     assert_eq!(combo.pick().lock().unwrap().selected, None);
 }
 
-/// **An exact match reports nothing — and the method says so.** v1's third branch set
-/// `selected` and called no callback; that is preserved, and it is why `commit()` returns
-/// a bool rather than nothing: a caller driving this by hand needs to be able to tell
-/// "committed and said so" from "committed silently", and the second case is real.
 #[test]
 fn committing_an_exact_match_is_silent_even_though_it_moved_the_selection() {
     let (combo, seen) = recording();
@@ -135,10 +113,6 @@ fn committing_an_exact_match_is_silent_even_though_it_moved_the_selection() {
     );
 }
 
-/// A substring the *filter* would show does not become a selection on commit.
-///
-/// The filter uses `contains` and the commit uses `eq_ignore_ascii_case`; conflating them
-/// is the obvious mistake, and here it would mean typing "an" silently selects "banana".
 #[test]
 fn committing_a_substring_selects_nothing() {
     let (combo, seen) = recording();
@@ -148,7 +122,6 @@ fn committing_a_substring_selects_nothing() {
     assert_eq!(combo.pick().lock().unwrap().selected, None);
 }
 
-/// Case does not matter for the commit, though it does for nothing else here.
 #[test]
 fn committing_matches_an_option_regardless_of_case() {
     let (combo, _) = recording();
@@ -157,8 +130,6 @@ fn committing_matches_an_option_regardless_of_case() {
     assert_eq!(combo.pick().lock().unwrap().selected, Some(2));
 }
 
-/// An autocomplete with no callback commits without complaint, which is what a caller
-/// that only reads the state gets.
 #[test]
 fn committing_without_a_callback_is_fine() {
     let mut combo = FluentAutocomplete::new().options(options());
@@ -170,27 +141,16 @@ fn committing_without_a_callback_is_fine() {
     assert_eq!(combo.pick().lock().unwrap().selected, None);
 }
 
-// --- what the port cannot reproduce ---------------------------------------
 
-/// **v1 committed on `FocusLost`; 2.0 has no way for a parent to observe a child's
-/// focus, so `commit()` is public and the caller drives it.** This test is the record of
-/// that: the rule is reachable, and it is reachable only because it was made public.
 #[test]
 fn the_commit_point_is_public_because_focus_cannot_be_observed() {
     let (combo, seen) = recording();
     *combo.query().lock().unwrap() = "kiwi".to_string();
-    // A caller holding only the autocomplete — with no reference to any field — can
-    // still commit. Under v1 this was reachable only from inside the widget, attached to
-    // an event 2.0 does not deliver.
     combo.commit();
     assert_eq!(seen.lock().unwrap().as_slice(), [Some("kiwi".to_string())]);
 }
 
-// --- the tokens -----------------------------------------------------------
 
-/// The six numbers from `AutocompleteTokens` are the token's. `AutocompleteTokens` has
-/// exactly `ComboboxTokens`' six fields, which is why the engine's one style struct
-/// serves both controls — and that is worth asserting rather than assuming.
 #[test]
 fn the_tokens_come_from_autocomplete_tokens() {
     let style = FluentAutocomplete::new().resolved_style();
@@ -210,21 +170,11 @@ fn the_tokens_come_from_autocomplete_tokens() {
     assert_eq!(style.panel_max_height, tokens.panel_max_height);
 }
 
-/// **This kit's panel gap is zero, where Material's is four** — the one number the three
-/// kits disagree on.
-///
-/// I derived this file by substituting names from the Material one, and the substitution
-/// renamed the test's *title* while leaving its *number* at 4.0. So the test compiled,
-/// failed, and said something false about this kit. A substitution renames words; it does
-/// not know which words are values. The control below is what makes the difference
-/// legible rather than merely asserted.
 #[test]
 fn the_panel_gap_is_zero() {
     assert_eq!(FluentAutocomplete::new().resolved_style().panel_gap, 0.0);
 }
 
-/// The control: the engine's default is Material's 4.0, so a kit that says nothing gets
-/// the wrong gap and this one has to say `0.0` out loud.
 #[test]
 fn the_engine_default_would_have_been_wrong_here() {
     assert_eq!(
@@ -234,8 +184,6 @@ fn the_engine_default_would_have_been_wrong_here() {
     );
 }
 
-/// The call-site constants, which v1 wrote inline. The same values the combobox uses:
-/// the two controls agree here, which the shared style struct now makes structural.
 #[test]
 fn the_call_site_constants_match_the_comboboxs() {
     let style = FluentAutocomplete::new().resolved_style();
@@ -245,9 +193,6 @@ fn the_call_site_constants_match_the_comboboxs() {
     assert_eq!(style.selected_row_alpha, 24);
 }
 
-/// **Nothing here verifies that this is Fluent's theme.** `MultiTheme::new_for` ignores
-/// its argument and reads go through a process-global, so these numbers are Fluent's
-/// because nothing has called `set_design_system`.
 #[test]
 fn the_theme_is_not_selected_by_naming_it() {
     let fluent = FluentAutocomplete::new().resolved_style();
@@ -259,13 +204,8 @@ fn the_theme_is_not_selected_by_naming_it() {
     assert_eq!(fluent.height, fluent.height);
 }
 
-// --- props ----------------------------------------------------------------
 
-/// `props()` reports `AutocompleteProps`, not `ComboboxProps`.
-///
-/// The two structs are identical except for `on_change`'s payload, and picking the wrong
 /// one is a compile error rather than a silent bug — which is why this assertion exists
-/// only to say the *right* one is in use.
 #[test]
 fn props_are_autocomplete_props() {
     let (combo, _) = recording();
@@ -277,23 +217,13 @@ fn props_are_autocomplete_props() {
     );
 }
 
-/// The default placeholder is v1's — and it is **not** the combobox's.
-///
-/// `AutocompleteProps::default()` says "Type to search…" where `ComboboxProps::default()`
-/// says "Select…". Two props types, two defaults, and this is the second structural
-/// difference between them beyond `on_change`'s payload. Worth a test because a single
-/// shared style struct elsewhere in this port makes it easy to assume the two controls
-/// were the same thing all the way down.
 #[test]
 fn the_default_placeholder_is_the_autocompletes_own() {
     let combo = FluentAutocomplete::new();
     assert_eq!(combo.props().placeholder, "Type to search\u{2026}");
 }
 
-// --- the mounted view -----------------------------------------------------
 
-/// The view places its panel below the field with Fluent's gap — the same placement a
-/// combobox makes, because it is the same engine widget.
 #[test]
 fn the_view_places_its_panel_below_the_field() {
     let mut view = FluentAutocomplete::new().options(options()).view();
@@ -309,21 +239,12 @@ fn the_view_places_its_panel_below_the_field() {
     assert_eq!(cx.opened_overlays().len(), 1);
 }
 
-/// An untouched autocomplete lists everything, because v1's filter matches an empty
-/// query against every option — an autocomplete that opened empty would be a search box
-/// with no way to see what it searches.
 #[test]
 fn an_empty_query_lists_every_option() {
     let view = FluentAutocomplete::new().options(options()).view();
     assert_eq!(view.visible(), options());
 }
 
-/// `disabled` reaches the widget, so a disabled autocomplete is visibly one.
-///
-/// Painted rather than read: `Combobox` has no `disabled()` reader — and adding one for a
-/// flag a caller already passed in would be a getter for its own argument. The trigger is
-/// also a *child*, so the widget's own `paint` draws nothing and comparing the widgets
-/// would compare two empty scenes; the child is what has to be painted.
 #[test]
 fn disabled_reaches_the_widget_and_changes_how_it_paints() {
     let bounds = floom_types::Rect {

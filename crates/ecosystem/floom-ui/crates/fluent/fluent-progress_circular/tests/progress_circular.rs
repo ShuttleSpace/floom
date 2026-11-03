@@ -1,12 +1,4 @@
 //! Fluent circular progress: the ring, and the two numbers this kit owns.
-//!
-//! ## The claim
-//!
-//! v1 drew an SVG ring -- a track circle and an accent arc over it. 2.0's
-//! `CircularProgress` draws the same two things, so the kit is a thin adapter
-//! and the assertions are about the two numbers it decides: the indeterminate
-//! arc's *length* and *start*, which are where this kit and the other two
-//! disagree.
 
 use floom_core::Widget;
 use floom_types::{Color, Length, Rect};
@@ -26,13 +18,6 @@ const BOX: Rect = Rect {
     y1: 48.0,
 };
 
-/// The Fluent theme, with Fluent selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time. So a test that wants Fluent's own values has to
-/// select Fluent, and `set_design_system` writes a thread-local, so the
-/// selection is this test's alone.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
@@ -56,7 +41,6 @@ fn ring(p: FluentProgressCircular) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The style resolves this kit's own tokens and colours.
 #[test]
 fn the_style_resolves_this_kits_tokens_and_colours() {
     let theme = theme();
@@ -74,7 +58,6 @@ fn the_style_resolves_this_kits_tokens_and_colours() {
     assert_eq!(style.design_system, "fluent");
 }
 
-/// The props' size wins over the token's -- and the token's size is never read.
 #[test]
 fn the_props_size_wins_over_the_tokens() {
     let style = FluentProgressCircular::new()
@@ -83,9 +66,6 @@ fn the_props_size_wins_over_the_tokens() {
         .resolved_style();
     assert_eq!(style.size, 64.0, "v1: the props' size when it is set");
 
-    // The default is the *props'* 36.0, not zero -- so v1's
-    // `if props.size > 0.0 { props.size } else { tokens.size }` never reached
-    // the token, and `ProgressCircularTokens::size` was dead in all three kits.
     let style = FluentProgressCircular::new()
         .with_theme(theme())
         .resolved_style();
@@ -100,7 +80,6 @@ fn the_props_size_wins_over_the_tokens() {
     );
 }
 
-/// The indeterminate arc covers 25% of the ring, starting at three o'clock.
 #[test]
 fn the_indeterminate_arc_is_the_shape_this_kit_asks_for() {
     let style = FluentProgressCircular::new()
@@ -126,8 +105,6 @@ fn the_indeterminate_arc_is_the_shape_this_kit_asks_for() {
     );
 }
 
-/// The determinate arc starts at twelve o'clock, whatever the indeterminate one
-/// does -- that is v1's `transform="rotate(-90 ..)"`.
 #[test]
 fn the_determinate_arc_starts_at_twelve_oclock() {
     let ring = FluentProgressCircular::new()
@@ -146,7 +123,6 @@ fn the_determinate_arc_starts_at_twelve_oclock() {
     );
 }
 
-/// The ring is painted as a track and an arc, in the kit's own colours.
 #[test]
 fn the_ring_is_a_track_and_an_arc() {
     let ops = ring(
@@ -175,7 +151,6 @@ fn the_ring_is_a_track_and_an_arc() {
     assert_eq!(strokes[1].1, to_paint(theme.colors().primary), "the arc");
 }
 
-/// The ring is as big as the props' size -- the token's is never read.
 #[test]
 fn the_ring_is_the_props_size() {
     let ring = FluentProgressCircular::new().with_theme(theme()).view();
@@ -186,7 +161,6 @@ fn the_ring_is_the_props_size() {
     assert_eq!(request.height, Some(Length::Px(36.0)));
 }
 
-/// Design-system colour -> engine colour.
 fn to_paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,

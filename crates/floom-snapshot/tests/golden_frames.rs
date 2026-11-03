@@ -132,10 +132,6 @@ fn record(g: &mut GoldenFrames, host: &mut WidgetHost, size: Size, ticks: &[usiz
     }
 }
 
-// ---------------------------------------------------------------------------
-// A fade, plain and styled.
-// ---------------------------------------------------------------------------
-
 #[test]
 fn a_fading_card_is_golden_frame_by_frame() {
     let (mut host, root) = mounted(FRAME, card_style(), Container::new().background(INK));
@@ -224,10 +220,6 @@ fn a_fading_blurred_card_is_golden_frame_by_frame() {
     g.assert(snapshots_dir!(), "frames_blurred_card_fade_in");
 }
 
-// ---------------------------------------------------------------------------
-// Presence: entering and, the harder half, leaving.
-// ---------------------------------------------------------------------------
-
 /// A child box with a size of its own.
 ///
 /// A `Container` asked for with `LayoutRequest::default()` measures 0×0 — it
@@ -306,10 +298,6 @@ fn a_presence_child_leaving_is_golden_frame_by_frame() {
     g.assert(snapshots_dir!(), "frames_presence_exit");
 }
 
-// ---------------------------------------------------------------------------
-// Crossfade: two sides on screen at once.
-// ---------------------------------------------------------------------------
-
 #[test]
 fn a_crossfade_swap_is_golden_frame_by_frame() {
     let a = sized_card(INK, 1);
@@ -346,10 +334,6 @@ fn a_crossfade_swap_is_golden_frame_by_frame() {
 
     g.assert(snapshots_dir!(), "frames_crossfade_swap");
 }
-
-// ---------------------------------------------------------------------------
-// Shared element: the ink flies from one box to another.
-// ---------------------------------------------------------------------------
 
 /// A small solid square child built directly (no glyphs — a golden over shaped
 /// text is pinned to the host's font stack).
@@ -441,8 +425,6 @@ fn a_shared_element_flight_is_golden_frame_by_frame() {
 fn host_digest(host: &WidgetHost) -> FrameDigest {
     FrameDigest::of(&pixels(host, FRAME), 12)
 }
-
-// ---------------------------------------------------------------------------
 
 #[test]
 fn every_frame_golden_is_accounted_for() {

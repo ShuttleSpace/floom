@@ -1,13 +1,3 @@
-//! `Slider` driven through real platform events.
-//!
-//! These moved with the widget from `floom-app/tests/interaction.rs`, for the
-//! reason `select_interaction.rs` moved: a test of a widget's behaviour belongs
-//! with the widget, and this file is what has to be deleted with it.
-//!
-//! What they pin is the wiring *around* the widget's own logic -- a press the
-//! platform reports reaching the control under the cursor, a key reaching
-//! whatever holds focus at that moment -- which is the chain `TestApp` gives
-//! and the direct dispatch in `slider.rs` cannot.
 
 use std::cell::Cell;
 use std::rc::Rc;

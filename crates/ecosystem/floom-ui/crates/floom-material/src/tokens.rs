@@ -1,4 +1,3 @@
-//! Material 3 colour roles and the token set built around them.
 
 use floom_design::{readable_on, tonal_ramp};
 use floom_theme::{ColorScheme, Theme};

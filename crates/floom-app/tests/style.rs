@@ -63,9 +63,7 @@ fn rects(host: &WidgetHost) -> Vec<(Rect, Brush, Option<Shadow>)> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // A3 — a gradient background through the widget door
-// ---------------------------------------------------------------------------
 
 /// The ramp a container was built with is the ramp the renderer receives —
 /// not a colour sampled somewhere on the way down.
@@ -92,9 +90,7 @@ fn a_flat_background_still_costs_one_flat_node() {
     assert_eq!(nodes[0].1.solid(), Some(Color::rgb(10, 20, 30)));
 }
 
-// ---------------------------------------------------------------------------
 // A4 — elevation through the widget door
-// ---------------------------------------------------------------------------
 
 /// A shadow is one extra node in front of the fill it belongs to, carrying the
 /// whole request — including a transparent silhouette, because the host cannot
@@ -137,9 +133,7 @@ fn an_elevated_card_casts_its_shadow_before_its_own_fill() {
     assert_eq!(nodes[0].0, nodes[1].0);
 }
 
-// ---------------------------------------------------------------------------
 // A3 — the same door from a self-drawn painter
-// ---------------------------------------------------------------------------
 
 /// A `Canvas` painter can paint with a brush too, because the brush ops live on
 /// `PaintContext`: the path it fills carries the ramp rather than one colour

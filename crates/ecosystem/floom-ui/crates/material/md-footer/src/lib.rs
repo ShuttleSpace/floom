@@ -1,39 +1,3 @@
-//! Material 3 footer, ported to the Floom 2.0 widget API.
-//!
-//! # What changed from v1
-//!
-//! v1 built a view by composing and styling:
-//!
-//! ```ignore
-//! Container::new(child).style(move |s| {
-//!     let mut s = s.width_pct(100.0).height(h).padding(pad).items_center()
-//!                .background(surface).color(on_surface);
-//!     if bordered { s = s.border_color(outline_variant).border_top(border); }
-//!     if elevation > 0 { s = s.box_shadow_blur(6.0)..; }
-//!     s
-//! })
-//! ```
-//!
-//! Each of those becomes a different thing in 2.0:
-//!
-//! * the box is a [`Surface`] — a decorated box that holds its child and pads it;
-//! * `items_center` is [`Surface::request`]'s `main_align` / `cross_align`, not a
-//!   property of the fill, because the child is what gets centred;
-//! * `border_top` is [`Surface::border_edges`] with [`Edges::TOP`], the one thing
-//!   v1's four-sided stroke could not say;
-//! * `color(..)` on the box does not exist in 2.0 at all: colour belongs to the
-//!   thing that draws, so the content colour is exposed as
-//!   [`MdFooter::content_color`] for the child to use.
-//!
-//! # The layout registry is kept
-//!
-//! v1 called `register_layout(LayoutSlot::Footer, height)` while building the
-//! view, and `md-main` reads that process-wide signal to inset the content
-//! region. Dropping it would leave every footer's content overlapped by the bar,
-//! so [`MdFooter::view`] still publishes — at build time, exactly as v1 did, not
-//! reactively. A footer whose height changes after mount does not re-publish,
-//! which was already true in v1 and is recorded in
-//! [`MdFooter::publish_layout`] rather than quietly improved.
 
 use floom_core::{LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
@@ -57,18 +21,10 @@ const BLACK: Color = Color {
     a: 255,
 };
 
-/// The blur of the elevation shadow. v1 wrote `box_shadow_blur(6.0)
-/// .box_shadow_spread(0.0).box_shadow_color(with_alpha(BLACK, 30))` with no
-/// offset, so the shadow is a symmetric halo rather than a drop.
 const ELEVATION_BLUR: f32 = 6.0;
 
-/// The alpha of that shadow, matching v1's `with_alpha(BLACK, 30)`.
 const ELEVATION_ALPHA: u8 = 30;
 
-/// A builder for the footer's content, replayed each time the bar is built.
-///
-/// An [`std::sync::Arc`] for the reason `md-toolbar`'s is: a 2.0 slot is a
-/// replayed `Fn`, so every rebuild needs its own copy to move into it.
 pub type ChildBuilder = std::sync::Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
 fn footer_tokens(theme: &MultiTheme) -> FooterTokens {
@@ -81,11 +37,6 @@ fn footer_tokens(theme: &MultiTheme) -> FooterTokens {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MdFooterStyle {
     pub surface: Color,
-    /// The colour the *content* should be drawn in.
-    ///
-    /// A field rather than a property of the box: 2.0 has no `color(..)` on a
-    /// decoration, because a fill and a glyph are different objects and only one
-    /// of them is text.
     pub content: Color,
     /// The separator colour, present only when `bordered`.
     pub outline: Color,
@@ -127,8 +78,6 @@ impl MdFooter {
         self
     }
 
-    /// Draw the top separator. On by default: v1's `FooterProps::default()` sets
-    /// `bordered: true`.
     pub fn bordered(mut self, bordered: bool) -> Self {
         self.props.bordered = bordered;
         self
@@ -139,10 +88,6 @@ impl MdFooter {
         self
     }
 
-    /// Supply the footer's content.
-    ///
-    /// v1 took `impl IntoView`; 2.0 takes a replayed builder. Callers holding a
-    /// widget already write `move || Box::new(..)`.
     pub fn child(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
         self.child = Some(std::sync::Arc::new(build));
         self
@@ -176,12 +121,6 @@ impl MdFooter {
         }
     }
 
-    /// The bar's extent — its height and the full width of its parent — plus the
-    /// centring v1 wrote as `items_center()`.
-    ///
-    /// The alignment lives here rather than on a builder because the *child* is
-    /// what gets centred: 2.0's decoration boxes carry a fill and a border, and
-    /// the layout of what they hold is declared by the box's own request.
     pub fn request(&self) -> LayoutRequest {
         let style = self.resolved_style();
         LayoutRequest::new()
@@ -195,10 +134,6 @@ impl MdFooter {
         Insets::uniform(f64::from(self.resolved_style().padding))
     }
 
-    /// The top separator as `(thickness, colour)`, or `None` when unbordered.
-    ///
-    /// [`Edges::TOP`] specifically: v1 wrote `border_top`, and a footer's rule
-    /// along its top edge is not the same drawing as a box outlined all round.
     pub fn border(&self) -> Option<(f32, PaintColor)> {
         let style = self.resolved_style();
         style
@@ -225,22 +160,10 @@ impl MdFooter {
         })
     }
 
-    /// The colour the content should be drawn in.
-    ///
-    /// v1 put this on the box as `color(..)`, which in 2.0 has nowhere to live:
-    /// a `Surface` paints a fill, and only the child knows it is text.
     pub fn content_color(&self) -> PaintColor {
         to_paint(self.resolved_style().content)
     }
 
-    /// Report this footer's height to the process-wide layout registry.
-    ///
-    /// v1 did this inside `view()` and `md-main` reads it to inset the content
-    /// region, so dropping it overlaps the content with the bar. Deliberately a
-    /// build-time side effect and not reactive: that is what v1 did, and a footer
-    /// whose height changes after mount does not re-publish. Making it reactive
-    /// would mean holding the theme signal inside a `Send + Sync` slot closure,
-    /// which 2.0's slots cannot do.
     pub fn publish_layout(&self) {
         floom_core_theme::layout::register_layout(
             floom_core_theme::layout::LayoutSlot::Footer,
@@ -260,7 +183,6 @@ impl MdFooter {
         let edges = self.border_edges();
         let shadow = self.shadow();
         let surface_colour = to_paint(style.surface);
-        // Last, because it moves.
         let child = self.child;
 
         let mut surface = Surface::new()
@@ -275,9 +197,6 @@ impl MdFooter {
         }
         match child {
             Some(child) => surface.push(move || child()),
-            // v1 substituted an empty view. A `Surface` with no children is the
-            // same answer without a node, and leaves the bar's centring
-            // uncontested.
             None => surface,
         }
     }

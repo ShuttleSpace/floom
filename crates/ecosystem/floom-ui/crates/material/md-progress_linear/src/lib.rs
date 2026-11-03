@@ -1,57 +1,3 @@
-//! Material 3 linear progress, ported to the Floom 2.0 widget API.
-//!
-//! ## The lowest-similarity shape in the port, and why that is the point
-//!
-//! `md_progress_linear` / `cupertino_progress_linear` / `fluent_progress_linear`
-//! measure **0.17 and 0.19** similarity — the lowest of any shape ported so far.
-//! They agree on the tokens (one shared table, `track_height` 4.0,
-//! `border_radius` 2.0) and on both colours (`surface_variant` track, `primary`
-//! fill). They disagree about everything else, and the disagreements are the
-//! substance:
-//!
-//! | | Material | Cupertino | Fluent |
-//! |---|---|---|---|
-//! | fill placement | absolute overlay | absolute overlay | centred child |
-//! | fill corner radius | **none** | track radius | track radius |
-//! | value → percent | exact | **truncated** | exact |
-//! | indeterminate | **sliding 40% segment** | static 40% bar | static 40% segment |
-//!
-//! All four are parameters on [`LinearProgressStyle`] or
-//! [`floom_widgets::Indeterminate`], and each kit says which it wants. Nothing is
-//! resolved.
-//!
-//! ## What this kit uniquely wants
-//!
-//! * **`fill_radius: None`.** Material rounds the track and leaves the bar square.
-//!   `ProgressLinearTokens::border_radius` is documented "Corner radius of the
-//!   track **and fill**", so Material disagrees with its own token's doc. The doc
-//!   is left alone — changing a published token's meaning is a design decision,
-//!   and the disagreement that matters is Material's behaviour.
-//! * **`Indeterminate::SlidingSegment`.** v1 spawned an OS thread that slept
-//!   16 ms and wrote an `ArcRwSignal` from it, sliding a 40% segment across 60% of
-//!   the track. See "What is lost" below.
-//!
-//! ## What is lost, and stated rather than faked
-//!
-//! **The sliding animation has no driver.** v1's was a spawned thread mutating a
-//! signal off-thread, which is exactly the shape 2.0's shared `Arc<Mutex<..>>`
-//! state exists to avoid, so it is not portable and should not be. The *geometry*
-//! survives — a 40% segment travelling across `SLIDING_TRAVEL_PCT` — and the offset
-//! is the caller's to supply through `LinearProgress::set_fill_offset_pct`.
-//! Nothing in the engine advances it. Until a host-side driver exists, an
-//! indeterminate Material bar sits at the left edge, which is Cupertino's and
-//! Fluent's behaviour and is visibly wrong for Material.
-//!
-//! ## Two API differences kept, one added
-//!
-//! * **Kept: `height`, not `track_height`.** Material's style struct names the
-//!   field `height` where the other two say `track_height`. That is an API
-//!   difference rather than a visual one, and it costs nothing to keep.
-//! * **Added: `props()`, `theme()`, `with_theme()`.** v1's Material arm had none of
-//!   these; Cupertino's and Fluent's did. Deriving all three from one file meant
-//!   either losing two accessors two kits had, or giving Material two it did not.
-//!   Adding them is the smaller change, and it is an addition rather than a
-//!   behaviour change.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -154,10 +100,6 @@ impl MdProgressLinear {
         }
     }
 
-    /// The engine's style, which is the whole translation.
-    ///
-    /// Four disagreements in eight lines, and each one is a value rather than a
-    /// branch: the engine asks four questions and this answers them.
     pub fn linear_progress_style(&self) -> LinearProgressStyle {
         let style = self.resolved_style();
         LinearProgressStyle {
@@ -165,20 +107,12 @@ impl MdProgressLinear {
             fill_color: to_paint(style.fill_color),
             track_height: style.height,
             track_radius: style.border_radius,
-            // The disagreement: Cupertino and Fluent round the bar, Material does
-            // not. `None` means square, not "same as the track" — the engine test
-            // `a_none_fill_radius_means_square_ends_not_the_track_radius` is the
-            // one that keeps those apart.
             fill_radius: None,
             fill_placement: FillPlacement::Absolute,
             percent_rounding: PercentRounding::Exact,
         }
     }
 
-    /// Which indeterminate mode this kit asks for.
-    ///
-    /// v1's `indeterminate` was a `bool` on the props and stays one; the engine
-    /// wants three states, and Material is the kit that needs the third.
     pub fn indeterminate_mode(&self) -> Indeterminate {
         if self.props.indeterminate {
             Indeterminate::SlidingSegment
@@ -187,11 +121,6 @@ impl MdProgressLinear {
         }
     }
 
-    /// The bar as an engine widget.
-    ///
-    /// The returned widget's `set_fill_offset_pct` is what a host-side animation
-    /// driver would call. Nothing here calls it, and that is the recorded loss
-    /// above rather than an oversight — see the module note.
     pub fn view(self) -> LinearProgress {
         LinearProgress::new(self.props.value)
             .indeterminate_mode(self.indeterminate_mode())

@@ -1,84 +1,5 @@
 //! Cupertino slide group, ported to the Floom 2.0 widget API.
 //!
-//! A slide group is a horizontal strip of items with one of them chosen: the
-//! chosen one carries an indicator along its bottom edge, and the arrows at
-//! the ends move the choice along the strip.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a horizontal [`Stack`] of items, a [`Surface`] for
-//! each item's box, a [`Pressable`] around it, and a [`Conditional`] for the
-//! indicator that follows the choice. The engine's shared flag is the state:
-//! one flag per item, saying whether that item is the chosen one.
-//!
-//! ## What this kit answers
-//!
-//! * the chosen item's indicator: `primary`; an unchosen item's: `outline` at
-//!   alpha 0, which is nothing at all;
-//! * the arrows' ink: `on_surface_variant`; the arrows' own background: the
-//!   surface at alpha 220;
-//! * the strip's height, the gap between an item's edge and its content, the
-//!   indicator's thickness and the arrows' size: the tokens;
-//! * an item's width: 120, a v1 literal; an arrow's width: 32, a v1 literal;
-//!   the arrows' font size: the arrow size times 0.6, a v1 literal.
-//!
-//! ## The theme it reads
-//!
-//! Cupertino's theme is a *snapshot*: the kit takes a `MultiTheme` for
-//! Cupertino when it is built and reads its tokens and colours from it.
-//! The Material kit reads the app-wide signal instead, so a change of theme
-//! re-themes the strip with everything else.
-//!
-//! ## What the three kits disagree about
-//!
-//! Only the theme they read: the tokens, the colours and the literals above
-//! are the same in all three, so the three kits are the same code under three
-//! names, and what differs between them is the palette the theme hands out.
-//!
-//! ## The choice after mount
-//!
-//! v1 kept the choice in a local `RwSignal` and re-styled each item's bottom
-//! border from it. 2.0's tree is mounted once and its slot closures are
-//! shared between threads, so a signal cannot live in the tree -- the engine's
-//! answer is a shared flag, and the port uses one per item: the flag says
-//! whether that item is the chosen one, and the item's indicator is a
-//! [`Conditional`] that follows it. The choice is therefore still the kit's
-//! own, and it still moves after mount: a tap writes the flags, and the
-//! indicators follow on the next frame.
-//!
-//! ## The arrow that told nobody
-//!
-//! v1's arrows moved the choice and called nothing: `on_change` fired only
-//! when an item itself was tapped. The port keeps that, because v1 is the
-//! specification, and it is named here so that nobody takes it for an
-//! oversight.
-//!
-//! ## The prop nothing read
-//!
-//! `center_active` is in v1's props and v1 never read it -- the chosen item
-//! was not scrolled into the middle of the strip. The port keeps the prop,
-//! because v1's props carried it, and reads it no more than v1 did.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The clip.** v1's area clipped its overflow on both axes, so a strip
-//!   wider than the window was cut off at the edge. 2.0's layout request has
-//!   no overflow, so the clip is not carried and the area draws its children.
-//! * **The pointer cursor.** v1 set `CursorStyle::Pointer` on the items and on
-//!   the arrows. 2.0's paint context has no cursor vocabulary.
-//! * **The callback's shape.** v1's `on_change` was a `Box<dyn Fn(usize)>`,
-//!   which cannot cross a `Send + Sync` slot boundary. The kit keeps its own
-//!   `Arc<dyn Fn(usize) + Send + Sync>`.
-//! * **The accessors.** v1's slide groups had no `props()`, `theme()` or
-//!   `with_theme()`. The port gives them all three, because a kit that cannot
-//!   be given a theme cannot be tested against one.
-//!
-//! ## The one thing the port adds
-//!
-//! v1 published nothing to assistive technology. 2.0's `Pressable` does, so
-//! the port reports each item as selected when it is the chosen one. That is
-//! a fix rather than a translation, and it is named here rather than slipped
-//! in.
 
 use std::sync::Arc;
 
@@ -230,7 +151,6 @@ impl CupertinoSlideGroup {
     pub fn view(self) -> Stack {
         let style = self.resolved_style();
         let count = self.items.len();
-        // v1 clamped the choice to the items there were.
         let initial = self.selected.min(count.saturating_sub(1));
         // One flag per item: the flag says whether that item is the chosen
         // one. See the module's note on the choice after mount.
@@ -263,12 +183,10 @@ impl CupertinoSlideGroup {
             let chosen = index == initial;
 
             // v1's item box: the content, centred, with the strip's gap as its
-            // own horizontal padding.
             let content = Surface::new()
                 .request(
                     LayoutRequest::new()
                         // v1's border sat inside the box, so the content had
-                        // the box's height less the border's.
                         .height(height - indicator)
                         // v1's `items_center()` and `justify_center()`.
                         .main_align(Align::Center)
@@ -288,7 +206,6 @@ impl CupertinoSlideGroup {
                     ChildKey::index(0),
                     // The indicator is as wide as the band, and the band is as
                     // wide as the item: the percentage needs a definite base,
-                    // and the slot is where a percentage belongs.
                     LayoutRequest::new().width_pct(100.0),
                     {
                         let flag = flag.clone();
@@ -323,7 +240,6 @@ impl CupertinoSlideGroup {
                     .on_click(move || {
                         let current = chosen_of(&flags);
                         // v1 ignored a tap on the chosen item when the group
-                        // was mandatory.
                         if mandatory && current == index {
                             return;
                         }

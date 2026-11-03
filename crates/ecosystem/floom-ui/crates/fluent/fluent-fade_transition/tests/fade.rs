@@ -1,12 +1,4 @@
 //! Fluent fade transition: the transition it plays, and the flag that
-//! drives it.
-//!
-//! ## The claim
-//!
-//! v1 mounted the child only while a `show` signal was true, and played an
-//! animation on the way in and on the way out. The assertions are about those
-//! two things: the transition the kit chooses, and the child following the
-//! shared flag.
 
 use floom_core::{ElementId, Widget};
 use floom_types::{PresenceChannel, PresenceTransition};
@@ -18,13 +10,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_fluent_fade_transition::{FluentFadeTransition, FluentFadeTransitionStyle};
 
-/// The Fluent theme, with Fluent selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time. So a test that wants Fluent's own values has to
-/// select Fluent, and `set_design_system` writes a thread-local, so the
-/// selection is this test's alone.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
@@ -38,7 +23,6 @@ fn tokens() -> floom_core_theme::component_tokens::FadeTransitionTokens {
     }
 }
 
-/// The style resolves the token's own numbers.
 #[test]
 fn the_style_resolves_the_tokens() {
     let theme = theme();
@@ -50,7 +34,6 @@ fn the_style_resolves_the_tokens() {
     let _ = theme;
 }
 
-/// The transition is the one this kit plays.
 #[test]
 fn the_transition_is_the_one_this_kit_plays() {
     let kit = FluentFadeTransition::new().with_theme(theme());
@@ -67,7 +50,6 @@ fn the_transition_is_the_one_this_kit_plays() {
     );
 }
 
-/// The content is mounted only while the flag says so.
 #[test]
 fn the_content_follows_the_flag() {
     let kit = FluentFadeTransition::new()
@@ -87,9 +69,6 @@ fn the_content_follows_the_flag() {
         "the flag is true, so the content is mounted"
     );
 
-    // The flag goes back to false: the *exit* starts, and the content stays
-    // mounted while it plays -- a departure that vanished at once would not be
-    // a departure.
     floom_widgets::text_input::write_flag(&flag, false);
     conditional.update(&mut ctx, id);
     assert_eq!(
@@ -98,7 +77,6 @@ fn the_content_follows_the_flag() {
         "the content stays mounted while its exit plays"
     );
 
-    // And it is gone once the host says the exit has finished.
     conditional.animation_finished(&mut ctx, id);
     conditional.update(&mut ctx, id);
     assert_eq!(

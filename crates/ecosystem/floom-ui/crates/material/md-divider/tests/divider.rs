@@ -1,23 +1,3 @@
-//! Material divider: the rule is flush with the top of its box.
-//!
-//! ## Why this suite exists at all
-//!
-//! The three v1 dividers were identical — measured, not assumed: with naming and
-//! the `design_system` field removed, their `resolved_style()` and `view()` bodies
-//! were byte-identical. There is no per-kit style parameter here, and inventing
-//! one would be inventing a disagreement.
-//!
-//! What the kits *do* disagree on is one thing, and it is worth a test each:
-//!
-//! * **Cross-axis placement.** v1 wrote no vertical placement for a horizontal
-//!   rule, so the rule landed on the container's top. The engine centres instead.
-//!   All three kits ask for `RuleAlignment::Start` to reproduce v1, and the tests
-//!   below are what make that a port rather than a preference.
-//! * **Theme source.** Material reads the live signal; Cupertino and Fluent take
-//!   a construction-time snapshot.
-//!
-//! Every test here has a control: without one, "the rule is at the top" also
-//! passes for a rule that is at the top *because nothing else was tried*.
 
 use floom_types::Rect;
 use floom_widgets::{Divider, RuleAlignment};
@@ -37,13 +17,6 @@ const TALL: Rect = Rect {
     y1: 100.0,
 };
 
-/// A Material divider with an explicit theme.
-///
-/// `with_theme(..)` rather than setting the process-global design system: two
-/// tests in this binary assert different things about different kits' theme
-/// sources, and a test that mutated global state to do it would make them order-
-/// dependent. `floom_core_theme` re-reads the global on every accessor, so an
-/// explicit theme is the only way to pin one.
 fn material() -> MdDivider {
     MdDivider::new().with_theme(MultiTheme::new_for(DesignSystem::Material))
 }
@@ -55,7 +28,6 @@ fn tokens() -> DividerTokens {
     }
 }
 
-// --- the disagreement ------------------------------------------------------
 
 /// **Material's one styling opinion: the rule sits on the top edge.**
 #[test]
@@ -65,9 +37,6 @@ fn a_horizontal_rule_sits_on_the_top_edge() {
     assert_eq!(rule.y1, TALL.y0 + 1.0);
 }
 
-/// **The control.** The engine's own default centres the rule, and this kit
-/// overrides it. Without this assertion a widget that centred would pass
-/// everything above.
 #[test]
 fn the_engine_default_would_have_centred_it() {
     let centred = Divider::new().resolve_bounds(TALL);
@@ -93,8 +62,6 @@ fn a_vertical_rule_sits_on_the_left_edge() {
     assert_eq!(rule.x1, TALL.x0 + 1.0);
 }
 
-/// The rule spans the full extent of its axis, which is what v1's `width_full()`
-/// and `height_full()` meant.
 #[test]
 fn the_rule_spans_its_axis_fully() {
     let horizontal = material().divider().resolve_bounds(TALL);
@@ -120,7 +87,6 @@ fn the_inset_shrinks_both_ends_and_leaves_the_start_edge_alone() {
     assert_eq!(inset.x1, TALL.x1 - 16.0);
 }
 
-// --- tokens ---------------------------------------------------------------
 
 /// The thickness is the token's, and the token is 1.0.
 #[test]
@@ -137,9 +103,6 @@ fn the_colour_is_outline_variant() {
     assert_eq!(resolved.color, theme.colors().outline_variant);
 }
 
-/// **The control for the colour test**: the rule is actually *painted* in the
-/// resolved colour, so a resolver that returned the right colour while the
-/// widget ignored it would not pass. The snapshot carries the fill hex.
 #[test]
 fn the_rule_is_painted_in_the_resolved_colour() {
     let resolved = material().resolved_style();
@@ -161,7 +124,6 @@ fn the_rule_is_painted_in_the_resolved_colour() {
     );
 }
 
-// --- props and identity ---------------------------------------------------
 
 /// The props survive the round trip.
 #[test]
@@ -179,7 +141,6 @@ fn the_resolved_style_names_its_design_system() {
     assert_eq!(material().resolved_style().design_system, "material");
 }
 
-/// The default is a horizontal rule with no inset — v1's default too.
 #[test]
 fn the_default_is_a_flush_horizontal_rule() {
     let rule = material().divider().resolve_bounds(TALL);

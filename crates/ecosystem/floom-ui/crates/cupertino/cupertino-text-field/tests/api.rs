@@ -1,28 +1,5 @@
 //! The contract every Cupertino text field offers, rewritten for the 2.0 API.
 //!
-//! **This file has never been compiled.** It was written against v1 --
-//! `initial_value`, a `design_system` field on a style struct nobody read -- and
-//! nothing built it, which is how three kits came to disagree with themselves
-//! about a text field for this long. It has been ported rather than deleted,
-//! because a contract that was never checked is exactly the thing that was
-//! wrong. Every number it pins is kept: 44.0 and 10.0 are Cupertino's answer and
-//! they are the whole point of having a Cupertino field.
-//!
-//! What changed, and why each change is the same change in all three crates:
-//!
-//! * `initial_value(x)` is now `value(x)`. v1 had a `value(&self) -> String`
-//!   getter over the kit's own `value` signal as well, and that signal is gone:
-//!   the engine owns the value now. One write before mount, one name for it.
-//! * `design_system` is now `DESIGN_SYSTEM`, a `pub const` on the crate rather
-//!   than a field on a dead struct. The engine's `TextFieldStyle` has no such
-//!   field and no room for one.
-//! * The style assertions compare against `Color`s from the theme rather than
-//!   against v1's own struct fields, because there is no longer a kit struct to
-//!   compare. The numbers are unchanged.
-//! * `set_design_system` is called first, because `MultiTheme::new_for` is a
-//!   documented no-op and the design system is read from a process-wide signal at
-//!   access time. Without it a Cupertino field reports 48.0, which is
-//!   Material's row.
 
 use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::theme::{MultiTheme, Theme};

@@ -1,15 +1,4 @@
 //! The ported Cupertino confirm-edit -- a value with an edit affordance beside
-//! it, and a field with a tick and a cross when it is open.
-//!
-//! The engine has no confirm-edit, and its tree is built once, so what is
-//! tested here is the translation *and* the widget: the tokens reach the
-//! style, the display row shows the value, the edit affordance opens the
-//! field, and the tick saves while the cross cancels.
-//!
-//! ## The tripwires
-//!
-//! `the_display_row_shows_the_value` and `the_tick_saves_and_the_cross_cancels`
-//! would fail if this kit stopped being this kit.
 
 use floom_core::{
     Child, ChildKey, ElementId, Event, Key, KeyEvent, LayoutRequest, Rect, Widget, WidgetAny,
@@ -36,7 +25,6 @@ const ROW: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -347,7 +335,6 @@ fn a_change_of_mode_asks_for_the_other_row() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoConfirmEdit::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

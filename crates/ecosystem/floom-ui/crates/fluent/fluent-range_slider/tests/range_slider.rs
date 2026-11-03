@@ -1,17 +1,4 @@
 //! The ported Fluent range slider -- a track with two thumbs, and the band
-//! between them.
-//!
-//! The engine has no range slider, so the widget is the kit's own; what is
-//! tested here is therefore the translation *and* the widget: the tokens reach
-//! the style, the track, the band and the two thumbs are painted in v1's
-//! colours at v1's sizes, and a drag moves the nearer thumb and stops at the
-//! other one.
-//!
-//! ## The tripwires
-//!
-//! `the_track_the_band_and_the_two_thumbs_are_painted` and
-//! `a_drag_moves_the_nearer_thumb` would fail if this kit stopped being this
-//! kit.
 
 use floom_core::{ElementId, Event, Point, Rect, Widget};
 use floom_types::{Color, PointerEvent};
@@ -23,8 +10,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_ui_composites::RangeSlider;
 use floom_widget_fluent_range_slider::{FluentRangeSlider, FluentRangeSliderStyle};
 
-/// The box the slider is laid out in: a track 200 wide, so a value's place on
-/// it is readable as a number.
 const TRACK: Rect = Rect {
     x0: 0.0,
     y0: 0.0,
@@ -33,9 +18,6 @@ const TRACK: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -44,7 +26,6 @@ fn kit() -> FluentRangeSlider {
     FluentRangeSlider::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -59,7 +40,6 @@ fn allocate(widget: &dyn Widget) -> ElementId {
     widget.create(&mut create)
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -69,9 +49,7 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens reach the style.
 #[test]
 fn the_tokens_reach_the_style() {
     let style: FluentRangeSliderStyle = kit().resolved_style();
@@ -91,8 +69,6 @@ fn the_tokens_reach_the_style() {
     );
 }
 
-/// The colours reach the style: the track is `surface_variant`, the band and
-/// the thumbs are `primary`.
 #[test]
 fn the_colours_reach_the_style() {
     let style = kit().resolved_style();
@@ -103,7 +79,6 @@ fn the_colours_reach_the_style() {
     assert_eq!(style.thumb_color, colors.primary, "the thumbs");
 }
 
-/// v1's disabled palette: `surface_variant` and `primary`, both at 120 alpha.
 #[test]
 fn a_disabled_slider_dims_to_120_alpha() {
     let style = kit().disabled(true).resolved_style();
@@ -116,7 +91,6 @@ fn a_disabled_slider_dims_to_120_alpha() {
     assert_eq!(style.thumb_color.a, 120, "the thumbs dim");
 }
 
-/// A disabled slider is not the enabled one.
 #[test]
 fn a_disabled_slider_is_not_the_enabled_one() {
     assert_ne!(
@@ -131,7 +105,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// The props report the range v1 was given.
 #[test]
 fn the_props_report_the_range() {
     let kit = kit().low(10.0).high(60.0).min(0.0).max(80.0).step(2.0);
@@ -142,9 +115,7 @@ fn the_props_report_the_range() {
     assert_eq!(kit.props().step, 2.0);
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The track, the band and the two thumbs, in v1's colours at v1's sizes.
 #[test]
 fn the_track_the_band_and_the_two_thumbs_are_painted() {
     let resolved = kit().resolved_style();
@@ -152,7 +123,6 @@ fn the_track_the_band_and_the_two_thumbs_are_painted() {
     let ops = ops_of(&widget);
     assert_eq!(ops.len(), 4, "the track, the band and the two thumbs");
 
-    // The track: a pill, half its thickness as the radius.
     let (track_color, track_radius) = match &ops[0] {
         PaintOp::RoundedRect { color, radius, .. } => (*color, *radius),
         _ => panic!("the track is a rounded rect"),
@@ -164,7 +134,6 @@ fn the_track_the_band_and_the_two_thumbs_are_painted() {
         "v1's track was a pill: half its thickness as the radius"
     );
 
-    // The band: a plain rectangle between the two thumbs.
     let (band_color, band) = match &ops[1] {
         PaintOp::Rect { color, bounds } => (*color, *bounds),
         _ => panic!("the band is a plain rect"),
@@ -173,7 +142,6 @@ fn the_track_the_band_and_the_two_thumbs_are_painted() {
     assert_eq!(band.x0, 50.0, "the band starts at the low thumb");
     assert_eq!(band.x1, 150.0, "and ends at the high thumb");
 
-    // The two thumbs: circles, centred on their values.
     for (index, centre) in [(2usize, 50.0f64), (3usize, 150.0f64)] {
         let (thumb_color, thumb) = match &ops[index] {
             PaintOp::RoundedRect { color, bounds, .. } => (*color, *bounds),
@@ -187,7 +155,6 @@ fn the_track_the_band_and_the_two_thumbs_are_painted() {
     }
 }
 
-/// The band runs between the two thumbs, whatever they are.
 #[test]
 fn the_band_runs_between_the_two_thumbs() {
     let widget = kit().low(10.0).high(20.0).view();
@@ -196,8 +163,6 @@ fn the_band_runs_between_the_two_thumbs() {
         PaintOp::Rect { bounds, .. } => *bounds,
         _ => panic!("the band is a plain rect"),
     };
-    // A tenth and a fifth of a 200 wide track. The tolerance is the fraction's
-    // own: 0.1 is not a binary fraction, so the product is not exact.
     assert!(
         (band.x0 - 20.0).abs() < 0.001,
         "the band starts at the low thumb: {}",
@@ -210,15 +175,11 @@ fn the_band_runs_between_the_two_thumbs() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
-/// A press moves the *nearer* thumb, and only that one.
 #[test]
 fn a_drag_moves_the_nearer_thumb() {
     let mut widget = kit().low(25.0).high(75.0).view();
     let id = allocate(&widget);
-    // 20 is a tenth of the way along a 200 wide track: nearer the low thumb
-    // than the high one.
     let consumed = dispatch(
         &mut widget,
         id,
@@ -230,12 +191,10 @@ fn a_drag_moves_the_nearer_thumb() {
     assert_eq!(widget.high(), 75.0, "the high thumb did not");
 }
 
-/// The low thumb stops at the high one: the two never cross.
 #[test]
 fn the_thumbs_do_not_cross() {
     let mut widget = kit().low(25.0).high(75.0).view();
     let id = allocate(&widget);
-    // Press on the low thumb, then drag past the high one.
     dispatch(
         &mut widget,
         id,
@@ -252,12 +211,10 @@ fn the_thumbs_do_not_cross() {
     assert_eq!(widget.high(), 75.0, "and did not pass it");
 }
 
-/// The value lands on a step.
 #[test]
 fn the_value_lands_on_a_step() {
     let mut widget = kit().low(25.0).high(75.0).step(10.0).view();
     let id = allocate(&widget);
-    // 63 is 31.5 percent of the track: the nearest step is 30.
     dispatch(
         &mut widget,
         id,
@@ -267,7 +224,6 @@ fn the_value_lands_on_a_step() {
     assert_eq!(widget.low(), 30.0, "the value snapped to the step");
 }
 
-/// A disabled slider does not answer.
 #[test]
 fn a_disabled_slider_does_not_answer() {
     let mut widget = kit().low(25.0).high(75.0).disabled(true).view();
@@ -283,7 +239,6 @@ fn a_disabled_slider_does_not_answer() {
     assert_eq!(widget.high(), 75.0, "and moves nothing");
 }
 
-/// The callback reports the pair, every time a thumb moves.
 #[test]
 fn the_callback_reports_the_pair() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new((f32::NAN, f32::NAN)));
@@ -308,7 +263,6 @@ fn the_callback_reports_the_pair() {
     assert_eq!(reported, (10.0, 75.0), "the pair, after the move");
 }
 
-/// The two values are shared: what the caller holds is what the widget writes.
 #[test]
 fn the_two_values_are_shared_with_the_caller() {
     let kit = kit().low(25.0).high(75.0);
@@ -330,14 +284,9 @@ fn the_two_values_are_shared_with_the_caller() {
     assert_eq!(low.as_deref(), Some("10"), "the shared map holds the value");
 }
 
-// --- the theme source -----------------------------------------------------
 
-/// The theme: v1's Fluent range slider took a *snapshot* of its own design
-/// system, so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentRangeSlider::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

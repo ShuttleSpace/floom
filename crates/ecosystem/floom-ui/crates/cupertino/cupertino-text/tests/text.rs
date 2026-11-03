@@ -1,13 +1,5 @@
 //! Cupertino text: the theme's type, and the text it draws.
 //!
-//! ## The claim
-//!
-//! v1 drew a `Label` and styled it with a closure that re-read the theme on
-//! every use. 2.0's `Text` is a widget the caller holds and restyles, so the
-//! theme is resolved once and handed over as explicit values. The assertions
-//! are about the *painted* text -- its colour, its size and its weight --
-//! because a style struct cannot show that the right values reached the right
-//! knobs.
 
 use floom_core::{ElementId, Widget};
 use floom_types::{Color, Rect};

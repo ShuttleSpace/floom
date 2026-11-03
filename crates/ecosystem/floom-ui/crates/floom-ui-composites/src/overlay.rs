@@ -1,14 +1,3 @@
-//! An absolutely positioned layer over its parent's box.
-//!
-//! The primitive the dialog, the popup and the bottom sheet are built from. It covers a region outside the flow and takes the click that dismisses it.
-//!
-//! It lived in `floom-widgets/src/compose.rs` beside the layout vocabulary
-//! (`Stack`, `List`, `Grid`, `Conditional`, `Crossfade`). The two are not the
-//! same kind of thing: a `Stack` arranges children along an axis, which is
-//! arithmetic; this decides *what a control looks like*, which is a product
-//! decision. So it moved up a layer with the tree, the counter and the select,
-//! and the dependency runs one way -- this crate composes the engine's
-//! vocabulary rather than the other way round.
 
 use std::any::Any;
 use std::sync::atomic::Ordering;
@@ -25,9 +14,7 @@ use floom_widgets::Grid;
 
 use crate::overlay_bookkeeping::OverlayHost;
 
-// ---------------------------------------------------------------------------
 // Overlay
-// ---------------------------------------------------------------------------
 
 /// An absolutely positioned layer that covers its parent's whole box.
 ///

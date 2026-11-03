@@ -1,9 +1,4 @@
 //! Cupertino's autocomplete as a kit crate: the text-shaped callback, the commit point,
-//! and the one thing v1 could do that this port cannot reproduce on its own.
-//!
-//! The engine's own coverage is in `floom-widgets/tests/combobox*.rs` and is not repeated
-//! here. What is here is what is *this crate's*: it is a combobox whose callback speaks
-//! text, and whose commit point the caller has to drive.
 
 use std::sync::{Arc, Mutex};
 
@@ -181,7 +176,6 @@ fn the_commit_point_is_public_because_focus_cannot_be_observed() {
     *combo.query().lock().unwrap() = "kiwi".to_string();
     // A caller holding only the autocomplete — with no reference to any field — can
     // still commit. Under v1 this was reachable only from inside the widget, attached to
-    // an event 2.0 does not deliver.
     combo.commit();
     assert_eq!(seen.lock().unwrap().as_slice(), [Some("kiwi".to_string())]);
 }

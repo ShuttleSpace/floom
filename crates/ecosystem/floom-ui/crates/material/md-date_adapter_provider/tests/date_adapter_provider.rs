@@ -1,12 +1,3 @@
-//! Material date_adapter_provider: the value it shares, and the subtree it wraps.
-//!
-//! ## The claim
-//!
-//! A provider owns a value and hands its descendants a handle to it. v1 held it
-//! in an `RwSignal`; 2.0 holds it in a shared buffer, because an `RwSignal` is
-//! `Rc`-based and cannot cross a `Send + Sync` slot boundary. The handle is
-//! therefore the *same* one a descendant reads -- not a copy -- and the
-//! assertions are about that.
 
 use std::sync::Arc;
 

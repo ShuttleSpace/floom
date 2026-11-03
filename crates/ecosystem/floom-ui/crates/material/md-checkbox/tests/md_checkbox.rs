@@ -1,42 +1,3 @@
-//! Md's checkbox as a kit crate: the token translation, plus the numbers
-//! that are this kit's own rather than the tokens'.
-//!
-//! This crate has never been compiled, which is how three kits came to disagree
-//! with themselves about a five-layer control for this long. So the point of this
-//! file is not to exercise the engine's `Checkbox` -- that is what
-//! `floom-ui-composites`' own checkbox tests are for -- but to pin the numbers
-//! *this kit wrote*, in the places where a plausible-looking edit would change a
-//! pixel.
-//!
-//! ## The dead 97, and why it is asserted against
-//!
-//! v1 had a `resolved_style` that reported the disabled rim as `on_surface` at
-//! **97**, and a `view()` that painted `on_surface` at **38**. Nothing ever read
-//! the struct -- every kit resolved its colours inline -- so 97 is a number that
-//! was never once on a screen. It is named here and asserted *against*, so a
-//! later reader who finds it in git history knows which one was painted and the
-//! trap cannot re-arm itself.
-//!
-//! ## What this kit's identity actually is
-//!
-//! Every colour of the indicator, the mark and the label is shared by all three
-//! kits; what is Material's alone is the state layer -- a flat **40-point circle**
-//! tinted `primary`@20, deepening to `primary`@30 while pressed, gated on hover,
-//! press *and* focus, and never suppressed -- and the fact that focus is answered
-//! by that layer rather than by a `FocusRing`.
-//!
-//! ## The tripwires
-//!
-//! These tests would fail if the kit stopped being this kit:
-//! * `the_layer_is_a_flat_forty_circle` -- the other two write `size + 8`.
-//! * `the_layer_is_primary_at_twenty_and_thirty_while_pressed` -- the other two
-//!   have no pressed tint at all.
-//! * `material_opens_all_three_layer_gates_and_suppresses_none` -- the other two
-//!   open hover alone and suppress while disabled.
-//! * `the_layer_is_drawn_while_disabled` -- the other two's is not.
-//! * `material_answers_focus_with_the_layer_and_draws_no_ring` -- the other two
-//!   draw a 2px ring.
-//! They are why the three kits stay three crates rather than becoming one.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -55,10 +16,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_widget_md_checkbox::MdCheckbox;
 use floom_widget_md_icon::{MdIcon, MD_ICON_VIEW_BOX};
 
-/// The checkmark's path, from this kit's own icon crate, and the view box it is
-/// authored in. v1 handed `md_icon_svg("check")` to an `svg` view; 2.0 parses the
-/// same `d` attribute into a `VectorIcon`.
-/// Read at call time: `MdIcon` owns a `String` name, so its path is not a const.
 fn check_path() -> &'static str {
     MdIcon::new("check").path_data()
 }
@@ -73,33 +30,16 @@ const ROW: Rect = Rect {
     y1: 32.0,
 };
 
-/// v1's disabled ink: `on_surface` at 38. Written out so the assertion can name
-/// the number rather than only that it is not 97.
 const DISABLED_ALPHA: u8 = 38;
-/// v1's disabled fill: `on_surface` at 12. A different number from the ink, which
-/// is why `CheckboxStyle` has a disabled field per layer rather than one
-/// `disabled_color`.
 const DISABLED_CONTAINER_ALPHA: u8 = 12;
 
-/// What all three v1 `resolved_style` functions claimed for the disabled rim, and
-/// what none of them ever painted: nothing read those structs, and every `view()`
-/// resolved its colours inline. If a number here ever becomes 97, this crate has
-/// started trusting a dead struct.
 const V1_DEAD_ALPHA: u8 = 97;
 
-/// The mark's edge as a fraction of the indicator. v1 sized its icon view
-/// `size * 0.7` on both axes.
 const MARK_SCALE: f32 = 0.7;
-/// v1 wrote `gap(8.0)` between the indicator and the label; the engine's shared
-/// `INDICATOR_LABEL_GAP` is 6.0. A kit that does not say so silently loses two
-/// points, which no screenshot comparison catches because the label is still
-/// there, just closer.
 const V1_LABEL_GAP: f32 = 8.0;
 /// What the engine would have used, pinned so the two cannot be confused.
 const ENGINE_LABEL_GAP: f32 = 6.0;
 
-/// v1's halo: `.size(40.0, 40.0)`. An absolute number, not `size + pad * 2.0` as
-/// the other two kits wrote -- see `the_layer_is_a_flat_forty_circle`.
 const LAYER_SIZE: f32 = 40.0;
 
 /// The layer's alpha while hovered or focused, and while pressed. Material is the
@@ -107,8 +47,6 @@ const LAYER_SIZE: f32 = 40.0;
 const LAYER_ALPHA: u8 = 20;
 const LAYER_ALPHA_PRESSED: u8 = 30;
 
-/// v1's `let pad = 4.0` in the other two kits, so the tripwire can say what
-/// Material's is *not* rather than only that it is 40.
 const OTHER_KITS_PADDING: f32 = 4.0;
 
 fn theme() -> MultiTheme {
@@ -150,11 +88,6 @@ fn paint(checkbox: &Checkbox, bounds: Rect) -> (Vec<PaintOp>, String) {
     (recorder.ops().to_vec(), recorder.snapshot())
 }
 
-/// Every filled rounded rect in the recorded scene, in the order `paint` drew
-/// them: the state layer, then the indicator's fill.
-///
-/// The rim is not among them -- the engine draws it as a stroked path -- and
-/// neither is the mark, which is a filled `Path`.
 fn fills(ops: &[PaintOp]) -> Vec<(Rect, Color)> {
     ops.iter()
         .filter_map(|op| match op {
@@ -164,9 +97,6 @@ fn fills(ops: &[PaintOp]) -> Vec<(Rect, Color)> {
         .collect()
 }
 
-/// Only the fills that are the indicator itself, which is how a test tells the
-/// state layer apart from the box it sits behind: the two are concentric and the
-/// layer is the wider of them.
 fn box_fills(ops: &[PaintOp]) -> Vec<(Rect, Color)> {
     let side = f64::from(style().size);
     fills(ops)
@@ -238,14 +168,6 @@ fn alpha_of(c: Color) -> u8 {
     c.a
 }
 
-/// The mark's painted bounds when the engine is asked to draw this kit's
-/// checkmark at `scale`.
-///
-/// Built on the engine directly rather than through the kit, because the
-/// glyph does not fill its own 24x24 view box -- the path spans about 17.6 of
-/// the 24 units -- so an absolute width assertion would be a fact about the
-/// glyph and not about `mark_scale`. Two of these at different scales and the
-/// ratio is the scale, whatever the glyph is.
 fn mark_bounds_at(scale: f32) -> Rect {
     let mut scaled = style();
     scaled.mark_scale = scale;
@@ -295,14 +217,7 @@ fn click(checkbox: &mut Checkbox, id: ElementId) {
     dispatch(checkbox, id, ROW, PointerEvent::primary_up(at).into());
 }
 
-// --- the indicator ---------------------------------------------------------
 
-/// The indicator is `CheckboxTokens::size` across with `CheckboxTokens`' own
-/// corner radius, and a 2px rim the engine never drew.
-///
-/// The rim is pinned because it is the number that says *checkbox*: the engine's
-/// default is `0.0`, which is a bare fill and reads as a third state rather than
-/// as an outline.
 #[test]
 fn the_indicator_is_the_checkbox_tokens_with_a_two_point_rim() {
     let tokens = checkbox_tokens();
@@ -324,10 +239,6 @@ fn the_indicator_is_the_checkbox_tokens_with_a_two_point_rim() {
     );
 }
 
-/// The fill is `primary` while checked and fully transparent while unchecked.
-///
-/// Transparent, not white: an unchecked checkbox shows its parent's background,
-/// and a filled unchecked box reads as a third state.
 #[test]
 fn the_container_is_primary_while_checked_and_transparent_while_not() {
     let binding = theme();
@@ -410,14 +321,7 @@ fn the_rim_is_primary_while_checked_and_outline_while_not() {
     );
 }
 
-// --- the mark --------------------------------------------------------------
 
-/// The mark is `on_primary` while checked and transparent while unchecked -- so
-/// it is not drawn at all -- and it is asked for at `size * 0.7`.
-///
-/// The engine's own default mark is a font glyph at the *full* box height with
-/// `mark_scale: 1.0`, which is a visibly different checkmark; both numbers are
-/// asserted against it.
 #[test]
 fn the_mark_is_on_primary_at_seven_tenths_of_the_box() {
     let binding = theme();
@@ -446,10 +350,6 @@ fn the_mark_is_on_primary_at_seven_tenths_of_the_box() {
     let (bounds, ink) = mark(&ops).expect("a mark was filled");
     assert_eq!(ink, tint(colors.on_primary, 255), "\n{snapshot}");
 
-    // Asked for at `size * 0.7`, in a box centred on the indicator. The glyph
-    // does not fill its own 24x24 view box -- the path spans about 17.6 of the
-    // 24 units, and not symmetrically -- so the *painted* bounds sit inside that
-    // box rather than filling it, and containment is the claim to make.
     let requested = mark_bounds_at(MARK_SCALE);
     assert_eq!(
         bounds, requested,
@@ -474,9 +374,6 @@ fn the_mark_is_on_primary_at_seven_tenths_of_the_box() {
     );
 }
 
-/// **`mark_scale` really is the scale, proven from the paint rather than read off
-/// the struct.** The glyph does not fill its 24x24 view box, so an absolute width
-/// says nothing; two scales and a ratio does, whatever the glyph is.
 #[test]
 fn the_scale_is_a_scale() {
     let at_one = mark_bounds_at(1.0).width();
@@ -491,9 +388,6 @@ fn the_scale_is_a_scale() {
     );
 }
 
-/// An unchecked checkbox draws no mark at all, which is the stronger claim:
-/// `mark_color_unchecked` is transparent so a kit need not suppress the draw
-/// itself, but the control only fills a mark while checked.
 #[test]
 fn an_unchecked_box_draws_no_mark() {
     let unchecked = MdCheckbox::new("A").with_theme(theme()).view();
@@ -504,7 +398,6 @@ fn an_unchecked_box_draws_no_mark() {
     );
 }
 
-// --- the label -------------------------------------------------------------
 
 /// The label is `on_surface` at `typography().body.medium.font_size`, eight
 /// points to the right of the indicator.
@@ -538,7 +431,6 @@ fn the_label_is_on_surface_at_the_body_size_eight_points_on() {
     assert_eq!(size, style.label_font_size);
     assert_eq!(ink, tint(colors.on_surface, 255), "\n{snapshot}");
 
-    // And it sits the gap to the right of the indicator, not at the row's edge.
     let indicator = checkbox.box_bounds(ROW);
     assert_eq!(
         origin.x - indicator.x1,
@@ -547,15 +439,7 @@ fn the_label_is_on_surface_at_the_body_size_eight_points_on() {
     );
 }
 
-// --- the disabled palette -------------------------------------------------
 
-/// **38, not the 97 that v1's dead `resolved_style` claimed.** Every one of the
-/// three kits' `resolved_style` functions wrote `on_surface` at 97 and none of
-/// them was ever called; every one of their `view()` bodies wrote 38 inline and
-/// that is what a screen showed.
-///
-/// The fill is a different number again -- 12 -- which is why `CheckboxStyle`
-/// carries a disabled colour per layer rather than one `disabled_color`.
 #[test]
 fn the_disabled_palette_is_on_surface_at_38_and_12_and_not_97() {
     let binding = theme();
@@ -601,12 +485,6 @@ fn the_disabled_palette_is_on_surface_at_38_and_12_and_not_97() {
     );
 }
 
-/// And the disabled colours really reach all four layers when mounted, which is
-/// the claim the per-layer fields make.
-///
-/// Disabled is resolved *first* in the engine and covers both values, so a
-/// disabled *checked* box is `on_surface`@12 -- not `primary` dimmed. That is
-/// v1's own behaviour and the reason the fields exist separately.
 #[test]
 fn the_disabled_colour_reaches_every_layer() {
     let binding = theme();
@@ -660,7 +538,6 @@ fn an_enabled_box_carries_no_disabled_alpha() {
     assert_eq!(alpha_of(style.mark_color), 255, "undimmed");
 }
 
-// --- mounting -------------------------------------------------------------
 
 /// The props cross into the widget, and both of the two places `disabled` lives
 /// are set from the same builder flag.
@@ -675,10 +552,6 @@ fn mounting_carries_the_props_across() {
     assert!(checkbox.interaction().disabled, "and so did disabled");
 }
 
-/// **`on_toggle` is `Fn(bool)` and reports the value the engine moved to**, which
-/// is what v1's `on_change` did too -- so the callback crosses unchanged. Unlike
-/// the radio ports there is no `!was` reconstruction: the engine flips the value
-/// and fires, and a checkbox really does report both directions.
 #[test]
 fn the_callback_reports_both_directions() {
     let seen = Rc::new(Cell::new(Vec::<bool>::new()));
@@ -702,9 +575,6 @@ fn the_callback_reports_both_directions() {
     assert_eq!(seen.take(), vec![false]);
 }
 
-/// The layout reserves the indicator, this kit's gap and the label at this kit's
-/// font size -- the three numbers a host would otherwise take from the engine's
-/// defaults and clip a fifth of the control with.
 #[test]
 fn the_layout_reserves_the_indicator_the_gap_and_the_label() {
     let style = style();
@@ -730,15 +600,6 @@ fn the_layout_reserves_the_indicator_the_gap_and_the_label() {
     );
 }
 
-/// **The three design systems still resolve identical tokens, so a kit's identity
-/// lives in its own constants.** `MultiTheme::new_for` calls `activate`, which the
-/// theme crate documents as a no-op placeholder, and the variant is picked at read
-/// time from a `thread_local` that every test thread starts at Material -- so
-/// Material, Cupertino and Fluent hand back one identical set of colours and one
-/// `CheckboxTokens`. Every colour assertion above is therefore on a number *this
-/// kit wrote*, never on a token value -- a token assertion would pass for all
-/// three kits whatever any of them did. This is the tripwire for the day per-DS
-/// tokens land.
 #[test]
 fn the_three_design_systems_still_resolve_identical_tokens() {
     let own = theme();
@@ -771,11 +632,6 @@ fn the_three_design_systems_still_resolve_identical_tokens() {
     assert_eq!(checkbox_tokens().border_radius, style().border_radius);
 }
 
-/// `resolved_style` does not branch on `disabled` at all -- the engine resolves
-/// the state -- so the two styles are the same struct and what differs is which
-/// of the layer colours the widget picks. Asserted because it is the reason the
-/// port reads `*color_disabled` fields instead of composing one `disabled_color`
-/// the way the radio kits do.
 #[test]
 fn the_disabled_flag_does_not_move_the_style() {
     assert_eq!(
@@ -785,13 +641,7 @@ fn the_disabled_flag_does_not_move_the_style() {
     );
 }
 
-// --- the state layer -------------------------------------------------------
 
-/// **The tripwire for the three kits converging.** v1 hard-coded
-/// `.size(40.0, 40.0)` with `border_radius(9999.0)`; Cupertino and Fluent
-/// computed `size + pad * 2.0`. A "harmonise the kits" edit that reached for the
-/// relative form would land here at `size + 8`, and one that reached for the
-/// absolute one would land in the other two crates at 40.
 #[test]
 fn the_layer_is_a_flat_forty_circle() {
     let style = style();
@@ -839,10 +689,6 @@ fn the_layer_is_primary_at_twenty_and_thirty_while_pressed() {
     );
 }
 
-/// **Every gate Material opens, and the one it does not.** v1's condition was
-/// `hover || pressed || focused`, with no disabled check anywhere in the style --
-/// see the module doc for why that flag is `false` when v1's event handlers
-/// guarded themselves instead.
 #[test]
 fn material_opens_all_three_layer_gates_and_suppresses_none() {
     let layer = style().layer;
@@ -888,14 +734,6 @@ fn hovering_and_pressing_open_the_layer() {
     );
 }
 
-/// **The claim the module doc makes, pinned.** Material's layer is drawn while
-/// the checkbox is disabled, because the style carries no disabled rule.
-///
-/// Focus rather than hover, because the engine refuses to set `hovered` on a
-/// disabled widget at all -- `event` returns before the match -- so a hover-based
-/// version of this test would pass for the wrong reason and would stop being a
-/// claim about the flag the moment the engine taught itself to hover disabled
-/// controls.
 #[test]
 fn the_layer_is_drawn_while_disabled() {
     let style = style();
@@ -916,11 +754,6 @@ fn the_layer_is_drawn_while_disabled() {
     assert_eq!(layers[0].1, style.layer.color, "\n{snapshot}");
 }
 
-/// **Material answers focus with its layer, not with a ring.**
-///
-/// This is the control for the other two kits' tests: a `FocusRing` here would be
-/// a second focus affordance on the same control, and Material's v1 drew exactly
-/// one -- the 40px layer, gated on focus as well as hover and press.
 #[test]
 fn material_answers_focus_with_the_layer_and_draws_no_ring() {
     let style = style();
@@ -954,16 +787,9 @@ fn focus_paints_the_layer() {
     assert_eq!(layers[0].0.width(), f64::from(style.layer.size));
 }
 
-// --- the design system ----------------------------------------------------
 
-/// Material's v1 style struct had no `design_system` field, so this crate exports
-/// no `DESIGN_SYSTEM` const -- unlike Cupertino's and Fluent's, which had one and
-/// had to put it somewhere. Asserted as an absence, because a const invented here
-/// would be a fact about a kit that never claimed one.
 #[test]
 fn material_never_carried_a_design_system_field() {
-    // Structural rather than reflective: the type alias is the engine's style,
-    // which has no `design_system`, so there is nowhere for one to live.
     let style = style();
     assert_eq!(
         std::mem::size_of_val(&style),
@@ -972,20 +798,10 @@ fn material_never_carried_a_design_system_field() {
     );
 }
 
-/// **The tripwire, stated as the other two kits' numbers.** This crate cannot
-/// depend on its siblings -- three crates that named each other would have no
-/// place to put a shared truth -- so the difference is asserted against the
-/// numbers the other two *would* resolve, written out here.
-///
-/// Both halves have to be true at once for the three kits to be three: Material's
-/// layer is 40 and it draws no ring. A "harmonise" edit that gave Material a
-/// `size + 8` box would fail the first; one that gave it a `FocusRing` would fail
-/// the second.
 #[test]
 fn material_does_not_resolve_to_the_other_two_kits_layer_or_focus() {
     let style = style();
 
-    // What Cupertino and Fluent resolve: a padded box, and a ring.
     let other_layer = StateLayer {
         color: style.layer.color,
         color_pressed: None,
@@ -1009,7 +825,6 @@ fn material_does_not_resolve_to_the_other_two_kits_layer_or_focus() {
         other_layer.suppressed_when_disabled
     );
 
-    // And Material's focus answer: the layer's gate, not a ring.
     assert_eq!(style.focus_ring, None);
     assert!(style.layer.on_focus);
     assert_ne!(

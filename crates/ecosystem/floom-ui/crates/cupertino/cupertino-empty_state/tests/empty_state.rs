@@ -1,16 +1,5 @@
 //! The ported Cupertino empty state -- an icon, a title, a description, and
 //! whatever the caller wants under them.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the three lines are
-//! painted in v1's ink at v1's sizes, and the lines that v1 left out are left
-//! out here too.
-//!
-//! ## The tripwires
-//!
-//! `the_three_lines_are_painted_in_v1_s_ink` and
-//! `an_empty_icon_and_description_leave_no_line` would fail if this kit stopped
-//! being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Rect, Widget};
 use floom_types::Color;
@@ -31,7 +20,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -223,7 +211,6 @@ fn the_props_report_the_text() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoEmptyState::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

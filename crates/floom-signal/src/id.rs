@@ -70,7 +70,6 @@ impl Id {
         }
 
         if let Ok((children, signal, effect)) = RUNTIME.try_with(|runtime| {
-            // Clean up scope-specific data
             runtime.scope_contexts.borrow_mut().remove(self);
             runtime.parents.borrow_mut().remove(self);
 
@@ -203,7 +202,6 @@ mod tests {
             });
         });
 
-        // Sanity: effect ran and runtime holds signal/effect.
         assert_eq!(run_count.get(), 1);
         RUNTIME.with(|runtime| {
             assert!(runtime.signals.borrow().contains_key(&signal_id));
@@ -228,20 +226,15 @@ mod tests {
 
     #[test]
     fn set_parent_reparents_scope() {
-        // Create two independent scopes (simulating eager construction)
         let parent = Scope::new();
         let child = Scope::new();
 
-        // Initially child has no parent
         assert!(child.parent().is_none());
 
-        // Re-parent child under parent
         child.set_parent(parent);
 
-        // Verify parent relationship
         assert_eq!(child.parent().map(|s| s.0), Some(parent.0));
 
-        // Verify child is in parent's children set
         RUNTIME.with(|runtime| {
             let children = runtime.children.borrow();
             let parent_children = children
@@ -256,21 +249,17 @@ mod tests {
         let parent = Scope::new();
         let child = Scope::new();
 
-        // Create a signal in the child scope
         let signal = child.create_rw_signal(42);
         let signal_id = signal.id();
 
-        // Re-parent child under parent
         child.set_parent(parent);
 
-        // Signal should still exist
         assert!(signal_id.signal().is_some());
 
         // Dispose parent - should also dispose child and its signal
         parent.dispose();
         Runtime::drain_pending_work();
 
-        // Signal should be cleaned up
         assert!(signal_id.signal().is_none());
     }
 
@@ -280,16 +269,12 @@ mod tests {
         let new_parent = Scope::new();
         let child = old_parent.create_child();
 
-        // Verify initial parent
         assert_eq!(child.parent().map(|s| s.0), Some(old_parent.0));
 
-        // Re-parent to new parent
         child.set_parent(new_parent);
 
-        // Verify new parent
         assert_eq!(child.parent().map(|s| s.0), Some(new_parent.0));
 
-        // Verify removed from old parent's children
         RUNTIME.with(|runtime| {
             let children = runtime.children.borrow();
             if let Some(old_children) = children.get(&old_parent.0) {
@@ -297,7 +282,6 @@ mod tests {
             }
         });
 
-        // Verify added to new parent's children
         RUNTIME.with(|runtime| {
             let children = runtime.children.borrow();
             let new_children = children

@@ -145,7 +145,6 @@ impl<'a> WordCursor<'a> {
                     keep_word = true;
                 }
 
-                // Skip word deletion if above conditions were met
                 if keep_word
                     && (prop_prev == CharClassification::Punctuation
                         || prop_prev == CharClassification::Other)
@@ -153,7 +152,6 @@ impl<'a> WordCursor<'a> {
                     break;
                 }
 
-                // Default deletion
                 if classify_boundary(prop_prev, prop).is_start() {
                     break;
                 }

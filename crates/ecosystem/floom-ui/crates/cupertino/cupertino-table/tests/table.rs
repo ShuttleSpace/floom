@@ -1,16 +1,5 @@
 //! The ported Cupertino table -- a header row and body rows in a shared
 //! grid.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the frame is
-//! outlined in v1's colour, the header and the rows are filled in v1's
-//! colours, and the cells are painted in v1's ink at v1's sizes.
-//!
-//! ## The tripwires
-//!
-//! `the_header_row_is_filled_in_v1_s_colour` and
-//! `the_cells_are_painted_in_v1_s_ink` would fail if this kit stopped being
-//! this kit.
 
 use floom_core::{ElementId, Rect, Widget, WidgetAny};
 use floom_types::{Color, FontWeight};
@@ -31,7 +20,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -361,7 +349,6 @@ fn the_rows_declare_v1_s_heights() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoTable::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

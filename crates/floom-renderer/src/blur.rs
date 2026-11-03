@@ -104,7 +104,6 @@ pub fn box_blur_xy(
         // copy — running the sliding window anyway would only burn time.
         tmp.copy_from_slice(field);
     } else {
-        // Horizontal: rows of `width`, window [x-radius, x+radius] clamped.
         for y in 0..height {
             let row = y * width;
             let mut lo = 0usize;
@@ -130,7 +129,6 @@ pub fn box_blur_xy(
         field.copy_from_slice(&tmp);
         return;
     }
-    // Vertical: columns of `height` over the horizontal result.
     for x in 0..width {
         let mut lo = 0usize;
         let mut hi = radius_y.min(height - 1);

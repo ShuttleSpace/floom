@@ -70,16 +70,13 @@ impl Movement {
         }
         let last = len - 1;
         match self {
-            // Select the next entry/line
             Movement::Down if wrapping => (index + count) % len,
             Movement::Down => (index + count).min(last),
 
-            // Selects the previous entry/line
             Movement::Up if wrapping => (index + (len.saturating_sub(count))) % len,
             Movement::Up => index.saturating_sub(count),
 
             Movement::Line(position) => match position {
-                // Selects the nth line
                 LinePosition::Line(n) => (*n).min(last),
                 LinePosition::First => 0,
                 LinePosition::Last => last,

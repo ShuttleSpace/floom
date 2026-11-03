@@ -1,21 +1,3 @@
-//! Material container, ported to the Floom 2.0 widget API.
-//!
-//! A container is a content wrapper: a full-width box that centres a
-//! max-width-capped, padded, surface-coloured column inside it.
-//!
-//! ## The two boxes
-//!
-//! v1 nested two `Container`s: an outer one that was full width and centred its
-//! child, and an inner one that carried the padding, the fill and the max-width
-//! cap. 2.0's `Container` is a *leaf* -- a decorated box with nothing inside it
-//! -- so the roles are spelled with the engine's own vocabulary: the outer box is
-//! a [`Stack`] that centres on the main axis, and the inner one is a
-//! [`Surface`] that fills, pads and caps.
-//!
-//! ## `fluid`
-//!
-//! A fluid container drops the max-width cap and spans its parent. v1 wrote
-//! `if !fluid { s = s.max_width(max_width) }`, and so does this.
 
 use std::sync::Arc;
 
@@ -53,7 +35,6 @@ impl MaterialContainer {
     pub fn new() -> Self {
         Self {
             props: ContainerProps::default(),
-            // The app-wide signal, as v1's was.
             theme: theme_signal(),
             child: None,
         }
@@ -117,15 +98,12 @@ impl MaterialContainer {
         let child = self.child.clone();
 
         Stack::new(Axis::Horizontal)
-            // v1's outer box: `width_pct(100.0).justify_center()`.
             .request(
                 LayoutRequest::new()
                     .width_pct(100.0)
                     .main_align(Align::Center),
             )
             .push(move || {
-                // v1's inner box: `width_pct(100.0).padding(pad).background(surface)`,
-                // and the max-width cap unless the container is fluid.
                 let mut request = LayoutRequest::new()
                     .width_pct(100.0)
                     .padding(Insets::uniform(f64::from(padding)));

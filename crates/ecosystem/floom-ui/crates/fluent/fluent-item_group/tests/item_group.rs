@@ -1,12 +1,4 @@
-//! The ported Fluent item group — the shortest port in the library, and the
 //! one that proves the promotion was right.
-//!
-//! 209 lines of v1 became a token-to-style wrapper, because 123 of 149
-//! substantive lines are shared with the cupertino and fluent copies. So this
-//! suite is mostly *not* about the state machine — that lives in
-//! `floom-widgets`' `compose::select_group_tests`, which is the right boundary for
-//! it. What is here is the translation: the tokens reach the engine's style, the
-//! colours mean what they meant, and the props reach the rules.
 
 use floom_core::Widget;
 use floom_types::{Insets, Rect};
@@ -22,13 +14,6 @@ const AREA: Rect = Rect {
     y1: 120.0,
 };
 
-/// The Fluent theme, with Fluent selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time. So a test that wants Fluent's own
-/// palette has to select Fluent, and `set_design_system` writes a
-/// thread-local, so the selection is this test's alone.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
@@ -45,10 +30,7 @@ fn three_rows() -> FluentItemGroup {
         .row("Three", || Box::new(floom_widgets::Text::new("three")))
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The whole of this port: the theme's tokens and colours, in the engine's
-/// vocabulary, with no logic left over.
 #[test]
 fn the_tokens_and_colours_reach_the_engine_style() {
     let style = group().select_group_style();
@@ -92,8 +74,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> floom_types::Color {
     }
 }
 
-/// The unselected/selected pair is a *pair*, and this is the assertion that stops
-/// a caller styling a chosen row's box while leaving its label in the unchosen ink.
 #[test]
 fn the_ink_follows_the_selection() {
     let resolved = group().resolved_style();
@@ -105,8 +85,6 @@ fn the_ink_follows_the_selection() {
     );
 }
 
-/// v1 wrote `padding_horiz(pad).padding_vert(pad / 2.0)` — not a uniform inset,
-/// and the kind of asymmetry a "just use `uniform`" cleanup would quietly lose.
 #[test]
 fn the_padding_is_horizontal_pad_and_vertical_half() {
     let pad = f64::from(group().resolved_style().pad);
@@ -131,11 +109,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(group().resolved_style().design_system, "fluent");
 }
 
-// --- the props reach the rules --------------------------------------------
 
-/// v1 held two signals — `single` and `multi` — and read `multi.contains(&i)` for
-/// a row's appearance. 2.0 has one shared state, so the two accessors are derived
-/// from one widget rather than kept in step by hand.
 #[test]
 fn one_widget_answers_both_accessors() {
     let widget = group()
@@ -164,8 +138,6 @@ fn the_mode_and_mandatory_props_reach_the_widget() {
     assert!(many.is_mandatory());
 }
 
-/// v1's `selected(usize)` seeded both signals; here it seeds the one shared state,
-/// and both accessors have to agree about it.
 #[test]
 fn the_initial_selection_is_readable_through_both_accessors() {
     let widget = three_rows()
@@ -178,15 +150,12 @@ fn the_initial_selection_is_readable_through_both_accessors() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
 #[test]
 fn every_declared_row_reaches_the_widget() {
     let widget = three_rows().view(None::<fn(usize)>, None::<fn(Vec<usize>)>);
     assert_eq!(widget.children().len(), 3);
 
-    // `row_unlabelled` appends, like `row` does — a fourth row, not a
-    // replacement.
     let four = three_rows()
         .row_unlabelled(|| Box::new(floom_widgets::Text::new("x")))
         .view(None::<fn(usize)>, None::<fn(Vec<usize>)>);
@@ -198,10 +167,6 @@ fn every_declared_row_reaches_the_widget() {
     assert_eq!(one.children().len(), 1);
 }
 
-/// An empty group is a stack with no children. v1 wrote
-/// `apply_if(n == 0, |s| s.hide())` — hiding the *node* — and 2.0 has no `hide()`.
-/// The difference is real: a hidden node takes no space, an empty stack takes
-/// whatever the parent gives it. Recorded rather than papered over.
 #[test]
 fn an_empty_group_still_builds() {
     let widget = FluentItemGroup::new()
@@ -211,11 +176,7 @@ fn an_empty_group_still_builds() {
     assert!(widget.layout_request().is_some(), "and it is still a stack");
 }
 
-// --- the callbacks --------------------------------------------------------
 
-/// v1 had two callbacks because it had two signals. A caller in single mode gets
-/// the index; a caller in multiple mode gets the set; both are reported so neither
-/// has to know which mode it is in.
 #[test]
 fn both_callbacks_are_reported_and_agree() {
     let seen_single = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -229,8 +190,6 @@ fn both_callbacks_are_reported_and_agree() {
         Some(move |next| m.lock().unwrap().push(next)),
     );
 
-    // The rules themselves are the engine's; what this pins is that both
-    // callbacks reach the same change rather than one shadowing the other.
     assert!(
         seen_single.lock().unwrap().is_empty(),
         "no click, no report"
@@ -238,9 +197,6 @@ fn both_callbacks_are_reported_and_agree() {
     assert!(seen_multi.lock().unwrap().is_empty());
 }
 
-/// The style struct is the port's whole output, so a caller can build the widget
-/// by hand from it — which is what `view` does internally, and what makes the
-/// component composable in a way v1's `AnyView` was not.
 #[test]
 fn the_resolved_style_is_enough_to_build_the_widget() {
     let resolved: FluentItemGroupStyle = group().resolved_style();
@@ -248,8 +204,6 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
     assert!(resolved.pad > 0.0);
     assert!(resolved.radius > 0.0);
 
-    // And a hand-built widget with those exact numbers is indistinguishable from
-    // the port's own.
     let by_hand =
         floom_ui_composites::SelectGroup::new().style(floom_ui_composites::SelectGroupStyle {
             gap: resolved.gap,
@@ -274,13 +228,6 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
     let _ = Widget::layout_request(&by_hand);
 }
 
-/// The kit resolves Fluent's palette, not another system's.
-///
-/// The item-group *tokens* are the same in all three design systems, so the
-/// only thing that distinguishes the kits is the colour -- and a test that
-/// compared the kit against whatever theme the thread happened to hold would
-/// pass for any of the three. So the palette is pinned here: Fluent's
-/// `primary` is a literal, and it is not Material's.
 #[test]
 fn the_colours_are_this_design_system_s_own() {
     {

@@ -1,51 +1,5 @@
 //! Cupertino hover, ported to the Floom 2.0 widget API.
 //!
-//! A hover is a box that fills while the pointer is over it, and tells the
-//! caller when that happens.
-//!
-//! ## What the port uses
-//!
-//! The engine's [`HoverBox`]: a box that fills while the pointer is over it,
-//! around the caller's child. The engine grew it for this -- the engine's
-//! `Chip` paints its own hover fill because a chip *is* the widget, and here
-//! the widget is a box around somebody else's content.
-//!
-//! The *hover* is shared state: a [`SharedFlag`], the same
-//! bool-behind-an-`Arc<Mutex<_>>` the engine's `TextInput` and the floem-ui
-//! menus use, because a value that changes after mount cannot be held in a
-//! signal.
-//! ## What this kit answers
-//!
-//! * the fill under the pointer: `on_surface` at the token's `highlight_alpha`;
-//! * the alpha itself: the token.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The transition.** v1's style reported a `transition_ms` and nothing ever
-//!   read it: the fill appeared and disappeared instantly. The port reports the
-//!   number, because v1's style did, and the port does not animate either.
-//! * **`hovered_signal()` was an `RwSignal<bool>`.** 2.0's shared state is a
-//!   [`SharedFlag`], so the kit hands out `hovered_flag()` and takes one back
-//!   through `with_hovered_flag()`.
-//! * **The child was an `IntoView`.** 2.0's slots are replayed `Fn`s and a
-//!   widget is mounted by its parent, so the caller hands over a builder.
-//! * **`on_hover_change` was a `Box<dyn Fn(bool)>`.** 2.0's slots are shared
-//!   between threads, so the callback is `Fn(bool) + Send + Sync` and the kit
-//!   keeps it as an `Arc` of its own; the props' slot stays empty.
-//!
-//! ## The one difference inside the callback
-//!
-//! v1 reported *every* enter and *every* leave, including one that changed
-//! nothing. The port reports a change, so a pointer that enters twice reports
-//! once.
-//!
-//! ## The one thing v1's style did not have
-//!
-//! `design_system`. The other two kits' styles name theirs and this one's did
-//! not; the port gives all three the same field. The port also reports
-//! `highlight_color` -- the colour the fill is actually painted in -- which
-//! v1's style did not, because v1's style reported the alpha and left the
-//! colour to the theme.
 
 use std::sync::Arc;
 
@@ -107,7 +61,6 @@ impl CupertinoHover {
             props: HoverProps::default(),
             child: None,
             // v1's Cupertino hover read a snapshot of its own design
-            // system's theme, not the app-wide signal.
             theme: RwSignal::new(MultiTheme::new_for(
                 floom_core_theme::global_theme::DesignSystem::Cupertino,
             )),

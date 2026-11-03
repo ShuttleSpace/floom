@@ -1,13 +1,5 @@
 //! The ported Cupertino alert banner.
 //!
-//! Two claims, and the second is the one that would have been easy to get wrong:
-//!
-//! * the tokens and the four-variant accent table reach the engine;
-//! * **the dismiss slot is absent when the alert is not dismissible.** v1 mounted
-//!   an empty `Label` there, so the row always had two children and the 8px gap was
-//!   spent on nothing. Reproducing that faithfully would mean reproducing a bug, and
-//!   dropping it is a behaviour change rather than a translation — so it is pinned
-//!   here where the difference is visible.
 
 use floom_core::Widget;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -135,7 +127,6 @@ fn three_accents_are_fixed_literals_and_one_is_the_themes_error() {
     }
 
     // The control: four variants really are four different accents, so the table is
-    // not accidentally constant.
     let all = [
         alert_accent(&theme, AlertVariant::Error),
         alert_accent(&theme, AlertVariant::Info),

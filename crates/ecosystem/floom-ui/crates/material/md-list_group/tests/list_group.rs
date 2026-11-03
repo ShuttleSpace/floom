@@ -1,13 +1,3 @@
-//! Material list group: the header, the chevron, and the rows it reveals.
-//!
-//! ## The claim
-//!
-//! A list group is a titled, collapsible group of rows. v1 built it as a
-//! clickable header over a stack of rows that appeared and disappeared with a
-//! signal; 2.0's `Accordion` owns that state, and one list group is one
-//! accordion with a single panel. The assertions are about the two things the
-//! kit decides -- the header's style and the rows -- and about the chevron,
-//! which is this design system's own glyph.
 
 use std::sync::{Arc, Mutex};
 
@@ -20,13 +10,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_md_list_group::{MaterialListGroup, MaterialListGroupStyle};
 
-/// The Material theme, with Material selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time. So a test that wants Material's own values has to
-/// select Material, and `set_design_system` writes a thread-local, so the
-/// selection is this test's alone.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
@@ -97,9 +80,6 @@ fn the_group_starts_in_the_props_state() {
     assert!(open.is_open(0), "and v1 seeded the flag from the props");
 }
 
-/// The chevron is this design system's own glyph: the collapsed and the
-/// expanded one are different drawings, and both are drawn at the token's size
-/// in the muted ink.
 #[test]
 fn the_indicator_is_this_design_systems_glyph() {
     let style = group().resolved_style();
@@ -125,10 +105,6 @@ fn the_indicator_is_this_design_systems_glyph() {
     assert_eq!(collapsed.fill().b, style.indicator_color.b);
 }
 
-/// The toggle callback has to be `Send + Sync` to reach a click that lands
-/// inside a `Child` builder closure. Holding it as an `Arc` and cloning it into
-/// the accordion is what makes this compile, so the test that exists is the one
-/// that runs that construction.
 #[test]
 fn the_toggle_callback_survives_being_shared_into_the_tree() {
     let seen: Arc<Mutex<Vec<bool>>> = Arc::new(Mutex::new(Vec::new()));
@@ -137,8 +113,6 @@ fn the_toggle_callback_survives_being_shared_into_the_tree() {
         .on_toggle(move |open| sink.lock().unwrap().push(open))
         .view();
 
-    // The imperative door does not report a person's click -- the callback is
-    // for the user, and a caller that just set the state knows already.
     accordion.set_open(0, true);
     assert!(seen.lock().unwrap().is_empty());
     assert!(
@@ -148,8 +122,6 @@ fn the_toggle_callback_survives_being_shared_into_the_tree() {
     );
 }
 
-/// The rows are carried by the group, and the props keep reporting what v1
-/// reported.
 #[test]
 fn the_props_report_the_group_state() {
     let group = group().expanded(true).inset(true);
@@ -158,32 +130,17 @@ fn the_props_report_the_group_state() {
     assert_eq!(group.props().title.as_deref(), Some("Section"));
 }
 
-// --- the rows' geometry ---------------------------------------------------
 
-/// The stack of rows, mounted the way the host mounts it.
-///
-/// The body of a panel is mounted by the *update* pass, not by the build, so
-/// a test that reads the tree has to run one -- which is also why the engine's
-/// own tests have a `tick` helper.
 fn rows_of(accordion: &floom_ui_composites::Accordion) -> Box<dyn floom_core::WidgetAny> {
     let mut leaf = accordion.children()[0].build();
     let mut create = floom_widgets::testkit::AllocatingCreateContext::new();
     let id = leaf.create(&mut create);
     let mut cx = floom_widgets::testkit::RecordingUpdateContext::new();
     leaf.update(&mut cx, id);
-    // The panel holds the header, and then the stack of rows.
     assert_eq!(leaf.children().len(), 2, "the header and the rows");
     leaf.children().remove(1).build()
 }
 
-/// The rows' stack carries v1's vertical padding.
-///
-/// This is the one that went missing once. v1 wrote
-/// `padding_vert(content_padding)` on the stack that held the rows, and the
-/// port's own documentation claimed the padding was kept -- and it was not:
-/// the accordion's `content_padding` insets the body box on all four sides,
-/// and v1 had no horizontal inset there, so the number was left unspent and
-/// the rows sat flush against the header.
 #[test]
 fn the_rows_carry_v1_s_vertical_padding() {
     let style = group().resolved_style();
@@ -205,7 +162,6 @@ fn the_rows_carry_v1_s_vertical_padding() {
     );
 }
 
-/// Each row: v1's height, and its padding at the sides.
 #[test]
 fn each_row_is_v1_s_height_and_padding() {
     let style = group().resolved_style();
@@ -256,17 +212,11 @@ fn an_inset_group_indents_its_rows() {
     );
 }
 
-/// The header's own inset: v1 wrote `padding_horiz(content_padding)` on the
-/// header's box.
-///
-/// The engine's `Accordion` carries the number in its style -- and used to
-/// leave it unspent, so the title sat flush against the panel's edge.
 #[test]
 fn the_header_is_padded_at_the_sides() {
     let style = group().resolved_style();
     let accordion = group().view();
     let leaf = accordion.children()[0].build();
-    // The header holds a pressable, and the pressable holds the header's row.
     let pressable = leaf.children().remove(0).build();
     let row = pressable.children().remove(0).build();
     let request = row
@@ -284,12 +234,8 @@ fn the_header_is_padded_at_the_sides() {
     );
 }
 
-/// The theme: v1's Material list group read the *app-wide* theme signal, so a
-/// change of theme re-themes the group with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `group()`: the helper hands the kit a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialListGroup::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

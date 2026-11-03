@@ -1,15 +1,3 @@
-//! The ported Material confirm-edit -- a value with an edit affordance beside
-//! it, and a field with a tick and a cross when it is open.
-//!
-//! The engine has no confirm-edit, and its tree is built once, so what is
-//! tested here is the translation *and* the widget: the tokens reach the
-//! style, the display row shows the value, the edit affordance opens the
-//! field, and the tick saves while the cross cancels.
-//!
-//! ## The tripwires
-//!
-//! `the_display_row_shows_the_value` and `the_tick_saves_and_the_cross_cancels`
-//! would fail if this kit stopped being this kit.
 
 use floom_core::{
     Child, ChildKey, ElementId, Event, Key, KeyEvent, LayoutRequest, Rect, Widget, WidgetAny,
@@ -34,9 +22,6 @@ const ROW: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -98,7 +83,6 @@ fn click(widget: &mut dyn WidgetAny) {
     );
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens reach the style.
 #[test]
@@ -132,8 +116,6 @@ fn the_colours_reach_the_style() {
     assert_eq!(style.outline, colors.outline, "the field's outline");
 }
 
-/// The numbers v1 wrote as literals are in the style, because v1's style did
-/// not report them and the paint used them.
 #[test]
 fn the_literals_are_in_the_style() {
     let style = kit().resolved_style();
@@ -157,7 +139,6 @@ fn the_props_report_the_value() {
     assert_eq!(kit.props().value, "Hello");
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The display row: the value and the edit affordance.
 #[test]
@@ -197,7 +178,6 @@ fn the_editing_row_holds_the_field_and_the_two_buttons() {
     assert_eq!(row.children().len(), 3, "the field, the tick and the cross");
 }
 
-// --- the pixels -----------------------------------------------------------
 
 /// The display row shows the value.
 #[test]
@@ -248,7 +228,6 @@ fn the_edit_affordance_is_a_glyph_in_on_surface_variant() {
     );
 }
 
-// --- the interaction ------------------------------------------------------
 
 /// The edit affordance opens the field, and the draft takes the value.
 #[test]
@@ -277,7 +256,6 @@ fn the_tick_saves_and_the_cross_cancels() {
         })
         .view();
 
-    // Open the field and type into it.
     widget.edit();
     let row = row_of(&widget);
     let mut input = row.children().remove(0).build();
@@ -290,7 +268,6 @@ fn the_tick_saves_and_the_cross_cancels() {
     );
     assert_eq!(widget.draft(), "Hello!", "the field holds the edit");
 
-    // The tick saves.
     let row = row_of(&widget);
     let mut save = row.children().remove(1).build();
     click(&mut *save);
@@ -302,7 +279,6 @@ fn the_tick_saves_and_the_cross_cancels() {
     );
     assert!(!widget.is_editing(), "and the field closed");
 
-    // The cross cancels: the draft goes back to the value.
     widget.edit();
     {
         let draft = widget.draft_buffer();
@@ -340,14 +316,9 @@ fn a_change_of_mode_asks_for_the_other_row() {
     );
 }
 
-// --- the theme source -----------------------------------------------------
 
-/// The theme: v1's Material confirm-edit read the *app-wide* theme signal, so
-/// a change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialConfirmEdit::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

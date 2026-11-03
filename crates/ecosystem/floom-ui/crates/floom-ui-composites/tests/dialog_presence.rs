@@ -1,26 +1,3 @@
-//! `Dialog`'s shared presence flag — the answer to correction 11.
-//!
-//! ## The decision, restated because it is the whole point
-//!
-//! v1's dialogs owned `open: RwSignal<bool>` and exposed `open_signal()`, documented "so
-//! an external trigger (e.g. a button) can drive it". That signal is `Rc`-based and
-//! cannot cross a `Send + Sync` slot boundary, so a dialog could not own one — which is
-//! where correction 11 stopped, as "a decision, not a port".
-//!
-//! **The host already owns presence.** `OverlayKind::Dialog`, `OverlayHandle`,
-//! `PresenceChannel`, the state-driven `open_overlay`/`close_overlay` doors and
-//! `Widget::overlay_opened`/`overlay_closed` all exist, and `floem-app/tests/overlay.rs`
-//! covers them against the real host. So the decision was already made by the
-//! architecture; what was missing was a flag a caller can hold. That is
-//! [`Dialog::with_shared_presence`], and it is `Arc<Mutex<bool>>` for exactly the reason
-//! `TextInput`'s buffer and `TreeView`'s forest are what they are.
-//!
-//! ## Two directions, both said out loud
-//!
-//! The flag is read in `update` and written in `overlay_closed`. Getting only one is the
-//! mistake `Combobox` made twice in a row: a dialog that reads the flag but never clears
-//! it comes straight back after the user closed it, and one that clears it but never
-//! reads it never opens at all. Both are pinned below.
 
 use std::sync::Arc;
 

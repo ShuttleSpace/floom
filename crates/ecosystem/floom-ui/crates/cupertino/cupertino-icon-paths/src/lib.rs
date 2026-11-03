@@ -1,16 +1,7 @@
 //! Path data for the Cupertino icon set, 24x24 view box.
 //!
-//! This used to be the `icons` module of `floom-widget-cupertino-icon`, which is
-//! still a v1 crate and therefore cannot be a dependency of a 2.0 one. The
-//! data itself has never depended on anything: a `&str` of path data is the
-//! whole value, and the SVG wrapper around it is v1's problem. So the module
-//! became its own crate, and both halves name it.
-//!
-//! See `floom-widget-md-icon` for the kit that went the other way: it was ported
-//! whole, so its `icons` stayed inside it.
 
 //! Minimal Cupertino-style icon path set (24x24 viewBox, `fill="currentColor"`).
-//! Mirrors the Material subset; everything else falls back to a dot.
 
 const FALLBACK: &str = "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z";
 

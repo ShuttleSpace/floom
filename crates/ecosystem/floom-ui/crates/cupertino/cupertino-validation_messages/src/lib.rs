@@ -1,55 +1,5 @@
 //! Cupertino validation messages, ported to the Floom 2.0 widget API.
 //!
-//! A validation message list is a column of error strings under a field: the
-//! theme's `error` colour, at a small size, with a gap between them.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a column of `Text` leaves, and a shared list the
-//! caller pushes into and pulls out of.
-//!
-//! ## What the port uses
-//!
-//! The engine's [`ValidationMessagesList`]: a list of error messages, drawn
-//! from a shared [`SharedList`]. The engine grew both for this -- it had a
-//! shared bool, a shared string and a shared map, but no shared *list*, and a
-//! list of messages is none of those: a map keyed by index would lose the
-//! order, and a buffer would have to carry a separator that a message could
-//! contain.
-//!
-//! The list re-declares its `Text` children whenever the messages change,
-//! because 2.0's tree is built once.
-//!
-//! ## What this kit answers
-//!
-//! * the messages' ink: the theme's `error`;
-//! * the messages' size and the gap between them: the props, which default to
-//!   the tokens.
-//!
-//! ## The one disagreement inside v1
-//!
-//! v1's style reported the *tokens*, while v1's paint used the *props*: a
-//! caller who wrote `gap(10.0)` changed the pixels and not the style. The port
-//! reports both -- v1's fields keep v1's meaning (the token's numbers) and two
-//! added fields report what the messages are actually drawn with -- because a
-//! style that says nothing about the pixels is a trap. The tokens and the
-//! props' defaults are the same numbers, so the two readings only differ after
-//! an override.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **`messages_signal()` was an `RwSignal<Vec<String>>`.** 2.0's shared state
-//!   is a list behind an `Arc<Mutex<_>>`, so the kit hands out
-//!   `messages_list()` and the caller pushes and pulls through it.
-//! * **`dyn_view`.** v1 re-read the signal on every change and rebuilt the
-//!   whole list. 2.0's widget reads the shared list in its `update` and
-//!   re-declares its children -- the same thing, said the 2.0 way.
-//!
-//! ## The one thing v1's style did not have
-//!
-//! `design_system`. The other two kits' styles name theirs and this one's did
-//! not; the port gives all three the same field, so a caller can read which
-//! design system a style came from.
 
 use floom_core::{
     Axis, Child, ChildKey, CreateContext, ElementId, LayoutRequest, PaintContext, SemanticsContext,
@@ -108,7 +58,6 @@ impl CupertinoValidationMessages {
         Self {
             props: ValidationMessagesProps::default(),
             // v1's Cupertino validation messages read a snapshot of its own
-            // design system's theme, not the app-wide signal.
             theme: RwSignal::new(MultiTheme::new_for(
                 floom_core_theme::global_theme::DesignSystem::Cupertino,
             )),

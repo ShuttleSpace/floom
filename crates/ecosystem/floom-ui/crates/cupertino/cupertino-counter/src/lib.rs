@@ -1,40 +1,5 @@
 //! Cupertino counter, ported to the Floom 2.0 widget API.
 //!
-//! ## The shortest possible port, and why that is a finding
-//!
-//! `cupertino-counter`, `cupertino-counter` and `fluent-counter` are 151, 148 and 148
-//! lines, and after normalising the kit names away the three differ in **five
-//! lines — all of them the theme signal**. Every design value comes from
-//! `CounterTokens`, and the single literal (`font_size(16.0)` on the value readout)
-//! is the same literal in all three.
-//!
-//! So this is not "one component with three skins", and that is worth stating
-//! plainly: there is **no disagreement to preserve here**. Most shapes in this port
-//! turned out to disagree somewhere, and the disagreements are the substance. This
-//! one does not, and the honest report is "the kits agree" rather than a table of
-//! two rows.
-//!
-//! Everything that is left here is the translation from design tokens to
-//! [`CounterStyle`], plus the one value that is *not* a token — the readout's
-//! `16.0`.
-//!
-//! ## What changed from v1
-//!
-//! * **The state became shared.** v1 held a `RwSignal<i64>` created inside
-//!   `view()`, so a caller could set the value before mounting and read it
-//!   afterwards only by holding the signal — and `view()` returned `impl View`, so
-//!   it could not hand it back. 2.0 needs `Arc<Mutex<CounterState>>` for the reason
-//!   every other 2.0 shared value does: a slot is `Send + Sync` and `RwSignal` is
-//!   `Rc`-based. [`CupertinoCounter::view`] therefore hands the widget back, and
-//!   [`floom_widgets::Counter::state`] is how a caller reads it.
-//! * **`CursorStyle::Pointer` is gone.** 2.0's `PaintContext` has no cursor
-//!   vocabulary. The buttons are still `Pressable`s, so they are still reachable by
-//!   keyboard, which the cursor was not. Recorded rather than worked around.
-//! * **`clamp_value` moved into the engine**, unchanged, including which bound wins
-//!   when the range is inverted. See `floom_widgets::counter`.
-//! * **`on_change` still fires when a press cannot move the value.** v1 called back
-//!   unconditionally, and that is preserved — including the fact that the engine's
-//!   own `Slider` does the opposite.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;

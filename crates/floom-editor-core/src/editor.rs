@@ -106,10 +106,7 @@ impl Action {
                 let c = s.chars().next().unwrap();
                 let matching_pair_type = matching_pair_direction(c);
 
-                // The main edit operations
                 let mut edits = vec![];
-
-                // "Late edits" - characters to be inserted after particular regions
                 let mut edits_after = vec![];
 
                 let mut selection = selection.clone();
@@ -144,7 +141,6 @@ impl Action {
 
                     if auto_closing_matching_pairs {
                         if (c == '"' || c == '\'' || c == '`') && cursor_char == Some(c) {
-                            // Skip the closing character
                             let new_offset = buffer.next_grapheme_offset(offset, 1, buffer.len());
 
                             *region = SelRegion::caret(new_offset, CursorAffinity::Backward);
@@ -153,7 +149,6 @@ impl Action {
 
                         if matching_pair_type == Some(false) {
                             if cursor_char == Some(c) {
-                                // Skip the closing character
                                 let new_offset =
                                     buffer.next_grapheme_offset(offset, 1, buffer.len());
 
@@ -185,7 +180,6 @@ impl Action {
                         }
 
                         if matching_pair_type == Some(true) || c == '"' || c == '\'' || c == '`' {
-                            // Create a late edit to insert the closing pair, if allowed.
                             let is_whitespace_or_punct = cursor_char
                                 .map(|c| {
                                     let prop = get_char_property(c);
@@ -229,7 +223,6 @@ impl Action {
                     edits.push((current_selection, c.to_string()));
                 }
 
-                // Apply edits to current selection
                 let edits = edits
                     .iter()
                     .map(|(selection, content)| (selection, content.as_str()))
@@ -239,13 +232,11 @@ impl Action {
 
                 buffer.set_cursor_before(CursorMode::Insert(selection.clone()));
 
-                // Update selection
                 let mut selection = selection.apply_delta(&delta, true, InsertDrift::Default);
 
                 buffer.set_cursor_after(CursorMode::Insert(selection.clone()));
 
                 deltas.push((text, delta, inval_lines));
-                // Apply late edits
                 let edits_after = edits_after
                     .iter()
                     .map(|(idx, content)| {
@@ -268,7 +259,6 @@ impl Action {
                     deltas.push((text, delta, inval_lines));
                 }
 
-                // Adjust selection according to previous late edits
                 let mut adjustment = 0;
                 for region in selection
                     .regions_mut()
@@ -362,7 +352,6 @@ impl Action {
             let second_half = buffer.slice_to_cow(offset..line_end);
             let second_half_trim = second_half.trim();
 
-            // TODO: this could be done with 1 string
             let new_line_content = {
                 let indent_storage;
                 let indent = if auto_indent && has_unmatched_pair(&first_half) {
@@ -1844,6 +1833,4 @@ mod test {
         end_selection.add_region(SelRegion::caret(19, CursorAffinity::Backward));
         assert_eq!(cursor.mode, CursorMode::Insert(end_selection));
     }
-
-    // TODO(dbuga): add tests duplicating selections (multiple line blocks)
 }

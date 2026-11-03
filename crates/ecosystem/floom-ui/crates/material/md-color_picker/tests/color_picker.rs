@@ -1,17 +1,3 @@
-//! The ported Material colour picker -- a square of colour, a hue strip, an
-//! alpha strip, a preview and a hex field.
-//!
-//! The shape is the engine's vocabulary -- a surface over a stack -- so what
-//! is tested here is the translation and the pixels: the tokens reach the
-//! style, the square is painted with v1's three gradient layers, the preview
-//! is painted in the chosen colour, and the alpha strip is only there when it
-//! was asked for.
-//!
-//! ## The tripwires
-//!
-//! `the_square_is_painted_with_v1_s_three_layers` and
-//! `the_preview_is_painted_in_the_chosen_colour` would fail if this kit
-//! stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -33,9 +19,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -54,12 +37,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
-///
-/// The widget is behind a `WidgetAny`, because that is what a slot hands back,
-/// and upcasting `&dyn WidgetAny` to `&dyn Widget` is not something Rust can
-/// do yet -- so the methods are called through the `WidgetAny` handle, which
-/// finds them on the supertrait.
 fn ops_of(widget: &dyn WidgetAny) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -98,7 +75,6 @@ fn stack_of(surface: &dyn WidgetAny) -> Box<dyn WidgetAny> {
     children.remove(0).build()
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -138,8 +114,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-/// The numbers v1 wrote as literals are reported, because v1's paint used them
-/// and v1's style did not report them.
 #[test]
 fn the_literals_v1_wrote_are_reported() {
     let style = kit().resolved_style();
@@ -154,18 +128,13 @@ fn the_literals_v1_wrote_are_reported() {
     assert_eq!(style.thumb_border_width, 2.0, "v1's thumb border");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The picker is a surface in v1's colours.
 #[test]
 fn the_picker_is_painted_in_v1_s_colours() {
     let style = kit().resolved_style();
     let surface = kit().view();
     let ops = ops_of(&surface);
-    // The picker's fill is the surface colour.
     assert_eq!(fills(&ops).first(), Some(&paint(style.surface)), "the fill");
-    // And its border is v1's: `outline` at 80, one point thick. A border is
-    // a stroke and not a fill, so it is not among the fills.
     let (width, colour) = ops
         .iter()
         .find_map(|op| match op {
@@ -191,8 +160,6 @@ fn the_picker_is_painted_in_v1_s_colours() {
     );
 }
 
-/// The square is painted with v1's three layers: the hue underneath, the white
-/// ramp across it and the black ramp down it.
 #[test]
 fn the_square_is_painted_with_v1_s_three_layers() {
     let surface = kit().view();
@@ -222,7 +189,6 @@ fn the_preview_is_painted_in_the_chosen_colour() {
     let surface = kit().value(chosen).view();
     let stack = stack_of(&surface);
     let mut children = stack.children();
-    // The square, the hue strip, the alpha strip, then the preview row.
     let bottom = children.remove(3).build();
     let mut bottom_children = bottom.children();
     let swatch = bottom_children.remove(0).build();
@@ -253,7 +219,6 @@ fn the_hex_field_spells_the_colour_out() {
     assert_eq!(texts[0].1, style.hex_font_size);
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The alpha strip is only there when the picker was asked for one.
 #[test]
@@ -306,7 +271,6 @@ fn a_drag_in_the_square_reports_the_colour_it_landed_on() {
 
     let reported = reported.lock().expect("the sink");
     assert_eq!(reported.len(), 1, "the colour is reported once");
-    // The middle of the square is half saturated and half bright.
     let color = reported[0];
     assert!(
         color.r < 33 || color.g < 150 || color.b < 243,
@@ -314,7 +278,6 @@ fn a_drag_in_the_square_reports_the_colour_it_landed_on() {
     );
 }
 
-/// The props report what v1 reported.
 #[test]
 fn the_props_report_the_alpha_flag() {
     let picker = kit().show_alpha(false);
@@ -322,12 +285,8 @@ fn the_props_report_the_alpha_flag() {
     assert!(kit().show_alpha(true).props().show_alpha);
 }
 
-/// The theme: v1's Material colour picker read the *app-wide* theme signal, so
-/// a change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialColorPicker::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

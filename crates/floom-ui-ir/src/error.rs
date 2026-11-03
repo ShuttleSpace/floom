@@ -13,7 +13,6 @@ use crate::version::IrVersion;
 /// which type* was expected lets an author fix it without guessing.
 #[derive(Debug, Clone, PartialEq)]
 pub enum IrError {
-    // --- version gate ------------------------------------------------------
     /// The document was written by a newer minor of this major.
     VersionTooNew {
         found: IrVersion,
@@ -27,7 +26,6 @@ pub enum IrError {
     /// The document is not even the right shape (wrong JSON, unknown enum tag).
     Json(String),
 
-    // --- structure ---------------------------------------------------------
     /// A node key that is not a legal key.
     BadKey { key: String },
     /// Two nodes claim the same key.
@@ -49,7 +47,6 @@ pub enum IrError {
     /// One node declares the same slot twice.
     DuplicateSlot { key: String, slot: String },
 
-    // --- properties --------------------------------------------------------
     /// The same property is set twice on one node.
     DuplicateProp { key: String, prop: String },
     /// No kind declares this property.
@@ -74,7 +71,6 @@ pub enum IrError {
         value: String,
     },
 
-    // --- bindings and events ----------------------------------------------
     /// Two bindings share a name.
     DuplicateBinding { name: String },
     /// A reference names a binding that is not declared.

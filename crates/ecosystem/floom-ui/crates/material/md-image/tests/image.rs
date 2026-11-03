@@ -1,16 +1,3 @@
-//! The ported Material image -- a picture, or the alt text on the placeholder
-//! fill.
-//!
-//! What is tested here is the translation and the pixels: the tokens reach the
-//! style, the box is painted the placeholder fill, the placeholder is the alt
-//! text in v1's ink, and a picture is drawn from the resource the caller
-//! registered.
-//!
-//! ## The tripwires
-//!
-//! `the_placeholder_is_the_alt_text_on_the_placeholder_fill` and
-//! `the_picture_is_drawn_from_the_resource` would fail if this kit stopped
-//! being this kit.
 
 use floom_core::{ElementId, Length, Rect, Widget};
 use floom_types::{Color, ResourceId, Size};
@@ -29,9 +16,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -81,7 +65,6 @@ fn text_of(ops: &[PaintOp]) -> (String, f32, Color) {
         .expect("the placeholder is painted")
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -116,10 +99,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The box is painted the placeholder fill, and the placeholder is the alt
-/// text in v1's ink.
 #[test]
 fn the_placeholder_is_the_alt_text_on_the_placeholder_fill() {
     let resolved = kit().resolved_style();
@@ -215,7 +195,6 @@ fn the_box_is_the_size_the_caller_asked_for() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The props report the source and the flags.
 #[test]
@@ -235,14 +214,9 @@ fn the_props_report_the_source_and_the_flags() {
     assert!(kit.props().cover);
 }
 
-// --- the theme source -----------------------------------------------------
 
-/// The theme: v1's Material image read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialImage::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

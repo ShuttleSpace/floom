@@ -16,11 +16,8 @@ pub fn snap_to_soft_tab(
     direction: SnapDirection,
     tab_width: usize,
 ) -> usize {
-    // Fine which line we're on.
     let line = text.line_of_offset(offset);
-    // Get the offset to the start of the line.
     let start_line_offset = text.offset_of_line(line);
-    // And the offset within the lint.
     let offset_within_line = offset - start_line_offset;
 
     start_line_offset
@@ -42,7 +39,6 @@ pub fn snap_to_soft_tab_line_col(
     direction: SnapDirection,
     tab_width: usize,
 ) -> usize {
-    // Get the offset to the start of the line.
     let start_line_offset = text.offset_of_line(line);
 
     snap_to_soft_tab_logic(text, col, start_line_offset, direction, tab_width)

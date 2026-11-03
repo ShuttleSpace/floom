@@ -29,8 +29,6 @@ fn track(duration: f64) -> MediaState {
     }
 }
 
-// --- time formatting -------------------------------------------------------
-
 #[test]
 fn time_formatting_reads_like_a_transport_display() {
     assert_eq!(format_time(0.0), "0:00");
@@ -48,8 +46,6 @@ fn time_formatting_reads_like_a_transport_display() {
     // position it is describing.
     assert_eq!(format_time(9.99), "0:09");
 }
-
-// --- transport state -------------------------------------------------------
 
 #[test]
 fn a_default_transport_is_paused_at_the_start_at_full_volume() {
@@ -180,8 +176,6 @@ fn volume_is_clamped_and_muting_preserves_the_level() {
     assert_eq!(s.effective_volume(), 0.8);
 }
 
-// --- accessible parts ------------------------------------------------------
-
 #[test]
 fn the_control_cluster_describes_its_parts() {
     let mut controls = MediaControls::new(track(200.0));
@@ -247,8 +241,6 @@ fn the_cluster_summarizes_its_state_for_assistive_tech() {
     let snap = semantics_snapshot(&controls, id, BAR);
     assert!(snap.contains("Video player"), "got {snap:?}");
 }
-
-// --- layout and interaction ------------------------------------------------
 
 #[test]
 fn the_layout_partitions_its_box_without_overlap() {

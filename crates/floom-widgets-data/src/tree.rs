@@ -302,8 +302,6 @@ impl Tree {
         self
     }
 
-    // --- inspection --------------------------------------------------------
-
     pub fn model(&self) -> &VecTree {
         &self.model
     }
@@ -337,8 +335,6 @@ impl Tree {
         self.model.expanded_count()
     }
 
-    // --- expansion ---------------------------------------------------------
-
     pub fn expand(&mut self, id: TreeNodeId) -> bool {
         self.mutate(|model| model.expand(id))
     }
@@ -367,8 +363,6 @@ impl Tree {
         self.pending_repaint = true;
         true
     }
-
-    // --- geometry ----------------------------------------------------------
 
     pub fn set_container(&mut self, rect: Rect) -> bool {
         self.container = rect;
@@ -491,8 +485,6 @@ impl Tree {
         }
         changed
     }
-
-    // --- internals ---------------------------------------------------------
 
     fn recompute(&mut self) {
         self.rows = self.model.flatten();

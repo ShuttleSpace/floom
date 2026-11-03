@@ -1,21 +1,5 @@
 //! Cupertino grid, ported to the Floom 2.0 widget API.
 //!
-//! A grid is a set of cells in rows of equal width. v1 built the rows itself:
-//! chunk the children, wrap each cell so it grows, and stack the rows with a
-//! gap. 2.0's [`Grid`] does the chunking, so the kit is a thin adapter over it.
-//!
-//! ## The padding of the last row
-//!
-//! v1 padded the last row with empty cells so that every row held the same
-//! number of cells, and each cell grew by a share of the row. Without that, the
-//! last row's cells would divide the whole width between them and be wider
-//! than the rows above -- so the kit pads the item list before handing it over.
-//!
-//! ## The cells
-//!
-//! v1 wrapped each cell in a box that grew (`flex_grow(1.0)`). 2.0 says the same
-//! thing as the cell's own layout request, and the engine's `Grid` applies it
-//! to every cell.
 
 use std::sync::Arc;
 
@@ -114,7 +98,6 @@ impl CupertinoGrid {
         }
 
         // The index is the cell's key, so a row remounts only when its
-        // membership changes.
         let items: Vec<(u64, CellBuilder)> = children
             .into_iter()
             .enumerate()

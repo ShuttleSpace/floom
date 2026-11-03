@@ -1,38 +1,5 @@
 //! Cupertino's slider, ported to the 2.0 widget API.
 //!
-//! ## What the port changed
-//!
-//! * v1's `Stack::vertical((fill, thumb))` over a styled `Container`, with its
-//!   own `snap` and `apply_pointer` helpers, is the engine's `Slider` widget
-//!   now: one `Widget` whose `quantize`/`value_at` are the same two functions,
-//!   driven by pointer events rather than by hand-written listeners plus
-//!   `request_pointer_capture`.
-//! * v1's `value` and `value_signal` `RwSignal`s are gone, and so is
-//!   `value_signal` from the builder. The engine's widget owns the value across
-//!   paints, so the drag flash-back that made v1 reach for a signal cannot
-//!   happen, and a signal bridge would only reintroduce the host rebuild it
-//!   was avoiding.
-//! * v1's `dragging` `RwSignal` is gone: the widget tracks its own
-//!   `InteractionState`.
-//! * The cursor is gone with it. v1 set `CursorStyle::Pointer` on the track
-//!   and the engine's `Slider` has no cursor, so the pointer affordance is no
-//!   longer this kit's to set. Reported rather than papered over.
-//!
-//! ## The thumb is `surface`, and v1's own struct said otherwise
-//!
-//! v1's `resolved_style` wrote `thumb_color: colors.primary`, and that struct
-//! was dead: nothing read it, and `view()` drew the thumb from
-//! `colors().surface` directly. So the white disc is what v1 *painted*, and
-//! that is what this port carries. It is the one place where trusting v1's
-//! `resolved_style` over v1's `view()` would have silently changed the kit's
-//! appearance.
-//!
-//! ## The drop shadow
-//!
-//! Cupertino is the only one of the three kits that separates its thumb from
-//! the track with a shadow rather than a halo: blur 3, spread 0, black at 60
-//! percent. On a light track a white disc needs it to read at all, which is why
-//! this kit has an answer here and the other two have none.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -134,7 +101,6 @@ impl CupertinoSlider {
             thumb_size: tokens.thumb_size,
             thumb_radius: tokens.thumb_radius,
 
-            // --- base colours ---
             track_color: to_paint(colors.surface_variant),
             filled_color: to_paint(colors.primary),
             thumb_color: to_paint(colors.surface),
@@ -148,7 +114,6 @@ impl CupertinoSlider {
             filled_pressed_color: None,
 
             // No halo: v1 drew none, and the shadow below is what this kit uses
-            // to separate the thumb from the track instead.
             halo_color: None,
             halo_size: 0.0,
             halo_size_dragging: 0.0,

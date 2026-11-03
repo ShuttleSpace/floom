@@ -1,10 +1,4 @@
 //! Cupertino's select as a kit crate: the token translation, the props round
-//! trip, and the four numbers this kit decides differently from Material.
-//!
-//! The behaviour tests are not repeated here on purpose — they are the engine's,
-//! in `floom-widgets/tests/controls.rs` and `tests/select_style.rs`. What is here
-//! is what is *this kit's*, plus a control for each claim so a "just use the
-//! default" edit cannot quietly pass.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -57,7 +51,6 @@ fn the_hover_row_is_primary_at_twelve() {
     assert_eq!(alpha_of(style().hover_row), 12);
 
     // Control: the engine's default is Material's answer, so saying nothing
-    // would give this kit the wrong band.
     let default = SelectStyle::default();
     assert_ne!(
         default.hover_row,

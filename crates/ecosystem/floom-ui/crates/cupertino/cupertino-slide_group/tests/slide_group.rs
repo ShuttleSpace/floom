@@ -1,18 +1,4 @@
 //! The ported Cupertino slide group -- a strip of items with one of them
-//! chosen, and arrows that move the choice along the strip.
-//!
-//! ## Why the pixels and not the style
-//!
-//! The chosen item's indicator is `primary` and an unchosen item's is
-//! nothing at all, and only the paint log can tell those apart. So the tests
-//! read what was drawn.
-//!
-//! ## The tripwires
-//!
-//! `the_chosen_item_has_a_primary_indicator`,
-//! `an_unchosen_item_has_no_indicator` and
-//! `tapping_an_item_moves_the_indicator` would fail if this kit stopped being
-//! this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -41,7 +27,6 @@ const AT: Point = Point { x: 20.0, y: 20.0 };
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -231,7 +216,6 @@ fn an_unchosen_item_has_no_indicator() {
     let band = band_of(&*item_box_of(&*item));
 
     // The band itself is v1's border: `outline` at alpha 0, which draws
-    // nothing.
     let ops = ops_of(&*band);
     let fill = ops.iter().find_map(|op| match op {
         PaintOp::Rect { color, .. } => Some(*color),

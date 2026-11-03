@@ -26,7 +26,6 @@ fn render_thread_consumes_immutable_snapshot() {
             .expect("snapshot");
         assert_eq!(snap.frame_number, 7);
         assert_eq!(snap.scene.len(), 1);
-        // Immutable consume: iterate without mutating.
         assert_eq!(snap.scene.iter().count(), 1);
     });
 

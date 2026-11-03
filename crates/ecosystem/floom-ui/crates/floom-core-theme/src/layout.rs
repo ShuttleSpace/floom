@@ -1,24 +1,4 @@
 //! App-wide layout signal — the "layout provider".
-//!
-//! Vuetify's `v-app` exposes a single layout object that the application shell
-//! pieces (system bar, app bar, footer, bottom navigation, navigation drawer)
-//! write their sizes into, and that `v-main` reads to offset its content so it
-//! never hides under a fixed bar or an open drawer.
-//!
-//! This module provides the Floom equivalent:
-//!
-//! * [`LayoutSlot`] — which piece of the shell is reporting a size.
-//! * [`LayoutState`] — the registered sizes plus derived [`top`](LayoutState::top) /
-//!   [`bottom`](LayoutState::bottom) / [`left`](LayoutState::left) /
-//!   [`right`](LayoutState::right) insets.
-//! * [`layout_signal`] — a process-wide `RwSignal<LayoutState>` (mirrors
-//!   [`floom_core_theme::global_theme::theme_signal`]).
-//! * [`register_layout`] — called by each shell primitive from its `view()` so the
-//!   size lands in the shared signal automatically.
-//!
-//! `RwSignal` is `!Sync`, so the shared instance lives in a `thread_local` cell
-//! (the UI runs on a single thread). The signal is DS-agnostic: the same
-//! accessor is used by the Material, Cupertino, and Fluent builds.
 
 use std::cell::OnceCell;
 
@@ -82,9 +62,6 @@ thread_local! {
 }
 
 fn layout_global() -> RwSignal<LayoutState> {
-    // Bound to the never-disposed root scope via `create_global_rw_signal` so
-    // the shell primitives keep working even after the `dyn_view` child scopes
-    // that first touch it are disposed and rebuilt.
     LAYOUT.with(|c| *c.get_or_init(|| create_global_rw_signal(LayoutState::default())))
 }
 

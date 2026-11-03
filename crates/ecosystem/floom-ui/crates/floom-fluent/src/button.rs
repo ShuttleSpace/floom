@@ -1,4 +1,3 @@
-//! Fluent control variants and their pointer-first interaction semantics.
 
 use floom_design::{
     ControlSize, InteractionState, Props, StyleSetBuilder, StyleSetExt, Variant, composite_over,

@@ -1,13 +1,5 @@
 //! Cupertino list group: the header, the chevron, and the rows it reveals.
 //!
-//! ## The claim
-//!
-//! A list group is a titled, collapsible group of rows. v1 built it as a
-//! clickable header over a stack of rows that appeared and disappeared with a
-//! signal; 2.0's `Accordion` owns that state, and one list group is one
-//! accordion with a single panel. The assertions are about the two things the
-//! kit decides -- the header's style and the rows -- and about the chevron,
-//! which is this design system's own glyph.
 
 use std::sync::{Arc, Mutex};
 
@@ -289,7 +281,6 @@ fn the_header_is_padded_at_the_sides() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `group()`: the helper hands the kit a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoListGroup::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

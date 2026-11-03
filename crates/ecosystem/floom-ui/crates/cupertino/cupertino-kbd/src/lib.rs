@@ -1,16 +1,5 @@
 //! Cupertino kbd, ported to the Floom 2.0 widget API.
 //!
-//! A keycap: v1 spelled it as a `Container` holding a `Label`; 2.0 spells it
-//! a [`Surface`] holding a [`Text`], which is the same two things with the roles
-//! named -- the surface is the a keycap, the text is the label.
-//!
-//! ## The monospace font is gone, and the props say so
-//!
-//! v1 drew the a keycap in a monospace font, and the props carried a `mono` flag
-//! to ask for it. 2.0's text layer has no notion of a font family at all, so
-//! there is nothing to ask for: the text is drawn in the default family. The
-//! `mono` prop is carried and reports what the caller asked for, because a
-//! caller reading it back should not be told the font changed when it did not.
 
 use std::sync::Arc;
 

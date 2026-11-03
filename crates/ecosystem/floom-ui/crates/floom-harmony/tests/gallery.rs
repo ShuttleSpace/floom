@@ -1,9 +1,3 @@
-//! HarmonyOS gallery snapshots and the capsule audit.
-//!
-//! Harmony's signature rule is that a control's corner is *derived* from its own
-//! height, so the same variant is a different shape at each size step. That is
-//! a claim about the raster, not about the property table, so the strongest test
-//! here reads pixels: the corner of a filled capsule must not be filled.
 
 use floom_design::{
     CellPaint, ControlSize, GallerySample, InteractionState, Variant, contrast_ratio, gallery_size,

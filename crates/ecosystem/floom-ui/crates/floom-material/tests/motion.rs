@@ -1,11 +1,3 @@
-//! B6 — the design system's motion tokens reach the engine.
-//!
-//! `MotionDuration` used to be a token with zero consumers: the design language
-//! was written, but no engine API could read it. This file proves the seam is
-//! closed end-to-end: a Material duration + easing token become a
-//! `floom_types::Transition`, and that transition is exactly what
-//! `floom_widgets::Button::transition` accepts — the implicit-transition door
-//! B4 opened. The design system decides the timing; the engine plays it.
 
 use floom_app::WidgetHost;
 use floom_layout::LayoutStyle;

@@ -1,46 +1,5 @@
 //! Cupertino toolbar, ported to the Floom 2.0 widget API.
 //!
-//! # What changed from v1
-//!
-//! v1 built a view by composing and styling:
-//!
-//! ```ignore
-//! Container::new(Stack::horizontal((left, actions)).style(|s| s.items_center().justify_between()))
-//!     .style(move |s| s.width_pct(100.0).height(h).padding(pad).background(..))
-//! ```
-//!
-//! 2.0 has no style closure and no `IntoView`, so the same three ideas become
-//! three different things:
-//!
-//! * the bar is a [`Surface`] — a filled box that holds children and pads them,
-//!   which v1's `Container` only did because it was both;
-//! * the two groups are a [`Stack`] with `Align::SpaceBetween` on the main axis
-//!   (v1's `justify_between`) and `Align::Center` across it (v1's `items_center`);
-//! * the trailing actions are a **builder closure** rather than an
-//!   `impl IntoView`, because 2.0 slots are replayable `Fn`s, not values.
-//!
-//! `CupertinoToolbar::view` still returns the whole bar, content included. That is a
-//! deliberate exception to "composition is declared by the parent": *where* the
-//! leading icon sits relative to the trailing actions is what makes a toolbar a
-//! toolbar, so it is the component's business rather than the caller's.
-//!
-//! Two capabilities this component was the first to need are now in the engine:
-//! `FontWeight` (the `Medium` title) and `Surface::request` (a 64px bar that is
-//! also the full width of its parent).
-//!
-//! The theme is a `MultiTheme` snapshot rather than the app-wide signal that
-//! Material's kit uses. That is v1's difference, kept: v1 held a snapshot here
-//! and the live signal there.
-//!
-//! # What was kept deliberately
-//!
-//! * The title's `Medium` weight and the leading icon's hardcoded 22px are v1
-//!   literals, not tokens, and they are still literals here. A port that quietly
-//!   promoted them to tokens would change what the component draws.
-//! * The bar's height comes from `ToolbarProps::height`, and `ToolbarTokens`
-//!   also has a `height` field — which v1 never read. Reading the token instead
-//!   would be a behaviour change, so the token stays unread and says so in
-//!   [`ToolbarTokensHeightNote`] below rather than being silently preferred.
 
 use floom_core::{FontWeight as EngineFontWeight, LayoutRequest, WidgetAny};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};

@@ -1,30 +1,3 @@
-//! `Stepper` -- a row of steps, one of them current.
-//!
-//! Each step is a marker and a label; the marker carries a number, or a tick
-//! once the step is behind the current one. The steps are joined by
-//! connectors, and the colours follow the selection.
-//!
-//! ## What the kits still answer
-//!
-//! The step's size, the connector's width, the gap between the steps, the
-//! label's size, the six inks (the marker's fill and its ink, the label's
-//! inks, the outline and the outline variant), and the numbers v1 wrote as
-//! literals: the number inside a marker, the marker's radius and outline, the
-//! gap between a marker and its label, the padding around the row, the
-//! connector's smallest width and the tick's size.
-//!
-//! ## The tick is a kit's glyph
-//!
-//! The tick a completed step carries is a design system's own icon, and the
-//! engine does not know which one. So the tick is handed to the stepper: its
-//! path data and the box it is drawn in, as [`StepperTick`].
-//!
-//! ## The selection travels in a shared map
-//!
-//! The current step changes after mount -- a click moves it -- so it cannot
-//! live in a signal, which is `Rc`-based and cannot cross a slot boundary.
-//! It lives in the engine's shared map, under the key `"selected"`, and it
-//! travels as decimal text.
 
 use std::collections::HashMap;
 use std::sync::Arc;

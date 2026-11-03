@@ -1,12 +1,5 @@
 //! Cupertino container: the two boxes, and what each of them carries.
 //!
-//! ## The claim
-//!
-//! A container is two boxes. The outer one is full width and centres its
-//! content; the inner one carries the padding, the fill and the max-width cap.
-//! v1 nested two `Container`s to say that, and 2.0 says it with a `Stack` and a
-//! `Surface` -- so the assertions are about the two layout requests, which is
-//! where the two roles can be told apart.
 
 use floom_core::{ElementId, Widget};
 use floom_types::{Color, Length, Rect};

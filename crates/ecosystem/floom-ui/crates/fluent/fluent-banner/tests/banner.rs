@@ -1,16 +1,4 @@
 //! The ported Fluent banner -- a tinted strip with an icon, a message and an
-//! action.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the strip is painted
-//! v1's tint, the three pieces are painted in v1's inks at v1's sizes, and the
-//! slots v1 filled with an empty view are absent here.
-//!
-//! ## The tripwires
-//!
-//! `the_strip_is_painted_v1_s_tint` and
-//! `a_banner_without_an_icon_or_an_action_has_one_child` would fail if this kit
-//! stopped being this kit.
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
@@ -31,9 +19,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -42,7 +27,6 @@ fn kit() -> FluentBanner {
     FluentBanner::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -52,7 +36,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -62,19 +45,16 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The row: the message group on the left, the action on the right.
 fn row_of(kit: FluentBanner) -> Box<dyn floom_core::WidgetAny> {
     let surface = kit.view();
     surface.children().remove(0).build()
 }
 
-/// The message group: the icon (if there is one) and the message.
 fn group_of(kit: FluentBanner) -> Box<dyn floom_core::WidgetAny> {
     let row = row_of(kit);
     row.children().remove(0).build()
 }
 
-/// The text and the ink one of the group's texts painted.
 fn text_of(kit: FluentBanner, index: usize) -> (String, f32, Color) {
     let group = group_of(kit);
     let text = group.children().remove(index).build();
@@ -89,7 +69,6 @@ fn text_of(kit: FluentBanner, index: usize) -> (String, f32, Color) {
         .expect("a banner paints its texts")
 }
 
-/// Taps the action, the way the host would.
 fn tap(pressable: &mut floom_widgets::Pressable) {
     let mut create = AllocatingCreateContext::new();
     let id = pressable.create(&mut create);
@@ -99,9 +78,7 @@ fn tap(pressable: &mut floom_widgets::Pressable) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentBannerStyle = kit().resolved_style();
@@ -135,9 +112,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// Three of the four accents are fixed RGB and only `error` reads the theme.
-/// Fluent's three are its own -- that is the tripwire keeping the three kits
-/// three crates.
 #[test]
 fn three_accents_are_fixed_literals_and_one_is_the_themes_error() {
     let theme = theme();
@@ -173,9 +147,6 @@ fn three_accents_are_fixed_literals_and_one_is_the_themes_error() {
     }
 }
 
-/// v1's container colour is the accent at **26/255** -- about 10%, a tint rather
-/// than a wash. 26 is a strange number to survive a port by accident, so it is
-/// asserted.
 #[test]
 fn the_strip_is_the_accent_at_26() {
     let theme = theme();
@@ -201,9 +172,7 @@ fn the_strip_is_the_accent_at_26() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The strip is painted the colour v1 painted.
 #[test]
 fn the_strip_is_painted_v1_s_tint() {
     let resolved = kit().resolved_style();
@@ -221,7 +190,6 @@ fn the_strip_is_painted_v1_s_tint() {
     );
 }
 
-/// The message is painted in v1's ink at v1's size.
 #[test]
 fn the_message_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -231,7 +199,6 @@ fn the_message_is_painted_in_v1_s_ink() {
     assert_eq!(ink, paint(resolved.text_color), "v1's message ink");
 }
 
-/// The icon is painted in the accent at the token's size.
 #[test]
 fn the_icon_is_painted_in_the_accent() {
     let resolved = kit().resolved_style();
@@ -241,7 +208,6 @@ fn the_icon_is_painted_in_the_accent() {
     assert_eq!(ink, paint(resolved.accent), "the icon's ink is the accent");
 }
 
-/// The action is painted in `primary` at the token's size.
 #[test]
 fn the_action_is_painted_in_primary() {
     let resolved = kit().resolved_style();
@@ -251,7 +217,6 @@ fn the_action_is_painted_in_primary() {
         .as_any()
         .downcast_ref::<floom_widgets::Pressable>()
         .expect("the action is a pressable");
-    // The pressable holds the padded surface, which holds the label.
     let surface = pressable.child().build();
     let text = surface.children().remove(0).build();
     let ops = ops_of(&*text);
@@ -269,7 +234,6 @@ fn the_action_is_painted_in_primary() {
     assert_eq!(ink, paint(resolved.action_color), "the action's ink");
 }
 
-/// The action fires v1's callback when it is tapped.
 #[test]
 fn the_action_fires_the_callback() {
     let hits = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -291,11 +255,7 @@ fn the_action_fires_the_callback() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
-/// v1 filled the missing icon and the missing action with an `Empty` view, so
-/// its row always had two children. Here the slots are absent, so a banner with
-/// neither has one child.
 #[test]
 fn a_banner_without_an_icon_or_an_action_has_one_child() {
     let row = row_of(kit().message("Sync failed"));
@@ -308,7 +268,6 @@ fn a_banner_without_an_icon_or_an_action_has_one_child() {
     );
 }
 
-/// With an icon and an action, the row has two children and the group has two.
 #[test]
 fn an_icon_and_an_action_fill_the_slots() {
     let row = row_of(kit().icon("!").message("Sync failed").action("Retry"));
@@ -318,8 +277,6 @@ fn an_icon_and_an_action_fill_the_slots() {
     assert_eq!(group.children().len(), 2, "the icon and the message");
 }
 
-/// v1 wrote `gap(gap)` on a container that held one child, so the gap never
-/// showed.
 #[test]
 fn the_strip_has_no_gap() {
     let surface = kit().view();
@@ -332,7 +289,6 @@ fn the_strip_has_no_gap() {
     );
 }
 
-/// The strip's padding and minimum height are v1's.
 #[test]
 fn the_strip_is_padded_and_has_a_minimum_height() {
     let resolved = kit().resolved_style();
@@ -352,9 +308,7 @@ fn the_strip_is_padded_and_has_a_minimum_height() {
     );
 }
 
-// --- the props ------------------------------------------------------------
 
-/// The props report the text, and the callback is stored in the v1 shape too.
 #[test]
 fn the_props_report_the_message_and_the_callback() {
     let kit = kit()
@@ -371,8 +325,6 @@ fn the_props_report_the_message_and_the_callback() {
     );
 }
 
-/// v1's `single_line` never reached the paint: the message was never
-/// truncated.
 #[test]
 fn single_line_is_carried_but_never_truncates() {
     let kit = kit().message("Sync failed").single_line(true);
@@ -384,14 +336,9 @@ fn single_line_is_carried_but_never_truncates() {
     );
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// The theme: v1's Fluent banner took a *snapshot* of its own design system,
-/// so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentBanner::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

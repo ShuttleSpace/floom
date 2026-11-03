@@ -1,17 +1,3 @@
-//! [`OverlayHost`] as an embeddable: the state machine a composite which is *about*
-//! something else — a combobox with a dropdown — has to own.
-//!
-//! It used to be `pub(crate)`, which was correct while `Popup` and `Dialog` were the
-//! only composites: for them the bookkeeping lived inside the composite. It is
-//! public now because a combobox cannot avoid owning the same bookkeeping, and the
-//! reason is a host fact rather than a taste: **unmounting a node does not close the
-//! overlays it opened.** `OverlaySlot` is only removed by the `close_overlay` path, so
-//! a popup whose owner is torn down stays on the stack. That rules out returning a
-//! `Popup` as a child whose presence flag flips — the key would have to change, the
-//! child would remount, and the panel would be orphaned.
-//!
-//! So these tests are about the transitions, and each one names what it would take for
-//! a panel to get stuck or to disappear.
 
 use floom_core::{
     Child, ChildKey, ElementId, LayoutRequest, OverlayRequest, UpdateContext, Widget, WidgetAny,

@@ -1,28 +1,3 @@
-//! Material responsive box, ported to the Floom 2.0 widget API.
-//!
-//! A box that keeps a width-to-height ratio as it is resized -- a media
-//! placeholder, a 16:9 video frame.
-//!
-//! ## The aspect ratio is now a layout capability
-//!
-//! v1 wrote `.aspect_ratio(aspect)` on the style closure, and 2.0's
-//! `LayoutRequest` had no such field: a box could state its width and its
-//! height, but not "these two in this ratio", which is the one thing a
-//! responsive box is for -- a fixed height would be wrong at every width but
-//! one.
-//!
-//! So `LayoutRequest` grew `aspect_ratio`, the layout adapter carries it, and
-//! the host lowers it into the layout engine's own notion of a ratio. This is
-//! the same shape of addition as `Spacer::growing`: a capability the design
-//! system asked for and the engine could not say.
-//!
-//! ## The ratio and the parent's stretch
-//!
-//! The box states the ratio; whether it keeps that height is the parent's
-//! business. A parent that stretches its children gives them the parent's
-//! cross-axis extent, and a stretched child is given a height, so the ratio is
-//! moot. The kit states what it wants and says so here rather than pretending
-//! the ratio always wins.
 
 use std::sync::Arc;
 

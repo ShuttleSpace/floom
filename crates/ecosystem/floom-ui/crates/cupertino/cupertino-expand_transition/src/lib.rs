@@ -1,30 +1,5 @@
 //! Cupertino expand transition, ported to the Floom 2.0 widget API.
 //!
-//! v1 mounted the child only while a `show` signal was true, and played an
-//! animation on the way in and on the way out. 2.0's [`Conditional`] is that
-//! shape: it mounts and unmounts a subtree, and keeps an exiting one mounted
-//! until its exit has played, so the departure is visible.
-//!
-//! ## The signal became a flag
-//!
-//! v1 held an `RwSignal<bool>`, which is `Rc`-based and cannot cross a `Send +
-//! Sync` slot boundary -- so the port holds a [`SharedFlag`], the same
-//! `Arc<Mutex<bool>>` the text input's buffer uses, and the engine's
-//! `Conditional` reads it in `update`. The signal is therefore still the
-//! caller's: [`CupertinoExpandTransition::show_signal`] hands it over, and whoever writes it drives
-//! the child in and out.
-//!
-//! ## The height cannot be animated
-//!
-//! v1's expand transition animated the *height*: the box went from zero to the
-//! content's natural height, with the overflow clipped so the content did not
-//! spill out while it collapsed. 2.0 cannot do that: the host only re-runs
-//! layout when layout is dirty, so a box cannot change its height per frame --
-//! the same gap the expansion panels record (B4, "size"). The content is
-//! therefore its final height from the first frame, and the transition this kit
-//! offers is the compositor-only one, which is what `floom-widgets`' linear
-//! progress does with its sliding segment.
-//!
 use std::sync::Arc;
 
 use floom_core::{ChildKey, LayoutRequest, WidgetAny};

@@ -1,9 +1,3 @@
-//! The HarmonyOS component gallery: every button variant × size × state.
-//!
-//! Almost none of this file is HarmonyOS's. The sample grid, the layout and the
-//! label format live in [`floom_design`] because all four design systems need
-//! them and had four byte-identical copies; what remains here is the two things
-//! that are actually HarmonyOS: which theme to read, and how a sample resolves.
 
 use floom_design::{
     CellPaint, DepthField, button_gallery_labels as shared_labels, button_gallery_scene,

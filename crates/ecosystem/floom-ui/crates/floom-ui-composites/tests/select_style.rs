@@ -1,11 +1,3 @@
-//! `SelectStyle` is read, not just carried.
-//!
-//! Every test here is built the same way: change one field, assert something
-//! observable moved. That shape is the point. `SelectStyle` was added with a
-//! `style()` builder and no reader at all, and nothing failed — a kit could
-//! hand a `Select` twenty-eight Material tokens and get a white box with black
-//! text back. An assertion that a field *exists* cannot catch that; only an
-//! assertion that changing it changes the output can.
 
 use floom_core::{ElementId, Point, Rect, Widget};
 use floom_types::Color;

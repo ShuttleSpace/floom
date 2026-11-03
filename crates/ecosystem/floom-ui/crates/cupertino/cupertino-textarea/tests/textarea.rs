@@ -1,15 +1,5 @@
 //! The ported Cupertino textarea -- a bordered box with a text field in it,
 //! sized by the rows.
-//!
-//! The shape is the engine's vocabulary plus the engine's `TextInput`, so what
-//! is tested here is the translation and the pixels: the tokens reach the
-//! style, the box is painted in v1's colours, and the dead numbers v1 wrote
-//! are still the ones the style reports.
-//!
-//! ## The tripwires
-//!
-//! `the_box_is_painted_in_v1_s_colours` and `the_dead_numbers_are_v1_s` would
-//! fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -32,7 +22,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -282,7 +271,6 @@ fn the_props_report_the_text() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoTextarea::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

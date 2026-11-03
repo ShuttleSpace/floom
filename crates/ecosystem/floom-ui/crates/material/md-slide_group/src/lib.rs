@@ -1,83 +1,3 @@
-//! Material slide group, ported to the Floom 2.0 widget API.
-//!
-//! A slide group is a horizontal strip of items with one of them chosen: the
-//! chosen one carries an indicator along its bottom edge, and the arrows at
-//! the ends move the choice along the strip.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a horizontal [`Stack`] of items, a [`Surface`] for
-//! each item's box, a [`Pressable`] around it, and a [`Conditional`] for the
-//! indicator that follows the choice. The engine's shared flag is the state:
-//! one flag per item, saying whether that item is the chosen one.
-//!
-//! ## What this kit answers
-//!
-//! * the chosen item's indicator: `primary`; an unchosen item's: `outline` at
-//!   alpha 0, which is nothing at all;
-//! * the arrows' ink: `on_surface_variant`; the arrows' own background: the
-//!   surface at alpha 220;
-//! * the strip's height, the gap between an item's edge and its content, the
-//!   indicator's thickness and the arrows' size: the tokens;
-//! * an item's width: 120, a v1 literal; an arrow's width: 32, a v1 literal;
-//!   the arrows' font size: the arrow size times 0.6, a v1 literal.
-//!
-//! ## The theme it reads
-//!
-//! Material's theme is the *app-wide* signal, the same one every other
-//! Material kit reads, so a change of theme re-themes the strip with
-//! everything else. The Cupertino and Fluent kits take a snapshot instead.
-//!
-//! ## What the three kits disagree about
-//!
-//! Only the theme they read: the tokens, the colours and the literals above
-//! are the same in all three, so the three kits are the same code under three
-//! names, and what differs between them is the palette the theme hands out.
-//!
-//! ## The choice after mount
-//!
-//! v1 kept the choice in a local `RwSignal` and re-styled each item's bottom
-//! border from it. 2.0's tree is mounted once and its slot closures are
-//! shared between threads, so a signal cannot live in the tree -- the engine's
-//! answer is a shared flag, and the port uses one per item: the flag says
-//! whether that item is the chosen one, and the item's indicator is a
-//! [`Conditional`] that follows it. The choice is therefore still the kit's
-//! own, and it still moves after mount: a tap writes the flags, and the
-//! indicators follow on the next frame.
-//!
-//! ## The arrow that told nobody
-//!
-//! v1's arrows moved the choice and called nothing: `on_change` fired only
-//! when an item itself was tapped. The port keeps that, because v1 is the
-//! specification, and it is named here so that nobody takes it for an
-//! oversight.
-//!
-//! ## The prop nothing read
-//!
-//! `center_active` is in v1's props and v1 never read it -- the chosen item
-//! was not scrolled into the middle of the strip. The port keeps the prop,
-//! because v1's props carried it, and reads it no more than v1 did.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The clip.** v1's area clipped its overflow on both axes, so a strip
-//!   wider than the window was cut off at the edge. 2.0's layout request has
-//!   no overflow, so the clip is not carried and the area draws its children.
-//! * **The pointer cursor.** v1 set `CursorStyle::Pointer` on the items and on
-//!   the arrows. 2.0's paint context has no cursor vocabulary.
-//! * **The callback's shape.** v1's `on_change` was a `Box<dyn Fn(usize)>`,
-//!   which cannot cross a `Send + Sync` slot boundary. The kit keeps its own
-//!   `Arc<dyn Fn(usize) + Send + Sync>`.
-//! * **The accessors.** v1's slide groups had no `props()`, `theme()` or
-//!   `with_theme()`. The port gives them all three, because a kit that cannot
-//!   be given a theme cannot be tested against one.
-//!
-//! ## The one thing the port adds
-//!
-//! v1 published nothing to assistive technology. 2.0's `Pressable` does, so
-//! the port reports each item as selected when it is the chosen one. That is
-//! a fix rather than a translation, and it is named here rather than slipped
-//! in.
 
 use std::sync::Arc;
 
@@ -99,7 +19,6 @@ use floom_widget_runtime::theme_signal;
 const ITEM_W: f32 = 120.0;
 /// An arrow's width. A v1 literal.
 const ARROW_W: f32 = 32.0;
-/// The arrows' font size, as a fraction of the arrow size. A v1 literal.
 const ARROW_FONT_RATIO: f32 = 0.6;
 
 /// A callback in the shape 2.0's slots need.
@@ -110,7 +29,6 @@ const PREV: &str = "\u{2039}";
 /// The next arrow's glyph.
 const NEXT: &str = "\u{203a}";
 
-/// The slide group's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialSlideGroupStyle {
     pub design_system: &'static str,
@@ -130,7 +48,6 @@ pub struct MaterialSlideGroupStyle {
     pub item_width: f32,
     /// An arrow's width. A v1 literal.
     pub arrow_width: f32,
-    /// The arrows' font size. A v1 literal.
     pub arrow_font_size: f32,
 }
 
@@ -174,10 +91,6 @@ impl MaterialSlideGroup {
         self
     }
 
-    /// Whether the chosen item may be un-chosen.
-    ///
-    /// v1 read this as "the chosen item cannot be tapped away": a tap on it did
-    /// nothing at all, and told nobody.
     pub fn mandatory(mut self, mandatory: bool) -> Self {
         self.props.mandatory = mandatory;
         self
@@ -212,7 +125,6 @@ impl MaterialSlideGroup {
             on_surface_variant: theme.colors().on_surface_variant,
             primary: theme.colors().primary,
             outline: theme.colors().outline,
-            // v1's arrow background: the surface at alpha 220.
             arrow_background: with_alpha(theme.colors().surface, 220),
             height: tokens.height,
             gap: tokens.gap,
@@ -228,10 +140,7 @@ impl MaterialSlideGroup {
     pub fn view(self) -> Stack {
         let style = self.resolved_style();
         let count = self.items.len();
-        // v1 clamped the choice to the items there were.
         let initial = self.selected.min(count.saturating_sub(1));
-        // One flag per item: the flag says whether that item is the chosen
-        // one. See the module's note on the choice after mount.
         let flags: Arc<Vec<SharedFlag>> = Arc::new(
             (0..count)
                 .map(|index| shared_flag(index == initial))
@@ -245,11 +154,8 @@ impl MaterialSlideGroup {
         let chosen_fill = to_paint(style.primary);
         let unchosen_fill = to_paint(with_alpha(style.outline, 0));
 
-        // v1's strip: the items, side by side, touching, centred vertically.
         let mut row = Stack::new(Axis::Horizontal)
-            // v1's `gap(0.0)`.
             .gap(0.0)
-            // v1's `items_center()`.
             .align(Align::Start, Align::Center)
             .request(LayoutRequest::new().height(height));
 
@@ -260,33 +166,21 @@ impl MaterialSlideGroup {
             let mandatory = self.props.mandatory;
             let chosen = index == initial;
 
-            // v1's item box: the content, centred, with the strip's gap as its
-            // own horizontal padding.
             let content = Surface::new()
                 .request(
                     LayoutRequest::new()
-                        // v1's border sat inside the box, so the content had
-                        // the box's height less the border's.
                         .height(height - indicator)
-                        // v1's `items_center()` and `justify_center()`.
                         .main_align(Align::Center)
                         .cross_align(Align::Center),
                 )
-                // v1's `padding_horiz(gap)`.
                 .padding_horiz(f64::from(gap))
                 .child(item);
 
-            // v1's `border_bottom(indicator)` with `border_color(..)`: a band
-            // along the bottom edge, in `primary` when the item is chosen and
-            // in `outline` at alpha 0 -- nothing at all -- when it is not.
             let band = Surface::new()
                 .request(LayoutRequest::new().height(indicator))
                 .background(unchosen_fill)
                 .child(Child::new(
                     ChildKey::index(0),
-                    // The indicator is as wide as the band, and the band is as
-                    // wide as the item: the percentage needs a definite base,
-                    // and the slot is where a percentage belongs.
                     LayoutRequest::new().width_pct(100.0),
                     {
                         let flag = flag.clone();
@@ -298,15 +192,12 @@ impl MaterialSlideGroup {
                 .request(
                     LayoutRequest::new()
                         .height(height)
-                        // v1's `min_width(ITEM_W)`.
                         .min_width(item_width),
                 )
                 .push(move || Box::new(content.clone()))
                 .push(move || Box::new(band.clone()));
 
             row = row.push(move || {
-                // The slot is a replayed `Fn`, so each box it holds gets a
-                // copy of its own rather than a borrow of the one outside.
                 let box_ = box_.clone();
                 let flag = flag.clone();
                 let flags = flags.clone();
@@ -320,8 +211,6 @@ impl MaterialSlideGroup {
                     .selected_from(move || read_flag(&flag))
                     .on_click(move || {
                         let current = chosen_of(&flags);
-                        // v1 ignored a tap on the chosen item when the group
-                        // was mandatory.
                         if mandatory && current == index {
                             return;
                         }
@@ -334,7 +223,6 @@ impl MaterialSlideGroup {
             });
         }
 
-        // v1's area: the strip, and the arrows over its ends.
         let mut area = Stack::new(Axis::Horizontal)
             .request(LayoutRequest::new().width_pct(100.0).height(height));
         area = area.push(move || Box::new(row.clone()));
@@ -345,7 +233,6 @@ impl MaterialSlideGroup {
             let arrow_ink = to_paint(style.on_surface_variant);
             let arrow_background = to_paint(style.arrow_background);
 
-            // v1's previous arrow. It moved the choice and told nobody.
             let prev_flags = flags.clone();
             area = area.push_layout(arrow_slot(arrow_width, false), move || {
                 let flags = prev_flags.clone();
@@ -366,7 +253,6 @@ impl MaterialSlideGroup {
                 )
             });
 
-            // v1's next arrow. It moved the choice and told nobody.
             let next_flags = flags.clone();
             area = area.push_layout(arrow_slot(arrow_width, true), move || {
                 let flags = next_flags.clone();
@@ -413,12 +299,6 @@ fn choose(flags: &[SharedFlag], index: usize) {
     }
 }
 
-/// The indicator along an item's bottom edge.
-///
-/// It is a [`Conditional`] that follows the item's flag, so it appears and
-/// disappears with the choice. The conditional is seeded with the choice as it
-/// was when the tree was built, so the item that starts chosen shows its
-/// indicator on the first frame rather than the second.
 fn indicator_of(flag: SharedFlag, chosen: bool, fill: PaintColor, height: f32) -> Conditional {
     let mut conditional = if chosen {
         Conditional::new(true)
@@ -435,13 +315,8 @@ fn indicator_of(flag: SharedFlag, chosen: bool, fill: PaintColor, height: f32) -
     })
 }
 
-/// The slot an arrow occupies: absolutely positioned, at one end of the strip.
-///
-/// 2.0's layout takes a child's position and inset from the slot that holds
-/// it, so this is where v1's `absolute()` and its inset belong.
 fn arrow_slot(width: f32, at_right: bool) -> LayoutRequest {
     let mut slot = LayoutRequest::new()
-        // v1's `height_pct(100.0)` and `width(32.0)`.
         .height_pct(100.0)
         .width(width);
     slot.position = Some(Position::Absolute);
@@ -476,7 +351,6 @@ fn arrow_widget(
             LayoutRequest::new()
                 .height_pct(100.0)
                 .width(width)
-                // v1's `items_center()`.
                 .cross_align(Align::Center),
         )
         .background(background)

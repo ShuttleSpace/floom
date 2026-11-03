@@ -1,15 +1,5 @@
 //! The ported Cupertino virtual scroller -- a viewport over a list too long to
 //! draw, which mounts only the rows the user can see.
-//!
-//! The shape is the engine's vocabulary plus a kit-local scroller, so what is
-//! tested here is the translation, the pixels, and the one thing that makes a
-//! virtual list a virtual list: **only the window's rows are mounted**, and
-//! scrolling mounts a different window.
-//!
-//! ## The tripwires
-//!
-//! `only_the_windows_rows_are_mounted` and `scrolling_mounts_a_different_window`
-//! would fail if this kit stopped being this kit.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -42,7 +32,6 @@ const ROW: f32 = 44.0;
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -115,7 +104,6 @@ fn the_tokens_and_colours_reach_the_style() {
         };
     // v1's rule: the prop's row height when it is positive and the token's
     // when it is not. The props' default is 44, so the token's is the
-    // fallback rather than the number in play.
     assert_eq!(
         style.item_height,
         kit().props().item_height,
@@ -260,7 +248,6 @@ fn the_scroller_asks_for_more_at_the_end() {
     let mut scroller = surface.children().remove(0).build();
     let id = ElementId::new(0, 1);
     // A hundred rows of 44 is 4400, and the viewport is 360, so the end is
-    // 4040 pixels down.
     let mut cx = TestEventContext::new(id, BOX, wheel(4040.0));
     scroller.event(&mut cx, id);
 
@@ -285,7 +272,6 @@ fn the_props_report_the_numbers() {
     );
 }
 
-// --- the theme source ---
 
 /// The theme: v1's Cupertino virtual scroller took a *snapshot* of its own design
 /// system, so a change of the app-wide theme does not re-theme it.

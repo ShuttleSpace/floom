@@ -1,17 +1,4 @@
 //! The ported Cupertino main content region -- the area the application's
-//! content lives in, inset by the sizes the shell registered.
-//!
-//! ## Why the pixels and not the style
-//!
-//! The style can say which fill the content was *given*; only the paint log
-//! can say that the content was painted in it, and that the spacers around it
-//! are the sizes the shell asked for. So the tests read both.
-//!
-//! ## The tripwires
-//!
-//! `the_content_is_painted_in_the_background` and
-//! `the_spacers_are_sized_from_the_registered_insets` would fail if this kit
-//! stopped insetting itself.
 
 use floom_core::{ElementId, Length, Rect, Widget, WidgetAny};
 use floom_types::Color;

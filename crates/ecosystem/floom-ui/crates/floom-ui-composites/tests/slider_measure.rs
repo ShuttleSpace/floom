@@ -1,10 +1,3 @@
-//! A slider's intrinsic extent, measured through a real host.
-//!
-//! This moved with the widget from `floom-app/tests/composite_measure.rs`. What
-//! is left in that file is the progress bar it was sharing a test body with;
-//! this half asserts that a slider reports a thumb-diameter height and a track
-//! long enough to be dragged, which is the one thing about its layout a caller
-//! can depend on without pinning a size.
 
 use floom_app::{NodeId, WidgetHost};
 use floom_layout::LayoutStyle;

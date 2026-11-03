@@ -1,13 +1,3 @@
-//! Material text: the theme's type, and the text it draws.
-//!
-//! ## The claim
-//!
-//! v1 drew a `Label` and styled it with a closure that re-read the theme on
-//! every use. 2.0's `Text` is a widget the caller holds and restyles, so the
-//! theme is resolved once and handed over as explicit values. The assertions
-//! are about the *painted* text -- its colour, its size and its weight --
-//! because a style struct cannot show that the right values reached the right
-//! knobs.
 
 use floom_core::{ElementId, Widget};
 use floom_types::{Color, Rect};
@@ -26,13 +16,6 @@ const BOX: Rect = Rect {
     y1: 40.0,
 };
 
-/// The Material theme, with Material selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time. So a test that wants Material's own values has to
-/// select Material, and `set_design_system` writes a thread-local, so the
-/// selection is this test's alone.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
@@ -107,9 +90,6 @@ fn the_painted_text_carries_the_themes_ink_and_type() {
     );
 }
 
-/// The weight crossing names all nine variants, and v1's one difference is
-/// kept: v1's `to_floom()` sent `Black` to 800, because parley's table has no
-/// 900. Here `Black` is the engine's 900.
 #[test]
 fn the_weight_crossing_names_all_nine_variants() {
     assert_eq!(
@@ -124,7 +104,6 @@ fn the_weight_crossing_names_all_nine_variants() {
         to_engine_weight(ThemeFontWeight::Light),
         floom_types::FontWeight::Light
     );
-    // v1's name for 400 is `NORMAL`; the theme's is `Regular`.
     assert_eq!(
         to_engine_weight(ThemeFontWeight::Regular),
         floom_types::FontWeight::Normal
@@ -151,11 +130,6 @@ fn the_weight_crossing_names_all_nine_variants() {
     );
 }
 
-/// `max_lines` and `selectable` are carried on the props and not applied.
-///
-/// v1 set both and neither reached the view -- it drew a plain `Label` -- and
-/// 2.0's `Text` has no knob for either. So the props keep reporting them and
-/// no kit claims a truncation or a selection it does not perform.
 #[test]
 fn max_lines_and_selectable_are_carried_but_not_applied() {
     let text = MaterialText::new("Hello").max_lines(2).selectable(true);

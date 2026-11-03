@@ -1,17 +1,3 @@
-//! The ported Material pagination -- the page buttons, and the arrows either
-//! side of them.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style assertion cannot see a fill swap: the selected page is `primary`
-//! and the others are nothing at all, and only the paint log can tell them
-//! apart. So the tests read what was drawn.
-//!
-//! ## The tripwires
-//!
-//! `the_selected_page_is_filled_in_primary`,
-//! `the_other_pages_are_filled_with_nothing` and
-//! `the_controls_are_a_column` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -35,9 +21,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -66,7 +49,6 @@ fn ops_of<W: Widget + ?Sized>(widget: &W) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The column of controls inside v1's row.
 fn column_of(kit: MaterialPagination) -> Box<dyn WidgetAny> {
     let outer = kit.view();
     outer.children().remove(0).build()
@@ -102,7 +84,6 @@ fn tap(control: &mut dyn WidgetAny) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -155,14 +136,11 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
 /// The selected page is filled in `primary` and inked in `on_primary`.
 #[test]
 fn the_selected_page_is_filled_in_primary() {
     let style = kit().resolved_style();
-    // The controls are: the previous arrow, page one, page two, page three,
-    // and the next arrow.
     let control = control_at(kit().total(3).current(2), 2);
     let ops = ops_of(&*box_of(control.as_ref()));
     let (fill, radius) = ops
@@ -246,7 +224,6 @@ fn the_arrows_are_inked_in_on_surface() {
 #[test]
 fn a_disabled_arrow_is_inked_at_alpha_38() {
     let style = kit().resolved_style();
-    // On the first page, the previous arrow cannot answer.
     let control = control_at(kit().total(3).current(1), 0);
     let label = label_of(control.as_ref());
     let ops = ops_of(&*label);
@@ -273,9 +250,7 @@ fn the_buttons_are_the_tokens_square() {
     assert_eq!(request.height, Some(Length::Px(style.button_size)));
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The controls are a column, inside a row: v1's `list(..)` was a column.
 #[test]
 fn the_controls_are_a_column() {
     let outer = kit().total(3).current(1).view();
@@ -293,8 +268,6 @@ fn the_controls_are_a_column() {
     );
 }
 
-/// The buttons sat against each other: v1's gap was on a container with one
-/// child, so it separated nothing.
 #[test]
 fn the_buttons_have_no_gap_between_them() {
     let column = column_of(kit().total(3).current(1));
@@ -324,7 +297,6 @@ fn the_container_keeps_the_tokens_gap() {
     );
 }
 
-// --- the behaviour --------------------------------------------------------
 
 /// A page button answers with its own page.
 #[test]
@@ -347,7 +319,6 @@ fn a_disabled_arrow_does_not_answer() {
         let seen = seen.clone();
         move |page| seen.lock().unwrap().push(page)
     });
-    // On the first page, the previous arrow cannot answer.
     let mut control = control_at(kit, 0);
     tap(&mut *control);
     assert!(
@@ -367,8 +338,6 @@ fn the_props_report_the_totals() {
         "and there is no callback, because none was given"
     );
 
-    // v1's props held the callback too, so a kit that was given one reports
-    // one.
     let with_callback = kit().total(7).current(3).on_change(|_| {});
     assert!(
         with_callback.props().on_change.is_some(),

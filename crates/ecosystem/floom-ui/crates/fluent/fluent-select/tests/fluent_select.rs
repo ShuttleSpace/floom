@@ -1,10 +1,4 @@
 //! Fluent's select as a kit crate: the token translation, the props round trip,
-//! and the three numbers this kit answers differently from the other two.
-//!
-//! `select` is the one component in the port where the three kits are not the
-//! same component. Fluent is the third answer: its hover band agrees with
-//! Material's, its missing panel border agrees with Cupertino's, and its chevron
-//! is a third value of its own.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -36,10 +30,7 @@ fn alpha_of(color: floom_types::Color) -> u8 {
     color.a
 }
 
-// --- the three answers ----------------------------------------------------
 
-/// A hovered row is `on_surface`@8 — Material's answer, and explicitly *not*
-/// Cupertino's `primary`@12.
 #[test]
 fn the_hover_row_is_on_surface_at_eight() {
     let theme = theme();
@@ -53,7 +44,6 @@ fn the_hover_row_is_on_surface_at_eight() {
     );
 }
 
-/// The panel has no border, as Cupertino's; Material's is `outline`@120.
 #[test]
 fn the_panel_has_no_border() {
     assert_eq!(alpha_of(style().panel_border), 0);
@@ -64,8 +54,6 @@ fn the_panel_has_no_border() {
     );
 }
 
-/// The chevron is `on_surface`@160: Cupertino's is 140 and Material's is the
-/// full `on_surface_variant`.
 #[test]
 fn the_chevron_is_on_surface_at_160() {
     let theme = theme();
@@ -74,23 +62,18 @@ fn the_chevron_is_on_surface_at_160() {
     assert_eq!(alpha_of(style().chevron), 160);
 }
 
-/// v1's Fluent trigger painted its label in `on_surface` and never distinguished
-/// a placeholder, so the two are the same colour — unlike the other two kits,
-/// where the placeholder is dimmer than a chosen option.
 #[test]
 fn the_placeholder_is_the_same_colour_as_a_chosen_label() {
     let style = style();
     assert_eq!(style.placeholder, style.on_surface);
 }
 
-/// The shadow is black@20, which Material shares; Cupertino wrote 24.
 #[test]
 fn the_panel_shadow_is_black_at_twenty() {
     assert_eq!(alpha_of(style().panel_shadow), 20);
     assert_eq!(style().panel_shadow_blur, 12.0);
 }
 
-// --- what is shared -------------------------------------------------------
 
 #[test]
 fn the_geometry_is_the_select_tokens() {
@@ -109,16 +92,12 @@ fn the_geometry_is_the_select_tokens() {
     assert_eq!(style.icon_size, tokens.icon_size);
 }
 
-/// v1's Fluent trigger kept `surface` when disabled — there is no disabled
-/// background to translate, so it is the same colour. Cupertino's is
-/// `on_surface`@4, which is why this field exists at all.
 #[test]
 fn a_disabled_trigger_keeps_the_surface() {
     assert_eq!(style().disabled_background, style().surface);
     assert_eq!(alpha_of(style().disabled_border), 38);
 }
 
-// --- mounting -------------------------------------------------------------
 
 #[test]
 fn mounting_carries_the_options_the_selection_and_the_placeholder() {
@@ -186,11 +165,6 @@ fn choosing_reports_the_index() {
     assert_eq!(seen.load(Ordering::SeqCst), 2, "same index, reported again");
 }
 
-/// The callback carries a plain index, not an `Option`.
-///
-/// v1's select reported `Option<usize>` because its `RwSignal` could be cleared;
-/// the engine's cannot -- `Select::choose` writes `Some(index)` on every
-/// successful pick, so there is no "unchoose" state to carry.
 #[test]
 fn the_callback_carries_a_plain_index() {
     let seen = Arc::new(AtomicUsize::new(0));
@@ -204,8 +178,6 @@ fn the_callback_carries_a_plain_index() {
     assert_eq!(seen.load(Ordering::SeqCst), 1, "index 0 became 1, never 0");
 }
 
-/// The same placeholder fallback the other two kits get, from
-/// `SelectProps::default()` rather than from this crate.
 #[test]
 fn an_empty_option_list_still_mounts() {
     let select: Select = FluentSelect::new().view();

@@ -1,10 +1,3 @@
-//! Material responsive box: the ratio, and the fill.
-//!
-//! ## The claim
-//!
-//! A responsive box keeps a width-to-height ratio, and 2.0's `LayoutRequest`
-//! grew `aspect_ratio` so that it can say so. The assertions are about the
-//! request the box makes and the fill it paints.
 
 use floom_core::Widget;
 use floom_types::{Color, Length, Rect};

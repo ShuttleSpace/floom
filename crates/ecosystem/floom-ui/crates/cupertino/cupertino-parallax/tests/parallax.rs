@@ -1,16 +1,5 @@
 //! The ported Cupertino parallax -- a layer that moves more slowly than the
 //! page it sits on.
-//!
-//! The shape is a kit-local widget, because the effect needs a translate and
-//! the engine has none in its layout vocabulary. So what is tested here is the
-//! translation and the motion: the factor reaches the style, the layer
-//! declares the translate v1 wrote, and a moved offset is a new declaration.
-//!
-//! ## The tripwires
-//!
-//! `the_layer_moves_the_content_by_the_scroll_times_the_factor` and
-//! `a_moved_offset_re_declares_the_motion` would fail if this kit stopped
-//! being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Widget};
 use floom_types::CompositorProp;
@@ -29,7 +18,6 @@ const ID: ElementId = ElementId::new(1, 1);
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -203,7 +191,6 @@ fn the_props_report_the_factor() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoParallax::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

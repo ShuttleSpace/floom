@@ -1,11 +1,5 @@
 //! The ported Cupertino footer.
 //!
-//! The footer is the component that needed [`Edges`]: v1 styled it
-//! `.border_color(outline_variant).border_top(tokens.border)`, and a four-sided
-//! stroke cannot say "top". So this suite is as much about that one line as about
-//! the theme → style → widget translation, and it pins the parts that a
-//! `Container` (a leaf) could not have carried at all: the padding, the content
-//! inside the box, and the bar's own extent.
 
 use floom_core::{Edges, Widget};
 use floom_types::{Insets, Rect};
@@ -92,7 +86,6 @@ fn the_separator_reaches_the_surface_as_a_top_edge() {
     assert_eq!(border.width(), tokens().border);
 
     // The mutation this catches: passing `Edges::ALL` would draw a box around a
-    // footer, which looks wrong at every size.
     assert_ne!(border.edges(), Edges::ALL);
 }
 

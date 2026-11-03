@@ -1,15 +1,3 @@
-//! The ported Material carousel -- one slide at a time, with arrows and dots.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the area is
-//! painted in v1's colours, the dots are painted in the colours v1 gave
-//! them, and only the current slide is mounted.
-//!
-//! ## The tripwires
-//!
-//! `the_dots_are_painted_in_v1_s_colours` and
-//! `only_the_current_slide_is_mounted` would fail if this kit stopped being
-//! this kit.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -35,9 +23,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -91,7 +76,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -144,8 +128,6 @@ fn the_tokens_and_colours_reach_the_style() {
 /// The height is the prop's when it is positive, and the token's otherwise.
 #[test]
 fn the_height_is_the_prop_s_when_it_is_positive() {
-    // The token's height, read from the token: the three kits' tokens do not
-    // agree on it.
     let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::Carousel)
     {
         floom_core_theme::component_tokens::ComponentTokens::Carousel(tokens) => tokens,
@@ -168,9 +150,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The area is painted the colours v1 painted.
 #[test]
 fn the_area_is_painted_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -201,8 +181,6 @@ fn the_area_is_painted_v1_s_colours() {
     );
 }
 
-/// The dots are painted in v1's colours: the current one in the primary, the
-/// others in the ink at the token's inactive opacity.
 #[test]
 fn the_dots_are_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -231,13 +209,11 @@ fn the_dots_are_painted_in_v1_s_colours() {
     assert_eq!(colours[1], Some(inactive), "the other dot");
 }
 
-/// The arrows are painted with v1's glyphs at v1's size.
 #[test]
 fn the_arrows_are_painted_with_v1_s_glyphs() {
     let resolved = kit().resolved_style();
     let area = area(kit().slides(vec![slide("One"), slide("Two")]));
     let children = area.children();
-    // The two slides, then the two arrows, then the dots.
     let previous = children[2].build();
     let next = children[3].build();
     let previous_label = previous.children().remove(0).build();
@@ -266,14 +242,12 @@ fn the_arrows_are_painted_with_v1_s_glyphs() {
     assert_eq!(text, "›", "v1's next glyph");
 }
 
-// --- the structure --------------------------------------------------------
 
 /// Only the current slide is mounted.
 #[test]
 fn only_the_current_slide_is_mounted() {
     let area = area(kit().slides(vec![slide("One"), slide("Two"), slide("Three")]));
     let children = area.children();
-    // The first slide is the current one.
     let first = slide_presence(children[0].build());
     assert_eq!(first.children().len(), 1, "the current slide is mounted");
     let second = slide_presence(children[1].build());
@@ -288,7 +262,6 @@ fn only_the_current_slide_is_mounted() {
 fn the_arrows_are_only_drawn_when_there_is_somewhere_to_go() {
     let area = area(kit().slides(vec![slide("One")]));
     let children = area.children();
-    // One slide, no arrows, and the dots' overlay.
     assert_eq!(children.len(), 2, "the slide and the dots");
 }
 
@@ -314,7 +287,6 @@ fn the_next_arrow_moves_the_carousel_on_and_says_so() {
     assert_eq!(kit.index(), 0, "the first slide is showing");
     let area = area(kit);
     let children = area.children();
-    // The two slides, then the two arrows, then the dots.
     let mut next = children[3].build();
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = next.create(&mut create);
@@ -346,12 +318,8 @@ fn the_props_report_the_switches() {
     assert!(kit.props().auto_play);
 }
 
-/// The theme: v1's Material carousel read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialCarousel::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

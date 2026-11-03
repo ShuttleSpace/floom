@@ -1,16 +1,3 @@
-//! The ported Material 3 expansion panels — the *stateful* reference port.
-//!
-//! Where `md-card`'s test proved the theme→style→widget translation and
-//! `md-button`'s pinned an interaction, this one pins what only a component that
-//! *changes after mount* has: that the theme's tokens reach the engine widget,
-//! that the panels and their bodies survive being shared into the tree, and that
-//! the design system's single-panel rule is still in force after the trip.
-//!
-//! The state machine's own behaviour — mount, unmount, reconcile, and the two
-//! things this port could not carry over — is pinned where it lives, in
-//! `floom-widgets`' `compose::accordion_tests`. A kit test can only reach the
-//! public surface of the engine widget, which is the right boundary: this file
-//! proves the *translation*, not the engine.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -45,12 +32,7 @@ fn panels(count: usize) -> MdExpansionPanels {
     built
 }
 
-// --- the tokens reach the engine widget ------------------------------------
 
-/// The translation test: every metric the port resolves is the token it names.
-/// `indent` is the one that could go wrong silently — v1 spells it
-/// `content_padding + indent` for the body and nothing at all for the header, so
-/// a mix-up shows up as content that is flush with the panel edge.
 #[test]
 fn the_resolved_style_is_the_theme_tokens() {
     let tokens = tokens();
@@ -64,9 +46,6 @@ fn the_resolved_style_is_the_theme_tokens() {
     assert_eq!(style.border_width, tokens.border);
 }
 
-/// v1 wrote `border_color(with_alpha(t.colors().outline, 30))`. Resolve the
-/// outline at full alpha and the panel stops reading as a hairline and starts
-/// reading as a box — a visible change nobody would catch in a diff.
 #[test]
 fn the_outline_is_the_theme_outline_at_30_alpha() {
     let style = MdExpansionPanels::new().resolved_style();
@@ -98,7 +77,6 @@ fn the_engine_widget_declares_the_token_axis_and_gap() {
     assert_eq!(req.gap, Some(tokens().gap), "the token gap, not a default");
 }
 
-// --- the panels travel -----------------------------------------------------
 
 #[test]
 fn every_declared_panel_becomes_one_slot() {
@@ -109,9 +87,6 @@ fn every_declared_panel_becomes_one_slot() {
     assert_eq!(MdExpansionPanels::new().panel_count(), 0);
 }
 
-/// The single-panel rule is the design system's identity, and it has to survive
-/// the trip into the engine widget: a default that silently became "multiple"
-/// would let two panels sit open at once.
 #[test]
 fn the_single_panel_rule_survives_the_trip() {
     let mut accordion = panels(2).resolve();
@@ -133,14 +108,7 @@ fn the_single_panel_rule_survives_the_trip() {
     );
 }
 
-// --- the bodies ------------------------------------------------------------
 
-/// A body is a *builder*, and 2.0's builder closure is `Send + Sync + 'static`.
-///
-/// That constraint is the whole reason this test exists as a compile-level
-/// assertion: it does not build unless the kit shared the callback as an `Arc`
-/// instead of keeping v1's `Box<dyn Fn() -> AnyView>`. v1's signature simply
-/// cannot be expressed here.
 #[test]
 fn a_body_is_a_send_sync_builder() {
     let builds = Arc::new(AtomicUsize::new(0));
@@ -158,8 +126,6 @@ fn a_body_is_a_send_sync_builder() {
          panel is opened, and again whenever the tree rebuilds that slot"
     );
 
-    // And it *is* callable from the tree: mounting a panel slot runs no body
-    // builder, which is what makes a closed panel cheap.
     let accordion = component.resolve();
     let _ = accordion.children();
     assert_eq!(
@@ -169,10 +135,6 @@ fn a_body_is_a_send_sync_builder() {
     );
 }
 
-/// v1 wrote the body's inset as `padding_horiz(content_padding + indent)` and
-/// `padding_vert(content_padding)`. 2.0's `Container` is a leaf, so the inset is a
-/// margin on the body's slot — and the horizontal side has to be the *sum* or the
-/// content loses the indent that makes it read as the panel's own.
 #[test]
 fn the_body_inset_carries_both_tokens() {
     let tokens = tokens();
@@ -191,11 +153,7 @@ fn the_body_inset_carries_both_tokens() {
     );
 }
 
-// --- the indicator ---------------------------------------------------------
 
-/// v1 swapped between two glyph *names* inside a `dyn_view` closure. 2.0 cannot
-/// do that — a widget is built once — so the pair has to exist up front, and it
-/// has to actually be two different outlines.
 #[test]
 fn the_indicator_is_a_pair_of_distinct_glyphs() {
     let indicator = MdExpansionPanels::new().indicator();
@@ -239,9 +197,6 @@ fn the_indicator_carries_the_token_size_and_the_muted_ink() {
     );
 }
 
-/// The glyph swap is why the engine takes a *builder* rather than a widget: it
-/// cannot know the state when the panel is declared. This is that seam, written
-/// the way `resolve` writes it.
 #[test]
 fn the_kit_hands_the_engine_a_builder_that_is_told_the_state() {
     let indicator = MdExpansionPanels::new().indicator();
@@ -270,11 +225,7 @@ fn the_kit_hands_the_engine_a_builder_that_is_told_the_state() {
     );
 }
 
-// --- the shared props shape ------------------------------------------------
 
-/// `ExpansionPanelsProps` is the design-system-neutral carrier, and 2.0 cannot
-/// use its `Box<dyn Fn(..)>` field — the kit holds an `Arc` of its own and says
-/// so rather than reporting a callback it does not keep there.
 #[test]
 fn the_shared_props_report_the_multiple_rule_only() {
     let props: ExpansionPanelsProps = panels(1).multiple(true).props();
@@ -285,10 +236,6 @@ fn the_shared_props_report_the_multiple_rule_only() {
     );
 }
 
-/// `on_change` has to be `Send + Sync` to reach a click that lands inside a
-/// `Child` builder closure. Holding it as an `Arc` and cloning it into the
-/// accordion is what makes this compile, so the test that exists is the one that
-/// runs that construction.
 #[test]
 fn the_change_callback_survives_being_shared_into_the_tree() {
     let seen: Arc<std::sync::Mutex<Vec<(usize, bool)>>> =
@@ -298,8 +245,6 @@ fn the_change_callback_survives_being_shared_into_the_tree() {
         .on_change(move |index, open| sink.lock().unwrap().push((index, open)))
         .resolve();
 
-    // The imperative door does not report a person's click — the callback is for
-    // the user, and a caller that just set the state knows already.
     accordion.set_open(1, true);
     assert!(seen.lock().unwrap().is_empty());
     assert!(
@@ -309,18 +254,10 @@ fn the_change_callback_survives_being_shared_into_the_tree() {
     );
 }
 
-/// The header's own inset: v1 wrote `padding_horiz(content_padding)` on the
-/// header's box.
-///
-/// The engine's `Accordion` carries the number in its style -- and used to
-/// leave it unspent, so the title sat flush against the panel's edge while the
-/// style said otherwise.
 #[test]
 fn the_header_is_padded_at_the_sides() {
     let style = MdExpansionPanels::new().resolved_style();
     let accordion = panels(1).resolve();
-    // The panel holds the header, the header holds a pressable, and the
-    // pressable holds the header's row.
     let leaf = accordion.children()[0].build();
     let pressable = leaf.children().remove(0).build();
     let row = pressable.children().remove(0).build();

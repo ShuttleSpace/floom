@@ -1,10 +1,3 @@
-//! The ported Material 3 button — the *interactive* reference port.
-//!
-//! Where `md-card`'s test proved the theme→style→widget translation, this one
-//! also pins the parts an interactive control needs and a surface never
-//! touches: a callback that must survive being shared into the tree, a ripple
-//! that follows the theme after mount, and the `Send + Sync` constraint 2.0's
-//! `Child` builder imposes.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -30,9 +23,6 @@ fn button() -> MdButton {
     MdButton::new().label("Save")
 }
 
-/// A real click is a press followed by a release over the same spot; the
-/// engine's `Button` only activates on a matched pair, so sending one half is
-/// not a weaker click, it is not a click at all.
 fn click(b: &mut Button, id: floom_core::ElementId) {
     let at = floom_types::Point::new(60.0, 20.0);
     let mut down =
@@ -144,10 +134,6 @@ fn the_ripple_ink_is_the_foreground_at_low_alpha() {
 
 #[test]
 fn follow_theme_replaces_v1s_radius_and_color_closures() {
-    // v1 handed Ripple `radius_fn` and `color` closures that re-read the theme on
-    // every use. 2.0 mounts once, so `follow_theme` is the replacement -- and it
-    // has to be idempotent, or a theme signal firing on unrelated changes would
-    // repaint on every frame.
     let mut ripple = button().resolve_with_ripple();
     let before = ripple.clip();
 
@@ -239,16 +225,6 @@ fn painted_radius(b: &MdButton) -> f32 {
         .expect("the button paints a rounded fill")
 }
 
-/// The fill the engine paints is the kit's *background*, and the label it
-/// paints is the kit's *foreground*.
-///
-/// The engine `Button` paints a fill and a label, and they are two different
-/// knobs: `Button::color` is the fill, `Button::text_color` is the label. A kit
-/// that passes the foreground to `color` paints a foreground-coloured button
-/// with a white label on it -- and it compiles, and the style resolves, and the
-/// click fires. Nothing about the API says the button is upside down, so this
-/// is asserted against the *paint*: the style struct alone cannot catch the
-/// swap.
 #[test]
 fn the_fill_is_the_background_and_the_label_is_the_foreground() {
     let b = button();
@@ -270,13 +246,6 @@ fn the_fill_is_the_background_and_the_label_is_the_foreground() {
     );
 }
 
-/// The disabled palette reaches the pixels at v1's alphas: 12 for the fill and
-/// 38 for the label.
-///
-/// The engine halves the alpha of a disabled control's fill and its label, so
-/// the kit hands it a double-alpha colour and the halving lands on v1's value.
-/// A test that read the *style* would see the doubled alpha and think the value
-/// was wrong; a test that reads the *paint* sees v1's 12 and 38.
 #[test]
 fn the_disabled_palette_reaches_the_pixels_at_v1s_alphas() {
     let b = MdButton::new().label("Save").disabled(true);
@@ -302,9 +271,6 @@ fn the_fill_is_drawn_with_the_full_radius() {
     assert_eq!(style.border_radius, b.theme().get().radius().full);
 }
 
-/// The hover fill is the M3 state layer: 8% of the variant's own foreground
-/// mixed over the base fill. This is where Material differs from Cupertino and
-/// Fluent, whose hover is a flat foreground tint.
 #[test]
 fn the_hover_fill_is_the_eight_percent_state_layer() {
     let style = button().resolved_style();

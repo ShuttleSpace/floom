@@ -1,18 +1,5 @@
 //! The ported Cupertino bottom navigation -- a bar of destinations, one of them
 //! chosen, and a fill under the one the pointer is over.
-//!
-//! The bar is the kit's own, because the engine has no bottom navigation (see
-//! the kit's module documentation), so what is tested here is the translation
-//! and the pixels: the tokens reach the style, the bar paints v1's fill and
-//! v1's rule, the chosen destination's label is painted in v1's ink, and the
-//! pointer's fill appears where v1 put it.
-//!
-//! ## The tripwires
-//!
-//! `the_bar_paints_v1_s_fill_and_rule`,
-//! `the_chosen_destination_s_label_is_painted_in_v1_s_ink` and
-//! `the_pointer_s_fill_appears_only_while_the_pointer_is_over_the_destination`
-//! would fail if this kit stopped being this kit.
 
 use floom_core::{
     Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny,
@@ -47,7 +34,6 @@ const AT: Point = Point { x: 20.0, y: 20.0 };
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -91,7 +77,6 @@ fn label_of(bar: &BottomNavigationBar, index: usize) -> Box<dyn WidgetAny> {
     let destination = pressable.children().remove(0).build();
     let mut children = destination.children();
     // The label is the destination's last child; the icon, when there is one,
-    // is the first.
     children.remove(children.len() - 1).build()
 }
 
@@ -458,7 +443,6 @@ fn the_change_callback_reports_the_chosen_destination() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoBottomNavigation::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

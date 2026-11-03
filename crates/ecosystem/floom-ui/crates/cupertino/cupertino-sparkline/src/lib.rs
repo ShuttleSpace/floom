@@ -1,69 +1,5 @@
 //! Cupertino sparkline, ported to the Floom 2.0 widget API.
 //!
-//! A sparkline is a compact bar chart: a series of values drawn as a row of
-//! thin bars, each as tall as its value is of the way to the largest.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a horizontal `Stack` of bars, each a [`Surface`]
-//! with a fill and a corner radius. There is nothing here that a widget could
-//! own and the vocabulary does not already say.
-//!
-//! ## What this kit answers
-//!
-//! * the rendered width and height: `SparklineTokens`, unless the caller
-//!   overrides them;
-//! * the bars' colour: `primary`; translucent at the token's `fill_opacity`
-//!   when `fill` is set -- and `fill` defaults to *on*;
-//! * the gap between the bars: the *props'* `line_width`;
-//! * the width of each bar, and the scale the values are drawn against.
-//!
-//! ## The token v1 never read
-//!
-//! `SparklineTokens::line_width` -- "Bar width in px" -- was never read by v1.
-//! The bar's width is computed from the rendered width and the gap, and the
-//! gap comes from the *props'* `line_width`, not from the token. The token is
-//! kept in the style as `token_line_width` and named here, because a number a
-//! theme declares and a widget ignores is a disagreement between the theme
-//! and the widget, not between two kits.
-//!
-//! ## The prop v1 used for something else
-//!
-//! `SparklineProps::line_width` calls itself "Width of each bar in px", and
-//! v1's own method doc calls it "the gap between bars in px (also the default
-//! bar width hint)". It is the *gap*: the bar's width is computed, not taken
-//! from it. The port uses it as the gap, as v1 did.
-//!
-//! ## The literals v1 wrote
-//!
-//! The bars' corner radius (2), their minimum height (2), and the rule that a
-//! series whose values are all equal is drawn against a range of 1.
-//!
-//! ## The theme
-//!
-//! v1's Cupertino sparkline took a *snapshot* of its own design system rather
-//! than reading the app-wide signal, so a change of theme does not reach it.
-//! That difference is v1's, and it is kept.
-//!
-//! The snapshot names a design system it does not pin: `MultiTheme` reads
-//! the *current* design system at read time, so a Cupertino sparkline in an
-//! app whose active design system is Material shows Material's colours. That
-//! is v1's behaviour too -- the same `MultiTheme` v1 snapshotted -- and it is
-//! kept rather than papered over.
-//!
-//! ## The style v1 did not have
-//!
-//! v1's sparkline had no style struct at all: the tokens were read inside
-//! `view()` and never reported. The port's style reports them, because a
-//! component whose numbers cannot be read is a component that cannot be
-//! tested against a theme.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The accessors.** v1's sparkline had `props()` and `theme()` but no
-//!   `resolved_style()` and no `with_theme()`. The port gives all three kits
-//!   the same three, because a kit that cannot be given a theme cannot be
-//!   tested against one.
 
 use floom_core::LayoutRequest;
 use floom_signal::{RwSignal, SignalGet};
@@ -217,7 +153,6 @@ impl CupertinoSparkline {
             range,
             bar_color,
             fill_opacity: tokens.fill_opacity,
-            // v1 never read the token's own bar width.
             token_line_width: tokens.line_width,
             fill: self.props.fill,
         }
@@ -237,7 +172,6 @@ impl CupertinoSparkline {
 
         for value in values {
             // v1's scale: the value's share of the range, times the rendered
-            // height, with a floor of 2.
             let h = (((value - style.min) / style.range) * style.height).max(MIN_BAR_HEIGHT);
             let bar_width = style.bar_width;
             let bar_color = to_paint(style.bar_color);

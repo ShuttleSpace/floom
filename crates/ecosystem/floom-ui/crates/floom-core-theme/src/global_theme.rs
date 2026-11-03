@@ -1,18 +1,4 @@
 //! App-wide theme signal.
-//!
-//! Every component reads its visual tokens from a single theme signal so that
-//! theming flows from one place (an app-level [`set_theme`] call or a
-//! [`ThemeProvider`](floom_widget_runtime::theme_provider)) into every component.
-//!
-//! [`RwSignal`] is `!Sync`, so the shared instance is kept in a `thread_local`
-//! cell (the UI runs on a single thread). Exactly one Design System feature
-//! (`material` / `cupertino` / `fluent`) is active at compile time, which
-//! selects the concrete theme type returned here.
-//!
-//! If more than one feature somehow ends up enabled (for example the `material`
-//! default plus an explicit `cupertino`), the priority Fluent > Cupertino >
-//! Material is applied so the module always resolves to exactly one definition
-//! set instead of emitting duplicate-symbol errors.
 
 use std::cell::OnceCell;
 
@@ -31,12 +17,6 @@ thread_local! {
 
 #[cfg(any(feature = "material", feature = "cupertino", feature = "fluent"))]
 fn global() -> RwSignal<SelectedTheme> {
-    // `create_global_rw_signal` binds the signal to the runtime's root scope,
-    // which lives for the whole process and is never disposed. A plain
-    // `RwSignal::new` would bind to whatever scope is active on first touch
-    // (e.g. a `dyn_view` child scope) and get removed from the runtime when that
-    // scope re-runs — after which every `.get()` panics in floom's
-    // `reactive/src/read.rs`.
     GLOBAL.with(|c| {
         *c.get_or_init(|| create_global_rw_signal(SelectedTheme::new_for(DesignSystem::default())))
     })
@@ -95,7 +75,6 @@ thread_local! {
 }
 
 fn ds_global() -> RwSignal<DesignSystem> {
-    // Bound to the never-disposed root scope (see `global()` above).
     DS_GLOBAL.with(|c| *c.get_or_init(|| create_global_rw_signal(DesignSystem::default())))
 }
 
@@ -126,7 +105,6 @@ thread_local! {
 }
 
 fn dark_global() -> RwSignal<bool> {
-    // Bound to the never-disposed root scope (see `global()` above).
     DARK.with(|c| *c.get_or_init(|| create_global_rw_signal(false)))
 }
 

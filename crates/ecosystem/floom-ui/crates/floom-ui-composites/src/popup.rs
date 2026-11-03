@@ -1,14 +1,3 @@
-//! A popup panel anchored to the control that opened it.
-//!
-//! Placement, the gap between trigger and panel, and the arrow are all style; what is left is the anchoring arithmetic, which every kit that opens a list needs.
-//!
-//! It lived in `floom-widgets/src/compose.rs` beside the layout vocabulary
-//! (`Stack`, `List`, `Grid`, `Conditional`, `Crossfade`). The two are not the
-//! same kind of thing: a `Stack` arranges children along an axis, which is
-//! arithmetic; this decides *what a control looks like*, which is a product
-//! decision. So it moved up a layer with the tree, the counter and the select,
-//! and the dependency runs one way -- this crate composes the engine's
-//! vocabulary rather than the other way round.
 
 use std::any::Any;
 use std::sync::atomic::Ordering;
@@ -26,9 +15,7 @@ use floom_widgets::Grid;
 
 use crate::overlay_bookkeeping::OverlayHost;
 
-// ---------------------------------------------------------------------------
 // Popup
-// ---------------------------------------------------------------------------
 
 /// Where a [`Popup`]'s panel sits relative to the control that owns it.
 ///

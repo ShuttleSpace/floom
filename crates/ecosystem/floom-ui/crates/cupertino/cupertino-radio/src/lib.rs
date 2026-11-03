@@ -1,43 +1,5 @@
 //! Cupertino's radio, ported to the 2.0 widget API.
 //!
-//! ## What the port changed
-//!
-//! * v1 was a `Stack::horizontal` over three `Container`s -- an absolutely
-//!   positioned hover halo, a dot and a bordered circle -- driven by five
-//!   `on_event` listeners. It is the engine's `Radio` widget now: one `Widget`
-//!   with `layout_request` and `paint`, which strokes the ring as an annulus and
-//!   fills the dot rather than drawing a bordered box.
-//! * The `checked` and `hover` `RwSignal`s are gone, and so were v1's two
-//!   missing states: there is no `pressed` or `focused` signal to port, only the
-//!   absence of one. The widget owns the selection and an `InteractionState`.
-//! * v1's `on_change` was `Fn(bool)` and reported the new value. The engine's
-//!   `on_select` is `Fn()` and toggles internally, so `view` reconstructs the
-//!   value from the `checked` prop the widget was built with. See the note there.
-//! * `cursor(Pointer)` and `gap(8.0)` are gone with the style layer: the engine's
-//!   `Radio` has no cursor, and its `INDICATOR_LABEL_GAP` is 6.
-//!
-//! ## What v1 drew that this port cannot
-//!
-//! v1 ended its style closure with
-//! `.focus(|s| s.outline(2.0).outline_color(colors().primary))`, so a focused
-//! Cupertino radio drew a 2px `primary` outline around the whole control.
-//! `RadioStyle` has no outline field, the halo gates are per state rather than a
-//! second layer, and the engine's `Radio` draws nothing else. So the outline is
-//! gone, and `halo.on_focus` is `false` here for the honest reason that there is
-//! no longer anything to draw on focus.
-//!
-//! Reported rather than approximated. Putting it back is a `focus_outline` on the
-//! engine's `RadioStyle` -- two numbers and a colour for every kit to answer --
-//! and it would be a design decision about where focus is drawn that this port
-//! has no licence to make for a second kit that might disagree.
-//!
-//! ## The halo: hover only, four points of padding, gone when disabled
-//!
-//! v1's was an absolutely positioned `size + pad * 2.0` box with `pad = 4.0`,
-//! translated back over the ring and filled `primary` at 10, hidden by
-//! `apply_if(!hover || disabled, hide)`. All four of those are answers, and all
-//! four differ from Material's: `size + 8.0` rather than a flat 40, hover only
-//! rather than hover/press/focus, and suppressed while disabled.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -90,7 +52,6 @@ impl CupertinoRadio {
             },
             // A fixed binding, not the live signal -- the same choice v1 made, and
             // the same one `cupertino-slider` makes. Only Material's kits follow
-            // the app theme here.
             theme: RwSignal::new(MultiTheme::new_for(DesignSystem::Cupertino)),
         }
     }
@@ -192,7 +153,6 @@ impl CupertinoRadio {
             label_gap: LABEL_GAP,
             label_font_size: tokens.label_font_size,
 
-            // --- this kit's own numbers ---
             touch_target: halo_size,
 
             // v1's circle was `.border(bw).border_color(..)` with no
@@ -205,7 +165,6 @@ impl CupertinoRadio {
             // `if checked { primary } else { outline }` -- so it duplicated
             // `unselected_color` and meant neither. Splitting that one
             // conditional into the style's two independent fields is the whole
-            // reason the field exists twice.
             selected_color: to_paint(colors.primary),
             unselected_color: to_paint(colors.outline),
             // v1's dot container read `colors().primary` with no disabled branch
@@ -215,14 +174,12 @@ impl CupertinoRadio {
             // and nothing in `RadioStyle` can exempt one of them. Reported rather
             // than worked around: reproducing the old pixels would mean a
             // per-layer disabled colour in the engine, which is not this port's
-            // to add.
             selected_dot_color: to_paint(colors.primary),
 
             // v1 had no hover or press colour for the ring at all: its entire
             // interaction answer was the halo. `None` means "no variant of this
             // kit's own", which is a real answer and not the same as the engine's
             // default, where both are `Some` and would repaint a Cupertino radio
-            // under the pointer in two greys it never had.
             unselected_hovered_color: None,
             unselected_pressed_color: None,
 
@@ -234,10 +191,8 @@ impl CupertinoRadio {
                 color: to_paint(with_alpha(colors.primary, HALO_ALPHA)),
                 // v1 read one alpha, from `hover` alone. There is no pressed
                 // variant to carry, so `None` -- which means the halo keeps
-                // `color` -- rather than a second copy of it.
                 color_pressed: None,
                 // Relative, four points of padding on each side. Material's is a
-                // flat 40, and the two must not converge.
                 size: halo_size,
                 shape: LayerShape::Circle,
                 // v1's condition was `hover && !disabled`, and nothing else ever
@@ -248,13 +203,11 @@ impl CupertinoRadio {
                 suppressed_when_disabled: true,
             },
 
-            // v1 ended this closure with
             // `.focus(|s| s.outline(2.0).outline_color(colors().primary))`, so a
             // focused Cupertino radio drew a 2px `primary` ring around the whole
             // control -- indicator and label together, because the closure was
             // on the container holding both. That is exactly a `FocusRing`, and
             // `halo.on_focus` is `false` above so the two mechanisms do not both
-            // fire.
             focus_ring: Some(FocusRing {
                 width: FOCUS_RING_WIDTH,
                 color: to_paint(colors.primary),

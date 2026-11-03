@@ -1,15 +1,5 @@
 //! Cupertino list, ported to the Floom 2.0 widget API.
 //!
-//! v1 was a `Container` of `Label` rows, each with a hovered background and a
-//! click listener. The row is the engine's `ListItemRow` now -- a `Pressable`
-//! with interaction state, which is what any hover answer would have to read --
-//! so what is left is the token translation and the container's own numbers.
-//!
-//! See `floom-widget-md-list`'s module docs for the full rationale of what the
-//! port drops (row hover background, container horizontal padding). The only
-//! number this kit answers differently from Material is the container radius:
-//! Cupertino reads `radius().md` (Material hardcodes `8.0`). The row hover is
-//! `primary`@8 in both, and `ListItemStyle` cannot carry it in either.
 
 use floom_core::Axis;
 use floom_core::LayoutRequest;
@@ -132,7 +122,6 @@ impl CupertinoList {
 
         // A `Container` is a leaf in this engine, so "a filled box with content
         // in it" is a `Stack` whose first child fills it absolutely, then the
-        // vertical padding, then the rows.
         let mut stack = Stack::new(Axis::Vertical)
             .gap(gap)
             .request(LayoutRequest::new().min_width(min_width))

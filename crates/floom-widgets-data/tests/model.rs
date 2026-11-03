@@ -23,8 +23,6 @@ fn table(rows: &[&[&str]]) -> VecTable {
     )
 }
 
-// --- cell values -----------------------------------------------------------
-
 #[test]
 fn cell_display_is_stable_across_variants() {
     assert_eq!(CellValue::Empty.display(), "");
@@ -105,8 +103,6 @@ fn number_parsing_rejects_text_and_accepts_signs() {
     assert_eq!(CellValue::parse(ColumnKind::Bool, "maybe"), None);
 }
 
-// --- sorting ---------------------------------------------------------------
-
 #[test]
 fn sort_click_cycles_ascending_descending_cleared() {
     let c = ColumnId(1);
@@ -164,8 +160,6 @@ fn sorting_an_empty_model_is_empty() {
         Vec::<usize>::new()
     );
 }
-
-// --- selection -------------------------------------------------------------
 
 #[test]
 fn single_mode_click_replaces_the_selection() {
@@ -306,8 +300,6 @@ fn select_all_reports_whether_anything_changed() {
     assert_eq!(sel.cursor(), None);
 }
 
-// --- edit history ----------------------------------------------------------
-
 fn edit(row: u64, before: &str, after: &str) -> CellEdit {
     CellEdit {
         row: RowId(row),
@@ -434,8 +426,6 @@ fn edit_session_typing_moves_the_caret_and_reports_nothing_from_an_unchanged_com
     let s = EditSession::begin(RowId(0), ColumnId(0), CellValue::Text("same".into()));
     assert_eq!(s.finish(ColumnKind::Text), None);
 }
-
-// --- model -----------------------------------------------------------------
 
 #[test]
 fn vec_table_is_read_only_until_its_cells_are_written() {

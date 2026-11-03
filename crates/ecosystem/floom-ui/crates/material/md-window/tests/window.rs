@@ -1,15 +1,3 @@
-//! The ported Material window -- a box of pages, with arrows and dots.
-//!
-//! What is tested here is the translation and the pixels: the tokens reach the
-//! style, the box is painted the surface fill and the outline, the page on
-//! show is the one that was selected, the arrows and the dots are where v1
-//! put them, and a click moves the page on.
-//!
-//! ## The tripwires
-//!
-//! `the_box_is_painted_the_surface_and_the_outline` and
-//! `the_page_on_show_is_the_one_that_was_selected` would fail if this kit
-//! stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -30,9 +18,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -108,7 +93,6 @@ fn click(widget: &mut dyn WidgetAny) {
     widget.event(&mut cx, id);
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -165,9 +149,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The box is painted the surface fill, with v1's outline.
 #[test]
 fn the_box_is_painted_the_surface_and_the_outline() {
     let resolved = kit().resolved_style();
@@ -187,7 +169,6 @@ fn the_box_is_painted_the_surface_and_the_outline() {
     assert_eq!(colour, paint(resolved.border_color), "v1's outline colour");
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The page on show is the one that was selected.
 #[test]
@@ -197,7 +178,6 @@ fn the_page_on_show_is_the_one_that_was_selected() {
         .selected(1)
         .view();
     let mut children = viewer.children();
-    // The page, then the two arrows: v1 put the arrows over the pages.
     assert_eq!(children.len(), 3, "the page and the two arrows");
     let shown = children.remove(0).build();
     let (text, _, _) = text_of(&ops_of(&*shown));
@@ -228,7 +208,6 @@ fn the_dots_are_there_when_they_are_asked_for() {
         .show_dots(true)
         .view();
     let mut children = viewer.children();
-    // The page, the two arrows and the dots.
     assert_eq!(children.len(), 4, "the page, the arrows and the dots");
     let row = children.remove(3).build();
     assert_eq!(row.children().len(), 2, "one dot per page");
@@ -255,15 +234,12 @@ fn clicking_the_next_arrow_moves_the_page_on() {
     );
     assert_eq!(viewer.index(), 1, "the page moved on");
 
-    // And the page on show is the second one.
     let mut children = viewer.children();
     let shown = children.remove(0).build();
     let (text, _, _) = text_of(&ops_of(&*shown));
     assert_eq!(text, "Two", "the second page is on show");
 }
 
-/// Clicking the previous arrow at the first page wraps around, because v1's
-/// window was continuous by default.
 #[test]
 fn clicking_the_previous_arrow_wraps_around() {
     let viewer = kit().items(vec![page(0, "One"), page(1, "Two")]).view();
@@ -287,14 +263,9 @@ fn the_props_report_the_flags() {
     assert!(!kit.props().continuous);
 }
 
-// --- the theme source -----------------------------------------------------
 
-/// The theme: v1's Material window read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialWindow::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

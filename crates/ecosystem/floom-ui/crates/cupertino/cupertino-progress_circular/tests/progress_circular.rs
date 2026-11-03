@@ -1,12 +1,5 @@
 //! Cupertino circular progress: the ring, and the two numbers this kit owns.
 //!
-//! ## The claim
-//!
-//! v1 drew an SVG ring -- a track circle and an accent arc over it. 2.0's
-//! `CircularProgress` draws the same two things, so the kit is a thin adapter
-//! and the assertions are about the two numbers it decides: the indeterminate
-//! arc's *length* and *start*, which are where this kit and the other two
-//! disagree.
 
 use floom_core::Widget;
 use floom_types::{Color, Length, Rect};

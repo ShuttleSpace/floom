@@ -1,41 +1,5 @@
 //! Cupertino empty state, ported to the Floom 2.0 widget API.
 //!
-//! An empty state is what a list shows when it has nothing to show: an icon, a
-//! title, a description, and whatever the caller wants under them, all
-//! centred in a surface.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a [`Surface`] for the box, a vertical `Stack` for
-//! the column, and `Text` for the three lines. v1's three kits were the same
-//! code under three names, so the shape stays in the kits -- there is nothing
-//! here that a widget could own and the vocabulary does not already say.
-//!
-//! ## What this kit answers
-//!
-//! * the icon's size, the title's and the description's sizes, the gap and the
-//!   column's maximum width: the tokens;
-//! * the icon's and the description's ink: `on_surface_variant`; the title's:
-//!   `on_surface`, in medium weight;
-//! * the padding around the column: 24, a v1 literal.
-//!
-//! ## The one field the port's style adds
-//!
-//! v1's style reported the ink and the sizes but not the surface the column
-//! sits on, though the paint used it. The port's style reports it, because a
-//! style that does not say what the widget draws is not the widget's output.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The column's ink.** v1 set `.color(on_surface)` on the column, which is
-//!   what the caller's own child inherited. 2.0's `Text` carries its own
-//!   colour, so a caller's child keeps the colour it was given.
-//! * **The child is a slot, not a view.** v1's `child(..)` took an
-//!   `impl IntoView`; 2.0's takes a [`Child`], because a 2.0 widget is mounted
-//!   by its parent rather than returned.
-//! * **The accessors.** v1's empty states had no `props()`, `theme()` or
-//!   `with_theme()`. The port gives them all three, because a kit that cannot
-//!   be given a theme cannot be tested against one.
 
 use floom_core::Child;
 use floom_core::LayoutRequest;
@@ -171,7 +135,6 @@ impl CupertinoEmptyState {
                 Text::new(title.clone())
                     .size(title_size)
                     .color(title_color)
-                    // v1's title was medium weight.
                     .weight(FontWeight::Medium),
             )
         });

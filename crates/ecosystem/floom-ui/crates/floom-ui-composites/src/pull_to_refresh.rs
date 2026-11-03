@@ -1,21 +1,3 @@
-//! `PullToRefresh` -- a column that pulls, and a refresh when it is let go.
-//!
-//! The column watches the pull distance; the indicator says what would
-//! happen if the user let go now. The three floem-ui pull-to-refresh kits
-//! each used to carry their own copy of both; they share the engine's ones
-//! now.
-//!
-//! ## What the kits still answer
-//!
-//! The box's fill, the label's inks, the indicator's size and its two
-//! thresholds, and the label's size.
-//!
-//! ## The pull is a shared number
-//!
-//! The pull distance changes after mount -- a drag moves it -- so it cannot
-//! live in a signal, which is `Rc`-based and cannot cross a slot boundary.
-//! It is the engine's `SharedNumber`, the shared number beside the flag, the
-//! buffer and the map.
 
 use std::sync::Arc;
 

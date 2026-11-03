@@ -1,14 +1,3 @@
-//! The ported Material rating -- a row of stars, the first `value` of them
-//! filled.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the stars are
-//! painted in v1's inks, and a tap fills the stars below it.
-//!
-//! ## The tripwires
-//!
-//! `the_filled_stars_are_painted_in_v1_s_ink` and `a_tap_fills_the_stars_below
-//! _it` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -32,9 +21,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -53,11 +39,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The ink of every star in the row, in order.
-///
-/// A star is a `Pressable` around a slot that holds one of two glyphs, and the
-/// engine's `Conditional` mounts the one the flag calls for -- which happens
-/// in an update pass, the way the host does it every frame.
 fn star_inks(row: &Stack) -> Vec<Option<Color>> {
     let mut out = Vec::new();
     for star in row.children() {
@@ -102,7 +83,6 @@ fn tap(row: &Stack, index: usize) {
     star.event(&mut up, id);
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -131,9 +111,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The stars are painted in v1's inks: the first `value` of them filled.
 #[test]
 fn the_filled_stars_are_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -174,8 +152,6 @@ fn the_star_is_the_size_the_token_says() {
     );
 }
 
-/// A fractional value fills the stars below it, as v1's `(i as f32) < value`
-/// did: 3.5 fills four stars.
 #[test]
 fn a_fractional_value_fills_the_stars_below_it() {
     let resolved = kit().resolved_style();
@@ -209,7 +185,6 @@ fn a_value_above_the_maximum_is_clamped() {
     }
 }
 
-// --- the rules ------------------------------------------------------------
 
 /// A tap fills the stars below it and reports the new value.
 #[test]
@@ -272,12 +247,8 @@ fn the_props_report_the_value() {
     assert!(!kit.props().readonly);
 }
 
-/// The theme: v1's Material rating read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialRating::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

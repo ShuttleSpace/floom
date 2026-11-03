@@ -1,66 +1,5 @@
 //! Cupertino sheet, ported to the Floom 2.0 widget API.
 //!
-//! A sheet is a panel anchored to one edge of the window, over a scrim, that
-//! the caller shows and hides.
-//!
-//! ## What the port uses
-//!
-//! The engine's [`Dialog`] composite, with the scrim and the panel as its
-//! card. `Dialog` is the engine's host-modal surface driven by a shared
-//! presence flag -- which is exactly v1's `open` / `open_signal` external
-//! trigger -- and a sheet is a modal panel, so the two are the same shape.
-//!
-//! The engine's `BottomSheet` composite was read and not used: it is anchored
-//! to the bottom edge only, it carries no scrim, it has no shared presence, and
-//! it holds a title and a fixed height. v1's sheet has four sides, a scrim and
-//! caller-supplied content, so none of those three things would have survived
-//! the move.
-//!
-//! ## What this kit answers
-//!
-//! * the panel's colour: `surface`; the content's ink: `on_surface`;
-//! * the panel's inner padding, the side sheets' width, the shadow's blur and
-//!   spread and the scrim's colour: the tokens;
-//! * the panel's corner radius: the theme's `radius().md`. v1's paint used it
-//!   and v1's style reported the *token* instead -- for Cupertino the two are
-//!   both 10.0, so they agree, but they come from different places and the
-//!   style reports both;
-//! * the scrim's alpha: 160, a v1 literal -- and it *replaces* the scrim
-//!   token's own alpha rather than multiplying it, so the token's alpha never
-//!   shows;
-//! * the shadow's ink: black at 40, a v1 literal.
-//!
-//! ## The differences that are named rather than reproduced
-//!
-//! * **The slide-in and the fade.** v1 played a 300ms slide from the anchored
-//!   edge and a 300ms fade of the scrim. 2.0 has `AnimationSpec` and the host
-//!   drives animations, so this is reachable -- but the sheet's card is built
-//!   inside an overlay's content factory, and wiring a presence motion into it
-//!   is a separate piece of work. Recorded rather than half-done, as it was for
-//!   `cupertino-dialog`.
-//! * **The panel's inherited ink.** v1 set `.color(on_surface)` on the panel,
-//!   which is what the caller's own child inherited. 2.0's `Text` carries its
-//!   own colour, so a caller's child keeps the colour it was given.
-//! * **The overlay kind.** The sheet is mounted as the engine's `Dialog`
-//!   overlay, so the host's overlay kind says `Dialog`; the enter and exit
-//!   motion the host picks follows the kind.
-//! * **Closed means unmounted.** v1 hid the sheet with `.hide()` and kept it
-//!   in the tree. 2.0's shared presence unmounts it, so nothing of the sheet
-//!   is in the tree while it is closed.
-//! * **The theme is read when the sheet is built.** v1's panel style re-read
-//!   the theme on every style recomputation. 2.0's card is built from colours
-//!   captured at `view()` time, because the theme signal is `Rc`-based and
-//!   cannot cross the `Send + Sync` slot boundary an overlay's content factory
-//!   is.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The accessors.** v1's Cupertino sheet had `props()` and `theme()` but
-//!   no `with_theme()`. The port gives all three kits the same three, because
-//!   a kit that cannot be given a theme cannot be tested against one.
-//! * **The empty content.** v1 mounted an `Empty` view when no content was
-//!   supplied. Here the panel simply has no child. `Empty` had no size, so the
-//!   only difference is structural.
 
 use floom_core::{Child, ChildKey, LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
@@ -130,7 +69,6 @@ impl CupertinoSheet {
         let props = SheetProps::default();
         Self {
             // v1 seeded the signal from `props.open`, and the props default is
-            // `false`.
             open: shared_flag(props.open),
             props,
             theme: RwSignal::new(MultiTheme::new_for(
@@ -213,10 +151,8 @@ impl CupertinoSheet {
             panel_color: theme.colors().surface,
             content_color: theme.colors().on_surface,
             // v1's paint: `border_radius(theme.radius().md)` on the top and
-            // bottom sheets -- not the token.
             corner_radius: theme.radius().md,
             // v1's style reported the token. For Cupertino the two are both
-            // 10.0, so they agree.
             token_corner_radius: tokens.corner_radius,
             side_width: tokens.side_width,
             elevated: self.props.elevated,
@@ -267,7 +203,6 @@ fn build_card(
     child: Option<Child>,
 ) -> Box<dyn WidgetAny> {
     // v1: `with_alpha(scrim_color, 160)`. The token's own alpha is replaced,
-    // not multiplied.
     let scrim = to_paint(with_alpha(style.scrim_color, SCRIM_ALPHA));
     let panel = build_panel(style, side, child);
 
@@ -280,7 +215,6 @@ fn build_card(
                 LayoutRequest::new().fill(),
                 move || {
                     // The panel is a value, and the slot is a replayed `Fn`, so
-                    // it takes a copy rather than a borrow.
                     let panel = panel.clone();
                     // The stack that puts the panel on its edge: v1's `flex_col`
                     // with `justify_end` for the bottom, `flex_row` with
@@ -316,7 +250,6 @@ fn build_panel(style: CupertinoSheetStyle, side: SheetSide, child: Option<Child>
     let mut request = LayoutRequest::new().padding(Insets::uniform(f64::from(style.padding)));
     match side {
         // v1: the top and bottom sheets span the width; the side sheets are
-        // full height and `side_width` wide.
         SheetSide::Bottom | SheetSide::Top => {
             request = request.width_pct(100.0);
         }
@@ -329,7 +262,6 @@ fn build_panel(style: CupertinoSheetStyle, side: SheetSide, child: Option<Child>
         .request(request)
         .background(to_paint(style.panel_color));
 
-    // v1 rounded the top and bottom sheets only.
     if matches!(side, SheetSide::Bottom | SheetSide::Top) {
         panel = panel.radius(style.corner_radius);
     }
@@ -339,7 +271,6 @@ fn build_panel(style: CupertinoSheetStyle, side: SheetSide, child: Option<Child>
             color: to_paint(style.shadow_color),
             blur: f64::from(style.shadow_blur),
             spread: f64::from(style.shadow_spread),
-            // v1's `box_shadow_*` wrote no offset.
             offset_x: 0.0,
             offset_y: 0.0,
         });

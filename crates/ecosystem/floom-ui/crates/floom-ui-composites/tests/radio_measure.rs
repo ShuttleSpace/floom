@@ -1,18 +1,3 @@
-//! A radio's intrinsic extent, measured through a real host.
-//!
-//! This is the half of `floom-app/tests/composite_measure.rs` that belongs to
-//! the widget rather than to the crate. Nothing named `Radio` was asserted
-//! there -- the file's checkbox row covers "indicator + gap + label" for the
-//! controls that stayed in the widgets crate -- but the measurement still has to
-//! be pinned somewhere, and it has to be pinned *here*, because `layout_request`
-//! now reads the style and a kit's 28px radio is laid out from the style's own
-//! numbers rather than from the engine's.
-//!
-//! The 28px case is the reason this file exists rather than the default's 16.
-//! Material's `RadioTokens` puts a 20px ring inside a 40px touch target, so a
-//! layout that measured the label at the engine's 14 and reserved the engine's
-//! 16 would clip a third of the control. That is the same defect the `Slider`
-//! port fixed, and the assertions below are what hold the fix in place.
 
 use floom_app::{NodeId, WidgetHost};
 use floom_layout::LayoutStyle;

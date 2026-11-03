@@ -94,8 +94,6 @@ pub fn generate_all(schema: &ComponentSchema) -> Result<Vec<GeneratedFile>, Sche
     Ok(files)
 }
 
-// --- shared naming helpers -------------------------------------------------
-
 /// Convert a `PascalCase` / `camelCase` identifier to `snake_case`.
 ///
 /// `VideoPlayer` → `video_player`, `WebView` → `web_view`,
@@ -140,8 +138,6 @@ pub fn symbol_prefix(schema: &ComponentSchema) -> String {
 pub fn macro_prefix(schema: &ComponentSchema) -> String {
     format!("FLOOM_{}", upper_snake(&schema.name.0))
 }
-
-// --- shared traversal helpers ---------------------------------------------
 
 /// Visit `ty` and every type nested under it (`Option`/`Vec`).
 pub fn walk_type(ty: &TypeRef, f: &mut impl FnMut(&TypeRef)) {

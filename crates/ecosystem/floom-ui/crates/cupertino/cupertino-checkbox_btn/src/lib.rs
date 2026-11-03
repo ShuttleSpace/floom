@@ -1,78 +1,5 @@
 //! Cupertino checkbox button, ported to the Floom 2.0 widget API.
 //!
-//! A checkbox button is a *chip-shaped* toggle: a rounded box with a check mark
-//! in it and a label beside it. It is not the engine's square `Checkbox`, and
-//! it is not a radio: one of them is chosen by being switched on.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a [`Surface`] for the pill, a `VectorIcon` for the
-//! mark -- this kit's own icon table, `CupertinoIcon::new("check")` -- and a `Text` for
-//! the label. There is nothing here that a widget could own, so the shape stays
-//! in the kit.
-//!
-//! ## The checked state
-//!
-//! v1 kept the state in an `RwSignal<bool>` and read it inside the pill's
-//! style closure, so the pill repainted itself the moment the state changed.
-//! 2.0's tree is mounted once, and an `RwSignal` is `Rc`-based, so the state is
-//! the engine's [`SharedFlag`] -- an `Arc<Mutex<bool>>` -- and the engine's
-//! [`Conditional`] follows it: the flag is read in `update`, so whoever writes
-//! it drives the pill.
-//!
-//! ## The two flags, and why there are two
-//!
-//! The pill has two appearances and the engine's `Conditional` shows one child
-//! at a time, so the kit keeps **a pair** of flags -- the state and its
-//! inverse -- and writes them together. The pair is the kit's own business:
-//! [`CupertinoCheckboxBtn::set_checked`] is the only writer, so the two cannot
-//! drift apart, and no raw flag is handed out for a host to write behind the
-//! kit's back.
-//!
-//! ## The style the port adds
-//!
-//! v1's checkbox button had **no** `resolved_style` at all: every colour was
-//! read inline inside the pill's style closure. The port adds
-//! [`CupertinoCheckboxBtnStyle`], because a kit whose appearance cannot be asked
-//! about cannot be tested against one.
-//!
-//! ## The mark's colour while disabled and unchecked
-//!
-//! This is the one place the three kits disagree, and the disagreement is in
-//! the pixels. Material wrote the disabled tint *inside* the checked branch, so
-//! an unchecked and disabled button drew its mark **transparent**. Cupertino
-//! and Fluent wrote it *outside*, so an unchecked and disabled button drew a
-//! visible grey check mark on a greyed pill. The port keeps each kit's own
-//! answer: Material's is
-//! [`CupertinoCheckboxBtnStyle::unchecked_disabled_mark_color`] and the other
-//! two's is the same field with a different value.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **`cursor(CursorStyle::Pointer)`.** 2.0's paint context has no cursor
-//!   vocabulary. The pill is still a `Pressable`, so it is still activatable by
-//!   keyboard, which the pointer was not.
-//! * **`justify_center()`.** v1 centred the mark and the label in the pill. In
-//!   2.0 the stack centres its children the same way, and the effect shows only
-//!   when the pill is wider than its content -- which it is not, because
-//!   nothing gives it a width.
-//! * **`keyboard_navigable()`.** v1's flag made the pill answer Enter and
-//!   Space. 2.0's `Pressable` answers the activation keys itself, so the
-//!   behaviour is there without the flag.
-//!
-//! ## The accessors
-//!
-//! v1's checkbox buttons had none: no `props()`, no `theme()`, no
-//! `with_theme()`. The port gives them all three, because a kit that cannot be
-//! given a theme cannot be tested against one.
-//!
-//! ## The one thing the port adds
-//!
-//! v1 published nothing to assistive technology. 2.0's `Pressable` does, so the
-//! port gives the pill the label as its accessible name and reports the
-//! checked state to assistive technology from the flag -- live, the way the
-//! rest of the state is. That is a fix rather than a translation, and it is
-//! named here rather than slipped in.
 
 use std::sync::Arc;
 
@@ -261,7 +188,6 @@ impl CupertinoCheckboxBtn {
             disabled_mark_color: with_alpha(c.on_surface, DISABLED_ALPHA),
             // v1 drew the unchecked mark transparent, and wrote the disabled tint
             // *inside* the checked branch -- so an unchecked and disabled button
-            // drew it transparent too.
             unchecked_mark_color: Color::rgba(0, 0, 0, 0),
             unchecked_disabled_mark_color: with_alpha(c.on_surface, DISABLED_ALPHA),
             label_color: c.on_surface,
@@ -377,7 +303,6 @@ fn build_pill(ctx: &PillContext, checked: bool) -> Box<dyn floom_widgets::Widget
     // same thing: it paints nothing and asks for no space.
     let label = ctx.label.clone().unwrap_or_default();
     // The accessible name is a second copy: the label itself is moved into the
-    // content's slot.
     let accessible = label.clone();
 
     let content = Stack::new(Axis::Horizontal)
@@ -417,7 +342,6 @@ fn build_pill(ctx: &PillContext, checked: bool) -> Box<dyn floom_widgets::Widget
     .selected_from(move || read_flag(&reported_flag))
     .on_click(move || {
         // v1's toggle: nothing happens while disabled, and the callback is
-        // handed the state the button moved to.
         if disabled {
             return;
         }

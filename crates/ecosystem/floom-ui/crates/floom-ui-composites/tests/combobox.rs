@@ -1,10 +1,3 @@
-//! The combobox's decisions: the filter, the selection state machine, the placement,
-//! and the token translation.
-//!
-//! There is no `Widget` impl yet, on purpose — the port settles design logic before
-//! markup, and everything here is decidable without mounting anything. What is
-//! deliberately *not* tested is the absence of a widget: a test file that proved
-//! "there is no widget" would only pass until the next commit.
 
 use std::sync::{Arc, Mutex};
 

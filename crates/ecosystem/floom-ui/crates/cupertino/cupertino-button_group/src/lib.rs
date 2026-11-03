@@ -1,20 +1,5 @@
 //! Cupertino button group, ported to the Floom 2.0 widget API.
 //!
-//! A button group lays a set of buttons out with a shared gap -- or, when
-//! `joined`, as a segmented control: no gap, and a rounded outer surface.
-//!
-//! ## The two shapes
-//!
-//! v1 stacked the buttons in a `Container` that carried the fill, the radius
-//! and the padding. 2.0's `Container` is a leaf, so the box is a [`Surface`]
-//! and the buttons inside it are a [`Stack`] along the group's axis.
-//!
-//! ## The joined numbers
-//!
-//! v1 wrote the joined case as three separate conditionals, and they are kept
-//! as they were: no gap, the token's radius on the outer surface, and no padding
-//! inside it. The unjoined case is the token's gap, no radius, and 4dp of
-//! padding.
 
 use std::sync::Arc;
 

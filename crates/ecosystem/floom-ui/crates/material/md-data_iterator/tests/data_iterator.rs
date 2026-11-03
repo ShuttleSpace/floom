@@ -1,12 +1,3 @@
-//! Material data iterator: the container, the parts in it, and the rule between
-//! them.
-//!
-//! ## The claim
-//!
-//! A container with the items in it, an optional header and footer, and -- when
-//! `divided` -- a thin rule between consecutive items. The assertions are about
-//! what the container holds, because that is where the rule's placement lives:
-//! v1 drew it *between* the items and never before the first.
 
 use floom_core::Widget;
 use floom_types::{Color, Rect};
@@ -103,7 +94,6 @@ fn the_items_are_in_order_with_a_rule_between_them() {
     let column = surface.children()[0].build();
     let column = column.as_any().downcast_ref::<Stack>().unwrap().clone();
 
-    // Three items and two rules: the rule never comes before the first item.
     assert_eq!(column.child_count(), 5, "three items and two rules");
     let rules = (0..column.child_count())
         .filter(|i| column.children()[*i].build().as_any().is::<Divider>())

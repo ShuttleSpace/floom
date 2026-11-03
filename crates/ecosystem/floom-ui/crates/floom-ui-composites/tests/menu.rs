@@ -1,8 +1,3 @@
-//! The engine's `Menu`: a panel of rows that opens when a flag says so.
-//!
-//! Three things make it a menu rather than a list: the panel is up only while
-//! the flag says so, the row the pointer is over is filled, and choosing a row
-//! runs its callback and closes the menu.
 
 use std::sync::Arc;
 use std::sync::Mutex;

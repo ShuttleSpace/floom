@@ -1,94 +1,5 @@
 //! Cupertino snackbar, ported to the Floom 2.0 widget API.
 //!
-//! A snackbar is a message that appears over the page for a while: a dark
-//! bar at the bottom with the message in it, and an optional action at the
-//! end.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: the engine's `Overlay` -- a layer that covers its
-//! parent's box -- holding a `Conditional` that mounts the snackbar while a
-//! shared flag says it is up, and inside that a `Surface` for the bar and a
-//! horizontal `Stack` for the message and the action.
-//!
-//! The `Overlay` is a *layout* primitive: the layer covers the box the
-//! snackbar is declared in and is clipped by it. v1's `Overlay` was a layer
-//! above everything on the page, so a snackbar declared inside the page is now
-//! inside the page's box -- and one declared at the root still covers the
-//! window. The engine's other overlay layers are `Dialog`, which is modal, and
-//! `Popup`, which is anchored to a control and dismissed by a click beside it;
-//! neither is a toast.
-//!
-//! ## What this kit answers
-//!
-//! * the bar's padding, radius, minimum height, maximum width, the message's
-//!   size and the gap before the action: the tokens;
-//! * the bar's fill: `on_surface`; the message's ink: `surface`; the action's
-//!   ink: `primary`;
-//! * the action's size and weight: the theme's `label.large`, in medium
-//!   weight;
-//! * the bar's shadow: a black-at-40 blur of 16 with a spread of 1;
-//! * where the bar sits: centred at the bottom, 24 above the bottom edge.
-//!
-//! ## What this kit carries that Material's does not
-//!
-//! * **The radius.** v1's style reported the token's radius while its paint
-//!   drew the theme's `lg` radius. The port reports both: `border_radius` is
-//!   v1's number and `painted_border_radius` is the one the bar is drawn with.
-//! * **The message takes the room.** v1 gave the message `flex_basis(1.0)`
-//!   and `flex_grow(1.0)`. 2.0's `LayoutRequest` has a `flex_grow` but no
-//!   `flex_basis`, so the port keeps the grow and drops the basis.
-//! * **The action's size.** v1's action was the token's `font_size`, not the
-//!   theme's `label.large`.
-//! * **Where the bar sits.** v1 put the bar at the middle right, with 16
-//!   points of padding on every side: `items_end` and `justify_center` on a
-//!   column. The port reproduces that.
-//! * **The timer.** v1's Cupertino snackbar was the one that armed a
-//!   background thread; the port's `dismiss_after` is that shape.
-//!
-//! ## The timer
-//!
-//! **2.0's engine has no timer, and that is a gap the port names rather than
-//! hides.** v1 armed the dismissal itself: an effect on the open signal
-//! started a timer when the snackbar appeared, and the timer closed it
-//! again. 2.0 has no timer to arm, and -- because a kit is not told that a
-//! flag it does not own went true -- no way to be told that the snackbar
-//! opened. The port keeps `duration_ms` in the props and offers
-//! [`CupertinoSnackbar::dismiss_after`], which is v1's dismissal asked for by
-//! the caller rather than by the kit. A caller that wants v1's behaviour
-//! writes the flag and asks for the dismissal; a caller that wants the
-//! snackbar to stay until it is dismissed does nothing.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The slide and the fade.** v1's animation moved the snackbar up 40
-//!   points *and* faded it in, over 250 milliseconds, on the way in and on
-//!   the way out. 2.0's presence transition carries one channel per element,
-//!   so the port slides -- the motion that says "this came from the bottom" --
-//!   and the fade is dropped.
-//! * **The action was always built.** v1's Cupertino snackbar gave the row an
-//!   action view even when there was no label -- an empty label -- so the row
-//!   carried a second child and the gap between them. The port leaves the
-//!   action out when there is no label, which is what v1's Material and
-//!   Fluent snackbars did.
-//! * **The pointer cursor.** v1 gave the action `cursor(CursorStyle::Pointer)`.
-//!   2.0's `Pressable` does not answer `Widget::cursor`, so the pointer is
-//!   not carried over.
-//! * **The callback in the shared props.** `SnackbarProps::on_action` is a
-//!   `Box<dyn Fn()>`, which cannot cross a `Send + Sync` slot boundary. The
-//!   kit keeps an `Arc<dyn Fn() + Send + Sync>` of its own and the props'
-//!   slot stays empty.
-//! * **The accessors.** v1's Cupertino snackbar already had `props()`, `theme()`
-//!   and `with_theme()`. The port gives Material the same three, so the
-//!   three kits are one shape.
-//!
-//! ## The one field the port's style adds
-//!
-//! v1's style reported the bar's padding, radius, height, width, the
-//! message's size and the gap -- and nothing about the action's own size and
-//! weight, its padding, the shadow, or where the bar sits, all of which the
-//! paint used. The port's style reports all of them, because a style that
-//! does not say what the widget draws is not the widget's output.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -267,7 +178,6 @@ impl CupertinoSnackbar {
         CupertinoSnackbarStyle {
             design_system: "cupertino",
             // v1: the bar is `on_surface` and the message is `surface` -- the
-            // two are the other way round from the naming.
             surface_color: theme.colors().on_surface,
             text_color: theme.colors().surface,
             action_color: theme.colors().primary,
@@ -360,7 +270,6 @@ impl CupertinoSnackbar {
                     ))
                     .on_click(move || {
                         // v1 ran the action's callback and then closed the
-                        // snackbar.
                         if let Some(cb) = &on_action {
                             cb();
                         }
@@ -392,7 +301,6 @@ impl CupertinoSnackbar {
             .push(move || Box::new(row.clone()));
 
         // The layer the bar sits in: the whole overlay's box, with the bar
-        // centred at the bottom.
         let layer = Stack::new(Axis::Vertical)
             .request(
                 LayoutRequest::new()

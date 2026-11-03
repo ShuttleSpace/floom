@@ -1,16 +1,4 @@
 //! Fluent avatar: the shape, the palette, and the type.
-//!
-//! ## The three kits disagree about all three
-//!
-//! | | Material | Cupertino | Fluent |
-//! |---|---|---|---|
-//! | shape | circle | circle | **rounded square** |
-//! | fill | `primary_container` | **`surface_variant`** | `primary_container` |
-//! | ink | `on_primary_container` | **`on_surface`** | `on_primary_container` |
-//! | weight | normal | normal | **SemiBold** |
-//!
-//! The assertions are about this kit's own answers, read off the painted
-//! surface and the painted text.
 
 use floom_core::Widget;
 use floom_types::{Color, FontWeight, Rect};
@@ -29,13 +17,6 @@ const BOX: Rect = Rect {
     y1: 64.0,
 };
 
-/// The Fluent theme, with Fluent selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time. So a test that wants Fluent's own values has to
-/// select Fluent, and `set_design_system` writes a thread-local, so the
-/// selection is this test's alone.
 fn theme() -> MultiTheme {
     set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
@@ -49,7 +30,6 @@ fn tokens() -> floom_core_theme::component_tokens::AvatarTokens {
     }
 }
 
-/// The painted ops: the surface's fill and the text's ink.
 fn painted(
     b: FluentAvatar,
 ) -> (
@@ -69,8 +49,6 @@ fn painted(
         _ => None,
     });
 
-    // The text is the surface's *child*, and a widget paints only itself, so
-    // the text is painted on its own.
     let mut text = surface.children()[0].build();
     let mut create = AllocatingCreateContext::new();
     let text_id = text.create(&mut create);
@@ -89,7 +67,6 @@ fn painted(
     (fill, ink, weight)
 }
 
-/// The style resolves this kit's own palette and the token's size.
 #[test]
 fn the_style_resolves_this_kits_own_palette() {
     let theme = theme();
@@ -99,13 +76,10 @@ fn the_style_resolves_this_kits_own_palette() {
     assert_eq!(style.design_system, "fluent");
     assert_eq!(style.background, theme.colors().primary_container);
     assert_eq!(style.text_color, theme.colors().on_primary_container);
-    // The size is the *props'* default, not the token's -- see
-    // `the_props_size_wins_over_the_tokens` for why.
     assert_eq!(style.size, 40.0);
     assert_eq!(style.font_size, tokens().font_size);
 }
 
-/// The props' size wins over the token's, and zero defers to it.
 #[test]
 fn the_props_size_wins_over_the_tokens() {
     let style = FluentAvatar::new()
@@ -114,9 +88,6 @@ fn the_props_size_wins_over_the_tokens() {
         .resolved_style();
     assert_eq!(style.size, 64.0, "the props' size wins");
 
-    // The *props'* default is 40, not zero, so v1's
-    // `if props.size > 0.0 { props.size } else { tokens.size }` never reached
-    // the token -- and `AvatarTokens::size` was dead in all three kits.
     let style = FluentAvatar::new().with_theme(theme()).resolved_style();
     assert_eq!(
         style.size, 40.0,
@@ -124,7 +95,6 @@ fn the_props_size_wins_over_the_tokens() {
     );
 }
 
-/// The shape is square, and the fill and the ink are this kit's.
 #[test]
 fn the_shape_is_square() {
     let b = FluentAvatar::new().with_theme(theme()).content("AB");
@@ -148,7 +118,6 @@ fn the_shape_is_square() {
     );
 }
 
-/// Design-system colour -> engine colour.
 fn to_engine(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,

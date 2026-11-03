@@ -1,12 +1,4 @@
 //! Fluent date_adapter_provider: the value it shares, and the subtree it wraps.
-//!
-//! ## The claim
-//!
-//! A provider owns a value and hands its descendants a handle to it. v1 held it
-//! in an `RwSignal`; 2.0 holds it in a shared buffer, because an `RwSignal` is
-//! `Rc`-based and cannot cross a `Send + Sync` slot boundary. The handle is
-//! therefore the *same* one a descendant reads -- not a copy -- and the
-//! assertions are about that.
 
 use std::sync::Arc;
 
@@ -16,14 +8,12 @@ use floom_core_theme::props::date_adapter_provider::DateAdapterProviderProps;
 
 use floom_widget_fluent_date_adapter_provider::FluentDateAdapterProvider;
 
-/// The props report what the caller set.
 #[test]
 fn the_props_report_the_value() {
     let provider = FluentDateAdapterProvider::new().adapter("en-GB");
     assert_eq!(provider.props().adapter, "en-GB");
 }
 
-/// The handle the descendants read holds the value.
 #[test]
 fn the_shared_handle_carries_the_value() {
     let provider = FluentDateAdapterProvider::new().adapter("en-GB");
@@ -35,8 +25,6 @@ fn the_shared_handle_carries_the_value() {
     );
 }
 
-/// Two calls hand over the *same* handle, so a descendant that wrote it would
-/// be seen by the next one that reads it.
 #[test]
 fn the_handle_is_shared() {
     let provider = FluentDateAdapterProvider::new();
@@ -48,7 +36,6 @@ fn the_handle_is_shared() {
     );
 }
 
-/// The subtree is mounted inside the provider.
 #[test]
 fn the_subtree_is_mounted() {
     let stack = FluentDateAdapterProvider::new()

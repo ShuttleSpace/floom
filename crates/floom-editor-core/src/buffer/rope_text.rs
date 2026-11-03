@@ -85,7 +85,6 @@ pub trait RopeText {
         let text = self.slice_to_cow(offset..self.offset_of_line(line + 1));
         let mut iter = text.chars().peekable();
         while let Some(c) = iter.next() {
-            // Stop at the end of the line
             if c == '\n' || (c == '\r' && iter.peek() == Some(&'\n')) {
                 return offset;
             }
@@ -230,7 +229,6 @@ pub trait RopeText {
             .slice_to_cow(range.start.min(self.len())..range.end.min(self.len()))
     }
 
-    // TODO(minor): Once you can have an `impl Trait` return type in a trait, this could use that.
     /// Iterate over `(utf8_offset, char)` values in the given range.
     #[allow(clippy::type_complexity)]
     /// This uses `iter_chunks` and so does not allocate, compared to [`Self::slice_to_cow`] which can
@@ -303,7 +301,6 @@ pub trait RopeText {
         let mut cursor = ParagraphCursor::new(self.text(), offset);
         let mut new_offset = offset;
         while count != 0 {
-            // FIXME: wait for if-let-chain
             if let Some(offset) = find_next(&mut cursor) {
                 new_offset = offset;
             } else {
@@ -336,7 +333,6 @@ pub trait RopeText {
         let mut cursor = WordCursor::new(self.text(), offset);
         let mut new_offset = offset;
         while count != 0 {
-            // FIXME: wait for if-let-chain
             if let Some(offset) = find_next(&mut cursor) {
                 new_offset = offset;
             } else {
@@ -457,16 +453,9 @@ impl<I: Iterator<Item = (usize, char)>, O: Iterator<Item = I>> Iterator for Char
 
         // Otherwise, if we didn't return something above, then we get a next iterator
         if let Some(next_current) = self.main_iter.next() {
-            // Update our current working iterator
             self.current_indices = Some(next_current);
-            // Update the current base offset with the previous iterators latest offset base
-            // This is what we are shifting by
             self.current_base = self.latest_base;
 
-            // Get the next item without new current iterator
-            // As long as main_iter and the iterators it produces aren't infinite then this
-            // recursion won't be infinite either
-            // and even the non-recursion version would be infinite if those were infinite
             self.next()
         } else {
             // We didn't get anything from the main iter, so we're completely done.

@@ -73,7 +73,6 @@ pub fn diff(old: &UiDocument, new: &UiDocument) -> UiPatch {
 
     let mut ops: Vec<PatchOp> = Vec::new();
 
-    // --- removals ----------------------------------------------------------
     // Only the *roots* of removed subtrees are named: removing a parent takes
     // its children with it, and naming every descendant would make the report
     // claim work the applier does not do.
@@ -94,7 +93,6 @@ pub fn diff(old: &UiDocument, new: &UiDocument) -> UiPatch {
         }
     }
 
-    // --- moves -------------------------------------------------------------
     // Same parent in both documents but a different position. Applied in
     // ascending target order, sequential moves land in the target arrangement.
     let mut matched: Vec<&NodeKey> = before
@@ -112,7 +110,6 @@ pub fn diff(old: &UiDocument, new: &UiDocument) -> UiPatch {
         }
     }
 
-    // --- property, layout and event changes on matched nodes ---------------
     for key in &matched {
         let old_node = old_nodes[*key];
         let new_node = new_nodes[*key];
@@ -157,7 +154,6 @@ pub fn diff(old: &UiDocument, new: &UiDocument) -> UiPatch {
         }
     }
 
-    // --- inserts -------------------------------------------------------------
     // Parents before children: a node whose parent is itself new cannot mount
     // until the parent exists.
     let mut inserted: Vec<&NodeKey> = after

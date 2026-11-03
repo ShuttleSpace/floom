@@ -1,8 +1,3 @@
-//! The ported Material tree view.
-//!
-//! The engine suite (`floom-widgets/tests/tree_view.rs`) owns the structure and the
-//! shared expansion state; this suite owns the translation, which is Material's six
-//! numbers, its colours, and its icon names.
 
 use floom_core::Widget;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -14,10 +9,6 @@ use floom_ui_composites::{TreeNode, TreeView};
 
 use floom_widget_md_treeview::{to_engine_nodes, MdTreeview};
 
-/// Activate Material and hand back a theme that will read it.
-///
-/// `MultiTheme::new_for(ds)` does **not** select `ds` — it reads a process-global at
-/// every access (the porting plan's correction 9).
 fn material() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
@@ -57,7 +48,6 @@ fn to_paint(c: floom_core_theme::tokens::color::Color) -> floom_types::Color {
     }
 }
 
-// --- the tokens -----------------------------------------------------------
 
 /// The six scalar tokens, read from Material's table.
 #[test]
@@ -95,15 +85,11 @@ fn the_tokens_reach_the_engine_style() {
         "and v1's `.hover(with_alpha(on_surface, 8))`"
     );
 
-    // The three literals v1 wrote at their call sites rather than reading tokens.
     assert_eq!(style.gap, 4.0, "v1's `.gap(4.0)`");
     assert_eq!(style.padding_horizontal, 8.0, "and `.padding_horiz(8.0)`");
     assert_eq!(style.icon_scale, 0.7, "and `icon_size * 0.7`");
 }
 
-/// `item_gap` is in the style and **not used**, because v1 read it nowhere. Asserting
-/// that it is *present* is the point: a port that deleted the field would be hiding a
-/// decision rather than making one.
 #[test]
 fn the_unused_token_is_carried_rather_than_deleted() {
     let theme = material();
@@ -118,7 +104,6 @@ fn the_unused_token_is_carried_rather_than_deleted() {
     );
 }
 
-// --- the node translation -------------------------------------------------
 
 /// Field for field, including the nesting and the initial `expanded`.
 #[test]
@@ -167,7 +152,6 @@ fn the_two_node_types_are_different_shapes() {
     );
 }
 
-// --- the tree -------------------------------------------------------------
 
 /// The rows the tree shows, through the kit.
 #[test]
@@ -204,12 +188,6 @@ fn a_toggle_through_the_shared_forest_is_visible() {
     );
 }
 
-/// The kit's forest and the widget's are the *same* allocation, not two copies.
-///
-/// Two copies would be a silent bug rather than a wrong answer: a toggle through
-/// either handle would work, and the two would drift apart. `Arc::ptr_eq` is the
-/// only thing that says "one", which is why this is a pointer comparison and not an
-/// equality check on the contents.
 #[test]
 fn the_kits_forest_and_the_widgets_are_one_allocation() {
     let kit = tree();
@@ -222,7 +200,6 @@ fn the_kits_forest_and_the_widgets_are_one_allocation() {
     );
 }
 
-// --- the props ------------------------------------------------------------
 
 /// `props()` reports the nodes and the callback, as v1 did.
 #[test]

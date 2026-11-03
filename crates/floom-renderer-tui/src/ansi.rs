@@ -127,7 +127,7 @@ pub fn diff_encode(new: &TuiGrid, old: &TuiGrid) -> (String, usize, usize) {
     out.push_str(RESET);
     let mut cur_fg: Option<Color> = None;
     let mut cur_bg: Option<Color> = None;
-    let mut escapes = 1; // the leading reset
+    let mut escapes = 1;
     let mut changed = 0;
     for row in 0..rows {
         for col in 0..cols {
@@ -138,7 +138,7 @@ pub fn diff_encode(new: &TuiGrid, old: &TuiGrid) -> (String, usize, usize) {
             }
             changed += 1;
             out.push_str(&format!("\u{1b}[{};{}H", row + 1, col + 1));
-            escapes += 1; // the cursor move
+            escapes += 1;
             let (chunk, f, b, e) = encode_cell(nc, &cur_fg, &cur_bg);
             out.push_str(&chunk);
             escapes += e;

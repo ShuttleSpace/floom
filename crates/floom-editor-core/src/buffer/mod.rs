@@ -103,7 +103,6 @@ impl Buffer {
     pub fn new(text: impl Into<Rope>) -> Self {
         let text = text.into();
 
-        // Determine the line ending of the text and adjust it if necessary
         let line_ending = LineEndingDetermination::determine(&text);
         let line_ending = line_ending.unwrap_or(LineEnding::Lf);
 
@@ -239,7 +238,6 @@ impl Buffer {
         self.indent_style
     }
 
-    // TODO: users of this function should often be using Styling::indent_style instead!
     pub fn indent_unit(&self) -> &'static str {
         self.indent_style.as_str()
     }
@@ -287,11 +285,6 @@ impl Buffer {
             }
         });
         for (start, end, rope) in interval_rope.into_iter() {
-            // TODO(minor): normalizing line endings here technically has an edge-case where it
-            // could be that we put a `\r` at the end of a replacement, then a `\n` at the start of
-            // a replacement right after it, and then it becomes a double newline.
-            // A possible alternative that might be better overall (?) would be to get the range of
-            // the delta and normalize that area after applying the delta.
             builder.replace(start..end, self.line_ending.normalize(&rope));
         }
         let delta = builder.build();
@@ -308,7 +301,6 @@ impl Buffer {
         Some(self.add_delta(delta))
     }
 
-    // TODO: don't clone the delta and return it, if the caller needs it then they can clone it
     /// Note: the delta's line-endings should be normalized.
     fn add_delta(&mut self, delta: RopeDelta) -> (Rope, RopeDelta, InvalLines) {
         let text = self.text.clone();
@@ -702,7 +694,6 @@ fn shuffle(
     old_deletes_from_union: &Subset,
     new_deletes_from_union: &Subset,
 ) -> (Rope, Rope) {
-    // Delta that deletes the right bits from the text
     let del_delta = Delta::synthesize(tombstones, old_deletes_from_union, new_deletes_from_union);
     let new_text = del_delta.apply(text);
     (

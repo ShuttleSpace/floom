@@ -1,88 +1,8 @@
 //! Cupertino time picker, ported to the Floom 2.0 widget API.
 //!
-//! A time picker is a field that shows the chosen time, and a panel that opens
-//! under it: an hour row and a minute row, each a pair of steppers around the
-//! number, and a "Done" button that closes the panel.
-//!
-//! ## What the port uses
-//!
-//! The engine's `TimePicker`: the field that shows the time and the panel
-//! that picks one. The three floem-ui time-picker kits each used to carry
-//! their own copy of both.
-//!
-//! The engine's overlay door. v1 put the panel in an `Overlay` and placed it
-//! by hand: a `LayoutChangedListener` read the field's *window* origin and
-//! height and wrote them into `inset_top` and `inset_left`, so the panel's
-//! position was the picker's own arithmetic -- arithmetic about the window
-//! rather than about the field, and so wrong the moment the page scrolled.
-//! 2.0's host owns the overlay layers. The picker asks for a popup rect
-//! derived from its own box, and the host puts the panel there, paints it
-//! above the tree and hit-tests it first. So the listener is gone, and so are
-//! the window-origin insets.
-//!
-//! ## What this kit answers
-//!
-//! * the field's height, radius and minimum width, the panel's width and the
-//!   row's height: the tokens;
-//! * the field's fill: `surface`; its border: `outline`, `primary` while the
-//!   panel is open and `outline` at 97 while the picker is disabled; the
-//!   time's ink: `on_surface`, the placeholder's: `on_surface_variant`;
-//! * the panel's fill: `surface`; its border: `outline` at 120; its shadow:
-//!   black at 24, blurred 12 and spread 1;
-//! * the stepper's fill: `on_surface` at 8; the "Done" button's ink:
-//!   `primary`.
-//!
-//! ## The numbers v1 wrote as literals
-//!
-//! The field's horizontal padding (12), the border's thickness (1), the
-//! panel's padding (12), the gap between the panel's three parts (8), the gap
-//! inside a row (8), the stepper's size (32) and radius (16), the stepper's
-//! text size (18), the number's size (24) and width (48), and the "Done"
-//! button's height (32) and padding (12).
-//!
-//! ## The token that never showed
-//!
-//! `TimePickerTokens::padding_horizontal` (16) is not in v1's markup: the
-//! field padded itself by 12, a literal. The port keeps v1's 12 and leaves the
-//! token unread, and the style reports the 12 under the name the paint uses.
-//!
-//! ## The differences this port names rather than reproduces
-//!
-//! * **The calendar opens on the frame after the click.** The panel is a host
-//!   overlay, and 2.0's overlay door is state-driven: the click writes "open"
-//!   into the shared state, and the next update asks the host for the panel.
-//!   v1's panel was up in the same frame.
-//! * **The field and the panel paint themselves.** 2.0 keeps a mounted
-//!   child's widget when its key survives a rebuild, so a `Text` child would
-//!   keep the time it was built with. The port's field and panel read the
-//!   shared state when they paint.
-//! * **The pointer cursor over a disabled picker.** v1 asked for the pointer
-//!   whatever the state; the engine's rule is that a control which cannot be
-//!   clicked shows the platform arrow, and the port follows the engine.
-//!
-//! ## The theme source
-//!
-//! v1's Cupertino time picker took a *snapshot* of its own design system --
-//! `MultiTheme::new_for(DesignSystem::Cupertino)` -- so a change of the
-//! app-wide theme does not reach it. The port keeps that.
 
 //! ## What v1 wrote that this port does not carry
 //!
-//! * **`props().on_change` is a `Box<dyn Fn(TimeValue)>`.** The kit fills it
-//!   with a wrapper around its own `Arc<dyn Fn(TimeValue) + Send + Sync>`:
-//!   the closure a 2.0 tree is built from has to be `Send + Sync`, and v1's
-//!   box is not.
-//! * **The accessors.** v1's Cupertino time picker had no `props()`, `theme()`
-//!   or `with_theme()`. The port gives all three kits the same three, because
-//!   a kit that cannot be given a theme cannot be tested against one.
-//!
-//! ## The shape that belongs to the engine
-//!
-//! The picker widget -- a field, a shared state, and a panel that opens under
-//! it -- is the same shape in all three kits, so it belongs in
-//! `floom-ui-composites` beside `Combobox` and `Menu`. The engine could not be
-//! edited while this port was written, so the shape is written here, once per
-//! kit, and named here.
 
 use std::sync::{Arc, Mutex};
 
@@ -231,7 +151,6 @@ impl CupertinoTimePicker {
         self.on_change = Some(shared.clone());
         // The props keep reporting that there is a callback, as v1's did. The
         // box is a wrapper, because the props' own type is not `Send + Sync`
-        // and the tree cannot hold one.
         self.props.on_change = Some(Box::new(move |value: ThemeTimeValue| {
             shared(to_engine_time(value))
         }));

@@ -1,36 +1,3 @@
-//! Material 3 divider, ported to the Floom 2.0 widget API.
-//!
-//! ## What this kit uniquely wants
-//!
-//! **A rule flush with the top of its box.** `RuleAlignment::Start`, not the
-//! engine's default `Center`.
-//!
-//! v1 wrote `s.height(thickness).width_full().background(color)` for a
-//! horizontal divider and said nothing about the vertical axis. In a container
-//! taller than the rule, "nothing said" means the rule lands on the container's
-//! top edge. The engine centres instead — it was written before this crate was
-//! ported, and centring is the better default for a rule between two columns.
-//!
-//! So this kit asks for `Start` explicitly rather than inheriting a default that
-//! would silently move its rule. `start_reproduces_what_v1_wrote` in
-//! `floom-widgets/tests/primitives.rs` is the assertion that makes that a port
-//! rather than a preference.
-//!
-//! ## The other difference, which is not about the divider
-//!
-//! Material reads the **live** theme signal (`theme_signal()`); Cupertino and
-//! Fluent capture a **snapshot** at construction (`MultiTheme::new_for(..)`). So
-//! a Material divider follows a global theme switch and the other two do not.
-//! That difference lives in this crate's `new()`, not in the widget, because it
-//! is a property of where the theme came from rather than of how a rule is drawn.
-//!
-//! ## What the three kits agree on
-//!
-//! Everything else, exactly. Measured: with naming and the `design_system`
-//! field removed, the three v1 files' `resolved_style()` and `view()` bodies are
-//! **byte-identical**. One token (`thickness: 1.0`), one colour role
-//! (`outline_variant`), one inset rule. There is no second style parameter to
-//! set, and inventing one would be inventing a disagreement.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -73,8 +40,6 @@ impl MdDivider {
     pub fn new() -> Self {
         Self {
             props: DividerProps::default(),
-            // The **live** signal, unlike Cupertino and Fluent. A global theme
-            // switch repaints this divider; theirs would not.
             theme: theme_signal(),
         }
     }
@@ -114,11 +79,6 @@ impl MdDivider {
         }
     }
 
-    /// The engine's style, which is the whole translation.
-    ///
-    /// Four disagreements in seven lines, and only one of them is a value:
-    /// `RuleAlignment::Start` is this kit's entire styling opinion. The colour,
-    /// the thickness and the inset are what all three kits already agreed on.
     pub fn divider(&self) -> Divider {
         let style = self.resolved_style();
         Divider::new()

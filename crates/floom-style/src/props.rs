@@ -23,13 +23,10 @@ bitflags! {
 /// dropping the parts it does not mention — see `merge_over`.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct StyleProps {
-    // --- paint ---
     pub background: Option<Color>,
     pub foreground: Option<Color>,
     pub opacity: Option<f32>,
-    // --- type ---
     pub font_size: Option<f32>,
-    // --- box ---
     pub padding: Option<f32>,
     pub radius: Option<f32>,
     pub border_width: Option<f32>,

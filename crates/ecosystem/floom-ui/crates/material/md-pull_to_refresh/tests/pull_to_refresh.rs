@@ -1,16 +1,3 @@
-//! The ported Material pull-to-refresh -- a drag that fires a refresh and an
-//! indicator above the content.
-//!
-//! The shape is the engine's vocabulary plus the two widgets the kit needs for
-//! the pull, so what is tested here is the translation and the pixels: the
-//! tokens reach the style, the indicator is painted in v1's ink at v1's size,
-//! and the indicator is absent when v1 would have drawn nothing.
-//!
-//! ## The tripwires
-//!
-//! `the_indicator_is_painted_in_v1_s_ink_at_v1_s_size` and
-//! `the_indicator_is_absent_until_there_is_something_to_say` would fail if
-//! this kit stopped being this kit.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -34,9 +21,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -67,7 +51,6 @@ fn indicator(kit: MaterialPullToRefresh) -> Box<dyn floom_core::WidgetAny> {
     column.children().remove(0).build()
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -103,7 +86,6 @@ fn the_tokens_and_colours_reach_the_style() {
     );
 }
 
-/// The threshold v1 used was the prop's, never the token's.
 #[test]
 fn the_threshold_is_the_props_not_the_token() {
     let style = kit().resolved_style();
@@ -125,9 +107,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The box is painted the colour v1 painted.
 #[test]
 fn the_box_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -145,15 +125,12 @@ fn the_box_is_painted_v1_s_colour() {
     assert_eq!(fill, Some(paint(resolved.background)), "the box's fill");
 }
 
-/// The indicator is painted in v1's ink at v1's size.
 #[test]
 fn the_indicator_is_painted_in_v1_s_ink_at_v1_s_size() {
     let resolved = kit().resolved_style();
     let kit = kit();
-    // A pull, so that there is an indicator to paint.
     *kit.pull_distance().lock().unwrap() = 20.0;
     let indicator = indicator(kit);
-    // The label is the indicator's only child.
     let label = indicator.children().remove(0).build();
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = label.create(&mut create);
@@ -175,7 +152,6 @@ fn the_indicator_is_painted_in_v1_s_ink_at_v1_s_size() {
     assert_eq!(ink, paint(resolved.on_surface_variant), "v1's label ink");
 }
 
-/// The refreshing state shows v1's other label.
 #[test]
 fn the_refreshing_state_shows_v1_s_other_label() {
     let kit = kit().loading(true);
@@ -197,7 +173,6 @@ fn the_refreshing_state_shows_v1_s_other_label() {
     assert_eq!(text, "↻ Refreshing…", "v1's label while refreshing");
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The indicator is absent until there is something to say.
 #[test]
@@ -291,12 +266,8 @@ fn the_props_report_the_threshold() {
     assert_eq!(kit.props().threshold, 64.0);
 }
 
-/// The theme: v1's Material pull-to-refresh read the *app-wide* theme signal,
-/// so a change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialPullToRefresh::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

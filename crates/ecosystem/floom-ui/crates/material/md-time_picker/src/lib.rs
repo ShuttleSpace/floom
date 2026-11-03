@@ -1,87 +1,4 @@
-//! Material time picker, ported to the Floom 2.0 widget API.
-//!
-//! A time picker is a field that shows the chosen time, and a panel that opens
-//! under it: an hour row and a minute row, each a pair of steppers around the
-//! number, and a "Done" button that closes the panel.
-//!
-//! ## What the port uses
-//!
-//! The engine's `TimePicker`: the field that shows the time and the panel
-//! that picks one. The three floem-ui time-picker kits each used to carry
-//! their own copy of both.
-//!
-//! The engine's overlay door. v1 put the panel in an `Overlay` and placed it
-//! by hand: a `LayoutChangedListener` read the field's *window* origin and
-//! height and wrote them into `inset_top` and `inset_left`, so the panel's
-//! position was the picker's own arithmetic -- arithmetic about the window
-//! rather than about the field, and so wrong the moment the page scrolled.
-//! 2.0's host owns the overlay layers. The picker asks for a popup rect
-//! derived from its own box, and the host puts the panel there, paints it
-//! above the tree and hit-tests it first. So the listener is gone, and so are
-//! the window-origin insets.
-//!
-//! ## What this kit answers
-//!
-//! * the field's height, radius and minimum width, the panel's width and the
-//!   row's height: the tokens;
-//! * the field's fill: `surface`; its border: `outline`, `primary` while the
-//!   panel is open and `outline` at 97 while the picker is disabled; the
-//!   time's ink: `on_surface`, the placeholder's: `on_surface_variant`;
-//! * the panel's fill: `surface`; its border: `outline` at 120; its shadow:
-//!   black at 24, blurred 12 and spread 1;
-//! * the stepper's fill: `on_surface` at 8; the "Done" button's ink:
-//!   `primary`.
-//!
-//! ## The numbers v1 wrote as literals
-//!
-//! The field's horizontal padding (12), the border's thickness (1), the
-//! panel's padding (12), the gap between the panel's three parts (8), the gap
-//! inside a row (8), the stepper's size (32) and radius (16), the stepper's
-//! text size (18), the number's size (24) and width (48), and the "Done"
-//! button's height (32) and padding (12).
-//!
-//! ## The token that never showed
-//!
-//! `TimePickerTokens::padding_horizontal` (16) is not in v1's markup: the
-//! field padded itself by 12, a literal. The port keeps v1's 12 and leaves the
-//! token unread, and the style reports the 12 under the name the paint uses.
-//!
-//! ## The differences this port names rather than reproduces
-//!
-//! * **The calendar opens on the frame after the click.** The panel is a host
-//!   overlay, and 2.0's overlay door is state-driven: the click writes "open"
-//!   into the shared state, and the next update asks the host for the panel.
-//!   v1's panel was up in the same frame.
-//! * **The field and the panel paint themselves.** 2.0 keeps a mounted
-//!   child's widget when its key survives a rebuild, so a `Text` child would
-//!   keep the time it was built with. The port's field and panel read the
-//!   shared state when they paint.
-//! * **The pointer cursor over a disabled picker.** v1 asked for the pointer
-//!   whatever the state; the engine's rule is that a control which cannot be
-//!   clicked shows the platform arrow, and the port follows the engine.
-//!
-//! ## The theme source
-//!
-//! v1's Material time picker read the *app-wide* theme signal, so a change of theme
-//! re-themes it with everything else. The port keeps that.
 
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **`props().on_change` is a `Box<dyn Fn(TimeValue)>`.** The kit fills it
-//!   with a wrapper around its own `Arc<dyn Fn(TimeValue) + Send + Sync>`:
-//!   the closure a 2.0 tree is built from has to be `Send + Sync`, and v1's
-//!   box is not.
-//! * **The accessors.** v1's Material time picker had no `props()`, `theme()`
-//!   or `with_theme()`. The port gives all three kits the same three, because
-//!   a kit that cannot be given a theme cannot be tested against one.
-//!
-//! ## The shape that belongs to the engine
-//!
-//! The picker widget -- a field, a shared state, and a panel that opens under
-//! it -- is the same shape in all three kits, so it belongs in
-//! `floom-ui-composites` beside `Combobox` and `Menu`. The engine could not be
-//! edited while this port was written, so the shape is written here, once per
-//! kit, and named here.
 
 use std::sync::{Arc, Mutex};
 
@@ -116,13 +33,6 @@ fn to_theme_time(value: floom_ui_composites::TimeValue) -> ThemeTimeValue {
     }
 }
 
-/// The time picker's appearance, in the terms v1 used.
-///
-/// The first block is v1's own list. The second block is what v1's paint used
-/// but v1's style never reported -- the padding, the border's thickness, the
-/// panel's own padding and shadow, the gaps, and the sizes that were literals
-/// in the markup. A style that does not say what the widget draws is not the
-/// widget's output.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialTimePickerStyle {
     pub design_system: &'static str,
@@ -136,40 +46,21 @@ pub struct MaterialTimePickerStyle {
     pub min_width: f32,
     pub panel_width: f32,
     pub cell_height: f32,
-    // --- what v1's paint used and v1's style did not report ---
-    /// The field's horizontal inner padding. v1's `.padding_horiz(12.0)`.
     pub padding_horizontal: f32,
-    /// The border's thickness. v1's `.border(1.0)`.
     pub border_width: f32,
-    /// The field's border alpha while the picker is disabled.
-    /// v1's `with_alpha(outline, 97)`.
     pub disabled_border_alpha: u8,
-    /// The panel's padding. v1's `.padding(12.0)`.
     pub panel_padding: f32,
-    /// The panel's border alpha. v1's `with_alpha(outline, 120)`.
     pub panel_border_alpha: u8,
-    /// The panel's shadow. v1's blur 12, spread 1, black at 24.
     pub panel_shadow: Shadow,
-    /// The gap between the panel's three parts. v1's `.gap(8.0)`.
     pub panel_gap: f32,
-    /// The gap inside a row, between the stepper and the number.
-    /// v1's `.gap(8.0)`.
     pub row_gap: f32,
-    /// The stepper's size. v1's `.size(32.0)`.
     pub stepper_size: f32,
-    /// The stepper's radius. v1's `.border_radius(16.0)`.
     pub stepper_radius: f32,
-    /// The stepper's fill alpha. v1's `with_alpha(on_surface, 8)`.
     pub stepper_fill_alpha: u8,
-    /// The stepper's text size. v1's `.font_size(18.0)`.
     pub stepper_font_size: f32,
-    /// The number's size. v1's `.font_size(24.0)`.
     pub value_font_size: f32,
-    /// The number's width. v1's `.width(48.0)`.
     pub value_width: f32,
-    /// The "Done" button's height. v1's `.height(32.0)`.
     pub done_height: f32,
-    /// The "Done" button's horizontal padding. v1's `.padding_horiz(12.0)`.
     pub done_padding_horizontal: f32,
     /// The field's label size: the theme's body-medium.
     pub text_size: f32,
@@ -219,17 +110,9 @@ impl MaterialTimePicker {
         self
     }
 
-    /// Called with the time the user chose.
-    ///
-    /// `Send + Sync` is required, not incidental: 2.0 rebuilds a widget inside
-    /// a slot closure the host may hand between threads, so the callback has
-    /// to be both clonable and thread-safe to be rebuilt into the tree.
     pub fn on_change(mut self, callback: impl Fn(TimeValue) + Send + Sync + 'static) -> Self {
         let shared: Arc<dyn Fn(TimeValue) + Send + Sync> = Arc::new(callback);
         self.on_change = Some(shared.clone());
-        // The props keep reporting that there is a callback, as v1's did. The
-        // box is a wrapper, because the props' own type is not `Send + Sync`
-        // and the tree cannot hold one.
         self.props.on_change = Some(Box::new(move |value: ThemeTimeValue| {
             shared(to_engine_time(value))
         }));

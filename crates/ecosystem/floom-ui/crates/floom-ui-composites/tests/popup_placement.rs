@@ -1,15 +1,3 @@
-//! The popup's placement: the one decision a `Popup` makes that is not plumbing.
-//!
-//! Everything else about a popup — asking the host, learning its handle, being
-//! dismissed from outside, falling back to an in-tree layer — is `OverlaySurface`
-//! and is covered end-to-end against the real host in `floem-app/tests/overlay.rs`.
-//! What is new here is *where the panel goes*, and these tests are about that and
-//! nothing else.
-//!
-//! They run against `RecordingUpdateContext`'s overlay door, which did not exist
-//! before this change. A composite that mounts its panel from `update` is exactly
-//! what a popup does, and with the door defaulting to `false` a test could not tell a
-//! deliberate in-tree fallback from a missing implementation.
 
 use floom_core::{ChildKey, LayoutRequest, Widget, WidgetAny};
 use floom_types::{OverlayKind, Rect};

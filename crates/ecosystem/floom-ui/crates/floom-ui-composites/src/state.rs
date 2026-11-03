@@ -1,15 +1,3 @@
-//! The layer a control paints behind or around itself to answer the pointer.
-//!
-//! Two controls need one and no two design systems agree on what it is. The
-//! disagreement has four independent axes, and each kit picks differently on
-//! every one: the resting tint (`primary` at 20, `primary` at 10, `on_surface` at
-//! 8), a pressed tint that only one kit has, which interaction states open the
-//! gate, and whether a disabled control still shows it.
-//!
-//! That is a wide disagreement for four fields, and it is exactly the kind that
-//! grows a fifth axis when a third control wants one. So the shape is here, the
-//! tints are here, the gate is here, and each control says how *its* shape is
-//! drawn rather than the layer growing a per-control branch.
 
 use floom_types::Color;
 

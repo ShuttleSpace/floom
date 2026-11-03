@@ -1,32 +1,3 @@
-//! `Menu` — a list of choices in a floating panel.
-//!
-//! Theme-agnostic by design, like [`Badge`]: a 2.0 widget takes explicit values
-//! rather than reading a global theme signal, so resolving the palette and the
-//! token sizes is the *kit's* job.
-//!
-//! ## What a menu is
-//!
-//! A panel with a row per choice, a fill behind the row the pointer is over,
-//! and a click that picks the row and closes the panel. That is the whole
-//! thing, and all three of the floem-ui kits' menus are it.
-//!
-//! ## Why it is an overlay, and where it goes
-//!
-//! A menu is a panel *over* the page: it must not push the content around, and
-//! it must escape the box it is declared in. So it is asked of the host as an
-//! overlay layer, the way [`Popup`](crate::popup::Popup) is, and it is placed
-//! at the top-left of the box it is mounted in.
-//!
-//! v1 had no such decision: the panel went into an overlay at the overlay's
-//! own origin, and the *caller* decided where that was by choosing the slot the
-//! menu was declared in. The 2.0 menu keeps that -- the caller still chooses
-//! the slot -- and the host does the arithmetic.
-//!
-//! ## The open flag
-//!
-//! A menu is opened by something else -- a button, a key -- so its state is
-//! shared rather than owned: a [`SharedFlag`] the caller writes and the menu
-//! reads. Choosing a row closes the menu by writing the same flag.
 
 use std::sync::Arc;
 

@@ -1,18 +1,3 @@
-//! The ported Material breadcrumbs -- a row of labels separated by dividers,
-//! where the last label is the current location and the earlier ones lead back.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a current item that is painted in `on_surface`
-//! from an ordinary one that is not, nor tell a divider from an item. Only the
-//! paint log can, so most of these tests read what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_current_item_is_painted_in_on_surface_and_the_others_are_not`,
-//! `the_divider_is_painted_in_the_outline_variant` and
-//! `the_current_item_is_not_a_link` would fail if this kit stopped being this
-//! kit.
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::{Color, FontWeight};
@@ -34,9 +19,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -84,7 +66,6 @@ fn slot(kit: MaterialBreadcrumbs, index: usize) -> Box<dyn WidgetAny> {
 /// The text one of the trail's slots painted.
 fn slot_text(kit: MaterialBreadcrumbs, index: usize) -> (String, f32, FontWeight, Color) {
     let widget = slot(kit, index);
-    // An item that is not the current one is a pressable around its text.
     let text = if widget.as_any().is::<Pressable>() {
         widget.children().remove(0).build()
     } else {
@@ -116,7 +97,6 @@ fn tap(kit: MaterialBreadcrumbs, index: usize) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -147,7 +127,6 @@ fn the_tokens_and_colours_reach_the_style() {
     );
 }
 
-/// The weights the paint used, which v1's style did not report.
 #[test]
 fn the_weights_the_paint_used_are_reported() {
     let style = kit().resolved_style();
@@ -164,7 +143,6 @@ fn the_weights_the_paint_used_are_reported() {
     );
 }
 
-/// The padding v1 wrote as a literal.
 #[test]
 fn the_padding_v1_wrote_as_a_literal_is_a_literal_here() {
     assert_eq!(
@@ -179,14 +157,11 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
 /// The current item is painted in `on_surface`; the others are not.
 #[test]
 fn the_current_item_is_painted_in_on_surface_and_the_others_are_not() {
     let style = kit().resolved_style();
-    // Three items: "Home", "Docs", "Guide". The trail is
-    // [Home, divider, Docs, divider, Guide].
     let (text, size, weight, ink) = slot_text(trail_of(&["Home", "Docs", "Guide"]), 0);
     assert_eq!(text, "Home");
     assert_eq!(size, style.font_size, "the token's font size");
@@ -226,7 +201,6 @@ fn the_divider_is_painted_in_the_outline_variant() {
     assert_eq!(ink, paint(style.outline_variant), "v1's `outline_variant`");
 }
 
-/// The box keeps v1's padding on every side.
 #[test]
 fn the_box_keeps_v1_s_padding() {
     let surface = kit().view();
@@ -237,7 +211,6 @@ fn the_box_keeps_v1_s_padding() {
     assert_eq!(insets.bottom, 8.0);
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The trail is the items and the dividers between them: three items, two
 /// dividers.
@@ -247,7 +220,6 @@ fn the_trail_is_the_items_and_the_dividers_between_them() {
     assert_eq!(trail.children().len(), 5, "three items and two dividers");
 }
 
-/// The current item is not a link: v1 gave it no listener.
 #[test]
 fn the_current_item_is_not_a_link() {
     assert!(
@@ -275,7 +247,6 @@ fn an_earlier_item_is_a_link() {
     );
 }
 
-// --- the callback ---------------------------------------------------------
 
 /// Clicking an item reports its index.
 #[test]
@@ -305,14 +276,9 @@ fn clicking_the_current_item_reports_nothing() {
     );
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// The theme: v1's Material breadcrumbs read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialBreadcrumbs::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

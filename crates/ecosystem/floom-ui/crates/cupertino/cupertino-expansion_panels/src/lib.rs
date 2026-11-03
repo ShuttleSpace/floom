@@ -1,63 +1,5 @@
 //! Cupertino expansion panels, ported to the Floom 2.0 widget API.
 //!
-//! The **stateful** reference port, alongside `md-card` (surface) and `md-button`
-//! (interactive). It is here because a component that *changes* after mount
-//! exercises things the other two never touch: a value every widget in a subtree
-//! has to agree on, a body that mounts and unmounts with it, and a header that
-//! must survive its own toggle so keyboard focus is not thrown away by the act of
-//! activating it.
-//!
-//! # What changed from v1
-//!
-//! v1 held the state in an `RwSignal<Vec<bool>>` that the panels read inside
-//! their `dyn_view` closures, and closed over each panel's index:
-//!
-//! ```ignore
-//! let expanded: RwSignal<Vec<bool>> = RwSignal::new(vec![false; n]);
-//! // per panel:
-//! .on_event(listener::Click, move |_, _| { expanded.set(all); … })
-//! ```
-//!
-//! 2.0 has no reactive read during render, so the state machine moved *into* the
-//! engine as [`floom_widgets::Accordion`] — a widget that owns the open set and
-//! hands each panel a shared handle, which is what lets the click that lands deep
-//! in a header reach a panel body its sibling owns. All three kits ship this
-//! component and their copies differ only in tokens and glyph names, so it is
-//! promoted once rather than written three times.
-//!
-//! The glyph names are the same in all three ("chevron_right" and
-//! "expand_more") but they come from this design system's own icon table, and
-//! those tables resolve no theme: the size and the muted ink are set on the
-//! icon here, where v1's icon view applied them.
-//!
-//! Three further translations, each load-bearing:
-//!
-//! * **The chevron is a `VectorIcon`,** not SVG markup. v1 handed
-//!   `svg(move || …)` a *closure* that re-read the open flag on every use; 2.0
-//!   resolves the glyph up front and hands [`Accordion::panel`] a builder that is
-//!   told which way the panel is (the same pattern the icon kits use).
-//! * **The header's clickable row is a [`floom_widgets::Pressable`].** v1 put
-//!   `.on_event(listener::Click, ..)` on any view; 2.0's only clickable widget was
-//!   `Button`, and `Button` *is* its label — it cannot carry a title plus a
-//!   chevron.
-//! * **The padding became a margin on the content's slot.** v1 wrote
-//!   `Container::new(content).style(|s| s.padding_horiz(..).padding_vert(..))`.
-//!   2.0's `Container` is a leaf with nothing inside it, so the inset belongs on
-//!   the content's own `LayoutRequest::margin`.
-//!
-//! # What is deliberately *not* here
-//!
-//! **A height transition on the reveal.** v1 has a real one — `md-expand_transition`
-//! tweens `height: 0 → computed` — and this port cannot reproduce it: 2.0's
-//! implicit layer only carries compositor channels (opacity / translate / scale),
-//! and the host re-runs layout only when layout is dirty
-//! (`WidgetHost::frame` → `if self.layout_dirty`), so a box cannot change height
-//! per frame. [`CupertinoExpansionPanels::content_transition`] therefore offers a
-//! compositor-only transition and the panel's box is its final height from the
-//! first frame. This is recorded in `docs/2.0/MOTION-GAP.md` (B4, "size") and in
-//! `docs/porting-floem-ui-to-2.0.md`.
-//!
-//! See `docs/porting-floem-ui-to-2.0.md`.
 
 use std::sync::Arc;
 
@@ -222,7 +164,6 @@ impl CupertinoExpansionPanels {
             // v1: `border_color(with_alpha(t.colors().outline, 30))`.
             border_color: to_paint(with_alpha(theme.colors().outline, 30)),
             // v1 drew the title with `Label::new(..)`, which takes the default text
-            // colour — `on_surface`.
             title_color: to_paint(theme.colors().on_surface),
             title_size: LABEL_FONT_SIZE,
         }

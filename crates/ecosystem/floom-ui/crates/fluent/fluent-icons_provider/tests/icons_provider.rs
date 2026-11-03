@@ -1,12 +1,4 @@
 //! Fluent icons_provider: the map it shares, and the subtree it wraps.
-//!
-//! ## The claim
-//!
-//! A provider owns a map of overrides and hands its descendants a handle to
-//! it. v1 held it in an `RwSignal<HashMap<String, String>>`; 2.0 holds it in
-//! a `SharedMap`, because an `RwSignal` is `Rc`-based and cannot cross a
-//! `Send + Sync` slot boundary. The handle is the *same* one a descendant
-//! reads -- not a copy.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -15,7 +7,6 @@ use floom_core::Widget;
 
 use floom_widget_fluent_icons_provider::FluentIconsProvider;
 
-/// The props report what the caller set.
 #[test]
 fn the_props_report_the_map() {
     let mut map = HashMap::new();
@@ -24,7 +15,6 @@ fn the_props_report_the_map() {
     assert_eq!(provider.props().icons, map);
 }
 
-/// The handle the descendants read holds the map.
 #[test]
 fn the_shared_handle_carries_the_map() {
     let mut map = HashMap::new();
@@ -38,8 +28,6 @@ fn the_shared_handle_carries_the_map() {
     );
 }
 
-/// Two calls hand over the *same* handle, so a descendant that wrote it would
-/// be seen by the next one that reads it.
 #[test]
 fn the_handle_is_shared() {
     let provider = FluentIconsProvider::new();
@@ -51,7 +39,6 @@ fn the_handle_is_shared() {
     );
 }
 
-/// The subtree is mounted inside the provider.
 #[test]
 fn the_subtree_is_mounted() {
     let stack = FluentIconsProvider::new()

@@ -1,89 +1,8 @@
 //! Cupertino date picker, ported to the Floom 2.0 widget API.
 //!
-//! A date picker is a field that shows the chosen date, and a calendar that
-//! opens under it: a header with the month and the two arrows that walk the
-//! months, a row of weekday initials, and a six-week grid of days.
-//!
-//! ## What the port uses
-//!
-//! The engine's `DatePicker`: the field that shows the date and the calendar
-//! that picks one. The three floem-ui date-picker kits each used to carry
-//! their own copy of both, along with the calendar's date arithmetic and the
-//! layout that puts the days in the grid.
-//!
-//! The engine's overlay door. v1 put the calendar in an `Overlay` and placed
-//! it by hand: a `LayoutChangedListener` read the field's *window* origin and
-//! height and wrote them into `inset_top` and `inset_left`, so the panel's
-//! position was the picker's own arithmetic -- and it was arithmetic about the
-//! window, not about the field, so it was wrong the moment the page scrolled.
-//! 2.0's host owns the overlay layers. The picker asks for a popup rect
-//! derived from its own box, and the host puts the calendar there, paints it
-//! above the tree and hit-tests it first. So the listener is gone, and so are
-//! the window-origin insets.
-//!
-//! ## What this kit answers
-//!
-//! * the field's height, radius and minimum width, the calendar's width and
-//!   the day cell's size: the tokens;
-//! * the field's fill: `surface`; its border: `outline`, `primary` while the
-//!   calendar is open, and `outline` at 97 while the picker is disabled; the
-//!   date's ink: `on_surface`, the placeholder's: `on_surface_variant`;
-//! * the calendar's fill: `surface`; its border: `outline` at 120; its
-//!   shadow: black at 24, blurred 12 and spread 1;
-//! * the chosen day's fill: `primary`; its ink: `on_primary`.
-//!
-//! ## The numbers v1 wrote as literals
-//!
-//! The field's horizontal padding (12), the border's thickness (1), the
-//! calendar's padding (8), the gap between the calendar's three parts (6), the
-//! gap between the grid's rows (2), the weekday row's size (11), the arrows'
-//! size (18) and their padding (4).
-//!
-//! ## The token that never showed
-//!
-//! `DatePickerTokens::padding_horizontal` (16) is not in v1's markup: the
-//! field padded itself by 12, a literal. The port keeps v1's 12 and leaves the
-//! token unread, and the style reports the 12 under the name the paint uses.
-//!
-//! ## The differences this port names rather than reproduces
-//!
-//! * **The hovered day cell.** v1 filled a day with `primary` at 16 while the
-//!   pointer was over it. 2.0's `Pressable` does not publish its interaction
-//!   state to the widget that owns it, so there is no way to know which cell
-//!   the pointer is over. The port's cells paint their selected fill or
-//!   nothing. Named rather than faked with a fill that is always on.
-//! * **The calendar opens on the frame after the click.** The calendar is a
-//!   host overlay, and 2.0's overlay door is state-driven: the click writes
-//!   "open" into the shared state, and the next update asks the host for the
-//!   panel. v1's panel was up in the same frame.
-//! * **The field and the calendar paint themselves.** 2.0 keeps a mounted
-//!   child's widget when its key survives a rebuild, so a `Text` child would
-//!   keep the date it was built with. The port's field and calendar read the
-//!   shared state when they paint.
-//!
-//! ## The theme source
-//!
-//! v1's Cupertino date picker took a *snapshot* of its own design system --
-//! `MultiTheme::new_for(DesignSystem::Cupertino)` -- so a change of the
-//! app-wide theme does not reach it. The port keeps that.
 
 //! ## What v1 wrote that this port does not carry
 //!
-//! * **`props().on_change` is a `Box<dyn Fn(DateValue)>`.** The kit fills it
-//!   with a wrapper around its own `Arc<dyn Fn(DateValue) + Send + Sync>`:
-//!   the closure a 2.0 tree is built from has to be `Send + Sync`, and v1's
-//!   box is not.
-//! * **The accessors.** v1's Cupertino date picker had no `props()`, `theme()`
-//!   or `with_theme()`. The port gives all three kits the same three, because
-//!   a kit that cannot be given a theme cannot be tested against one.
-//!
-//! ## The shape that belongs to the engine
-//!
-//! The picker widget -- a field, a shared state, and a calendar that opens
-//! under it -- is the same shape in all three kits, so it belongs in
-//! `floom-ui-composites` beside `Combobox` and `Menu`. The engine could not be
-//! edited while this port was written, so the shape is written here, once per
-//! kit, and named here.
 
 use std::sync::{Arc, Mutex};
 
@@ -243,7 +162,6 @@ impl CupertinoDatePicker {
         self.on_change = Some(shared.clone());
         // The props keep reporting that there is a callback, as v1's did. The
         // box is a wrapper, because the props' own type is not `Send + Sync`
-        // and the tree cannot hold one.
         self.props.on_change = Some(Box::new(move |value: ThemeDateValue| {
             shared(to_engine_date(value))
         }));

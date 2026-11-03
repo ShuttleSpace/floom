@@ -1,20 +1,5 @@
 //! The ported Cupertino checkbox button -- a chip-shaped toggle: a rounded box
 //! with a check mark in it and a label beside it.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a pill that paints `surface_variant` from one
-//! that paints `primary`, and it cannot tell a mark that is transparent from one
-//! that is a grey check. Only the paint log can, so most of these tests read
-//! what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_unchecked_pill_paints_v1_s_fill_and_rim`,
-//! `the_checked_pill_paints_v1_s_fill_and_rim` and
-//! `the_mark_is_transparent_while_unchecked_and_disabled` would fail if this kit
-//! stopped being this kit -- the last one is the place Material disagrees with
-//! the other two.
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::Color;
@@ -40,7 +25,6 @@ const AT: Point = Point { x: 20.0, y: 20.0 };
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -451,7 +435,6 @@ fn the_props_report_the_shape_and_not_the_callback() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoCheckboxBtn::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

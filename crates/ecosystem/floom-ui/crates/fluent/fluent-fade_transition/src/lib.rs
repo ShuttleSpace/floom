@@ -1,19 +1,4 @@
 //! Fluent fade transition, ported to the Floom 2.0 widget API.
-//!
-//! v1 mounted the child only while a `show` signal was true, and played an
-//! animation on the way in and on the way out. 2.0's [`Conditional`] is that
-//! shape: it mounts and unmounts a subtree, and keeps an exiting one mounted
-//! until its exit has played, so the departure is visible.
-//!
-//! ## The signal became a flag
-//!
-//! v1 held an `RwSignal<bool>`, which is `Rc`-based and cannot cross a `Send +
-//! Sync` slot boundary -- so the port holds a [`SharedFlag`], the same
-//! `Arc<Mutex<bool>>` the text input's buffer uses, and the engine's
-//! `Conditional` reads it in `update`. The signal is therefore still the
-//! caller's: [`FluentFadeTransition::show_signal`] hands it over, and whoever writes it drives
-//! the child in and out.
-//!
 use std::sync::Arc;
 
 use floom_core::{ChildKey, LayoutRequest, WidgetAny};
@@ -28,10 +13,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 
 const DESIGN_SYSTEM: &str = "fluent";
 
-/// A builder for the content, replayed each time it is mounted.
-///
-/// A 2.0 slot is a replayed `Fn`, so the content cannot be a value: it is
-/// built again every time it appears.
 pub type ChildBuilder = Arc<dyn Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static>;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -40,12 +21,10 @@ pub struct FluentFadeTransitionStyle {
     pub duration_ms: f32,
 }
 
-/// Fluent's fade transition.
 pub struct FluentFadeTransition {
     props: FadeTransitionProps,
     child: Option<ChildBuilder>,
     theme: RwSignal<MultiTheme>,
-    /// The shared "is it showing" flag.
     show: SharedFlag,
 }
 
@@ -61,25 +40,15 @@ impl FluentFadeTransition {
         }
     }
 
-    /// Set the content that appears and disappears.
-    ///
-    /// v1 took a factory closure for the same reason this does: the child is
-    /// mounted and unmounted on every enter and leave, so it must be
-    /// rebuildable.
     pub fn child(mut self, build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static) -> Self {
         self.child = Some(Arc::new(build));
         self
     }
 
-    /// The shared flag that shows and hides the content.
-    ///
-    /// v1's `show_signal()`: an external trigger -- a button, a route -- writes
-    /// it and the content follows.
     pub fn show_signal(&self) -> SharedFlag {
         self.show.clone()
     }
 
-    /// Shows or hides the content, through the shared flag.
     pub fn show(mut self, show: bool) -> Self {
         write_flag(&self.show, show);
         self
@@ -110,28 +79,19 @@ impl FluentFadeTransition {
         }
     }
 
-    /// The transition this kit plays, if it plays one.
-    ///
-    /// The same transition on the way in and on the way out, which is what v1
-    /// did: one animation, run forwards and backwards.
     pub fn transition(&self) -> Option<PresenceTransition> {
         let style = self.resolved_style();
         self.transition_for(&style)
     }
 
-    /// The transition for a resolved style. Split out so `transition` and
-    /// `view` cannot disagree about which one they mean.
     fn transition_for(&self, style: &FluentFadeTransitionStyle) -> Option<PresenceTransition> {
         Some(PresenceTransition::fade(
             f64::from(style.duration_ms) / 1000.0,
         ))
     }
 
-    /// The content, mounted only while the flag says so.
     pub fn view(self) -> Conditional {
         let style = self.resolved_style();
-        // v1's fade: opacity 0 -> 1 over the token's duration, played on
-        // create and on remove.
         let transition = self.transition_for(&style);
         let child = self.child.clone();
         let show = self.show.clone();

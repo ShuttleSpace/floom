@@ -1,16 +1,4 @@
 //! The ported Fluent data table -- a header row, body rows, and a click
-//! on a row.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation, the pixels and the click: the tokens reach the style, the
-//! frame and the rows are filled and ruled in v1's colours, the cells are
-//! painted in v1's ink at v1's sizes, and a clicked row answers with its
-//! index.
-//!
-//! ## The tripwires
-//!
-//! `the_cells_are_painted_in_v1_s_ink` and `a_clicked_row_answers_with_its
-//! _index` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -39,9 +27,6 @@ const ROW: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -57,7 +42,6 @@ fn tokens() -> floom_core_theme::component_tokens::DataTableTokens {
     }
 }
 
-/// A data table with two columns and two rows.
 fn table() -> FluentDataTable {
     kit()
         .columns(vec![
@@ -76,7 +60,6 @@ fn table() -> FluentDataTable {
         ])
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -86,7 +69,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn WidgetAny) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -96,7 +78,6 @@ fn ops_of(widget: &dyn WidgetAny) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The fills a painted box drew, in the order it drew them.
 fn fills(widget: &dyn WidgetAny) -> Vec<Color> {
     ops_of(widget)
         .iter()
@@ -108,10 +89,6 @@ fn fills(widget: &dyn WidgetAny) -> Vec<Color> {
         .collect()
 }
 
-/// The rows of a table: the header first, then the clickable body rows.
-///
-/// The slots, not the widgets: a slot can be built again, which is what a
-/// test that drives a click needs.
 fn rows(table: &impl Widget) -> Vec<Child> {
     let mut frame_children = table.children();
     assert_eq!(frame_children.len(), 1, "the frame holds the rows");
@@ -119,7 +96,6 @@ fn rows(table: &impl Widget) -> Vec<Child> {
     rows.children()
 }
 
-/// The row a clickable row holds.
 fn pressable_row(pressable: &Child) -> Box<dyn WidgetAny> {
     let row = pressable.build();
     let mut children = row.children();
@@ -127,7 +103,6 @@ fn pressable_row(pressable: &Child) -> Box<dyn WidgetAny> {
     children.remove(0).build()
 }
 
-/// The text a cell paints, with its size, its ink and its weight.
 fn cell_text(cell: &dyn WidgetAny) -> Option<(String, f32, Color, FontWeight)> {
     let mut children = cell.children();
     assert_eq!(children.len(), 1, "a cell holds one text");
@@ -144,8 +119,6 @@ fn cell_text(cell: &dyn WidgetAny) -> Option<(String, f32, Color, FontWeight)> {
     })
 }
 
-/// A full press-and-release, which is how the engine sees an activation.
-/// Returns whether the release was consumed.
 fn click(row: &mut Box<dyn WidgetAny>) -> bool {
     let at = Point::new(8.0, 16.0);
     let mut create = AllocatingCreateContext::new();
@@ -158,9 +131,7 @@ fn click(row: &mut Box<dyn WidgetAny>) -> bool {
     consumed
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentDataTableStyle = kit().resolved_style();
@@ -191,8 +162,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// v1's rules: the outline at 60 under the header, at 30 under the rows, and
-/// the on-surface at 6 for a striped row.
 #[test]
 fn the_rules_are_v1_s() {
     let style = kit().resolved_style();
@@ -214,8 +183,6 @@ fn the_rules_are_v1_s() {
     assert_eq!(style.divider_width, 1.0, "v1 wrote `border_bottom(1.0)`");
 }
 
-/// v1's style reported the token's row height even in dense mode, where the
-/// rows were drawn at `dense_row_height`. The port reports both.
 #[test]
 fn the_dense_row_height_is_reported_alongside_v1_s_row_height() {
     let style = kit().dense(true).resolved_style();
@@ -231,8 +198,6 @@ fn the_dense_row_height_is_reported_alongside_v1_s_row_height() {
     );
 }
 
-/// The props report the table -- and the callback slot stays empty, because
-/// `DataTableProps::on_row_click` is not shareable.
 #[test]
 fn the_props_report_the_table() {
     let kit = table().striped(true).dense(true);
@@ -246,9 +211,7 @@ fn the_props_report_the_table() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The frame is filled in v1's colour and outlined in v1's colour.
 #[test]
 fn the_frame_is_filled_and_outlined_in_v1_s_colours() {
     let style = table().resolved_style();
@@ -266,8 +229,6 @@ fn the_frame_is_filled_and_outlined_in_v1_s_colours() {
     assert_eq!(border.color(), paint(style.outline));
 }
 
-/// The header row is filled with the surface variant and ruled with v1's
-/// header rule.
 #[test]
 fn the_header_row_is_filled_and_ruled_in_v1_s_colours() {
     let style = table().resolved_style();
@@ -283,8 +244,6 @@ fn the_header_row_is_filled_and_ruled_in_v1_s_colours() {
     assert_eq!(fills[1], paint(style.header_divider), "v1's header rule");
 }
 
-/// A plain row carries only v1's rule; a striped row carries the stripe's
-/// fill as well.
 #[test]
 fn the_rows_carry_v1_s_rule_and_stripe() {
     let style = table().resolved_style();
@@ -302,13 +261,11 @@ fn the_rows_carry_v1_s_rule_and_stripe() {
     assert_eq!(second[1], paint(style.row_divider), "and the rule under it");
 }
 
-/// The cells are painted in v1's ink at v1's sizes.
 #[test]
 fn the_cells_are_painted_in_v1_s_ink() {
     let style = table().resolved_style();
     let rows = rows(&table().view());
 
-    // The header's cells: medium weight, the header's size.
     let header = rows[0].build();
     let header_cells = header.children();
     assert_eq!(header_cells.len(), 2, "one cell per column");
@@ -319,7 +276,6 @@ fn the_cells_are_painted_in_v1_s_ink() {
     assert_eq!(ink, paint(style.on_surface), "v1's header ink");
     assert_eq!(weight, FontWeight::Medium, "v1's header weight");
 
-    // The body cells: the body size, the same ink.
     let body_row = pressable_row(&rows[1]);
     let body_cells = body_row.children();
     let body_cell = body_cells[0].build();
@@ -329,9 +285,7 @@ fn the_cells_are_painted_in_v1_s_ink() {
     assert_eq!(ink, paint(style.on_surface), "v1's body ink");
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The header comes first and the last row is the last row.
 #[test]
 fn the_header_comes_first_and_the_last_row_is_the_last_row() {
     let rows = rows(&table().view());
@@ -354,8 +308,6 @@ fn the_header_comes_first_and_the_last_row_is_the_last_row() {
     );
 }
 
-/// The cells take an equal share of the row and are padded on the horizontal
-/// axis only, as v1 wrote them.
 #[test]
 fn the_cells_are_padded_on_the_horizontal_axis_only() {
     let style = table().resolved_style();
@@ -381,7 +333,6 @@ fn the_cells_are_padded_on_the_horizontal_axis_only() {
     );
 }
 
-/// The columns' alignments reach the cells.
 #[test]
 fn the_columns_alignments_reach_the_cells() {
     use floom_widgets::Align;
@@ -400,7 +351,6 @@ fn the_columns_alignments_reach_the_cells() {
     );
 }
 
-/// The rows declare v1's heights, and a dense table is shorter.
 #[test]
 fn the_rows_declare_v1_s_heights() {
     let style = table().resolved_style();
@@ -419,7 +369,6 @@ fn the_rows_declare_v1_s_heights() {
     );
 }
 
-/// A clicked row answers with its index.
 #[test]
 fn a_clicked_row_answers_with_its_index() {
     let clicked: Arc<Mutex<Vec<usize>>> = Arc::new(Mutex::new(Vec::new()));
@@ -440,9 +389,6 @@ fn a_clicked_row_answers_with_its_index() {
     );
 }
 
-/// A table with no callback still answers the click -- it just has nothing to
-/// say. v1's row always had a listener; 2.0's pressable consumes the click
-/// either way.
 #[test]
 fn a_table_with_no_callback_still_consumes_the_click() {
     let rows = rows(&table().view());
@@ -451,14 +397,9 @@ fn a_table_with_no_callback_still_consumes_the_click() {
     assert_eq!(rows.len(), 3, "and the table is still there");
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// v1's Fluent data table took a *snapshot* of its own design system, so a
-/// change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentDataTable::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

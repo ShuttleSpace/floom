@@ -1,26 +1,3 @@
-//! material's badge as a kit crate: the token translation, plus the
-//! numbers that are this kit's own rather than the tokens'.
-//!
-//! This crate had never been compiled, which is how a three-line palette came to
-//! be written three times without anyone noticing the engine already has a
-//! `Badge`. So the point of this file is to pin the palette *this kit wrote*, in
-//! the places where a plausible-looking edit would change a pixel.
-//!
-//! ## What v1 drew that this port cannot
-//!
-//! **The overlay over a child.** v1 wrapped a child with an absolutely-positioned
-//! bubble at the top-right. The engine `Badge` is the bubble itself and has no
-//! concept of "attached to a child". A kit that wants the overlay composes
-//! `Badge` over its own child, the way v1 did -- a layout decision the engine
-//! leaves to whoever mounts it. The dropped `child` field is reported, not
-//! re-implemented.
-//!
-//! ## What this kit's identity actually is
-//!
-//! material's whole disagreement with the other two is the palette: it uses
-//! `error` / `on_error` where Material and Cupertino use
-//! `error` / `on_error`. That is the tripwire that keeps the three kits three
-//! crates.
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;

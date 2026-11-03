@@ -1,17 +1,4 @@
 //! The ported Fluent main content region -- the area the application's
-//! content lives in, inset by the sizes the shell registered.
-//!
-//! ## Why the pixels and not the style
-//!
-//! The style can say which fill the content was *given*; only the paint log
-//! can say that the content was painted in it, and that the spacers around it
-//! are the sizes the shell asked for. So the tests read both.
-//!
-//! ## The tripwires
-//!
-//! `the_content_is_painted_in_the_background` and
-//! `the_spacers_are_sized_from_the_registered_insets` would fail if this kit
-//! stopped insetting itself.
 
 use floom_core::{ElementId, Length, Rect, Widget, WidgetAny};
 use floom_types::Color;
@@ -30,11 +17,6 @@ const BOX: Rect = Rect {
     y1: 600.0,
 };
 
-/// The Fluent theme, with Fluent selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// reads the *current* one -- and `set_design_system` writes a thread-local,
-/// so the selection is this test's alone.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
@@ -44,7 +26,6 @@ fn kit() -> FluentMain {
     FluentMain::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -54,7 +35,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -64,21 +44,17 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The middle row: the left spacer, the content and the right spacer.
 fn middle_of(kit: FluentMain) -> Box<dyn WidgetAny> {
     let region = kit.view();
     region.children().remove(1).build()
 }
 
-/// The content box: the middle row's second child.
 fn content_of(kit: FluentMain) -> Box<dyn WidgetAny> {
     let middle = middle_of(kit);
     middle.children().remove(1).build()
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The theme's fill and the design system reach the style.
 #[test]
 fn the_theme_and_the_design_system_reach_the_style() {
     let style: FluentMainStyle = kit().resolved_style();
@@ -90,7 +66,6 @@ fn the_theme_and_the_design_system_reach_the_style() {
     );
 }
 
-/// The insets are the layout signal's own numbers.
 #[test]
 fn the_insets_are_the_layout_signals_own_numbers() {
     register_layout(LayoutSlot::SystemBar, 24.0);
@@ -106,9 +81,7 @@ fn the_insets_are_the_layout_signals_own_numbers() {
     assert_eq!(style.right, 320.0, "the open right drawer");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The content is painted in the theme's background colour.
 #[test]
 fn the_content_is_painted_in_the_background() {
     let content = content_of(kit());
@@ -125,7 +98,6 @@ fn the_content_is_painted_in_the_background() {
     );
 }
 
-/// The spacers are sized from the registered insets.
 #[test]
 fn the_spacers_are_sized_from_the_registered_insets() {
     register_layout(LayoutSlot::AppBar, 64.0);
@@ -164,10 +136,7 @@ fn the_spacers_are_sized_from_the_registered_insets() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The region is a column of the top spacer, the middle row and the bottom
-/// spacer.
 #[test]
 fn the_region_is_a_column_of_three() {
     let region = kit().view();
@@ -191,8 +160,6 @@ fn the_region_is_a_column_of_three() {
     );
 }
 
-/// The middle row is a row of the left spacer, the content and the right
-/// spacer.
 #[test]
 fn the_middle_row_is_a_row_of_three() {
     let middle = middle_of(kit());
@@ -203,7 +170,6 @@ fn the_middle_row_is_a_row_of_three() {
     );
 }
 
-/// The content takes the room the spacers leave.
 #[test]
 fn the_content_takes_the_room_the_spacers_leave() {
     let middle = middle_of(kit());
@@ -215,9 +181,6 @@ fn the_content_takes_the_room_the_spacers_leave() {
     );
 }
 
-/// With no child, the content box has none: v1 mounted an `Empty` there, and
-/// `Empty` had no size, so this is a structural difference and not a pixel
-/// one.
 #[test]
 fn the_content_box_is_empty_when_there_is_no_child() {
     let content = content_of(kit());
@@ -228,10 +191,7 @@ fn the_content_box_is_empty_when_there_is_no_child() {
     );
 }
 
-// --- the theme source -----------------------------------------------------
 
-/// The theme is a snapshot: v1's Fluent main took a `MultiTheme` for Fluent,
-/// not the app-wide signal.
 #[test]
 fn the_theme_is_a_snapshot() {
     assert_ne!(

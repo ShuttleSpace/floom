@@ -1,15 +1,4 @@
 //! The ported Fluent tooltip -- a bubble that comes up while the pointer
-//! rests on the control.
-//!
-//! The state machine is the engine's; what is tested here is the translation
-//! and the pixels: the tokens reach the engine's style, the bubble is painted
-//! the colour v1 painted, and v1's own numbers -- the gap below the control,
-//! the text size -- are the ones the port uses.
-//!
-//! ## The tripwires
-//!
-//! `the_bubble_paints_v1_s_appearance` and `the_gap_is_v1_s` would fail if
-//! this kit stopped being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget};
 use floom_types::{Color, PointerPhase};
@@ -33,9 +22,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 10.0, y: 10.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -44,14 +30,12 @@ fn kit() -> FluentTooltip {
     FluentTooltip::new().with_theme(theme())
 }
 
-/// The control the tooltip hangs off.
 fn trigger() -> Child {
     Child::new(ChildKey::index(0), LayoutRequest::new(), || {
         Box::new(floom_widgets::Text::new("trigger"))
     })
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -61,8 +45,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The pointer arriving on the control, and the update pass that carries the
-/// hover to the bubble.
 fn arrive(tooltip: &mut Tooltip) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = tooltip.create(&mut create);
@@ -77,7 +59,6 @@ fn arrive(tooltip: &mut Tooltip) {
     tooltip.update(&mut cx, id);
 }
 
-/// The fill and the ink one bubble painted.
 fn bubble_painted(tooltip: &Tooltip) -> (Option<Color>, Option<Color>) {
     let bubble = tooltip.children().remove(1).build();
     let mut create = AllocatingCreateContext::new();
@@ -91,7 +72,6 @@ fn bubble_painted(tooltip: &Tooltip) -> (Option<Color>, Option<Color>) {
         _ => None,
     });
 
-    // The text is the bubble's child.
     let label = bubble.children().remove(0).build();
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = label.create(&mut create);
@@ -106,9 +86,7 @@ fn bubble_painted(tooltip: &Tooltip) -> (Option<Color>, Option<Color>) {
     (fill, ink)
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the engine's style.
 #[test]
 fn the_tokens_and_colours_reach_the_engine_style() {
     let style: FluentTooltipStyle = kit().resolved_style();
@@ -133,7 +111,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// The gap below the control is v1's: v1's Fluent bubble had no offset
 #[test]
 fn the_gap_is_v1_s() {
     assert_eq!(
@@ -143,10 +120,7 @@ fn the_gap_is_v1_s() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The bubble is painted the colour v1 painted: the fill at 230 and the text
-/// in the surface colour.
 #[test]
 fn the_bubble_paints_v1_s_appearance() {
     let resolved = kit().resolved_style();
@@ -162,7 +136,6 @@ fn the_bubble_paints_v1_s_appearance() {
     assert_eq!(ink, Some(paint(resolved.text_color)), "and the text's ink");
 }
 
-/// The bubble is up only while the pointer rests on the control.
 #[test]
 fn the_bubble_is_up_only_while_the_pointer_rests_on_the_control() {
     let mut tooltip = kit().child(trigger()).text("Hello").view();
@@ -175,7 +148,6 @@ fn the_bubble_is_up_only_while_the_pointer_rests_on_the_control() {
     assert!(tooltip.is_present(), "so the bubble is up");
 }
 
-/// The text is the tooltip's own.
 #[test]
 fn the_bubble_paints_the_tooltips_own_text() {
     let mut tooltip = kit().child(trigger()).text("Hello").view();
@@ -203,19 +175,14 @@ fn the_bubble_paints_the_tooltips_own_text() {
     );
 }
 
-/// The props report the text.
 #[test]
 fn the_props_report_the_text() {
     let kit = kit().text("Hello");
     assert_eq!(kit.props().text, "Hello");
 }
 
-/// The theme: v1's Fluent tooltip took a *snapshot* of its own design
-/// system, so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentTooltip::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

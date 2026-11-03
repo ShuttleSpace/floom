@@ -1,8 +1,3 @@
-//! The ported Material list item.
-//!
-//! The engine suite (`floom-widgets/tests/list_item.rs`) owns the *shape*; this
-//! suite owns the *translation*, which is all that is left in this crate. So each
-//! assertion is one v1 read: the token or literal it came from, and where it went.
 
 use floom_core::Widget;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -13,11 +8,6 @@ use floom_widgets::{Pressable, Ripple, Surface};
 
 use floom_widget_md_list_item::{to_engine_weight, MdListItem};
 
-/// Activate Material and hand back a theme that will read it.
-///
-/// `MultiTheme::new_for(ds)` does **not** select `ds` — it reads a process-global at
-/// every access (the porting plan's correction 9) — so a test that wants Material's
-/// numbers has to say so.
 fn material() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
@@ -35,11 +25,7 @@ fn list_tokens(theme: &MultiTheme) -> floom_core_theme::component_tokens::ListIt
     }
 }
 
-// --- the tokens reach the engine ------------------------------------------
 
-/// The three fields Material reads from `ListItemTokens`, and the two it reads from
-/// the theme proper. Material is the **only** kit that reads its own token table for
-/// these — see the note in the engine widget.
 #[test]
 fn material_reads_its_own_token_table() {
     let theme = material();
@@ -94,8 +80,6 @@ fn the_column_gap_is_the_literal_v1_wrote() {
     );
 }
 
-/// The title's weight comes from the **typography** scale in v1, not from the list
-/// item's tokens, and it is the one field the engine cannot resolve for a kit.
 #[test]
 fn the_title_weight_comes_from_the_typography_scale() {
     let theme = material();
@@ -114,7 +98,6 @@ fn the_title_weight_comes_from_the_typography_scale() {
     );
 }
 
-// --- the subtitle ---------------------------------------------------------
 
 /// A subtitle is an `Option`, and the props' own `Option<String>` is what decides.
 #[test]
@@ -129,7 +112,6 @@ fn no_subtitle_leaves_the_engine_field_empty() {
     assert!(with.has_subtitle(), "a subtitle makes two");
 }
 
-// --- the assembly ---------------------------------------------------------
 
 /// The composition, read through the kit: `Ripple(Pressable(Surface(row)))`.
 #[test]
@@ -164,7 +146,6 @@ fn the_title_and_subtitle_travel_into_the_row() {
     assert_eq!(item().subtitle("Home").view().title(), "Wi-Fi");
 }
 
-// --- disabled ------------------------------------------------------------
 
 #[test]
 fn disabled_reaches_the_row_and_its_ripple() {
@@ -179,7 +160,6 @@ fn disabled_reaches_the_row_and_its_ripple() {
     );
 }
 
-// --- the props -----------------------------------------------------------
 
 /// `nav` is stored and never read — v1 read it nowhere in `view()`.
 #[test]
@@ -193,8 +173,6 @@ fn nav_is_carried_but_unread() {
     );
 }
 
-/// The click callback is stored twice — a v1 `Box` for the props and an
-/// `Arc<dyn Fn() + Send + Sync>` for the engine — and both come from one closure.
 #[test]
 fn the_props_report_the_click_callback() {
     let hits = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -209,7 +187,6 @@ fn the_props_report_the_click_callback() {
         "the v1-shaped copy is set, so `props()` reports what v1 reported"
     );
 
-    // And the engine's copy fires: click the pressable.
     let view = item.view();
     let ripple = view.children()[0].build();
     let ripple = ripple.as_any().downcast_ref::<Ripple>().unwrap();

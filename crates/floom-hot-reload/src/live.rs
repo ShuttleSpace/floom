@@ -141,8 +141,6 @@ impl LiveTree {
         self.layouts.insert(id.raw(), layout);
     }
 
-    // --- reads, for tests and for a host that wants to reconcile ----------
-
     /// The live id a stable key currently owns.
     pub fn id_of(&self, key: &NodeKey) -> Option<ElementId> {
         self.keys.get(key).copied()

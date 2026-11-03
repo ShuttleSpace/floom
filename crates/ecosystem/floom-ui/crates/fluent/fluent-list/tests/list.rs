@@ -1,10 +1,4 @@
 //! Fluent's list as a kit crate: the token translation, plus the numbers that
-//! are this kit's own rather than the tokens'.
-//!
-//! See `floom-widget-md-list`'s test module for the full rationale. The one
-//! number this kit answers differently from Material is the container radius:
-//! Fluent reads `radius().md` where Material hardcodes `8.0`. That is the
-//! tripwire that keeps the three kits three crates.
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
@@ -23,7 +17,6 @@ fn style_of(list: &FluentList) -> FluentListStyle {
 
 #[test]
 fn the_container_radius_is_radius_md_not_hardcoded_eight() {
-    // Fluent's whole disagreement with Material: it reads `radius().md`.
     let list = FluentList::new().with_theme(theme());
     let style = style_of(&list);
     assert_eq!(style.border_radius, theme().radius().md);

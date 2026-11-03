@@ -1,5 +1,3 @@
-//! Material's combobox as a kit crate: the token translation, the props round trip,
-//! and the two things the port had to decide that the engine could not.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -33,13 +31,7 @@ fn style() -> ComboboxStyle {
     MdCombobox::new().resolved_style()
 }
 
-// --- the token translation ------------------------------------------------
 
-/// The five numbers that come from `ComboboxTokens` are the token's, not a default's.
-///
-/// The failure this pins is a kit silently resolving to `ComboboxStyle::default()`
-/// because `theme.component(..)` did not match — which is `unreachable!()` at runtime,
-/// so the real symptom is a combobox in the wrong metrics rather than a failure.
 #[test]
 fn the_tokens_come_from_combobox_tokens() {
     let style = style();
@@ -58,9 +50,6 @@ fn the_tokens_come_from_combobox_tokens() {
     assert_eq!(style.item_height, tokens.item_height);
 }
 
-/// `panel_max_height` is read now. v1 declared it in the token table and never used
-/// it, because the panel was as tall as its rows — and the host lays overlay content
-/// out *against* the requested rect, so a panel needs a bound to be clipped to.
 #[test]
 fn the_panel_bound_is_read_where_v1_never_read_it() {
     let style = style();
@@ -82,8 +71,6 @@ fn the_panel_bound_is_read_where_v1_never_read_it() {
     );
 }
 
-/// The numbers v1 wrote at the call site rather than reading from a token, with
-/// Material's values. These are design decisions, so they are named.
 #[test]
 fn the_call_site_constants_are_material_s() {
     let style = style();
@@ -96,9 +83,6 @@ fn the_call_site_constants_are_material_s() {
     assert_eq!(style.border_width, 1.0, "v1's `.border(1.0)`");
 }
 
-/// **Material is the kit that wrote a panel gap.** Cupertino and Fluent wrote none,
-/// so their panels sit flush against the field, and that disagreement is preserved by
-/// making the gap a parameter rather than reconciling it.
 #[test]
 fn the_panel_gap_is_materials_four_and_nobody_elses() {
     assert_eq!(
@@ -109,7 +93,6 @@ fn the_panel_gap_is_materials_four_and_nobody_elses() {
     );
 }
 
-/// The four alphas v1 spread across the trigger, the chevron and the rows.
 #[test]
 fn the_alphas_are_v1s() {
     let style = style();
@@ -122,8 +105,6 @@ fn the_alphas_are_v1s() {
     assert_eq!(style.panel_shadow_alpha, 20, "the panel's shadow");
 }
 
-/// The colours come from the theme, and the field's border follows v1's three cases
-/// with disabled winning over open.
 #[test]
 fn the_border_follows_v1s_three_cases_in_v1s_order() {
     let style = style();
@@ -145,16 +126,7 @@ fn the_border_follows_v1s_three_cases_in_v1s_order() {
     );
 }
 
-// --- the theme, which no test verifies ------------------------------------
 
-/// **A kit's own design system is not selected by naming it.** `MultiTheme::new_for`
-/// ignores its argument, and reads go through a process-global at every access, so this
-/// combobox resolves Material's tokens because nothing has called
-/// `set_design_system` — not because the manifest said Material.
-///
-/// That is a property of the workspace, not of this crate, and it is the third
-/// correction of this shape in this port. The test exists so that if it ever stops
-/// being true, this crate's numbers change and a reviewer sees why.
 #[test]
 fn the_theme_is_not_selected_by_naming_it_and_nothing_has_set_it() {
     let named_material = style();
@@ -170,11 +142,7 @@ fn the_theme_is_not_selected_by_naming_it_and_nothing_has_set_it() {
     );
 }
 
-// --- props ----------------------------------------------------------------
 
-/// `props()` keeps reporting what v1 reported, including the callback's presence —
-/// which is why the crate stores it twice, v1-shaped for `props()` and `Send + Sync`
-/// for the engine.
 #[test]
 fn props_report_what_the_builder_set() {
     let combo = MdCombobox::new()
@@ -194,20 +162,12 @@ fn props_report_what_the_builder_set() {
     );
 }
 
-/// And the default placeholder is v1's, including the ellipsis character.
 #[test]
 fn the_default_placeholder_is_v1s() {
     assert_eq!(MdCombobox::new().props().placeholder, "Select\u{2026}");
 }
 
-// --- the mounted view -----------------------------------------------------
 
-/// The viewed combobox asks the host for a panel below its field, with Material's gap.
-///
-/// This is the end of the line the port drew: v1 reached the same geometry with
-/// `.absolute().inset_top(origin.y + trigger_height)` plus `.margin_top(4.0)` and a
-/// `LayoutChangedListener` to learn `origin` and `trigger_height`. The widget already
-/// has the box, so the arithmetic is one subtraction and the listener is gone.
 #[test]
 fn the_viewed_combobox_places_its_panel_below_the_field_with_material_s_gap() {
     let mut combo = MdCombobox::new().options(options()).view();
@@ -240,8 +200,6 @@ fn the_viewed_combobox_places_its_panel_below_the_field_with_material_s_gap() {
     }
 }
 
-/// The options reach the widget, so an untouched combobox lists them all — which is
-/// v1's filter, not a search-only control.
 #[test]
 fn the_options_reach_the_widget_and_an_empty_query_lists_them_all() {
     let combo = MdCombobox::new().options(options()).view();

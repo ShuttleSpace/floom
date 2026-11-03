@@ -1,12 +1,3 @@
-//! Material icons_provider: the map it shares, and the subtree it wraps.
-//!
-//! ## The claim
-//!
-//! A provider owns a map of overrides and hands its descendants a handle to
-//! it. v1 held it in an `RwSignal<HashMap<String, String>>`; 2.0 holds it in
-//! a `SharedMap`, because an `RwSignal` is `Rc`-based and cannot cross a
-//! `Send + Sync` slot boundary. The handle is the *same* one a descendant
-//! reads -- not a copy.
 
 use std::collections::HashMap;
 use std::sync::Arc;

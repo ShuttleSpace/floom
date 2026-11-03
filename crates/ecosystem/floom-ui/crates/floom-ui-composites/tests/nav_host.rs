@@ -1,18 +1,3 @@
-//! `NavHost` across the real `WidgetHost`: page mounts, key-stable reuse and
-//! the exit-transition window.
-//!
-//! Same counting discipline as `floe-app`'s `reconcile.rs`: removed subtrees
-//! stay in the node vector flagged `dead`, so [`FrameStats::painted`] (live
-//! nodes only) is the metric to assert on.
-//!
-//! ## Why this test moved out of `floom-app`
-//!
-//! It was there because the widget was. `floo-app` is the engine, `floo-ui` is
-//! the layer above it, and a test of engine behaviour belongs with the engine
-//! while a test of a widget belongs with the widget — so when `NavHost` moved
-//! up, this did too. It still drives a real `WidgetHost`, which is why it needs
-//! `floom-app` as a dev-dependency; that is a test-only edge and the
-//! architecture gate exempts dev-dependencies for exactly this reason.
 
 use floom_app::{NodeId, WidgetHost};
 use floom_layout::LayoutStyle;

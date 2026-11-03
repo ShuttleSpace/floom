@@ -1,4 +1,3 @@
-//! Theme tokens: color, typography, spacing, radius, elevation, motion.
 
 use floom_types::Color;
 

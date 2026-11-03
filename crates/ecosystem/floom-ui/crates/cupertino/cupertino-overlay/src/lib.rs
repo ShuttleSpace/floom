@@ -1,33 +1,5 @@
 //! Cupertino overlay, ported to the Floom 2.0 widget API.
 //!
-//! v1 wrapped a full-viewport scrim around the caller's content and dismissed
-//! when the scrim was clicked. 2.0 has no standalone "scrim" widget, but its
-//! `Dialog` is a host-modal surface driven by a shared presence flag -- which is
-//! exactly v1's `show` / `with_show_signal` external trigger -- so the overlay
-//! becomes a `Dialog` whose card is the scrim plus the centered content.
-//!
-//! ## What the port reproduces
-//!
-//! * the external `show(bool)` / `with_show_signal` trigger, via `with_shared_presence`
-//!   and [`CupertinoOverlay::open_flag`] / [`CupertinoOverlay::with_open_flag`];
-//! * the scrim: a full-viewport layer tinted `scrim` at `opacity` alpha;
-//! * the centered content card: `surface` background, `on_surface` text,
-//!   `border_radius(12.0)`, padding from `OverlayTokens`;
-//! * dismiss on scrim click, firing the v1 `on_click` callback.
-//!
-//! ## What the port names (not fakes)
-//!
-//! * **v1 dismissed on any click outside the content; 2.0's modal is not
-//!   light-dismissed**, so the scrim is a `Pressable` that carries the dismiss.
-//!   If 2.0's event model bubbles a content click up to the scrim, that content
-//!   click would also dismiss -- v1 explicitly `Stop`-ed propagation on the
-//!   content, which 2.0's `EventPropagation` does not expose here. Recorded,
-//!   not worked around: a bubble-stop would be an engine change, not a kit one.
-//! * **Fluent's `border_radius(12.0)` is Cupertino's number** --
-//!   the Fluent kit hardcoded `12.0` instead of a `tokens`- or
-//!   `radius().md`-derived value. Preserved as written (the tripwire keeping the
-//!   three kits three crates).
-//! * the engine `Dialog` paints no scrim of its own, so the scrim is the card.
 
 use std::sync::Arc;
 

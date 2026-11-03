@@ -1,20 +1,3 @@
-//! The ported Material checkbox button -- a chip-shaped toggle: a rounded box
-//! with a check mark in it and a label beside it.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a pill that paints `surface_variant` from one
-//! that paints `primary`, and it cannot tell a mark that is transparent from one
-//! that is a grey check. Only the paint log can, so most of these tests read
-//! what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_unchecked_pill_paints_v1_s_fill_and_rim`,
-//! `the_checked_pill_paints_v1_s_fill_and_rim` and
-//! `the_mark_is_transparent_while_unchecked_and_disabled` would fail if this kit
-//! stopped being this kit -- the last one is the place Material disagrees with
-//! the other two.
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::Color;
@@ -38,9 +21,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -69,11 +49,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The pill that is mounted right now.
-///
-/// The kit holds two appearances and the engine's `Conditional` mounts one of
-/// them, so the test asks the conditionals which one is showing -- after
-/// giving them the update pass a host would give them.
 fn mounted_pill(widget: &Stack) -> Box<dyn WidgetAny> {
     for child in widget.children() {
         let mut conditional = child.build();
@@ -166,7 +141,6 @@ fn tap(widget: &Stack) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -209,7 +183,6 @@ fn the_tokens_and_colours_reach_the_style() {
     );
 }
 
-/// The numbers v1 wrote as literals, rather than as tokens.
 #[test]
 fn the_numbers_v1_wrote_as_literals_are_literals_here() {
     let style = kit().resolved_style();
@@ -226,7 +199,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
 /// The unchecked pill: `surface_variant` with an `outline` rim.
 #[test]
@@ -308,9 +280,6 @@ fn the_mark_is_on_primary_while_checked() {
     assert_eq!(mark_ink(&widget), Some(paint(style.mark_color)));
 }
 
-/// Material's own answer for a disabled and unchecked button: the mark is
-/// still transparent, because v1 wrote the disabled tint *inside* the checked
-/// branch. Cupertino and Fluent drew a grey check here instead.
 #[test]
 fn the_mark_is_transparent_while_unchecked_and_disabled() {
     let style = kit().resolved_style();
@@ -326,7 +295,6 @@ fn the_mark_is_transparent_while_unchecked_and_disabled() {
     );
 }
 
-/// The label is painted with v1's text, size and ink.
 #[test]
 fn the_label_is_painted_with_v1_s_text_size_and_ink() {
     let style = kit().resolved_style();
@@ -350,7 +318,6 @@ fn the_disabled_label_is_painted_with_v1_s_disabled_ink() {
     );
 }
 
-// --- the state ------------------------------------------------------------
 
 /// Clicking the pill switches it on, and says so.
 #[test]
@@ -430,11 +397,7 @@ fn a_disabled_pill_does_not_answer() {
     assert!(seen.lock().unwrap().is_empty());
 }
 
-// --- the props ------------------------------------------------------------
 
-/// The props report the shape, and not the callback: the kit holds that as an
-/// `Arc` of its own, because 2.0's slots are `Send + Sync` and the props'
-/// `Box<dyn Fn(..)>` is not.
 #[test]
 fn the_props_report_the_shape_and_not_the_callback() {
     let kit = kit().checked(true).disabled(true).label("Notify");
@@ -444,14 +407,9 @@ fn the_props_report_the_shape_and_not_the_callback() {
     assert!(kit.props().on_change.is_none());
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// The theme: v1's Material checkbox button read the *app-wide* theme signal,
-/// so a change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialCheckboxBtn::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

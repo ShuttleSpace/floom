@@ -1,16 +1,3 @@
-//! The ported Material validation messages -- a column of error strings.
-//!
-//! The list is the kit's own, because the engine has no shared list (see the
-//! kit's module documentation), so what is tested here is the translation and
-//! the pixels: the tokens reach the style, the messages are painted in the
-//! theme's error colour at the size v1 drew them, and the caller can push into
-//! the list and pull out of it.
-//!
-//! ## The tripwires
-//!
-//! `the_messages_are_painted_in_the_error_colour` and
-//! `the_caller_can_push_into_the_list` would fail if this kit stopped being
-//! this kit.
 
 use floom_core::{ElementId, Rect, Widget};
 use floom_types::Color;
@@ -32,9 +19,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -77,7 +61,6 @@ fn message_painted(list: &ValidationMessagesList, index: usize) -> (String, f32,
         .expect("a message is painted")
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -96,8 +79,6 @@ fn the_tokens_and_colours_reach_the_style() {
         theme().colors().error,
         "the theme's error"
     );
-    // The props default to the tokens, so the two readings agree until a
-    // caller overrides one of them.
     assert_eq!(style.painted_font_size, tokens.font_size);
     assert_eq!(style.painted_gap, tokens.gap);
 }
@@ -116,10 +97,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The messages are painted in the theme's error colour, at the size v1 drew
-/// them.
 #[test]
 fn the_messages_are_painted_in_the_error_colour() {
     let resolved = kit().resolved_style();
@@ -137,7 +115,6 @@ fn the_messages_are_painted_in_the_error_colour() {
     assert_eq!(ink, paint(resolved.error_color), "and the same ink");
 }
 
-/// The gap between the messages is the one v1 used.
 #[test]
 fn the_gap_between_the_messages_is_the_one_v1_used() {
     let resolved = kit().resolved_style();
@@ -147,10 +124,7 @@ fn the_gap_between_the_messages_is_the_one_v1_used() {
     assert_eq!(request.gap, Some(resolved.painted_gap));
 }
 
-// --- the structure --------------------------------------------------------
 
-/// An empty list is a column with nothing in it: v1's "collapses to a
-/// zero-height empty view".
 #[test]
 fn an_empty_list_has_no_messages() {
     let list = kit().view();
@@ -162,8 +136,6 @@ fn an_empty_list_has_no_messages() {
     );
 }
 
-/// The caller can push into the list and pull out of it: v1's
-/// `messages_signal()`.
 #[test]
 fn the_caller_can_push_into_the_list() {
     let kit = kit();
@@ -180,7 +152,6 @@ fn the_caller_can_push_into_the_list() {
         "and the caller can read it back"
     );
 
-    // The handle the caller holds is the same list the widget draws.
     handle.lock().unwrap().push("Name is too short".to_string());
     assert_eq!(list.children().len(), 2, "two messages");
 }
@@ -204,12 +175,8 @@ fn the_props_report_the_overrides() {
     assert_eq!(kit.props().font_size, 16.0);
 }
 
-/// The theme: v1's Material validation messages read the *app-wide* theme
-/// signal, so a change of theme re-themes them with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialValidationMessages::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

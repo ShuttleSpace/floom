@@ -1,14 +1,3 @@
-//! The ported Material menu -- a panel of rows, up while a flag says so.
-//!
-//! The state machine is the engine's; what is tested here is the translation
-//! and the pixels: the tokens reach the engine's style, the panel is painted
-//! the colour v1 painted, and v1's own numbers -- the row's padding, the
-//! hovered row's fill, the panel's radius -- are the ones the port uses.
-//!
-//! ## The tripwires
-//!
-//! `the_menu_paints_v1_s_appearance` and `the_hovered_row_is_v1_s_fill` would
-//! fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -36,9 +25,6 @@ const BOX: Rect = Rect {
 const OVER_FIRST: Point = Point { x: 10.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -74,7 +60,6 @@ fn open_menu(kit: MaterialMenu) -> Menu {
     menu
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the engine's style.
 #[test]
@@ -123,7 +108,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-/// The hovered row's fill is this kit's own: v1 used `on_surface` at 8
 #[test]
 fn the_hovered_row_is_v1_s_fill() {
     assert_eq!(
@@ -133,7 +117,6 @@ fn the_hovered_row_is_v1_s_fill() {
     );
 }
 
-/// The panel's radius is this kit's own: v1 wrote a literal 4
 #[test]
 fn the_panel_radius_is_v1_s() {
     assert_eq!(
@@ -143,9 +126,7 @@ fn the_panel_radius_is_v1_s() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The panel is painted the colour v1 painted, and the rows in v1's ink.
 #[test]
 fn the_menu_paints_v1_s_appearance() {
     let resolved = kit().resolved_style();
@@ -174,7 +155,6 @@ fn the_menu_paints_v1_s_appearance() {
     assert_eq!(ink, Some(paint(resolved.text_color)), "and the rows' ink");
 }
 
-/// The row the pointer is over is filled with v1's hovered colour.
 #[test]
 fn the_hovered_row_is_filled_when_the_pointer_arrives() {
     let resolved = kit().resolved_style();
@@ -202,7 +182,6 @@ fn the_hovered_row_is_filled_when_the_pointer_arrives() {
     );
 }
 
-// --- the rules ------------------------------------------------------------
 
 /// Choosing a row runs its callback.
 #[test]
@@ -240,12 +219,8 @@ fn the_props_report_the_items() {
     assert!(!kit.props().open, "and the menu starts closed");
 }
 
-/// The theme: v1's Material menu read the *app-wide* theme signal, so a change
-/// of theme re-themes the menu with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialMenu::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

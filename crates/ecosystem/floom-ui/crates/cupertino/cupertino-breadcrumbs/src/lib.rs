@@ -1,78 +1,5 @@
 //! Cupertino breadcrumbs, ported to the Floom 2.0 widget API.
 //!
-//! A breadcrumb trail is a row of labels separated by dividers, where the last
-//! label is the current location and the earlier ones lead back.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a [`Surface`] for the padded box, a horizontal
-//! `Stack` for the trail, a `Text` for each label and for each divider, and a
-//! [`Pressable`] around each label that is not the current one. There is nothing
-//! here that a widget could own, so the shape stays in the kit.
-//!
-//! ## What this kit answers
-//!
-//! * the gap between the items and the dividers, the items' size and the
-//!   divider's text: the tokens;
-//! * the current item's ink: `on_surface`; the other items':
-//!   `on_surface_variant`; the divider's: `outline_variant`;
-//! * the current item's weight: medium; the other items' and the divider's:
-//!   regular -- v1 wrote the first two explicitly and the third by not writing
-//!   it, which is the text's own default;
-//! * the padding around the trail (8 on every side): a v1 literal.
-//!
-//! ## The style the port adds
-//!
-//! v1's `MdBreadcrumbsStyle` reported the gap, the size and the three inks, and
-//! nothing else -- although the paint also used the items' weights, the
-//! divider's text and the padding around the trail. The port reports all three
-//! and says so here rather than leaving the style to be half the answer.
-//!
-//! One consequence: v1's style was `Copy` and the port's is not, because the
-//! divider's text is a `String` and the port reports it. The three kits stay
-//! consistent with each other; they differ from the other families' styles,
-//! which have nothing stringy to report.
-//!
-//! ## The trail does not follow the items
-//!
-//! v1 held the items in an `RwSignal` and drew them through a `dyn_view`, so a
-//! host that wrote the signal saw the trail change. 2.0's tree is mounted once
-//! -- a slot's build closure runs when the key is new and never again -- so the
-//! trail is the one the kit was built with. The kit still holds the signal: v1's
-//! `items(..)` wrote it and so does the port's, but nothing observes it after
-//! the mount.
-//!
-//! ## The accessors
-//!
-//! v1's breadcrumbs had none: no `props()`, no `theme()`, no `with_theme()`. The
-//! port gives them `theme()` and `with_theme()`, because a kit that cannot be
-//! given a theme cannot be tested against one. There is no `props()`: v1's kit
-//! held no props at all -- the shared `BreadcrumbsProps` was never read by any
-//! of the three kits, which read the component tokens instead -- and inventing a
-//! props field the kit does not use would be a second source of truth.
-//!
-//! ## The one difference between the kits that the port drops
-//!
-//! v1's three kits disagreed about one thing here: Material's `items` took
-//! `mut self` and the other two took `self`. The difference was v1's accident:
-//! `RwSignal::set` takes `&self`, so `mut` was never needed, and the three
-//! bodies were the same line. The port takes `self` in all three.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **`cursor(CursorStyle::Pointer)`** on the clickable items. 2.0's paint
-//!   context has no cursor vocabulary. The items are still `Pressable`s, so they
-//!   are still activatable by keyboard, which the pointer was not.
-//! * **`h_stack_from_iter`** in Material's import list, which v1 never used: the
-//!   trail was built with `Stack::horizontal_from_iter`. A dead import, not a
-//!   behaviour.
-//!
-//! ## The one thing the port adds
-//!
-//! v1 published nothing to assistive technology. 2.0's `Pressable` does, so the
-//! port gives each clickable item the link role and the item's own text as its
-//! accessible name. That is a fix rather than a translation, and it is named
-//! here rather than slipped in.
 
 use std::sync::Arc;
 
@@ -219,7 +146,6 @@ impl CupertinoBreadcrumbs {
             };
             let text = label.clone();
             // The accessible name is a second copy of the label: the text itself
-            // is moved into the pressable's slot.
             let accessible = label.clone();
 
             if is_last {

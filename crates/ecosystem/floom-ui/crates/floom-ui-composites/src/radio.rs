@@ -1,33 +1,3 @@
-//! `Radio`: one option in a group of which exactly one may be selected.
-//!
-//! It moved out of `floom-widgets/src/controls.rs` for the same reason `Select`,
-//! `Counter` and `Slider` did. What a radio *does* is primitive — hold a
-//! boolean, tell the caller when it flips, answer Enter and Space, report itself
-//! to assistive technology — but what it *looks like* is a design decision, and
-//! the old `paint` had no way to express one. It hard-coded a `#9AA5B1` disc, a
-//! `#2B6CB0` dot, a white unselected disc, a 16px ring and a black 14px label.
-//!
-//! ## The shape changed, which is why `paint` was rewritten
-//!
-//! The engine painted a *filled disc* with a smaller disc on top. All three v1
-//! kits paint a *stroked ring* with a filled dot, and they disagree about the
-//! ring's thickness, its diameter (Material's token says 20, Cupertino's and
-//! Fluent's say `size + 8` for the touch target), and whether a state layer sits
-//! behind it at all. No re-parameterisation of "a disc" produces "a ring `n`
-//! thick", so the appearance became a [`RadioStyle`] rather than a set of colour
-//! knobs, and `paint` now draws the layers one at a time.
-//!
-//! ## The default is the old pixels, not a design decision
-//!
-//! [`RadioStyle::default`] is a snapshot of the values the old `paint` wrote
-//! inline. The giveaway is `border_width: 8.0`: a 16px ring stroked 8 wide *is*
-//! the filled `#9AA5B1` disc the engine drew, because that stroke runs from
-//! radius 0 to radius 8. Everything else in the table is a literal from the old
-//! code, so a `Radio` built without a style still paints what it painted before
-//! the move.
-//!
-//! Everything except `paint` came across unchanged: the same revision model,
-//! the same pointer and keyboard handling, the same semantics.
 
 use crate::{
     focus::FocusRing,

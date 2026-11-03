@@ -1,45 +1,4 @@
 //! Fluent switch, ported to the Floom 2.0 widget API.
-//!
-//! ## The three kits do not disagree on a switch
-//!
-//! Measured twice, because the first measurement was wrong. With naming and the
-//! `design_system` field removed, the three v1 `resolved_style()` bodies are
-//! byte-identical, and the three `view()` bodies differ only in the kit name,
-//! the design system enum, and a doc comment that calls Cupertino's a "pill".
-//! Their tokens are identical too — one `SwitchTokens` serves all three design
-//! systems through `ComponentId::Switch`.
-//!
-//! (Two crates carried an older `tests/api.rs` claiming 51 x 31 and 40 x 20.
-//! Those assertions are stale and contradict the theme layer; see
-//! `the_track_is_the_shared_switch_token`.)
-//!
-//! So there is no per-kit style parameter here, and inventing one would be
-//! inventing a disagreement.
-//!
-//! What the kits *do* disagree with the engine is four things, and each one is
-//! a reason the engine grew a parameter:
-//!
-//! 1. **Three independent numbers.** `SwitchTokens` gives width 52, height 32
-//!    and thumb 24. None of them satisfies the engine's derivation (half the
-//!    width would be 26, and a knob as tall as the track would be 32), so the
-//!    engine takes `track_size` and `knob_size` rather than scaling.
-//! 2. **A 2px gap.** v1 wrote `padding(2.0)` on the track with the knob centred
-//!    inside it, so the knob never touched either end. The engine's `knob_inset`
-//!    is that padding, promoted from decoration to geometry.
-//! 3. **Colours come from the theme.** The engine hard-codes a green track and
-//!    a white knob; a kit has to be able to supply its own.
-//! 4. **No hover or press feedback.** v1 styled only the resting and disabled
-//!    states. The engine's `tints(false)` turns its feedback off, rather than a
-//!    kit passing four near-identical colours to get the same result.
-//!
-//! ## `thumb_offset` is dead, and that is worth knowing
-//!
-//! v1's style struct carried a `thumb_offset` of `width - height` = 20, which
-//! looks like it would drop the knob off-centre. It does not: `view()` never
-//! read the field, and positioned the knob with `justify_start`/`justify_end`
-//! inside the 2px padding instead. This crate therefore does not reproduce it.
-//! `a_knob_inside_the_track_with_2px_gaps` is the assertion for where the knob
-//! actually goes.
 
 use std::rc::Rc;
 
@@ -54,15 +13,8 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 
-/// The design system this crate reads.
 const DESIGN_SYSTEM: &str = "fluent";
 
-/// v1's disabled alphas, as parts of 255.
-///
-/// These are not a "half alpha" rule the engine could have guessed: the track
-/// is `on_surface` at 12/255 and the thumb is `outline` at 38/255, two different
-/// roles at two different strengths. Only the knob's 38 is near the engine's
-/// default of half.
 const DISABLED_TRACK_ALPHA: u8 = 12;
 const DISABLED_THUMB_ALPHA: u8 = 38;
 
@@ -77,7 +29,6 @@ fn switch_tokens(theme: &MultiTheme) -> SwitchTokens {
     }
 }
 
-/// Fluent's resolved appearance.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FluentSwitchStyle {
     pub design_system: &'static str,
@@ -88,7 +39,6 @@ pub struct FluentSwitchStyle {
     pub width: f32,
     pub height: f32,
     pub thumb_size: f32,
-    /// The gap v1 got from `padding(2.0)`.
     pub inset: f32,
 }
 
@@ -96,13 +46,6 @@ pub struct FluentSwitch {
     props: SwitchProps,
     checked: RwSignal<bool>,
     theme: RwSignal<MultiTheme>,
-    /// A shared handle on `props.on_change`.
-    ///
-    /// `SwitchProps::on_change` is a `Box<dyn Fn(bool)>` and is not `Clone` --
-    /// its `Clone` impl deliberately drops the callback -- so it cannot be
-    /// borrowed into the engine's `'static` callback closure. An `Rc` around the
-    /// whole `Option` is the same move `md-checkbox` makes, and matches v1,
-    /// which handed the props to the view closure.
     on_change: Rc<Option<Box<dyn Fn(bool)>>>,
 }
 
@@ -111,11 +54,6 @@ impl FluentSwitch {
         Self {
             props: SwitchProps::default(),
             checked: RwSignal::new(false),
-            // A **snapshot**, unlike Material's live `theme_signal()`. Taken
-            // from the process-global design system at construction, so a later
-            // global theme switch does not restyle this switch. v1 did the same,
-            // and two of the three kits behaved this way, so it is preserved
-            // rather than corrected on the strength of one.
             theme: RwSignal::new(MultiTheme::new_for(
                 floom_core_theme::global_theme::DesignSystem::Fluent,
             )),
@@ -181,13 +119,7 @@ impl FluentSwitch {
         }
     }
 
-    /// The engine's switch, which is the whole translation.
     pub fn switch(&self) -> Switch {
-        // `SwitchProps::on_change` is a `Box<dyn Fn(bool)>` and is not `Clone`
-        // (its `Clone` impl deliberately drops it), so it cannot be borrowed
-        // into the engine's `'static` callback. Moving the whole `Option` into
-        // an `Rc` and cloning that `Rc` is what `md-checkbox` already does, and
-        // matches v1, which passed the props themselves into the view closure.
         let checked = self.checked;
         let on_change = self.on_change.clone();
         let style = self.resolved_style();
@@ -197,8 +129,6 @@ impl FluentSwitch {
             .track_size(style.width as f64, style.height as f64)
             .knob_size(style.thumb_size as f64)
             .knob_inset(style.inset as f64)
-            // v1 had no hover or press styling, so the engine's feedback is
-            // turned off rather than approximated.
             .tints(false)
             .palette(SwitchPalette {
                 track_on: to_paint(theme_color(self.theme.get(), true, true)),
@@ -217,8 +147,6 @@ impl FluentSwitch {
     }
 }
 
-/// The engine palette needs both resting colours at once, so this reads the
-/// theme twice where `resolved_style` reads it once per call.
 fn theme_color(theme: MultiTheme, checked: bool, track: bool) -> Color {
     match (checked, track) {
         (true, true) => theme.colors().primary,

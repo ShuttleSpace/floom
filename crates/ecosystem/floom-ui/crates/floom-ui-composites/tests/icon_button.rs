@@ -1,17 +1,3 @@
-//! The engine's [`IconButton`]: the composition, the variant rules, and the two
-//! things a disabled toggle has to get right.
-//!
-//! This suite exists because the icon button is *assembled*, not painted. Every
-//! assertion is about a decision that could plausibly have gone the other way and
-//! would still compile: which wrapper is outermost, whether the icon is centred,
-//! whether the disabled ink replaces the variant's or blends with it, and whether
-//! the glyph follows the box when the button is disabled.
-//!
-//! Note on borrows: [`Ripple`] and [`Pressable`] are deliberately not `Clone` — a
-//! `Pressable` carries a callback that is deliberately not `Send + Sync`, and
-//! cloning one would hand out a second node pretending to be the first. So the
-//! walks below hold the type-erased box alive and borrow out of it, rather than
-//! copying.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

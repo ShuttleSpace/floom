@@ -8,10 +8,6 @@ pub fn char_is_line_ending(ch: char) -> bool {
 /// whitespace.
 #[inline]
 pub fn char_is_whitespace(ch: char) -> bool {
-    // TODO: this is a naive binary categorization of whitespace
-    // characters.  For display, word wrapping, etc. we'll need a better
-    // categorization based on e.g. breaking vs non-breaking spaces
-    // and whether they're zero-width or not.
     match ch {
         //'\u{1680}' | // Ogham Space Mark (here for completeness, but usually displayed as a dash, not as whitespace)
         '\u{0009}' | // Character Tabulation

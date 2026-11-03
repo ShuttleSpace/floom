@@ -1,11 +1,5 @@
 //! The ported Cupertino icon button.
 //!
-//! The engine suite (`floom-widgets/tests/icon_button.rs`) owns the *shape*; this
-//! suite owns the *translation*, which is the only thing left in this crate. So
-//! every assertion here is one v1 read: the token it came from, the arithmetic v1
-//! did on it, and where it ended up.
-//!
-//! Read together with the engine suite they cover both halves; neither alone would.
 
 use floom_core::Widget;
 use floom_core_theme::global_theme::DesignSystem;
@@ -354,11 +348,9 @@ fn the_props_report_the_click_callback() {
     );
 
     // And the engine's copy is the one that fires: click the pressable.
-    //
     // Both wrappers are reached by mutable borrow rather than cloned: `Ripple` and
     // `Pressable` are deliberately not `Clone`, because a `Pressable` carries a
     // callback that is not `Send + Sync` and a second copy would be a second node
-    // pretending to be the first.
     let view = button.view();
     let mut ripple = view.children()[0].build();
     let mut inner = {

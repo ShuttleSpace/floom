@@ -1,12 +1,4 @@
 //! Cupertino's slider as a kit crate: the token translation, and the two numbers
-//! this kit decides differently from Material -- a `surface` thumb and a drop
-//! shadow on it.
-//!
-//! The behaviour tests are not repeated here on purpose. Quantisation, the drag
-//! and the keyboard walk are the engine's, in
-//! `floom-ui-composites/tests/slider.rs`; what is here is what is *this kit's*,
-//! plus a control for each claim so a "just take the default" edit cannot
-//! quietly pass.
 
 use std::cell::Cell;
 use std::rc::Rc;

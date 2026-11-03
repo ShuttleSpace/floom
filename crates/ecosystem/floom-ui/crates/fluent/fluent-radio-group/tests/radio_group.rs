@@ -1,15 +1,4 @@
 //! The ported Fluent radio group -- a column of options, each a ring with a
-//! dot in it when it is chosen.
-//!
-//! The state lives in the engine's `SelectGroup`, so what is tested here is the
-//! *translation* and the *pixels*: the tokens reach the style, and the ring,
-//! the dot and the label are painted the way v1 painted them.
-//!
-//! ## The tripwires
-//!
-//! `the_ring_and_the_dot_are_painted_in_v1_s_colours` and
-//! `the_chosen_option_is_the_one_with_a_dot` would fail if this kit stopped
-//! being this kit.
 
 use floom_core::{ElementId, Rect, Widget};
 use floom_types::Color;
@@ -29,9 +18,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -40,7 +26,6 @@ fn kit() -> FluentRadioGroup {
     FluentRadioGroup::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -50,7 +35,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The paint ops of one widget.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -60,26 +44,17 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// One option's row: the ring, and the label beside it.
-///
-/// The group's own decoration sits between the row and the row's content: the
-/// group, the row, the `Pressable` that catches the click, and the `Surface`
-/// the group paints the row's fill on. The content -- the stack that holds the
-/// ring and the label -- is inside that surface.
 fn row_of(group: &SelectGroup, index: usize) -> Box<dyn Widget> {
     let pressable = group.children()[index].build().children().remove(0).build();
     let surface = pressable.children().remove(0).build();
     surface.children().remove(0).build()
 }
 
-/// The ring of one option: the outline, and the dot inside it.
 fn ring_of(row: &dyn Widget) -> Box<dyn Widget> {
     row.children().remove(0).build()
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentRadioGroupStyle = kit().resolved_style();
@@ -113,9 +88,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The ring and the dot are painted in v1's colours, at v1's sizes.
 #[test]
 fn the_ring_and_the_dot_are_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -125,7 +98,6 @@ fn the_ring_and_the_dot_are_painted_in_v1_s_colours() {
     let ring = ring_of(&*row);
     let ring_ops = ops_of(&*ring);
 
-    // The ring is an outline, not a fill.
     let (width, colour) = ring_ops
         .iter()
         .find_map(|op| match op {
@@ -143,7 +115,6 @@ fn the_ring_and_the_dot_are_painted_in_v1_s_colours() {
         "in v1's ring colour"
     );
 
-    // And the dot inside it.
     let dot = ring.children().remove(0).build();
     let dot_ops = ops_of(&*dot);
     let fill = dot_ops.iter().find_map(|op| match op {
@@ -166,7 +137,6 @@ fn the_ring_and_the_dot_are_painted_in_v1_s_colours() {
     );
 }
 
-/// The chosen option is the one with a dot.
 #[test]
 fn the_chosen_option_is_the_one_with_a_dot() {
     let group = kit().option("One").option("Two").selected(0).view();
@@ -186,7 +156,6 @@ fn the_chosen_option_is_the_one_with_a_dot() {
     );
 }
 
-/// The label is painted in v1's ink, at v1's size.
 #[test]
 fn the_label_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -212,9 +181,7 @@ fn the_label_is_painted_in_v1_s_ink() {
     );
 }
 
-// --- the rules ------------------------------------------------------------
 
-/// The option chosen before mount is the chosen one.
 #[test]
 fn the_option_chosen_before_mount_is_the_chosen_one() {
     let group = kit().option("One").option("Two").selected(1).view();
@@ -222,7 +189,6 @@ fn the_option_chosen_before_mount_is_the_chosen_one() {
     assert!(!group.is_selected(0));
 }
 
-/// A disabled group does not answer.
 #[test]
 fn a_disabled_group_does_not_answer() {
     let group = kit().option("One").option("Two").disabled(true).view();
@@ -233,7 +199,6 @@ fn a_disabled_group_does_not_answer() {
     );
 }
 
-/// The props report the options.
 #[test]
 fn the_props_report_the_options() {
     let kit = kit().option("One").option("Two").selected(1);
@@ -244,12 +209,8 @@ fn the_props_report_the_options() {
     assert_eq!(kit.props().selected, Some(1));
 }
 
-/// The theme: v1's Fluent radio group took a *snapshot* of its own design
-/// system, so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentRadioGroup::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

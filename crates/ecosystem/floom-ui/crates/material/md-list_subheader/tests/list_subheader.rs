@@ -1,12 +1,3 @@
-//! Material list subheader: the row, the text in it, and the two paddings.
-//!
-//! ## The claim
-//!
-//! A subheader is a row of small, muted text above a group of list items. v1
-//! spelled it as a `Container` holding a `Label`; 2.0 spells it a `Surface`
-//! holding a `Text`. The assertions are about the painted text and the row's
-//! own request, because that is where the two roles -- the box and the label --
-//! can be told apart.
 
 use floom_core::{ElementId, Widget};
 use floom_types::Rect;
@@ -26,13 +17,6 @@ const BOX: Rect = Rect {
     y1: 48.0,
 };
 
-/// The Material theme, with Material selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// `activate` is a documented no-op -- and a `MultiTheme` reads the *active*
-/// design system at read time. So a test that wants Material's own values has to
-/// select Material, and `set_design_system` writes a thread-local, so the
-/// selection is this test's alone.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
@@ -113,8 +97,6 @@ fn the_text_is_the_muted_ink_at_the_token_size() {
     let surface = MaterialListSubheader::new("Section")
         .with_theme(theme())
         .view();
-    // The text is the surface's *child*, and a widget paints only itself, so it
-    // is the child that is painted here.
     let mut child = surface.children()[0].build();
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = child.create(&mut create);

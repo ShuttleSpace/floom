@@ -1,17 +1,5 @@
 //! Cupertino text, ported to the Floom 2.0 widget API.
 //!
-//! v1 drew a `Label` and styled it with a closure that re-read the theme on
-//! every use. 2.0's [`Text`] is a widget the caller holds and restyles, so the
-//! theme is resolved once and handed over as explicit values.
-//!
-//! ## What the port names
-//!
-//! * **`max_lines` and `selectable` are carried but not applied.** v1 set both
-//!   on the props and neither reached the view -- it drew a plain `Label` -- and
-//!   2.0's `Text` has no knob for either. So the props keep reporting them and
-//!   no kit claims a truncation or a selection it does not perform.
-//! * **the label's type is the theme's**: `typography().body.medium`'s size and
-//!   weight, and `on_surface` for the colour.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, FontWeight};

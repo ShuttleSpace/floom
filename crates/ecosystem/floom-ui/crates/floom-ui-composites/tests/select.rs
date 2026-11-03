@@ -1,9 +1,3 @@
-//! `Select` sizes its closed control from its style.
-//!
-//! This lived in `floom-app/tests/composite_measure.rs` next to the other
-//! control-sizing tests, and moved with the widget for the reason the rest of
-//! this crate's tests did: a test of a widget's behaviour belongs with the
-//! widget, and `floom-app` is a layer below it.
 
 use floom_app::WidgetHost;
 use floom_core::Size;

@@ -1,4 +1,3 @@
-//! Fluent gallery snapshots and the colour audit.
 
 use floom_design::{GallerySample, contrast_ratio, gallery_size};
 use floom_fluent::{

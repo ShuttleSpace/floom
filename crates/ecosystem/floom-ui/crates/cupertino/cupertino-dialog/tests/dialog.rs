@@ -1,22 +1,5 @@
 //! Cupertino's dialog as a kit crate.
 //!
-//! ## What this file can and cannot reach
-//!
-//! The close button and the action buttons live inside the card, which the host mounts
-//! from an overlay's content factory. Driving a click on them needs a host that
-//! hit-tests and dispatches — so at *kit* level those callbacks are not reachable, the
-//! same limitation that cost the combobox its row hover fill.
-//!
-//! What is reachable, and what therefore carries the claims:
-//!
-//! * the shared flag, in every direction — `open`, `close`, `is_open`, `open_flag`,
-//!   `with_open_flag`;
-//! * the request the mounted view makes: a **modal** dialog over the viewport, which is
-//!   the behaviour change this port makes (v1 closed on an outside click; the host does
-//!   not light-dismiss a modal overlay);
-//! * the card the kit supplies, which carries v1's title row and close button — checked
-//!   structurally, because an unmounted `Stack` paints none of its children's ink;
-//! * and the token translation, including the nine-variant `FontWeight` mapping.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

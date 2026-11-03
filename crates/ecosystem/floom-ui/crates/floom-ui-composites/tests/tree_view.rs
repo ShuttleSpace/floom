@@ -1,11 +1,3 @@
-//! The engine's [`TreeView`]: the shared expansion state, and the fact that
-//! expanding a node **changes which rows exist**.
-//!
-//! That second point is the whole reason the state is shared rather than per-row, so
-//! it gets the most tests here. A tree whose rows each remembered their own
-//! `expanded` flag would look correct for itself and wrong for everything below it,
-//! and every test in the "flattening" section is really about the count and the
-//! order of the rows rather than about any one row.
 
 use floom_core::Widget;
 

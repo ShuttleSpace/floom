@@ -1,19 +1,3 @@
-//! The ported Material form -- the caller's own fields, an error summary, and a
-//! submit button that only answers while the form is valid.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a submit button that paints `primary` from one
-//! that paints `surface_variant`, and it cannot tell a summary that says
-//! "Name is required" from an empty one. Only the paint log can, so most of
-//! these tests read what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_valid_submit_button_paints_primary_and_the_invalid_one_does_not`,
-//! `the_submit_button_does_not_answer_while_the_form_is_invalid` and
-//! `the_error_messages_are_painted_in_the_error_ink` would fail if this kit
-//! stopped being this kit.
 
 use floom_core::{
     Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny,
@@ -38,9 +22,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -87,11 +68,6 @@ fn submit_slot(kit: MaterialForm) -> Box<dyn WidgetAny> {
     content.children().remove(2).build()
 }
 
-/// The submit button that is mounted right now.
-///
-/// The slot holds two appearances and the engine's `Conditional` mounts one of
-/// them, so the test asks the conditionals which one is showing -- after
-/// giving them the update pass a host would give them.
 fn mounted_submit(slot: &Box<dyn WidgetAny>) -> Box<dyn WidgetAny> {
     for child in slot.children() {
         let mut conditional = child.build();
@@ -169,7 +145,6 @@ fn tap_submit(slot: &Box<dyn WidgetAny>) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the props reach the style.
 #[test]
@@ -199,8 +174,6 @@ fn the_tokens_and_the_props_reach_the_style() {
     );
 }
 
-/// v1's style read the *props*' padding and gap, not the form token's. The
-/// port does the same, so the two sources cannot be confused.
 #[test]
 fn the_padding_and_the_gap_come_from_the_props_as_v1_read_them() {
     let kit = kit();
@@ -226,7 +199,6 @@ fn the_validation_messages_token_reaches_the_style() {
     assert_eq!(style.error_color, theme().colors().error, "the error ink");
 }
 
-/// The numbers v1 wrote as literals, rather than as tokens.
 #[test]
 fn the_numbers_v1_wrote_as_literals_are_literals_here() {
     let style = kit().resolved_style();
@@ -247,9 +219,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The form's surface is painted in v1's fill.
 #[test]
 fn the_form_surface_is_painted_in_v1_s_fill() {
     let style = kit().resolved_style();
@@ -287,8 +257,6 @@ fn the_valid_submit_button_paints_primary_and_the_invalid_one_does_not() {
     );
 }
 
-/// The submit label is `on_primary` in both cases: v1 wrote the invalid
-/// button's colour on the container, where the label's own ink won.
 #[test]
 fn the_submit_label_is_on_primary_in_both_cases() {
     let style = kit().resolved_style();
@@ -338,7 +306,6 @@ fn the_summary_is_empty_but_the_slot_is_still_there() {
     assert_eq!(summary.children().len(), 0, "no messages to paint");
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The caller's own content is mounted in the first slot.
 #[test]
@@ -357,7 +324,6 @@ fn the_callers_content_is_mounted_in_the_first_slot() {
     assert_eq!(text.as_deref(), Some("a field"), "the caller's content");
 }
 
-// --- the behaviour --------------------------------------------------------
 
 /// The submit callback fires while the form is valid.
 #[test]
@@ -440,11 +406,7 @@ fn the_submit_button_can_be_left_out() {
     );
 }
 
-// --- the props ------------------------------------------------------------
 
-/// The props report the shape, and not the callback: the kit holds that as an
-/// `Arc` of its own, because 2.0's slots are `Send + Sync` and the props'
-/// `Box<dyn Fn(..)>` is not.
 #[test]
 fn the_props_report_the_shape_and_not_the_callback() {
     let kit = kit().submit_label("Send").show_submit(false);
@@ -452,14 +414,9 @@ fn the_props_report_the_shape_and_not_the_callback() {
     assert!(!kit.props().show_submit);
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// The theme: v1's Material form read the *app-wide* theme signal, so a change
-/// of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialForm::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

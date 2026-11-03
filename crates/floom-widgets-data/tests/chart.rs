@@ -29,8 +29,6 @@ fn bars(name: &str, points: &[(f64, f64)]) -> ChartSeries {
     ChartSeries::bars(name, points.iter().copied())
 }
 
-// --- scale -----------------------------------------------------------------
-
 #[test]
 fn a_linear_scale_maps_its_domain_onto_its_range() {
     let s = LinearScale::new(0.0, 10.0, 0.0, 100.0);
@@ -73,8 +71,6 @@ fn a_degenerate_domain_maps_to_the_middle_instead_of_dividing_by_zero() {
         "a flat domain should sit centred, got {mapped}"
     );
 }
-
-// --- data bounds and axes ---------------------------------------------------
 
 #[test]
 fn bounds_span_every_series() {
@@ -127,8 +123,6 @@ fn ticks_land_on_the_plot_and_include_both_ends() {
         );
     }
 }
-
-// --- geometry ---------------------------------------------------------------
 
 #[test]
 fn bar_heights_are_proportional_to_their_values() {
@@ -239,8 +233,6 @@ fn a_flat_line_strokes_at_a_constant_height() {
     // Half the plot height = the middle of the box.
     assert!((y - (PLOT.y0 + PLOT.y1) / 2.0).abs() < 1e-6, "got {y}");
 }
-
-// --- summary and widget -----------------------------------------------------
 
 #[test]
 fn the_summary_names_the_kind_axes_extremes_and_peak() {

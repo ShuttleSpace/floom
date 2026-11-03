@@ -1,16 +1,3 @@
-//! Material kbd, ported to the Floom 2.0 widget API.
-//!
-//! A keycap: v1 spelled it as a `Container` holding a `Label`; 2.0 spells it
-//! a [`Surface`] holding a [`Text`], which is the same two things with the roles
-//! named -- the surface is the a keycap, the text is the label.
-//!
-//! ## The monospace font is gone, and the props say so
-//!
-//! v1 drew the a keycap in a monospace font, and the props carried a `mono` flag
-//! to ask for it. 2.0's text layer has no notion of a font family at all, so
-//! there is nothing to ask for: the text is drawn in the default family. The
-//! `mono` prop is carried and reports what the caller asked for, because a
-//! caller reading it back should not be told the font changed when it did not.
 
 use std::sync::Arc;
 
@@ -48,10 +35,6 @@ pub struct MaterialKbd {
     props: KbdProps,
     theme: RwSignal<MultiTheme>,
     child: Option<ChildBuilder>,
-    /// The convenience text, for a kit with no child of its own.
-    ///
-    /// v1 kept this beside the props rather than in them: `CodeProps`
-    /// and `KbdProps` carry only `mono`.
     content: Option<String>,
 }
 
@@ -71,10 +54,6 @@ impl MaterialKbd {
         self
     }
 
-    /// Ask for a monospace font.
-    ///
-    /// Carried, and reported, and not honoured: 2.0's text layer has no font
-    /// family. See the module note.
     pub fn mono(mut self, mono: bool) -> Self {
         self.props.mono = mono;
         self
@@ -136,13 +115,11 @@ impl MaterialKbd {
             )
             .background(to_paint(style.background))
             .radius(style.border_radius);
-        // v1 drew a border around the keycap, in the theme's outline.
         surface = surface.border(style.border_width, to_paint(style.border_color));
         match child {
             Some(build) => surface = surface.push(move || build()),
             None => {
                 surface = surface.push(move || {
-                    // The slot is a replayed `Fn`, so the text is cloned per mount.
                     Box::new(Text::new(content.clone()).size(font_size).color(text_color))
                 });
             }

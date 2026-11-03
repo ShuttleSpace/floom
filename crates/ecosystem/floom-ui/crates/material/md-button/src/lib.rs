@@ -1,68 +1,3 @@
-//! Material button, ported to the Floom 2.0 widget API.
-//!
-//! v1 built a `View` and styled it with a closure that re-read the theme on
-//! every use. 2.0 mounts the tree once and its widgets are theme-agnostic, so
-//! the theme is resolved to a concrete style up front
-//! ([`MdButton::resolved_style`]) and handed to the engine `Button` as explicit
-//! values.
-//!
-//! ## What the port reproduces
-//!
-//! * the variant palette: `primary`/`on_primary`, `secondary_container`/
-//!   `on_secondary_container`, `error`/`on_error`, and a transparent fill with a
-//!   `primary` label for the ghost and text variants;
-//! * the disabled palette: `on_surface` at 12/255 as the fill and at 38/255 as
-//!   the label;
-//! * the height for each size: the token height, 8 shorter for a small button
-//!   and 8 taller for a large one;
-//! * the corner radius: a pill: `radius().full`;
-//! * the hover and press fills.
-//!
-//! ## The engine `Button` and the fill/label pair
-//!
-//! The engine `Button` *is* its label: it paints a fill and a run of text, and
-//! it has no children. So the fill is `Button::color` and the label colour is
-//! `Button::text_color` -- two different knobs, and the kit has to use the right
-//! one for each. Passing the label colour to `color` paints a
-//! foreground-coloured button with a white label on it, which is a bug this port
-//! is careful not to reproduce.
-//!
-//! ## The disabled palette and the engine's dimming rule
-//!
-//! The engine dims a disabled control by halving the alpha of its fill and of
-//! its label. v1 named a disabled palette outright, so the kit hands the engine a
-//! double-alpha colour and the engine's halving lands on v1's value. The
-//! doubling is undone exactly, because the dimming is a plain `a / 2`.
-//!
-//! ## The height the style reports
-//!
-//! v1's Material `resolved_style` already reported the height for the chosen
-//! size, and the view it built drew that same height. The port agrees with
-//! both.
-//!
-//! ## What the port names (not fakes)
-//!
-//! * **the Ghost variant's 1px `outline` border is gone.** v1 drew a frame
-//! around the ghost button; the engine `Button` paints a fill and a label and has
-//! no border, and a `Surface` wrapper would have to change the family's return
-//! type (`resolve` hands back a `Button`). Named, not faked: the border is a
-//! design-system answer the engine has no place for.
-//! * **the hover and press fills replace the base fill rather than mixing with it.**
-//! v1's `.hover(..)` set the background to the hover colour outright, and the
-//! engine's `hover_color` does the same, so the two agree.
-//! * **v1's focus ring is gone.** v1 drew a 2px outline in the `outline`
-//!   colour; the engine paints its own focus band, in its own colour.
-//! * **the label's type is the engine's, not the theme's.** v1 drew the label at
-//!   `typography().label.large` (its size and weight); the engine draws it at a
-//!   fixed size with the default weight. The engine `Button` has no label-metric
-//!   knob, and adding one is an engine change rather than a kit one.
-//! * **`props().on_click` is always `None`.** v1 stored the callback in the
-//!   props as a `Box<dyn Fn()>`; 2.0's `Child` builder closure must be
-//!   `Send + Sync`, so the callback the tree uses is an `Arc<dyn Fn() + Send +
-//!   Sync>` held beside the props instead of inside them.
-//! * **the label is set by a builder, not by the constructor.** v1 took it in
-//!   `new("Save")`; the ported kits use `new()` plus a builder, and so does this
-//!   one.
 
 use std::sync::Arc;
 
@@ -102,9 +37,6 @@ pub struct MdButtonStyle {
 pub struct MdButton {
     props: ButtonProps,
     theme: RwSignal<MultiTheme>,
-    /// Shared with the built widget. `Arc` rather than `Box` because 2.0's
-    /// `Child` builder closure must be `Send + Sync + 'static`, so the callback
-    /// has to be both clonable and thread-safe to be rebuilt into the tree.
     on_click: Option<Arc<dyn Fn() + Send + Sync>>,
 }
 
@@ -128,8 +60,6 @@ impl MdButton {
         self
     }
 
-    /// The button's size. v1 had this builder, and reported the height for the
-    /// chosen size in the style -- the same as here.
     pub fn size(mut self, size: ButtonSize) -> Self {
         self.props.size = size;
         self
@@ -140,17 +70,11 @@ impl MdButton {
         self
     }
 
-    /// v1 carried a `loading` flag on the props and never drew anything for it.
-    /// It is carried here for the same reason: the props keep reporting it, and
-    /// no kit claims a spinner it does not draw.
     pub fn loading(mut self, loading: bool) -> Self {
         self.props.loading = loading;
         self
     }
 
-    /// `Send + Sync` is required, not incidental: 2.0 rebuilds a widget inside a
-    /// `Child` closure the host may hand between threads, so the callback is
-    /// shared as an `Arc`.
     pub fn on_click(mut self, callback: impl Fn() + Send + Sync + 'static) -> Self {
         self.on_click = Some(Arc::new(callback));
         self
@@ -181,9 +105,6 @@ impl MdButton {
             unreachable!("ComponentId::Button must resolve to ButtonTokens")
         };
         let (background, foreground) = base_colors(&theme, self.props.variant, self.props.disabled);
-        // A disabled button has no hover or press of its own: v1's state layer
-        // returned the disabled fill for both, and the engine ignores the
-        // interaction colours outright while a control is disabled.
         let (hover_background, press_background) = if self.props.disabled {
             (background, background)
         } else {
@@ -210,10 +131,6 @@ impl MdButton {
         }
     }
 
-    /// The fill and the label colour, as the engine paints them.
-    ///
-    /// A disabled control's colours are handed over double-alpha, because the
-    /// engine halves the alpha of a disabled control's fill and its label.
     fn paint_pair(&self, style: &MdButtonStyle) -> (PaintColor, PaintColor) {
         if self.props.disabled {
             (
@@ -225,10 +142,6 @@ impl MdButton {
         }
     }
 
-    /// The button itself, ready to mount.
-    ///
-    /// The 2.0 `Button` is a real engine widget, so the caller mounts it with
-    /// `Child::new(..)` -- a 2.0 widget holds no children of its own.
     pub fn resolve(&self) -> Button {
         let style = self.resolved_style();
         let (fill, label) = self.paint_pair(&style);
@@ -244,7 +157,6 @@ impl MdButton {
         )
     }
 
-    /// The button, ready to mount. The name the rest of the ported kits use.
     pub fn view(&self) -> Button {
         self.resolve()
     }
@@ -256,11 +168,6 @@ impl MdButton {
         Insets::uniform(h.max(f64::from(style.height) / 2.0))
     }
 
-    /// The button wrapped in its press ripple, ready to mount as one child.
-    ///
-    /// v1 wrapped the button in the shared Material press ripple: the ink circle is
-    /// clipped to the button's fully-rounded bounds and tinted with the button's
-    /// foreground at 24/255.
     pub fn resolve_with_ripple(&self) -> Ripple {
         let style = self.resolved_style();
         let (fill, label) = self.paint_pair(&style);
@@ -275,9 +182,6 @@ impl MdButton {
             .ink(self.ripple_ink())
             .disabled(disabled)
             .child(LayoutRequest::new().width(f32::INFINITY), move || {
-                // `Button` holds a boxed callback and so is not `Clone`; the tree
-                // rebuilds a fresh one per call from captured plain data, which is
-                // the 2.0 idiom.
                 Box::new(build_button(
                     &label_text,
                     fill,
@@ -304,10 +208,6 @@ impl MdButton {
         self.theme.get().radius().full as f64
     }
 
-    /// Push a freshly resolved theme into an already-mounted ripple.
-    ///
-    /// This is what replaces v1's `radius_fn` / `color` closures. Idempotent:
-    /// setting the same values dirties nothing.
     pub fn follow_theme(&self, ripple: &mut Ripple) {
         ripple.set_radius(self.ripple_radius());
         ripple.set_ink(self.ripple_ink());
@@ -364,8 +264,6 @@ fn base_colors(theme: &MultiTheme, variant: ButtonVariant, disabled: bool) -> (C
     }
 }
 
-/// v1's disabled palette: `on_surface` at 12/255 as the fill and 38/255 as the
-/// label, for every design system.
 fn disabled_colors(theme: &MultiTheme) -> (Color, Color) {
     (
         with_alpha(theme.colors().on_surface, 12),
@@ -382,11 +280,6 @@ fn undim(c: PaintColor) -> PaintColor {
     }
 }
 
-/// The M3 state layer: an 8% (hover) / 12% (press) overlay of the variant's own
-/// foreground colour, mixed over the base fill.
-///
-/// v1's `state_layer`, reproduced exactly -- including that the overlay is the
-/// *foreground* (white on a primary button), not a generic scrim.
 fn state_layer(theme: &MultiTheme, variant: ButtonVariant, hover: bool) -> Color {
     let overlay = match variant {
         ButtonVariant::Primary | ButtonVariant::Danger => theme.colors().on_primary,

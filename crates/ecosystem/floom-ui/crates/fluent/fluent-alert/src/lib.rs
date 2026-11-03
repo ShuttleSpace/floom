@@ -1,33 +1,4 @@
 //! Fluent alert banner, ported to the Floom 2.0 widget API.
-//!
-//! ## No new engine capability was needed
-//!
-//! This is the first of the six remaining `MdIcon::view()` callers, and it turned
-//! out to need **nothing** from the engine: the banner is a [`Surface`] holding a
-//! [`Stack`] of two more stacks and some [`Text`], and the dismiss affordance is a
-//! bare pressable icon. Every piece already exists — which is worth recording,
-//! because the six were treated as one batch and they are not: `alert` is a
-//! composition, and `select` at 60% cross-kit overlap is a different thing again.
-//!
-//! ## What the port changed
-//!
-//! * `FluentIcon::new("close").size(20.0).view().style(..).on_event(Click, ..)` — the
-//!   `.view()` had no 2.0 meaning, and the chain after it was v1's
-//!   `Decorators`. In 2.0 the icon *is* a widget, and a clickable one is that widget
-//!   inside a [`Pressable`]. The v1 chain also set a pointer cursor, which 2.0's
-//!   `PaintContext` has no vocabulary for; recorded rather than worked around, as it
-//!   was for `md-item_group`'s rows.
-//! * v1 mounted an **empty `Label`** as the dismiss slot when the alert was not
-//!   dismissible, so the row always had two children. Here the slot is simply
-//!   absent when there is nothing to put in it — the row has one child instead of
-//!   two, and the eight-pixel gap that followed the empty label disappears with it.
-//!   That is a visible difference: v1's non-dismissible banner was 8px narrower in
-//!   its content than it needed to be. It is v1's bug, not a translation choice,
-//!   and it is pinned by a test.
-//! * `Label::new(..)` is [`Text`], `.style(|s| s.color(..))` is `.color(..)`, and
-//!   `.font_weight(FontWeight::Bold.to_floom())` needed the same three-way
-//!   `FontWeight` crossing that `md-list_item` documented: v1's `to_floom()` returns
-//!   a `parley` weight, and 2.0's `Text::weight` takes `floom_types::FontWeight`.
 
 use std::sync::Arc;
 
@@ -46,11 +17,6 @@ use floom_core_theme::tokens::color_ext::*;
 use floom_core_theme::tokens::typography::FontWeight as ThemeFontWeight;
 use floom_widget_fluent_icon::FluentIcon;
 
-/// The theme's weight enum -> the engine's.
-///
-/// The same crossing `md-list_item` documents: v1's `to_floom()` returns a
-/// `parley::style::FontWeight`, a third type with the same name. This names the
-/// nine variants instead of reaching into parley's numeric weight.
 pub fn to_engine_weight(w: ThemeFontWeight) -> FontWeight {
     match w {
         ThemeFontWeight::Thin => FontWeight::Thin,
@@ -61,18 +27,11 @@ pub fn to_engine_weight(w: ThemeFontWeight) -> FontWeight {
         ThemeFontWeight::SemiBold => FontWeight::SemiBold,
         ThemeFontWeight::Bold => FontWeight::Bold,
         ThemeFontWeight::ExtraBold => FontWeight::ExtraBold,
-        // v1's `to_floom()` sent `Black` to 800; parley's table has no 900.
         ThemeFontWeight::Black => FontWeight::Black,
     }
 }
 
-/// The accent for each variant.
-///
 /// Fluent has no built-in info / success / warning tokens, so three of these
-/// are fixed RGB literals and only `error` reads the theme. Kept as v1 wrote it: the
-/// literals are the design, not an oversight, and a port that resolved them through
-/// the theme would change three kits' colours -- and each design system has its own
-/// three, which is the tripwire that keeps the three kits three crates.
 pub fn alert_accent(theme: &MultiTheme, variant: AlertVariant) -> Color {
     match variant {
         AlertVariant::Error => theme.colors().error,
@@ -94,24 +53,16 @@ pub struct FluentAlertStyle {
     pub title_font_size: f32,
 }
 
-/// v1's three fixed gaps, at the call sites where it wrote them.
 const DOT_BODY_GAP: f32 = 12.0;
 const BODY_TEXT_GAP: f32 = 4.0;
 const CONTENT_DISMISS_GAP: f32 = 8.0;
-/// The accent dot: a 10pt circle.
 const DOT_SIZE: f32 = 10.0;
-/// The dismiss icon's size, and the padding around it.
 const DISMISS_SIZE: f32 = 20.0;
 const DISMISS_PADDING: f64 = 2.0;
 
 pub struct FluentAlert {
     props: AlertProps,
     theme: RwSignal<MultiTheme>,
-    /// The dismiss callback in the shape 2.0 needs.
-    ///
-    /// `AlertProps::on_dismiss` is `Option<Box<dyn Fn()>>` — a v1 type — and the
-    /// engine's slot requires `Send + Sync`. Stored twice, from one closure; the
-    /// v1-shaped copy keeps `props()` honest.
     on_dismiss: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
 }
 
@@ -178,7 +129,6 @@ impl FluentAlert {
         FluentAlertStyle {
             design_system: "fluent",
             accent,
-            // v1: `with_alpha(accent, 26)`, i.e. about 10% — a tint, not a wash.
             container_color: with_alpha(accent, 26),
             text_color: theme.colors().on_surface,
             padding: tokens.padding,
@@ -188,18 +138,6 @@ impl FluentAlert {
         }
     }
 
-    /// The banner, ready to mount.
-    ///
-    /// The tree, outermost first:
-    ///
-    /// ```text
-    /// Surface            the tinted, rounded box: padding, radius, accent @ 26
-    ///  └ Stack           gap 8: the content, then the dismiss slot if there is one
-    ///     ├ Stack       gap 12: the accent dot, then the text column
-    ///     │  ├ Surface  the dot: 10pt, radius 9999, the accent itself
-    ///     │  └ Stack    gap 4: the title, then the message
-    ///     └ Pressable   only when `dismissible` — the close icon
-    /// ```
     pub fn view(self) -> Surface {
         let style = self.resolved_style();
         let accent = to_paint(style.accent);
@@ -212,9 +150,6 @@ impl FluentAlert {
         let message_size = style.font_size;
         let title_color = to_paint(style.text_color);
         let message_color = to_paint(self.theme.get().colors().on_surface_variant);
-        // v1's icon kit applied its own resolved style to the dismiss icon --
-        // `on_surface` for this design system. These icon kits resolve *no*
-        // theme (the caller restyles), so the colour is set here.
         let dismiss_color = to_paint(self.theme.get().colors().on_surface);
 
         Surface::new()
@@ -222,7 +157,6 @@ impl FluentAlert {
                 LayoutRequest::new()
                     .padding_horiz(f64::from(style.padding))
                     .padding_vert(f64::from(style.padding))
-                    // v1's `.items_center()` on the banner.
                     .cross_align(Align::Center),
             )
             .background(container)
@@ -230,7 +164,6 @@ impl FluentAlert {
             .push({
                 let accent = accent;
                 move || {
-                    // The content: the dot and the two lines of text.
                     let content = Stack::new(Axis::Horizontal)
                         .gap(DOT_BODY_GAP)
                         .align(Align::Start, Align::Center)
@@ -243,7 +176,6 @@ impl FluentAlert {
                                             LayoutRequest::new().width(DOT_SIZE).height(DOT_SIZE),
                                         )
                                         .background(accent)
-                                        // v1's `9999.0`: a circle from a rounded box.
                                         .radius(9999.0),
                                 )
                             }
@@ -262,7 +194,6 @@ impl FluentAlert {
                                                 Box::new(
                                                     Text::new(title.clone())
                                                         .size(title_size)
-                                                        // v1: `FontWeight::Bold.to_floom()`
                                                         .weight(FontWeight::Bold)
                                                         .color(title_color),
                                                 )
@@ -283,10 +214,6 @@ impl FluentAlert {
                             }
                         });
 
-                    // The row: the content, and the dismiss affordance *only if there
-                    // is one*. v1 mounted an empty `Label` here when the alert was not
-                    // dismissible, so the row always had two children and the 8px gap
-                    // was spent on nothing.
                     let mut row = Stack::new(Axis::Horizontal)
                         .gap(CONTENT_DISMISS_GAP)
                         .align(Align::Start, Align::Center)

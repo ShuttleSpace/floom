@@ -1,18 +1,5 @@
 //! Cupertino grid: the columns, the gaps, and the padded last row.
 //!
-//! ## The claim
-//!
-//! A grid is rows of equal-width cells. v1 chunked the children itself, and
-//! 2.0's `Grid` does the chunking -- so the kit is a thin adapter, and the
-//! assertions are about what reaches the engine.
-//!
-//! ## The last row
-//!
-//! v1 padded the last row with empty cells, so that every row held the same
-//! number of cells and each cell grew by a share of the row. Without the
-//! padding, the last row's cells would divide the whole width between them and
-//! be wider than the rows above. That is the one thing the kit has to do
-//! itself, and it is asserted here.
 
 use floom_core::Widget;
 use floom_widgets::{Axis, Stack};
@@ -83,7 +70,6 @@ fn every_cell_grows() {
     for cell in row.children() {
         // The grow is on the cell's *slot* -- the request it is mounted with --
         // and not on the widget it builds, which is what the engine's `Grid`
-        // applies `item_layout` to.
         assert_eq!(
             cell.layout.flex_grow,
             Some(1.0),

@@ -1,9 +1,4 @@
 //! Cupertino's combobox as a kit crate: the token translation, the props round trip,
-//! and the two things this kit decides differently from Material.
-//!
-//! The 12 tests it shares with `md-combobox` are not repeated here on purpose — they
-//! are the engine's, tested in `floom-widgets/tests/combobox*.rs` and in the Material
-//! crate. What is here is what is *this kit's*.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -294,7 +289,6 @@ fn disabled_reaches_the_widget_and_changes_how_it_paints() {
         .disabled(true)
         .view();
     // The trigger is a child, so the widget's own `paint` draws nothing — comparing
-    // the widgets would compare two empty scenes.
     let live_trigger = live.children().remove(0).build();
     let dead_trigger = dead.children().remove(0).build();
     let live_scene = floom_widgets::testkit::paint_snapshot(

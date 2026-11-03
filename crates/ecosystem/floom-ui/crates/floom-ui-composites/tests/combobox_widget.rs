@@ -1,9 +1,3 @@
-//! The combobox as a widget: mounting, the overlay round trip, and the two state
-//! transitions a caller can drive without a mouse.
-//!
-//! The decisions themselves — the filter, the colours, the placement arithmetic — are
-//! in `combobox.rs`'s companion file. What is here is only what can *only* be observed
-//! on a mounted widget.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

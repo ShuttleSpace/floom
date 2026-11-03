@@ -1,19 +1,3 @@
-//! The ported Material file input -- a bordered trigger box, a trigger label and
-//! a readout of the path that was chosen.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a box that paints `surface` from one that paints
-//! `surface` at 4 alpha, and it cannot tell a readout that says "No file chosen"
-//! from one that says the path. Only the paint log can, so most of these tests
-//! read what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_box_is_painted_with_v1_s_fill_and_rim`,
-//! `the_readout_says_no_file_chosen_when_there_is_no_path` and
-//! `the_trigger_reports_the_current_path_when_it_is_clicked` would fail if this
-//! kit stopped being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
@@ -34,9 +18,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -121,7 +102,6 @@ fn tap(pressable: &mut floom_widgets::Pressable) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -165,7 +145,6 @@ fn the_tokens_and_colours_reach_the_style() {
     assert_eq!(style.background, theme().colors().surface, "the box's fill");
 }
 
-/// The numbers v1 wrote as literals, rather than as tokens.
 #[test]
 fn the_numbers_v1_wrote_as_literals_are_literals_here() {
     let style = kit().resolved_style();
@@ -177,8 +156,6 @@ fn the_numbers_v1_wrote_as_literals_are_literals_here() {
     );
 }
 
-/// The trigger label's weight comes from the theme's type scale, where v1 read
-/// it from.
 #[test]
 fn the_trigger_label_takes_the_theme_s_label_weight() {
     let style = kit().resolved_style();
@@ -194,9 +171,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The box is painted with v1's fill and v1's rim.
 #[test]
 fn the_box_is_painted_with_v1_s_fill_and_rim() {
     let style = kit().resolved_style();
@@ -209,8 +184,6 @@ fn the_box_is_painted_with_v1_s_fill_and_rim() {
     );
 }
 
-/// The disabled box is painted with v1's disabled fill and v1's disabled rim:
-/// `on_surface` at 4 and at 38.
 #[test]
 fn the_disabled_box_is_painted_with_v1_s_disabled_fill_and_rim() {
     let style = kit().resolved_style();
@@ -311,14 +284,12 @@ fn the_callers_content_is_mounted_after_the_readout() {
     assert_eq!(text.as_deref(), Some("12 KB"), "the caller's content");
 }
 
-/// Without it, the row is exactly v1's: the label and the readout.
 #[test]
 fn without_the_slot_the_row_is_v1_s() {
     let row = row_of(kit());
     assert_eq!(row.children().len(), 2, "v1's label and readout");
 }
 
-// --- the behaviour --------------------------------------------------------
 
 /// The trigger reports the path as it is at the moment of the click.
 #[test]
@@ -372,11 +343,7 @@ fn a_disabled_trigger_does_not_answer() {
     );
 }
 
-// --- the props ------------------------------------------------------------
 
-/// The props report the shape, and not the callback: the kit holds that as an
-/// `Arc` of its own, because 2.0's slots are `Send + Sync` and the props'
-/// `Box<dyn Fn(..)>` is not.
 #[test]
 fn the_props_report_the_shape_and_not_the_callback() {
     let kit = kit().label("Pick").accept(".pdf").multiple(true);
@@ -386,14 +353,9 @@ fn the_props_report_the_shape_and_not_the_callback() {
     assert!(kit.props().on_change.is_none());
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// The theme: v1's Material file input read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialFileInput::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

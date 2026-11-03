@@ -1,15 +1,4 @@
 //! The ported Fluent date picker -- a field, and the calendar that opens
-//! under it.
-//!
-//! The calendar is a host overlay, so what is tested here is the translation,
-//! the field's pixels, and the request the picker makes of the host: the
-//! rectangle it asks for, and what the calendar it asked for actually draws.
-//!
-//! ## The tripwires
-//!
-//! `the_calendar_is_asked_of_the_host_below_the_field` and
-//! `the_calendar_draws_the_month_and_its_days` would fail if this kit stopped
-//! being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -26,7 +15,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_fluent_date_picker::{DateValue, FluentDatePicker, FluentDatePickerStyle};
 
-/// The field's box, in the tests' coordinate space.
 const FIELD: Rect = Rect {
     x0: 0.0,
     y0: 0.0,
@@ -35,9 +23,6 @@ const FIELD: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -46,7 +31,6 @@ fn kit() -> FluentDatePicker {
     FluentDatePicker::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -56,7 +40,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -66,7 +49,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The rounded fills of a widget's paint, in order.
 fn fills(ops: &[PaintOp]) -> Vec<Color> {
     ops.iter()
         .filter_map(|op| match op {
@@ -76,7 +58,6 @@ fn fills(ops: &[PaintOp]) -> Vec<Color> {
         .collect()
 }
 
-/// The text runs of a widget's paint, in order.
 fn texts(ops: &[PaintOp]) -> Vec<(String, f32, Color)> {
     ops.iter()
         .filter_map(|op| match op {
@@ -88,8 +69,6 @@ fn texts(ops: &[PaintOp]) -> Vec<(String, f32, Color)> {
         .collect()
 }
 
-/// The calendar's height, from the style's own numbers -- the formula the kit
-/// uses, written out again so a change in either is a change in both.
 fn calendar_height(style: &FluentDatePickerStyle) -> f64 {
     let header = f64::from(style.arrow_font_size) * 1.2 + f64::from(style.arrow_padding) * 2.0;
     let weekday = f64::from(style.weekday_font_size) * 1.2;
@@ -102,7 +81,6 @@ fn calendar_height(style: &FluentDatePickerStyle) -> f64 {
         + grid
 }
 
-/// The calendar's grid cell, as the kit lays it out.
 fn cell_rect(style: &FluentDatePickerStyle, bounds: Rect, row: usize, column: usize) -> Rect {
     let padding = f64::from(style.panel_padding);
     let inner = Rect {
@@ -127,9 +105,7 @@ fn cell_rect(style: &FluentDatePickerStyle, bounds: Rect, row: usize, column: us
     }
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentDatePickerStyle = kit().resolved_style();
@@ -175,8 +151,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// The numbers v1 wrote as literals are reported, because v1's paint used them
-/// and v1's style did not report them.
 #[test]
 fn the_literals_v1_wrote_are_reported() {
     let style = kit().resolved_style();
@@ -193,7 +167,6 @@ fn the_literals_v1_wrote_are_reported() {
     assert_eq!(style.hover_alpha, 16, "v1's hovered day");
 }
 
-/// The token v1 never read is still not read: the field keeps v1's literal 12.
 #[test]
 fn the_unread_token_stays_unread() {
     let tokens =
@@ -209,10 +182,7 @@ fn the_unread_token_stays_unread() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The field is painted in v1's colours: the border, the fill inside it, and
-/// the date.
 #[test]
 fn the_field_is_painted_in_v1_s_colours() {
     let style = kit().resolved_style();
@@ -236,7 +206,6 @@ fn the_field_is_painted_in_v1_s_colours() {
     assert_eq!(texts[0].2, paint(style.on_surface), "v1's ink for a date");
 }
 
-/// With nothing chosen, the placeholder shows in v1's other ink.
 #[test]
 fn the_placeholder_is_painted_in_the_variant_ink() {
     let style = kit().resolved_style();
@@ -246,7 +215,6 @@ fn the_placeholder_is_painted_in_the_variant_ink() {
     assert_eq!(texts[0].2, paint(style.on_surface_variant));
 }
 
-/// The border turns `primary` while the calendar is open, as v1 did.
 #[test]
 fn the_border_is_primary_while_the_calendar_is_open() {
     let style = kit().resolved_style();
@@ -267,10 +235,7 @@ fn the_border_is_primary_while_the_calendar_is_open() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The calendar is asked of the host, under the field and as wide as v1's
-/// panel.
 #[test]
 fn the_calendar_is_asked_of_the_host_below_the_field() {
     let style = kit().resolved_style();
@@ -313,7 +278,6 @@ fn the_calendar_is_asked_of_the_host_below_the_field() {
     );
 }
 
-/// The calendar draws the month it shows and the days of that month.
 #[test]
 fn the_calendar_draws_the_month_and_its_days() {
     let mut widget = kit().view();
@@ -327,8 +291,6 @@ fn the_calendar_draws_the_month_and_its_days() {
     );
     let mut cx = RecordingUpdateContext::with_bounds(FIELD);
     widget.update(&mut cx, id);
-    // The vector is held in a local: a borrow of a temporary would not
-    // outlive the statement.
     let opened = cx.opened_overlays();
     let OverlayCall::Open {
         bounds, content, ..
@@ -355,7 +317,6 @@ fn the_calendar_draws_the_month_and_its_days() {
     assert_eq!(days.last(), Some(&31), "the last of the month");
 }
 
-/// The weekday row is there, and the two arrows that walk the months.
 #[test]
 fn the_calendar_draws_its_weekday_row_and_its_arrows() {
     let mut widget = kit().view();
@@ -369,8 +330,6 @@ fn the_calendar_draws_its_weekday_row_and_its_arrows() {
     );
     let mut cx = RecordingUpdateContext::with_bounds(FIELD);
     widget.update(&mut cx, id);
-    // The vector is held in a local: a borrow of a temporary would not
-    // outlive the statement.
     let opened = cx.opened_overlays();
     let OverlayCall::Open {
         bounds, content, ..
@@ -399,7 +358,6 @@ fn the_calendar_draws_its_weekday_row_and_its_arrows() {
     );
 }
 
-/// Choosing a day sets the value, closes the calendar and tells the caller.
 #[test]
 fn choosing_a_day_sets_the_value_and_closes_the_calendar() {
     let style = kit().resolved_style();
@@ -418,15 +376,10 @@ fn choosing_a_day_sets_the_value_and_closes_the_calendar() {
         FIELD,
         Event::Pointer(PointerEvent::primary_up(Point::new(10.0, 10.0))),
     );
-    // A host with no overlays: the calendar is mounted in the tree instead,
-    // which is the only way a test can hold on to it.
     let mut cx = RecordingUpdateContext::without_overlay_support();
     widget.update(&mut cx, id);
     let children = widget.children();
     assert_eq!(children.len(), 1, "the in-tree fallback");
-    // The in-tree fallback puts the calendar on the overlay's layer, so the
-    // calendar is one level deeper than the picker: the layer, then the
-    // calendar the layer holds.
     let layer = children[0].build();
     let mut calendar = layer.children().remove(0).build();
 
@@ -436,8 +389,6 @@ fn choosing_a_day_sets_the_value_and_closes_the_calendar() {
         x1: f64::from(style.panel_width),
         y1: calendar_height(&style),
     };
-    // The first of August 2026 is a Saturday, so it sits in the seventh
-    // column of the first week.
     let cell = cell_rect(&style, bounds, 0, 6);
     let mut event = TestEventContext::new(
         id,
@@ -466,7 +417,6 @@ fn choosing_a_day_sets_the_value_and_closes_the_calendar() {
     );
 }
 
-/// A disabled picker does not answer.
 #[test]
 fn a_disabled_picker_does_not_answer() {
     let picker = kit().disabled(true);
@@ -487,7 +437,6 @@ fn a_disabled_picker_does_not_answer() {
     );
 }
 
-/// The props report what v1 reported.
 #[test]
 fn the_props_report_the_date_and_the_placeholder() {
     let kit = kit()
@@ -510,12 +459,8 @@ fn the_props_report_the_date_and_the_placeholder() {
     assert!(kit.props().disabled);
 }
 
-/// The theme: v1's Fluent date picker took a *snapshot* of its own design
-/// system, so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentDatePicker::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

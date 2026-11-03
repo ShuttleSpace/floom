@@ -1,14 +1,4 @@
 //! The ported Fluent rating -- a row of stars, the first `value` of them
-//! filled.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the stars are
-//! painted in v1's inks, and a tap fills the stars below it.
-//!
-//! ## The tripwires
-//!
-//! `the_filled_stars_are_painted_in_v1_s_ink` and `a_tap_fills_the_stars_below
-//! _it` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -32,9 +22,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -43,7 +30,6 @@ fn kit() -> FluentRating {
     FluentRating::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -53,11 +39,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The ink of every star in the row, in order.
-///
-/// A star is a `Pressable` around a slot that holds one of two glyphs, and the
-/// engine's `Conditional` mounts the one the flag calls for -- which happens
-/// in an update pass, the way the host does it every frame.
 fn star_inks(row: &Stack) -> Vec<Option<Color>> {
     let mut out = Vec::new();
     for star in row.children() {
@@ -89,8 +70,6 @@ fn star_inks(row: &Stack) -> Vec<Option<Color>> {
     out
 }
 
-/// Taps the star at `index`, the way a pointer would: a press and a release
-/// over the same spot.
 fn tap(row: &Stack, index: usize) {
     let mut star = row.children().remove(index).build();
     let mut create = AllocatingCreateContext::new();
@@ -102,9 +81,7 @@ fn tap(row: &Stack, index: usize) {
     star.event(&mut up, id);
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentRatingStyle = kit().resolved_style();
@@ -131,9 +108,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The stars are painted in v1's inks: the first `value` of them filled.
 #[test]
 fn the_filled_stars_are_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -151,7 +126,6 @@ fn the_filled_stars_are_painted_in_v1_s_ink() {
     }
 }
 
-/// The star is the size the token says.
 #[test]
 fn the_star_is_the_size_the_token_says() {
     let resolved = kit().resolved_style();
@@ -174,8 +148,6 @@ fn the_star_is_the_size_the_token_says() {
     );
 }
 
-/// A fractional value fills the stars below it, as v1's `(i as f32) < value`
-/// did: 3.5 fills four stars.
 #[test]
 fn a_fractional_value_fills_the_stars_below_it() {
     let resolved = kit().resolved_style();
@@ -193,9 +165,7 @@ fn a_fractional_value_fills_the_stars_below_it() {
     );
 }
 
-// --- the rules ------------------------------------------------------------
 
-/// A tap fills the stars below it and reports the new value.
 #[test]
 fn a_tap_fills_the_stars_below_it() {
     let resolved = kit().resolved_style();
@@ -221,7 +191,6 @@ fn a_tap_fills_the_stars_below_it() {
     assert_eq!(inks[4], Some(paint(resolved.inactive_color)), "star 4");
 }
 
-/// A read-only rating does not answer a tap.
 #[test]
 fn a_read_only_rating_does_not_answer() {
     let seen = Arc::new(Mutex::new(Vec::new()));
@@ -247,7 +216,6 @@ fn a_read_only_rating_does_not_answer() {
     );
 }
 
-/// The props report the value and the maximum.
 #[test]
 fn the_props_report_the_value() {
     let kit = kit().value(3.0).max(7);
@@ -256,12 +224,8 @@ fn the_props_report_the_value() {
     assert!(!kit.props().readonly);
 }
 
-/// The theme: v1's Fluent rating took a *snapshot* of its own design
-/// system, so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentRating::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

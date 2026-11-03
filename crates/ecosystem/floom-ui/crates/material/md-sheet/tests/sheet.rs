@@ -1,16 +1,3 @@
-//! The ported Material sheet -- a panel on the edge of the window, over a
-//! scrim, that the caller shows and hides.
-//!
-//! The sheet is the engine's `Dialog` composite with the scrim and the panel
-//! as its card, so what is tested here is the translation and the pixels: the
-//! tokens reach the style, the scrim and the panel are painted in v1's
-//! colours, the panel is sized and rounded the way each side asks, and the
-//! shared flag is what opens and closes it.
-//!
-//! ## The tripwires
-//!
-//! `the_scrim_is_black_at_160` and `the_open_flag_opens_and_closes_the_sheet`
-//! would fail if this kit stopped being this kit.
 
 use floom_core::{ElementId, Length, Rect, Widget};
 use floom_types::Color;
@@ -35,9 +22,6 @@ const VIEWPORT: Rect = Rect {
 const ID: ElementId = ElementId::new(1, 1);
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -56,14 +40,7 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The panel inside the card the host mounts.
-///
-/// Opened through the engine's own door, so the test sees what the host would
-/// have built: the scrim, then the aligned stack, then the panel.
 fn panel_of(kit: MaterialSheet) -> Box<dyn floom_core::WidgetAny> {
-    // v1 hid the sheet while it was closed, so the panel and the scrim
-    // only exist while it is up: the flag opens it before the host would
-    // have built anything.
     let flag = kit.open_flag();
     floom_widgets::write_flag(&flag, true);
     let mut dialog = kit.view();
@@ -73,8 +50,6 @@ fn panel_of(kit: MaterialSheet) -> Box<dyn floom_core::WidgetAny> {
     assert!(!opened.is_empty(), "the sheet asked for an overlay");
     match opened[0] {
         OverlayCall::Open { content, .. } => {
-            // The card is the scrim; it holds the aligned stack, which holds
-            // the panel.
             let stack = content.children().remove(0).build();
             stack.children().remove(0).build()
         }
@@ -95,9 +70,6 @@ fn panel_ops(kit: MaterialSheet) -> Vec<PaintOp> {
 
 /// The scrim's paint ops: the card the host mounts.
 fn scrim_ops(kit: MaterialSheet) -> Vec<PaintOp> {
-    // v1 hid the sheet while it was closed, so the panel and the scrim
-    // only exist while it is up: the flag opens it before the host would
-    // have built anything.
     let flag = kit.open_flag();
     floom_widgets::write_flag(&flag, true);
     let mut dialog = kit.view();
@@ -117,7 +89,6 @@ fn scrim_ops(kit: MaterialSheet) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -190,7 +161,6 @@ fn the_scrim_is_black_at_160() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
 /// The panel is painted the surface colour.
 #[test]
@@ -302,7 +272,6 @@ fn an_elevated_sheet_casts_the_shadow() {
     );
 }
 
-// --- the presence ---------------------------------------------------------
 
 /// The shared flag is what opens and closes the sheet.
 #[test]
@@ -349,14 +318,9 @@ fn the_props_report_the_side_and_the_elevation() {
     assert!(kit.is_open(), "and the flag agrees with the prop");
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// The theme: v1's Material sheet read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialSheet::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

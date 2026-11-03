@@ -1,21 +1,5 @@
 //! Cupertino container, ported to the Floom 2.0 widget API.
 //!
-//! A container is a content wrapper: a full-width box that centres a
-//! max-width-capped, padded, surface-coloured column inside it.
-//!
-//! ## The two boxes
-//!
-//! v1 nested two `Container`s: an outer one that was full width and centred its
-//! child, and an inner one that carried the padding, the fill and the max-width
-//! cap. 2.0's `Container` is a *leaf* -- a decorated box with nothing inside it
-//! -- so the roles are spelled with the engine's own vocabulary: the outer box is
-//! a [`Stack`] that centres on the main axis, and the inner one is a
-//! [`Surface`] that fills, pads and caps.
-//!
-//! ## `fluid`
-//!
-//! A fluid container drops the max-width cap and spans its parent. v1 wrote
-//! `if !fluid { s = s.max_width(max_width) }`, and so does this.
 
 use std::sync::Arc;
 

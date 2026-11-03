@@ -1,9 +1,3 @@
-//! Material's autocomplete as a kit crate: the text-shaped callback, the commit point,
-//! and the one thing v1 could do that this port cannot reproduce on its own.
-//!
-//! The engine's own coverage is in `floom-widgets/tests/combobox*.rs` and is not repeated
-//! here. What is here is what is *this crate's*: it is a combobox whose callback speaks
-//! text, and whose commit point the caller has to drive.
 
 use std::sync::{Arc, Mutex};
 
@@ -31,11 +25,7 @@ fn recording() -> (MdAutocomplete, Arc<Mutex<Vec<Option<String>>>>) {
     (combo, seen)
 }
 
-// --- the payload is text, not an index -----------------------------------
 
-/// **Choosing an option reports its text.** That single difference from a combobox is
-/// the whole reason this crate exists rather than being `md-combobox` with a different
-/// name: an index cannot express what this field is allowed to hold.
 #[test]
 fn choosing_an_option_reports_its_text() {
     let (mut combo, seen) = recording();
@@ -56,9 +46,6 @@ fn choosing_fills_the_field() {
     assert_eq!(combo.pick().lock().unwrap().selected, Some(2));
 }
 
-/// The mounted widget's callback is **adapted**, not handed through: the engine reports
-/// an index and the caller receives text. This drives the real path — the engine's
-/// `select`, which is what a row click does.
 #[test]
 fn the_mounted_widget_adapts_the_index_to_text() {
     let (combo, seen) = recording();
@@ -71,10 +58,7 @@ fn the_mounted_widget_adapts_the_index_to_text() {
     );
 }
 
-// --- the commit point -----------------------------------------------------
 
-/// Free text is reported when it matches nothing, because holding something that is not
-/// on the list is what this control is for.
 #[test]
 fn committing_free_text_reports_what_was_typed() {
     let (combo, seen) = recording();
@@ -109,10 +93,6 @@ fn committing_an_empty_field_clears_and_reports_none() {
     assert_eq!(combo.pick().lock().unwrap().selected, None);
 }
 
-/// **An exact match reports nothing — and the method says so.** v1's third branch set
-/// `selected` and called no callback; that is preserved, and it is why `commit()` returns
-/// a bool rather than nothing: a caller driving this by hand needs to be able to tell
-/// "committed and said so" from "committed silently", and the second case is real.
 #[test]
 fn committing_an_exact_match_is_silent_even_though_it_moved_the_selection() {
     let (combo, seen) = recording();
@@ -135,10 +115,6 @@ fn committing_an_exact_match_is_silent_even_though_it_moved_the_selection() {
     );
 }
 
-/// A substring the *filter* would show does not become a selection on commit.
-///
-/// The filter uses `contains` and the commit uses `eq_ignore_ascii_case`; conflating them
-/// is the obvious mistake, and here it would mean typing "an" silently selects "banana".
 #[test]
 fn committing_a_substring_selects_nothing() {
     let (combo, seen) = recording();
@@ -170,27 +146,16 @@ fn committing_without_a_callback_is_fine() {
     assert_eq!(combo.pick().lock().unwrap().selected, None);
 }
 
-// --- what the port cannot reproduce ---------------------------------------
 
-/// **v1 committed on `FocusLost`; 2.0 has no way for a parent to observe a child's
-/// focus, so `commit()` is public and the caller drives it.** This test is the record of
-/// that: the rule is reachable, and it is reachable only because it was made public.
 #[test]
 fn the_commit_point_is_public_because_focus_cannot_be_observed() {
     let (combo, seen) = recording();
     *combo.query().lock().unwrap() = "kiwi".to_string();
-    // A caller holding only the autocomplete — with no reference to any field — can
-    // still commit. Under v1 this was reachable only from inside the widget, attached to
-    // an event 2.0 does not deliver.
     combo.commit();
     assert_eq!(seen.lock().unwrap().as_slice(), [Some("kiwi".to_string())]);
 }
 
-// --- the tokens -----------------------------------------------------------
 
-/// The six numbers from `AutocompleteTokens` are the token's. `AutocompleteTokens` has
-/// exactly `ComboboxTokens`' six fields, which is why the engine's one style struct
-/// serves both controls — and that is worth asserting rather than assuming.
 #[test]
 fn the_tokens_come_from_autocomplete_tokens() {
     let style = MdAutocomplete::new().resolved_style();
@@ -216,8 +181,6 @@ fn the_panel_gap_is_materials_four() {
     assert_eq!(MdAutocomplete::new().resolved_style().panel_gap, 4.0);
 }
 
-/// The call-site constants, which v1 wrote inline. The same values the combobox uses:
-/// the two controls agree here, which the shared style struct now makes structural.
 #[test]
 fn the_call_site_constants_match_the_comboboxs() {
     let style = MdAutocomplete::new().resolved_style();
@@ -227,9 +190,6 @@ fn the_call_site_constants_match_the_comboboxs() {
     assert_eq!(style.selected_row_alpha, 24);
 }
 
-/// **Nothing here verifies that this is Material's theme.** `MultiTheme::new_for` ignores
-/// its argument and reads go through a process-global, so these numbers are Material's
-/// because nothing has called `set_design_system`.
 #[test]
 fn the_theme_is_not_selected_by_naming_it() {
     let material = MdAutocomplete::new().resolved_style();
@@ -241,13 +201,7 @@ fn the_theme_is_not_selected_by_naming_it() {
     assert_eq!(material.height, cupertino.height);
 }
 
-// --- props ----------------------------------------------------------------
 
-/// `props()` reports `AutocompleteProps`, not `ComboboxProps`.
-///
-/// The two structs are identical except for `on_change`'s payload, and picking the wrong
-/// one is a compile error rather than a silent bug — which is why this assertion exists
-/// only to say the *right* one is in use.
 #[test]
 fn props_are_autocomplete_props() {
     let (combo, _) = recording();
@@ -259,20 +213,12 @@ fn props_are_autocomplete_props() {
     );
 }
 
-/// The default placeholder is v1's — and it is **not** the combobox's.
-///
-/// `AutocompleteProps::default()` says "Type to search…" where `ComboboxProps::default()`
-/// says "Select…". Two props types, two defaults, and this is the second structural
-/// difference between them beyond `on_change`'s payload. Worth a test because a single
-/// shared style struct elsewhere in this port makes it easy to assume the two controls
-/// were the same thing all the way down.
 #[test]
 fn the_default_placeholder_is_the_autocompletes_own() {
     let combo = MdAutocomplete::new();
     assert_eq!(combo.props().placeholder, "Type to search\u{2026}");
 }
 
-// --- the mounted view -----------------------------------------------------
 
 /// The view places its panel below the field with Material's gap — the same placement a
 /// combobox makes, because it is the same engine widget.
@@ -291,21 +237,12 @@ fn the_view_places_its_panel_below_the_field() {
     assert_eq!(cx.opened_overlays().len(), 1);
 }
 
-/// An untouched autocomplete lists everything, because v1's filter matches an empty
-/// query against every option — an autocomplete that opened empty would be a search box
-/// with no way to see what it searches.
 #[test]
 fn an_empty_query_lists_every_option() {
     let view = MdAutocomplete::new().options(options()).view();
     assert_eq!(view.visible(), options());
 }
 
-/// `disabled` reaches the widget, so a disabled autocomplete is visibly one.
-///
-/// Painted rather than read: `Combobox` has no `disabled()` reader — and adding one for a
-/// flag a caller already passed in would be a getter for its own argument. The trigger is
-/// also a *child*, so the widget's own `paint` draws nothing and comparing the widgets
-/// would compare two empty scenes; the child is what has to be painted.
 #[test]
 fn disabled_reaches_the_widget_and_changes_how_it_paints() {
     let bounds = floom_types::Rect {

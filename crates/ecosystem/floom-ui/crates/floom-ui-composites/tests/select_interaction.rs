@@ -1,9 +1,3 @@
-//! The `Select` popup, driven through the real platform chain.
-//!
-//! This moved out of `floom-app/tests/interaction.rs` with the widget, and it
-//! is the test that says why the list is an overlay at all: as raw paint ops
-//! inside the control's own node the rows could never be hit, because the node
-//! is one row tall, so a mouse could open a list and never use one.
 
 use std::cell::Cell;
 use std::rc::Rc;

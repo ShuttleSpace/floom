@@ -1,77 +1,5 @@
 //! Cupertino textarea, ported to the Floom 2.0 widget API.
 //!
-//! A textarea is a bordered box with a text field in it, sized by the number
-//! of rows the caller asked for.
-//!
-//! ## What the port uses
-//!
-//! The engine's [`TextInput`] for the text and the engine's vocabulary -- a
-//! `Surface` for the box, a `Child` for the field inside it -- for everything
-//! else.
-//!
-//! ## What this kit answers
-//!
-//! * the box's padding, the corner radius, the field's maximum width and the
-//!   text's size: the tokens;
-//! * the text's ink: `on_surface`; the box's fill: `surface_variant`; the
-//!   rim: `outline`;
-//! * the disabled palette: `on_surface` at 4 for the fill, `on_surface` at 38
-//!   for the rim and for the text, and `on_surface` at 97 for the style's own
-//!   report of the ink -- v1's numbers;
-//! * the row height: the token's `min_height` plus one line per extra row,
-//!   with a line being 20 -- v1's own constant, not the font size.
-//!
-//! ## The numbers v1 wrote and never drew
-//!
-//! v1's `resolved_style` reported three numbers that the paint did not use,
-//! and the port keeps all three and names them here rather than quietly
-//! correcting them:
-//!
-//! * **the disabled ink.** The style said `on_surface`, with no disabled
-//!   case at all; the view painted the disabled text at `on_surface` at 97.
-//!   The port paints 97 and the style still reports the plain `on_surface`
-//!   v1 claimed.
-//! * **the rows.** The style's `min_height` was the token's, with no rows in
-//!   it; the view sized the box by the rows. The port's style reports the
-//!   token's number, as v1 did, and the box is sized by the rows.
-//!
-//! ## The hover rim, which the port does not draw
-//!
-//! v1's Cupertino textarea answered the pointer with a `primary` rim at
-//! alpha 140. The engine's `TextInput` has no hover state and neither does
-//! the engine's `Surface`, and a kit cannot observe the pointer over a child
-//! it does not own, so the port draws the resting rim and names the hover as
-//! missing. The engine piece that would close it is a text field that reports
-//! its own interaction state -- which is what the composite `TextField` is,
-//! and it owns its value rather than sharing a buffer.
-//!
-//! ## The theme
-//!
-//! v1's Cupertino textarea took a *snapshot* of its own design system, so a
-//! change of the app-wide theme did not reach it. The port keeps that.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **A disabled field still takes keystrokes.** v1's `TextInput` had a
-//!   `disabled` flag; the engine's has none. The port keeps the callback from
-//!   firing while the field is disabled, and the field's own text still shows
-//!   what was typed into it.
-//! * **The cursor.** v1's field asked for the text cursor; the engine's
-//!   `TextInput` answers with the platform arrow.
-//! * **The `initialized` flag.** v1 needed a `Cell<bool>` to make its effect
-//!   skip its own first run, so that the value the field was built with was
-//!   not reported back as though the user had typed it. The engine's
-//!   `TextInput` fires `on_change` for a keystroke and for nothing else, so
-//!   there is no first run to swallow.
-//! * **The multi-line editor that never was.** v1's textarea was v1's
-//!   single-line `TextInput` in a tall box, and the port is the engine's
-//!   single-line `TextInput` in a tall box. What the rows buy is the box's
-//!   height, not the text's behaviour.
-//! * **`value_signal()`.** v1 handed out the `RwSignal<String>` behind the
-//!   text. 2.0 cannot: a slot closure has to be `Send + Sync`, and an
-//!   `RwSignal` is `Rc`-based. The port hands out the engine's
-//!   `SharedBuffer` instead, which is the same handle under a different
-//!   name.
 
 use std::sync::{Arc, Mutex};
 
@@ -275,7 +203,6 @@ impl CupertinoTextarea {
             on_surface
         });
         // The box is as tall as the rows ask for -- which is where v1 put the
-        // height for this kit.
         let box_height =
             style.min_height + (self.props.rows.saturating_sub(1) as f32) * LINE_HEIGHT;
         let caret = buffer.lock().map(|text| text.len()).unwrap_or(0);
@@ -290,13 +217,11 @@ impl CupertinoTextarea {
                         font_size,
                         color: text_color,
                         // The box carries the fill and the rim; the text input
-                        // is the text.
                         background: None,
                         border_width: 0.0,
                         radius: 0.0,
                         // v1's `TextInput` had a padding of its own that the
                         // v1 source does not record, so the box's padding is
-                        // the only inset here.
                         padding_horiz: 0.0,
                         padding_vert: 0.0,
                         ..TextInputStyle::default()
@@ -304,14 +229,12 @@ impl CupertinoTextarea {
                 // The engine's `TextInput::new` opens with the caret at the
                 // *start* of the buffer, while `with_text` opens it at the
                 // end. A kit that hands out its own buffer cannot ask for the
-                // second one, so the caret is moved here.
                 input.set_caret(caret);
                 input = input.on_change({
                     let on_change = on_change.clone();
                     move |text: String| {
                         // A disabled field does not answer: v1's `TextInput`
                         // refused the keyboard, and the engine's has no such
-                        // flag.
                         if disabled {
                             return;
                         }
@@ -331,7 +254,6 @@ impl CupertinoTextarea {
                     .max_width(style.max_width)
                     .min_height(box_height)
                     // v1's field was `items_start`, so the text sits at the
-                    // top of the box.
                     .cross_align(Align::Start),
             )
             .padding(Insets {

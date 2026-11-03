@@ -1,17 +1,3 @@
-//! The ported Material main content region -- the area the application's
-//! content lives in, inset by the sizes the shell registered.
-//!
-//! ## Why the pixels and not the style
-//!
-//! The style can say which fill the content was *given*; only the paint log
-//! can say that the content was painted in it, and that the spacers around it
-//! are the sizes the shell asked for. So the tests read both.
-//!
-//! ## The tripwires
-//!
-//! `the_content_is_painted_in_the_background` and
-//! `the_spacers_are_sized_from_the_registered_insets` would fail if this kit
-//! stopped insetting itself.
 
 use floom_core::{ElementId, Length, Rect, Widget, WidgetAny};
 use floom_types::Color;
@@ -30,11 +16,6 @@ const BOX: Rect = Rect {
     y1: 600.0,
 };
 
-/// The Material theme, with Material selected.
-///
-/// `MultiTheme::new_for(ds)` does *not* select `ds` -- it builds all three and
-/// reads the *current* one -- and `set_design_system` writes a thread-local,
-/// so the selection is this test's alone.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
@@ -76,7 +57,6 @@ fn content_of(kit: MaterialMain) -> Box<dyn WidgetAny> {
     middle.children().remove(1).build()
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The theme's fill and the design system reach the style.
 #[test]
@@ -106,7 +86,6 @@ fn the_insets_are_the_layout_signals_own_numbers() {
     assert_eq!(style.right, 320.0, "the open right drawer");
 }
 
-// --- the pixels -----------------------------------------------------------
 
 /// The content is painted in the theme's background colour.
 #[test]
@@ -164,7 +143,6 @@ fn the_spacers_are_sized_from_the_registered_insets() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The region is a column of the top spacer, the middle row and the bottom
 /// spacer.
@@ -215,9 +193,6 @@ fn the_content_takes_the_room_the_spacers_leave() {
     );
 }
 
-/// With no child, the content box has none: v1 mounted an `Empty` there, and
-/// `Empty` had no size, so this is a structural difference and not a pixel
-/// one.
 #[test]
 fn the_content_box_is_empty_when_there_is_no_child() {
     let content = content_of(kit());
@@ -228,14 +203,11 @@ fn the_content_box_is_empty_when_there_is_no_child() {
     );
 }
 
-// --- the theme source -----------------------------------------------------
 
 /// Material's theme is the app-wide signal, so a change of theme re-themes
 /// the main region with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialMain::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

@@ -1,16 +1,5 @@
 //! Cupertino avatar: the shape, the palette, and the type.
 //!
-//! ## The three kits disagree about all three
-//!
-//! | | Material | Cupertino | Fluent |
-//! |---|---|---|---|
-//! | shape | circle | circle | **rounded square** |
-//! | fill | `primary_container` | **`surface_variant`** | `primary_container` |
-//! | ink | `on_primary_container` | **`on_surface`** | `on_primary_container` |
-//! | weight | normal | normal | **SemiBold** |
-//!
-//! The assertions are about this kit's own answers, read off the painted
-//! surface and the painted text.
 
 use floom_core::Widget;
 use floom_types::{Color, FontWeight, Rect};
@@ -70,7 +59,6 @@ fn painted(
     });
 
     // The text is the surface's *child*, and a widget paints only itself, so
-    // the text is painted on its own.
     let mut text = surface.children()[0].build();
     let mut create = AllocatingCreateContext::new();
     let text_id = text.create(&mut create);
@@ -100,7 +88,6 @@ fn the_style_resolves_this_kits_own_palette() {
     assert_eq!(style.background, theme.colors().surface_variant);
     assert_eq!(style.text_color, theme.colors().on_surface);
     // The size is the *props'* default, not the token's -- see
-    // `the_props_size_wins_over_the_tokens` for why.
     assert_eq!(style.size, 40.0);
     assert_eq!(style.font_size, tokens().font_size);
 }

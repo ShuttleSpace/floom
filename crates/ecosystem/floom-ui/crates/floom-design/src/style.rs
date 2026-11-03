@@ -1,4 +1,3 @@
-//! Fluent construction of [`StyleProps`] and of a whole [`StyleSet`].
 
 use floom_style::{StyleProps, StyleSet};
 use floom_types::Color;

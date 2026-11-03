@@ -670,7 +670,7 @@ impl SignalState {
     }
 }
 
-// Sync storage trait impls (requires Send + Sync)
+// Sync storage: requires Send + Sync
 impl<T: Clone + Send + Sync> SignalGet<T> for RwSignal<T, SyncStorage> {
     fn id(&self) -> Id {
         self.id
@@ -850,7 +850,7 @@ impl<T: Send + Sync> SignalWrite<T> for WriteSignal<T, SyncStorage> {
     }
 }
 
-// Unsync storage trait impls (no Send + Sync required)
+// Unsync storage: no Send + Sync required
 impl<T: Clone> SignalGet<T> for RwSignal<T, UnsyncStorage> {
     fn id(&self) -> Id {
         self.id

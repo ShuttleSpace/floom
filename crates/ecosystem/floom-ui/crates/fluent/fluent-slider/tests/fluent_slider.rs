@@ -1,13 +1,4 @@
 //! Fluent's slider as a kit crate: the token translation, and the one thing
-//! this kit does *not* have.
-//!
-//! Fluent is the plainest of the three. Its thumb is a bare `primary` disc on a
-//! `surface_variant` track: no halo, no drop shadow, no hover or press colour,
-//! no disabled palette. Most of this file is therefore about absence, and each
-//! absence carries a control so that "delete the line" and "the field defaulted
-//! to something" cannot pass for the same thing.
-//!
-//! The behaviour tests are the engine's, in `floom-ui-composites/tests/slider.rs`.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -23,7 +14,6 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_widget_fluent_slider::FluentSlider;
 
-/// The box the slider is laid out in.
 const ROW: Rect = Rect {
     x0: 0.0,
     y0: 0.0,
@@ -56,11 +46,7 @@ fn paint(slider: &Slider, bounds: Rect) -> (Vec<PaintOp>, String) {
     (recorder.ops().to_vec(), recorder.snapshot())
 }
 
-// --- what this kit shares with the others ---------------------------------
 
-/// The track is an undimmed `surface_variant`, as in Cupertino and unlike
-/// Material's 97 percent `on_surface_variant`. The alpha is the half that
-/// differs, so it is asserted rather than left implicit.
 #[test]
 fn the_track_is_an_undimmed_surface_variant() {
     let binding = theme();
@@ -76,9 +62,6 @@ fn the_track_is_an_undimmed_surface_variant() {
     );
 }
 
-/// The fill and the thumb are both `primary`, as in Material and unlike
-/// Cupertino, whose thumb is `surface`. So of the three kits this one shares its
-/// track with Cupertino and its thumb with Material.
 #[test]
 fn the_fill_and_the_thumb_are_both_primary() {
     let binding = theme();
@@ -107,12 +90,7 @@ fn the_geometry_is_the_slider_tokens() {
     assert_eq!(style.thumb_radius, tokens.thumb_radius);
 }
 
-// --- what this kit does not have ------------------------------------------
 
-/// **Neither optional thumb treatment.** This is the kit's whole answer to "how
-/// is the thumb separated from the track": it is not. Material has a 40px
-/// `primary` halo and Cupertino a black-at-60 drop shadow, and both are `None`
-/// here.
 #[test]
 fn neither_a_halo_nor_a_drop_shadow() {
     let style = style();
@@ -127,9 +105,6 @@ fn neither_a_halo_nor_a_drop_shadow() {
     assert_eq!(alpha_of(style.shadow_color), 0);
 }
 
-/// v1 had no hover or press colour of its own for any of the three boxes, so
-/// all three variants are `None`. The engine's default is the opposite on all
-/// three, which is what makes this a real answer rather than an omission.
 #[test]
 fn none_of_the_interaction_variants_are_this_kits_own() {
     let style = style();
@@ -146,16 +121,6 @@ fn none_of_the_interaction_variants_are_this_kits_own() {
     );
 }
 
-/// **There is no disabled palette in this kit, and that is pinned on purpose.**
-///
-/// `SliderStyle` has no disabled field, and v1's disabled look came from the
-/// style layer's generic dim -- `set_disabled(true)`, which halved a colour's
-/// alpha -- rather than from this kit's tokens. The engine deliberately dropped
-/// that rule, because a hard-coded dim a kit cannot override is the problem
-/// `SliderStyle` exists to fix. Material shows what a kit's *own* disabled
-/// answer looks like (120 and 60); this kit had none. So a disabled Fluent
-/// slider paints the enabled palette, and this test records that as the
-/// decision it is rather than leaving it to be discovered.
 #[test]
 fn a_disabled_slider_paints_the_enabled_palette() {
     let disabled = FluentSlider::new()
@@ -169,27 +134,6 @@ fn a_disabled_slider_paints_the_enabled_palette() {
     );
 }
 
-/// **The track's corner radius did not survive, and this is the test that says
-/// why it was not substituted.**
-///
-/// v1 drew both the track line and the fill at `theme.radius().sm`, *not* at
-/// `track_height / 2.0` as Material and Cupertino did, and those are two
-/// different numbers -- so this is a *visible* loss, not a coincidence that
-/// happened to be invisible. The token is perfectly readable, so nothing was
-/// lost by accident. What cannot carry it is `SliderStyle`, which has no
-/// track-radius field at all, and the engine's `paint`, which draws the track
-/// and the fill with `fill_rect` rather than `fill_rounded_rect`.
-///
-/// The token is read rather than hardcoded because a `MultiTheme` resolves its
-/// reads through the *active* design system -- `new_for` is a no-op placeholder
-/// and `radius()` follows a global -- so the number this test sees is the one
-/// v1 would have read under the same conditions.
-///
-/// `thumb_radius` is asserted against the *tokens* below, rather than being
-/// quietly reused to cover for the track: it is the thumb's corner radius and it
-/// is a different number. Adding a track radius to `SliderStyle` is an engine
-/// change, not a kit one, and this test is what will notice if it happens
-/// without someone updating this crate.
 #[test]
 fn the_track_corner_radius_token_is_readable_but_unexpressible() {
     let binding = theme();
@@ -216,10 +160,7 @@ fn the_track_corner_radius_token_is_readable_but_unexpressible() {
     );
 }
 
-// --- mounting -------------------------------------------------------------
 
-/// The style the kit resolved is the style the engine paints: exactly three
-/// filled shapes -- track, fill, thumb -- and nothing else.
 #[test]
 fn the_mounted_slider_paints_exactly_three_shapes() {
     let style = style();
@@ -250,9 +191,6 @@ fn the_mounted_slider_paints_exactly_three_shapes() {
     );
 }
 
-/// v1's props were `f32`; the engine's widget is `f64`. The widening happens in
-/// `view()`, and this is where it is checked, including the clamp that stops a
-/// caller handing the engine a value outside its own range.
 #[test]
 fn mounting_carries_the_props_as_f64() {
     let slider = FluentSlider::new()
@@ -278,10 +216,6 @@ fn mounting_carries_the_props_as_f64() {
     assert_eq!(clamped.value(), 100.0, "the engine clamps on construction");
 }
 
-/// The callback narrows the engine's `f64` back to the `f32` that
-/// `SliderProps` declares. The tolerance is 1e-6 rather than 1e-9 because the
-/// `f32` step widens: 0.1 becomes 0.10000000149011612, and the engine's value is
-/// exactly that.
 #[test]
 fn the_callback_reports_the_engines_value_narrowed_to_f32() {
     let seen = Rc::new(Cell::new(f32::NAN));
@@ -315,9 +249,6 @@ fn the_callback_reports_the_engines_value_narrowed_to_f32() {
     );
 }
 
-/// The disabled *flag* still reaches the widget even though no colour changes:
-/// the engine's `event` returns early for a disabled slider, so this is what
-/// stops a disabled one being draggable.
 #[test]
 fn a_disabled_slider_reaches_the_engine_as_disabled() {
     let enabled = FluentSlider::new().with_theme(theme()).view();
@@ -330,8 +261,6 @@ fn a_disabled_slider_reaches_the_engine_as_disabled() {
     assert!(disabled.interaction().disabled);
 }
 
-/// A slider's intrinsic height is the thumb, because the thumb is the tallest
-/// thing on it.
 #[test]
 fn mounting_reports_a_height_of_this_kits_thumb() {
     let style = style();
@@ -343,9 +272,6 @@ fn mounting_reports_a_height_of_this_kits_thumb() {
     );
 }
 
-/// The three design systems resolve the same tokens and the same colours today,
-/// so a kit's identity lives in its constants -- see the same test in the
-/// Material file for why this one has to exist.
 #[test]
 fn the_three_design_systems_still_resolve_identical_tokens() {
     let fluent_theme = theme();

@@ -87,8 +87,6 @@ fn paint_ops(grid: &DataGrid, id: ElementId) -> Vec<String> {
     rec.ops().iter().map(|op| op.snapshot_line()).collect()
 }
 
-// --- virtualization --------------------------------------------------------
-
 #[test]
 fn visible_range_follows_the_container_not_the_row_count() {
     let mut small = grid_with(1_000);
@@ -239,8 +237,6 @@ fn sync_rows_binds_the_rows_the_window_names() {
     assert_eq!(bound, (20..30).map(RowId).collect::<Vec<_>>());
 }
 
-// --- sorting ---------------------------------------------------------------
-
 #[test]
 fn header_click_cycles_the_sort_and_reorders_the_window() {
     let mut grid = grid_with(5);
@@ -287,8 +283,6 @@ fn a_column_can_refuse_to_sort() {
     assert!(!grid.toggle_sort(ColumnId(0)));
     assert_eq!(grid.sort(), None);
 }
-
-// --- selection -------------------------------------------------------------
 
 #[test]
 fn clicking_selects_the_row_under_the_pointer() {
@@ -361,8 +355,6 @@ fn double_click_opens_an_editor_only_on_an_editable_cell() {
     assert_eq!(session.column, ColumnId(1));
     assert_eq!(session.text, "1");
 }
-
-// --- keyboard --------------------------------------------------------------
 
 #[test]
 fn arrow_keys_move_the_cursor_and_keep_it_scrolled_into_view() {
@@ -450,8 +442,6 @@ fn a_non_modifier_key_only_moves_the_cursor_without_scrolling_the_page() {
     assert!(!key(&mut grid, id, Key::Char('q'), Modifiers::NONE));
     assert_eq!(grid.selection().cursor(), None);
 }
-
-// --- editing and undo ------------------------------------------------------
 
 #[test]
 fn enter_opens_an_editor_type_commits_and_undo_restores() {
@@ -563,8 +553,6 @@ fn undo_and_redo_are_no_ops_when_the_stacks_are_empty() {
     assert!(!key(&mut grid, id, Key::Char('z'), Modifiers::CONTROL));
     assert!(!key(&mut grid, id, Key::Char('y'), Modifiers::CONTROL));
 }
-
-// --- widget plumbing -------------------------------------------------------
 
 #[test]
 fn update_marks_the_element_dirty_once_per_change() {

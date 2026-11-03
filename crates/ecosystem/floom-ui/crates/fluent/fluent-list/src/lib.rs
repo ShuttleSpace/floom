@@ -1,15 +1,4 @@
 //! Fluent list, ported to the Floom 2.0 widget API.
-//!
-//! v1 was a `Container` of `Label` rows, each with a hovered background and a
-//! click listener. The row is the engine's `ListItemRow` now -- a `Pressable`
-//! with interaction state, which is what any hover answer would have to read --
-//! so what is left is the token translation and the container's own numbers.
-//!
-//! See `floom-widget-md-list`'s module docs for the full rationale of what the
-//! port drops (row hover background, container horizontal padding). The only
-//! number this kit answers differently from Material is the container radius:
-//! Fluent reads `radius().md` (Material hardcodes `8.0`). The row hover is
-//! `primary`@8 in both, and `ListItemStyle` cannot carry it in either.
 
 use floom_core::Axis;
 use floom_core::LayoutRequest;
@@ -28,7 +17,6 @@ use floom_widgets::compose::Stack;
 use floom_widgets::primitives::{Container, Spacer};
 use std::sync::Arc;
 
-/// The row's geometry, drawn from `ListTokens`.
 #[derive(Debug, Clone, Copy)]
 pub struct FluentRowGeometry {
     pub height: f32,
@@ -46,10 +34,7 @@ pub struct FluentListStyle {
     pub padding_horizontal: f32,
     pub min_width: f32,
     pub gap: f32,
-    /// The row's fill while hovered. All three kits wrote `primary`@8 and none
-    /// of the three can draw it -- see the md-list module doc. Carried anyway.
     pub hover_color: Color,
-    /// The container's corner radius. Fluent reads `radius().md`.
     pub border_radius: f32,
     pub label_font_size: f32,
 }
@@ -71,7 +56,6 @@ impl FluentList {
         }
     }
 
-    /// Append a clickable item to the list.
     pub fn item(
         mut self,
         label: impl Into<String>,
@@ -118,7 +102,6 @@ impl FluentList {
         }
     }
 
-    /// Build a renderable Fluent list of clickable rows.
     pub fn view(self) -> Stack {
         let style = self.resolved_style();
         let padding = style.padding;
@@ -130,9 +113,6 @@ impl FluentList {
         );
         let items = self.props.items;
 
-        // A `Container` is a leaf in this engine, so "a filled box with content
-        // in it" is a `Stack` whose first child fills it absolutely, then the
-        // vertical padding, then the rows.
         let mut stack = Stack::new(Axis::Vertical)
             .gap(gap)
             .request(LayoutRequest::new().min_width(min_width))

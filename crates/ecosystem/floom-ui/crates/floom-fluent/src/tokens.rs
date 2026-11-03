@@ -1,9 +1,3 @@
-//! Fluent colour and metric tokens.
-//!
-//! Surfaces are a *ramp* rather than a single background with alpha applied:
-//! Fluent's `Layer`, `LayerAlt` and `CardBackground` are three opaque greys in a
-//! fixed order, which is why the audit can hold them to a contrast floor against
-//! the text on top of them.
 
 use floom_theme::{ColorScheme, Theme};
 use floom_types::Color;

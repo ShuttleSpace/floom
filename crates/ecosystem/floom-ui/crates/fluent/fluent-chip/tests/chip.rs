@@ -1,21 +1,4 @@
 //! The ported Fluent chip -- a pill with a label in the middle, in one of
-//! three appearances.
-//!
-//! The pill and its centred label are the engine's `Chip`; what is tested here
-//! is the *translation*: the tokens reach the engine, the palette is the one
-//! v1 used, and the pixels say so.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a chip that paints the unchosen fill with the
-//! chosen ink from one that has them the right way round. Only the paint log
-//! can, so these tests read what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_three_appearances_are_the_ones_v1_drew` and
-//! `the_outline_is_the_one_v1_drew` would fail if this kit stopped being
-//! this kit.
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
@@ -37,9 +20,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -48,7 +28,6 @@ fn chip() -> FluentChip {
     FluentChip::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -58,7 +37,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The fill, the ink and the outline one chip actually painted.
 fn painted(chip: &Chip) -> (Option<Color>, Option<Color>, Option<(f64, Color)>) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = chip.create(&mut create);
@@ -85,7 +63,6 @@ fn painted(chip: &Chip) -> (Option<Color>, Option<Color>, Option<(f64, Color)>) 
     (fill, ink, outline)
 }
 
-/// Taps a chip, the way the host would.
 fn tap(chip: &mut Chip) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = chip.create(&mut create);
@@ -95,9 +72,7 @@ fn tap(chip: &mut Chip) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens reach the engine's chip, and the chip is the shape v1 drew.
 #[test]
 fn the_tokens_reach_the_engine_chip() {
     let style: FluentChipStyle = chip().resolved_style();
@@ -124,12 +99,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(chip().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The three appearances are the ones v1 drew.
-///
-/// This is the test that would catch a chip that paints the chosen fill with
-/// the unchosen ink, which a style assertion cannot see.
 #[test]
 fn the_three_appearances_are_the_ones_v1_drew() {
     let plain = chip().resolved_style();
@@ -148,7 +118,6 @@ fn the_three_appearances_are_the_ones_v1_drew() {
     assert_eq!(ink, Some(paint(off.text_color)), "and the disabled ink");
 }
 
-/// The outline: there only when the chip is chosen: 1px in `primary`
 #[test]
 fn the_outline_is_the_one_v1_drew() {
     let (fill, ink, outline) = painted(&chip().label("One").view());
@@ -165,7 +134,6 @@ fn the_outline_is_the_one_v1_drew() {
     assert_eq!(color, paint(chosen.border_color), "in `primary`");
 }
 
-/// The label is the chip's own text, at the token's size.
 #[test]
 fn the_label_is_the_chips_own_text() {
     let mut create = AllocatingCreateContext::new();
@@ -186,9 +154,7 @@ fn the_label_is_the_chips_own_text() {
     assert_eq!(text.1, chip().resolved_style().font_size);
 }
 
-// --- the click ------------------------------------------------------------
 
-/// A click calls the callback.
 #[test]
 fn a_click_calls_the_callback() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(0));
@@ -201,7 +167,6 @@ fn a_click_calls_the_callback() {
     assert_eq!(*seen.lock().unwrap(), 1);
 }
 
-/// A disabled chip does not.
 #[test]
 fn a_disabled_chip_does_not_call_the_callback() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(0));
@@ -215,8 +180,6 @@ fn a_disabled_chip_does_not_call_the_callback() {
     assert_eq!(*seen.lock().unwrap(), 0, "v1's `if !disabled` guard");
 }
 
-/// The props report the shape, and not the callback: the kit holds that as the
-/// v1 props' `Box<dyn Fn()>`.
 #[test]
 fn the_props_report_the_shape_and_not_the_callback() {
     let kit = chip().label("One").selected(true).disabled(true);

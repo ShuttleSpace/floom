@@ -1,68 +1,5 @@
 //! Cupertino main content region, ported to the Floom 2.0 widget API.
 //!
-//! The main region is the part of the screen the application's content lives
-//! in: the area between the app bar above it, the footer or the bottom
-//! navigation below it, and the navigation drawers at its sides. It reads the
-//! app-wide layout signal and offsets its content by the sizes those shell
-//! pieces registered, so the content never hides under them.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a vertical [`Stack`] of a top spacer, the middle
-//! row and a bottom spacer; the middle row a horizontal [`Stack`] of a left
-//! spacer, the content and a right spacer; and a [`Surface`] for the content's
-//! own fill. The spacers are `Surface`s with a size and no fill -- 2.0's
-//! spelling of v1's `Empty`.
-//!
-//! ## What this kit answers
-//!
-//! * the fill behind the content: `background`;
-//! * the four insets: the app-wide layout signal's own numbers, so the kit
-//!   answers no number of its own.
-//!
-//! ## The theme it reads
-//!
-//! Cupertino's theme is a *snapshot*: the kit takes a `MultiTheme` for
-//! Cupertino when it is built and reads its tokens and colours from it.
-//! The Material kit reads the app-wide signal instead, so a change of theme
-//! re-themes the main region with everything else.
-//!
-//! ## What the three kits disagree about
-//!
-//! Only the theme they read: the four insets are the same numbers in all
-//! three, and the fill is each theme's own background.
-//!
-//! ## The style v1 did not have
-//!
-//! v1's main had no style struct at all -- it was a view and nothing else.
-//! The port adds one, because a kit whose numbers cannot be read cannot be
-//! tested: [`CupertinoMainStyle`] reports the fill and the four insets.
-//!
-//! ## The difference that is named rather than reproduced
-//!
-//! **v1 re-read the layout signal on every style pass; the port reads it once,
-//! when the tree is built.** v1's spacers each carried a style closure that
-//! read `layout_signal()` on every frame, so a bar that registered its height
-//! after the main was built re-inset the main at once. 2.0 mounts a widget
-//! once: the insets are read when `view()` runs and the spacers are sized from
-//! them. The reason is the signal itself -- `RwSignal` is `Rc`-based and so
-//! neither `Send` nor `Sync`, and 2.0's slot closures are shared between
-//! threads, so a closure that read the signal could not be built at all.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The child is a slot, not a view.** v1's `child(..)` took an
-//!   `impl IntoView`; 2.0's takes a [`Child`], because a 2.0 widget is
-//!   mounted by its parent rather than returned.
-//! * **The empty child.** v1 mounted an `Empty` view when there was no child,
-//!   so the content box always had one child. Here the slot is absent when
-//!   there is nothing to put in it. `Empty` had no size, so there is no pixel
-//!   difference -- only a structural one.
-//! * **The accessors.** v1's main had no `props()`, `theme()` or `with_theme()`.
-//!   The port gives it `theme()` and `with_theme()`, because a kit that cannot
-//!   be given a theme cannot be tested against one. There is no `props()`:
-//!   `floom-core-theme` has no props struct for the main region, so there is
-//!   none to report.
 
 use floom_core::{Child, LayoutRequest};
 use floom_signal::{RwSignal, SignalGet};
@@ -127,7 +64,6 @@ impl CupertinoMain {
     pub fn resolved_style(&self) -> CupertinoMainStyle {
         let theme = self.theme.get();
         // The insets are read here, once: see the module's note on the layout
-        // signal.
         let layout = layout_signal().get();
         CupertinoMainStyle {
             design_system: "cupertino",
@@ -161,7 +97,6 @@ impl CupertinoMain {
         // v1's middle row: the left spacer, the content and the right spacer.
         // The content's `flex_grow(1.0)` lives on the *slot*, because 2.0's
         // layout takes a grow factor from the slot's request and not from the
-        // widget's own.
         let middle = Stack::new(Axis::Horizontal)
             .request(LayoutRequest::new().width_pct(100.0))
             .push(move || Box::new(left.clone()))
@@ -171,7 +106,6 @@ impl CupertinoMain {
             .push(move || Box::new(right.clone()));
 
         // v1's outer stack: the top spacer, the middle row and the bottom
-        // spacer.
         Stack::new(Axis::Vertical)
             .request(LayoutRequest::new().width_pct(100.0).height_pct(100.0))
             .push(move || Box::new(top.clone()))

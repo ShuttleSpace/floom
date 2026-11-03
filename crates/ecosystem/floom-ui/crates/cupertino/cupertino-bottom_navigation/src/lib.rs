@@ -1,81 +1,5 @@
 //! Cupertino bottom navigation, ported to the Floom 2.0 widget API.
 //!
-//! A bottom navigation is a bar across the bottom of the window with a row of
-//! destinations in it: an icon above a label, one of them chosen.
-//!
-//! ## What the port uses
-//!
-//! The engine's `BottomNavigationBar`: a row of `Pressable` destinations, each
-//! a vertical `Stack` of an optional icon and a label, inside a bar that
-//! paints its own fill and the rule along its top edge.
-//!
-//! The *choice* is shared state rather than a signal: an `Arc<AtomicUsize>`,
-//! the shape the engine's own `Tabs` and `NavigationBar` use, because a value
-//! that changes after mount cannot be held in a signal and read during render.
-//!
-//! ## What this kit answers
-//!
-//! * the bar's fill: `surface` at 235; the rule along its top edge: `on_surface`
-//!   at 30;
-//! * the chosen destination's ink: `primary`; the other destinations':
-//!   `on_surface_variant`;
-//! * the fill under a destination the pointer is over: `on_surface` at 12 --
-//!   and only while that destination is *not* the chosen one;
-//! * the bar's height, the destination's minimum width, the icon's size and the
-//!   label's size: the tokens;
-//! * the gap between the icon and the label: the token's `gap`;
-//! * the rule's thickness: **half a point**, a v1 literal;
-//! * the gap between the icon and the label's top edge: **4 points**, a v1
-//!   literal (`margin_top(4.0)`).
-//!
-//! ## The engine's bottom navigation
-//!
-//! The shape is shared by all three kits, so it belongs in `floom-ui-composites`
-//! beside the `SelectGroup` -- and it is there now:
-//! `floom_ui_composites::BottomNavigationBar` is a bar of destinations, one of
-//! them chosen, and the three kits use it. What the kits did *not* agree on
-//! -- whether the icon is sized, whether a chosen destination carries a rule,
-//! whether a destination fills itself under the pointer, and whether it asks
-//! for a minimum width -- are optional fields in the engine's style, because
-//! they were v1's differences between the kits and not a theme's answers.
-//!
-//! Two things the engine *does* have were considered, and did not fit:
-//!
-//! * **The `SelectGroup`.** It is the engine's "one of several, one chosen",
-//!   and its `row_with_state` gives a row's content the answer to "is this row
-//!   chosen?" -- which is exactly the label's ink. But a group is a *stack of
-//!   rows*: there is no bar behind them to paint, its rows do not grow to
-//!   share a bar's width, and its choice lives inside the group, so a caller
-//!   holding only the bar could not read it the way v1's `selected_signal()`
-//!   let them. The kit holds the bar and the rows instead.
-//! * **A shared integer.** The engine's shared types are a bool, a string and
-//!   a map; the choice is an index, so the bar holds an `Arc<AtomicUsize>` --
-//!   the shape the engine's own `Tabs` and `NavigationBar` use.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **`cursor(CursorStyle::Pointer)`.** 2.0 asks the node *under* the pointer
-//!   for its shape, and the node under the pointer is the destination's label
-//!   or its icon rather than the destination, so the hand is not carried over.
-//!   The destination is still a `Pressable`, so it is still activatable by
-//!   keyboard, which the pointer was not.
-//! * **The icons were `AnyView`s.** 2.0's slots are replayed `Fn`s and a
-//!   widget is mounted by its parent rather than returned, so the caller hands
-//!   over a builder per icon instead of a built view.
-//!
-//! ## The tokens v1's style did not report
-//!
-//! * **`gap`.** v1's paint used the token's gap between a destination's icon
-//!   and its label, and v1's style did not say so. The port reports it.
-//! * **`divider_width`.** v1 wrote `.border_top(0.5)` -- a literal, not a
-//!   token. The port reports it, because a style that does not say what the
-//!   widget draws is not the widget's output.
-//!
-//! ## The one thing v1's style did not have
-//!
-//! `design_system`. The other two kits' styles name theirs and this one's did
-//! not; the port gives all three the same field, so a caller can read which
-//! design system a style came from.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -158,7 +82,6 @@ impl CupertinoBottomNavigation {
     pub fn new() -> Self {
         let props = BottomNavigationProps::default();
         // The props are moved into the kit below, so the selection they carry
-        // is read first.
         let selected = props.selected;
         Self {
             props,

@@ -1,19 +1,5 @@
 //! Cupertino scale transition, ported to the Floom 2.0 widget API.
 //!
-//! v1 mounted the child only while a `show` signal was true, and played an
-//! animation on the way in and on the way out. 2.0's [`Conditional`] is that
-//! shape: it mounts and unmounts a subtree, and keeps an exiting one mounted
-//! until its exit has played, so the departure is visible.
-//!
-//! ## The signal became a flag
-//!
-//! v1 held an `RwSignal<bool>`, which is `Rc`-based and cannot cross a `Send +
-//! Sync` slot boundary -- so the port holds a [`SharedFlag`], the same
-//! `Arc<Mutex<bool>>` the text input's buffer uses, and the engine's
-//! `Conditional` reads it in `update`. The signal is therefore still the
-//! caller's: [`CupertinoScaleTransition::show_signal`] hands it over, and whoever writes it drives
-//! the child in and out.
-//!
 use std::sync::Arc;
 
 use floom_core::{ChildKey, LayoutRequest, WidgetAny};

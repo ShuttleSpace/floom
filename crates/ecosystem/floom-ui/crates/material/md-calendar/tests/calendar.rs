@@ -1,16 +1,3 @@
-//! The ported Material calendar -- a month of days, with the selected date
-//! picked out.
-//!
-//! The shape is the engine's vocabulary plus a kit-local body, so what is
-//! tested here is the translation and the pixels: the tokens reach the style,
-//! the panel is painted in v1's colours, the title names the month, the
-//! selected day is filled in `primary` and every other day is not, and
-//! clicking a day picks it.
-//!
-//! ## The tripwires
-//!
-//! `the_selected_day_is_filled_and_the_others_are_not` and
-//! `clicking_a_day_picks_it` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -33,9 +20,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -95,8 +79,6 @@ fn cell_widget(kit: MaterialCalendar, label: &str) -> Box<dyn WidgetAny> {
         let row = grid.children().remove(week).build();
         for column in 0..row.children().len() {
             let cell = row.children().remove(column).build();
-            // The cell is a pressable around the round box that holds the
-            // number.
             let surface = cell.children().remove(0).build();
             let text = surface.children().remove(0).build();
             let painted = text_of(&*text);
@@ -120,7 +102,6 @@ fn cell_paint(cell: &dyn WidgetAny) -> (Option<Color>, Option<(String, f32, Colo
     (fill, text_of(&*text))
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -179,9 +160,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The panel is painted in v1's colours: the fill, and the outline.
 #[test]
 fn the_panel_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -249,7 +228,6 @@ fn the_selected_day_is_filled_and_the_others_are_not() {
     assert_eq!(ink, paint(resolved.on_surface), "v1's day ink");
 }
 
-// --- the structure --------------------------------------------------------
 
 /// Clicking a day picks it: the callback is called with the date, and the
 /// date is the one the cell shows.
@@ -263,7 +241,6 @@ fn clicking_a_day_picks_it() {
         }
     });
 
-    // The fifteenth of the month, wherever it falls.
     let mut cell = cell_widget(kit, "15");
 
     let id = ElementId::new(0, 1);
@@ -298,8 +275,6 @@ fn clicking_a_day_picks_it() {
 /// take a column of their own.
 #[test]
 fn the_week_numbers_are_drawn_only_when_asked_for() {
-    // The second week, not the first: August 2026 opens on a Saturday, so
-    // the first week holds the first of the month and nothing else.
     let body = body_of(kit());
     let grid = body.children().remove(2).build();
     let row = grid.children().remove(1).build();
@@ -319,9 +294,6 @@ fn the_week_numbers_are_drawn_only_when_asked_for() {
     );
 }
 
-/// The props report the date and the week-number flag, and the callback slot
-/// stays empty: the props' callback is a `Box<dyn Fn(CalendarDate)>`, which
-/// cannot cross a 2.0 slot.
 #[test]
 fn the_props_report_the_date() {
     let kit = kit()
@@ -341,14 +313,9 @@ fn the_props_report_the_date() {
     );
 }
 
-// --- the theme source -----------------------------------------------------
 
-/// The theme: v1's Material calendar read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialCalendar::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

@@ -1,9 +1,5 @@
 //! The icon path table and the engine widget built from it.
 //!
-//! The table itself did not change in this port — it never depended on v1 — so most of
-//! these tests are about the two things that *did*: the normalisation that decides
-//! whether a name resolves, and the fact that the fallback is a drawn circle rather than
-//! nothing.
 
 use floom_types::{ElementId, Rect};
 
@@ -32,7 +28,6 @@ fn a_named_icon_resolves_to_real_path_data() {
         );
         // I first asserted "no spaces", which is wrong: SVG path data uses spaces as
         // argument separators (`M3 18h18v-2H3v2z`). What actually distinguishes it from
-        // prose or markup is a command letter and no tag.
         let path = cupertino_icon_path(name);
         assert!(
             path.chars().any(|c| c.is_ascii_uppercase()),

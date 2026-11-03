@@ -1,16 +1,4 @@
 //! The ported Fluent infinite scroller -- a viewport that asks for more when
-//! the user reaches the end of the content.
-//!
-//! The shape is the engine's vocabulary plus a kit-local scroller, so what is
-//! tested here is the translation and the pixels: the tokens reach the style,
-//! the viewport is painted in v1's colours, the loading footer shows v1's
-//! label, and the scroller asks for the next page at the end of the content.
-//!
-//! ## The tripwires
-//!
-//! `the_viewport_is_painted_v1_s_colour` and
-//! `the_scroller_asks_for_more_at_the_end` would fail if this kit stopped
-//! being this kit.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -37,9 +25,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -48,7 +33,6 @@ fn kit() -> FluentInfiniteScroller {
     FluentInfiniteScroller::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -58,7 +42,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -68,7 +51,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The text a widget paints, if it paints one.
 fn text_of(widget: &dyn Widget) -> Option<(String, f32, Color)> {
     ops_of(widget).into_iter().find_map(|op| match op {
         PaintOp::Text {
@@ -78,7 +60,6 @@ fn text_of(widget: &dyn Widget) -> Option<(String, f32, Color)> {
     })
 }
 
-/// A wheel of `delta` pixels.
 fn wheel(delta: f64) -> Event {
     Event::Scroll(ScrollEvent {
         delta_x: 0.0,
@@ -88,9 +69,7 @@ fn wheel(delta: f64) -> Event {
     })
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentInfiniteScrollerStyle = kit().resolved_style();
@@ -130,9 +109,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The viewport is painted in v1's colours: the fill, and the outline.
 #[test]
 fn the_viewport_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -159,7 +136,6 @@ fn the_viewport_is_painted_v1_s_colour() {
     );
 }
 
-/// The loading footer shows v1's label, in v1's ink, at v1's size.
 #[test]
 fn the_loading_footer_shows_v1_s_label() {
     let resolved = kit().resolved_style();
@@ -176,8 +152,6 @@ fn the_loading_footer_shows_v1_s_label() {
     assert_eq!(ink, paint(resolved.on_surface_variant), "v1's label ink");
 }
 
-/// The idle footer is an empty box the height of the footer's padding, and it
-/// paints nothing.
 #[test]
 fn the_idle_footer_is_an_empty_box() {
     let resolved = kit().resolved_style();
@@ -201,9 +175,7 @@ fn the_idle_footer_is_an_empty_box() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The scroller asks for the next page when the user reaches the end.
 #[test]
 fn the_scroller_asks_for_more_at_the_end() {
     let calls = Arc::new(AtomicUsize::new(0));
@@ -218,7 +190,6 @@ fn the_scroller_asks_for_more_at_the_end() {
     let surface = kit.view();
     let mut scroller = surface.children().remove(0).build();
     let id = ElementId::new(0, 1);
-    // The content is 1000 tall in a 360 viewport, so the end is 640 pixels down.
     let mut cx = TestEventContext::new(id, BOX, wheel(640.0));
     scroller.event(&mut cx, id);
 
@@ -229,8 +200,6 @@ fn the_scroller_asks_for_more_at_the_end() {
     );
 }
 
-/// A page that is already being fetched is not asked for again: that is the
-/// re-fire guard, and it is the loading flag.
 #[test]
 fn the_loading_flag_guards_the_re_fire() {
     let calls = Arc::new(AtomicUsize::new(0));
@@ -256,9 +225,6 @@ fn the_loading_flag_guards_the_re_fire() {
     );
 }
 
-/// A content height the host grows after mount is taken up: the scroller
-/// re-declares its content, because a box's size is its own layout request
-/// and only a reconcile re-reads it.
 #[test]
 fn a_grown_content_height_is_taken_up() {
     let height = shared_height(0.0);
@@ -280,8 +246,6 @@ fn a_grown_content_height_is_taken_up() {
     );
 }
 
-/// The props report the threshold, and the callback slot stays empty: the
-/// props' callback is a `Box<dyn Fn()>`, which cannot cross a 2.0 slot.
 #[test]
 fn the_props_report_the_threshold() {
     let kit = kit().threshold(120.0);
@@ -292,7 +256,6 @@ fn the_props_report_the_threshold() {
     );
 }
 
-/// The loading flag is the host's to write.
 #[test]
 fn the_loading_flag_is_the_hosts_to_write() {
     let kit = kit();
@@ -305,10 +268,7 @@ fn the_loading_flag_is_the_hosts_to_write() {
     );
 }
 
-// --- the theme source ---
 
-/// The theme: v1's Fluent infinite scroller took a *snapshot* of its own design
-/// system, so a change of the app-wide theme does not re-theme it.
 #[test]
 fn the_theme_is_a_snapshot() {
     assert_ne!(

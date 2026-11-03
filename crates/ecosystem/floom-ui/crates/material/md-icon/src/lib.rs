@@ -1,32 +1,3 @@
-//! Material 3 icon, ported to the Floom 2.0 widget API.
-//!
-//! # What changed from v1
-//!
-//! v1 rendered an icon as SVG markup fed to the renderer:
-//!
-//! ```ignore
-//! svg(move || icons::md_icon_svg(&name)).style(move |s| {
-//!     s.size(sz, sz).color(t.colors().on_surface_variant.to_peniko())
-//! })
-//! ```
-//!
-//! That whole pipeline is gone in 2.0: there is no `svg` view, no `usvg` in the
-//! render path, and no style closure. The icon's *shape* — one filled outline —
-//! is expressed as a [`floom_widgets::VectorIcon`], which parses the `d`
-//! attribute once at construction and fills a `Path` at paint.
-//!
-//! Two things worth naming:
-//!
-//! * **`md_icon_svg` still exists, for the v1 callers.** Six material crates
-//!   (`md-list_group`, `md-stepper`, `md-confirm_edit`, `md-checkbox_btn`,
-//!   `md-checkbox`, `md-rating`) are still on v1 and call it to hand markup to
-//!   their own `svg()` view. Deleting it would break them; porting them is
-//!   separate work. New code uses [`MdIcon::resolve`].
-//! * **The size and colour are resolved up front.** v1's style closure re-read
-//!   the theme on every use, which 2.0's mount-once tree cannot do, so the kit
-//!   resolves them and pushes the result in — the same pattern `md-button` uses.
-//!
-//! See `docs/porting-floem-ui-to-2.0.md`.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Rect};
@@ -41,8 +12,6 @@ use floom_widget_runtime::theme_signal;
 
 mod icons;
 
-// v1 markup, for the six material crates still on v1 that feed it to their own
-// `svg()` view. 2.0 callers use `MdIcon::resolve` instead.
 pub use icons::md_icon_svg;
 
 /// The Material Symbols view box every glyph in [`icons`] is authored against.
@@ -128,19 +97,11 @@ impl MdIcon {
         icons::md_icon_path_data(&self.props.name)
     }
 
-    /// The icon as a 2.0 widget, ready to mount with `Child::new(..)`.
-    ///
-    /// This is the whole port: resolve the theme (the kit's job), parse the
-    /// outline once, hand back a widget. There is no `view()` terminal call
-    /// because 2.0 widgets are not composed — the *parent* declares them.
     pub fn resolve(&self) -> VectorIcon {
         let style = self.resolved_style();
         let mut icon = VectorIcon::from_path_data(self.path_data(), MD_ICON_VIEW_BOX)
             .size(style.size)
             .color(to_paint(style.color));
-        // v1's `svg` view had no accessibility story at all; 2.0's does, and
-        // the props already carried the intent, so this is a fix rather than a
-        // translation. An icon with no label stays decorative.
         if let Some(label) = self.props.label.as_deref() {
             icon = icon.label(label);
         }

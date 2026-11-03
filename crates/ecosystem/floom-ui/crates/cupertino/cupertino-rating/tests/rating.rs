@@ -1,14 +1,5 @@
 //! The ported Cupertino rating -- a row of stars, the first `value` of them
 //! filled.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the stars are
-//! painted in v1's inks, and a tap fills the stars below it.
-//!
-//! ## The tripwires
-//!
-//! `the_filled_stars_are_painted_in_v1_s_ink` and `a_tap_fills_the_stars_below
-//! _it` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -34,7 +25,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -261,7 +251,6 @@ fn the_props_report_the_value() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoRating::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

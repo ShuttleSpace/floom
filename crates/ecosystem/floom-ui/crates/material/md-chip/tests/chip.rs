@@ -1,21 +1,3 @@
-//! The ported Material chip -- a pill with a label in the middle, in one of
-//! three appearances.
-//!
-//! The pill and its centred label are the engine's `Chip`; what is tested here
-//! is the *translation*: the tokens reach the engine, the palette is the one
-//! v1 used, and the pixels say so.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a chip that paints the unchosen fill with the
-//! chosen ink from one that has them the right way round. Only the paint log
-//! can, so these tests read what the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! `the_three_appearances_are_the_ones_v1_drew` and
-//! `the_outline_is_the_one_v1_drew` would fail if this kit stopped being
-//! this kit.
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
@@ -37,9 +19,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -95,9 +74,7 @@ fn tap(chip: &mut Chip) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens reach the engine's chip, and the chip is the shape v1 drew.
 #[test]
 fn the_tokens_reach_the_engine_chip() {
     let style: MaterialChipStyle = chip().resolved_style();
@@ -124,12 +101,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(chip().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The three appearances are the ones v1 drew.
-///
-/// This is the test that would catch a chip that paints the chosen fill with
-/// the unchosen ink, which a style assertion cannot see.
 #[test]
 fn the_three_appearances_are_the_ones_v1_drew() {
     let plain = chip().resolved_style();
@@ -152,7 +124,6 @@ fn the_three_appearances_are_the_ones_v1_drew() {
     assert_eq!(ink, Some(paint(off.label_color)), "and the disabled ink");
 }
 
-/// The outline: none: v1's Material chip had no outline
 #[test]
 fn the_outline_is_the_one_v1_drew() {
     let (fill, ink, outline) = painted(&chip().label("One").view());
@@ -187,7 +158,6 @@ fn the_label_is_the_chips_own_text() {
     assert_eq!(text.1, chip().resolved_style().font_size);
 }
 
-// --- the click ------------------------------------------------------------
 
 /// A click calls the callback.
 #[test]

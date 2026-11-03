@@ -1,23 +1,5 @@
 //! Cupertino divider: the rule is flush with the top of its box.
 //!
-//! ## Why this suite exists at all
-//!
-//! The three v1 dividers were identical — measured, not assumed: with naming and
-//! the `design_system` field removed, their `resolved_style()` and `view()` bodies
-//! were byte-identical. There is no per-kit style parameter here, and inventing
-//! one would be inventing a disagreement.
-//!
-//! What the kits *do* disagree on is one thing, and it is worth a test each:
-//!
-//! * **Cross-axis placement.** v1 wrote no vertical placement for a horizontal
-//!   rule, so the rule landed on the container's top. The engine centres instead.
-//!   All three kits ask for `RuleAlignment::Start` to reproduce v1, and the tests
-//!   below are what make that a port rather than a preference.
-//! * **Theme source.** Material reads the live signal; Cupertino and Fluent take
-//!   a construction-time snapshot.
-//!
-//! Every test here has a control: without one, "the rule is at the top" also
-//! passes for a rule that is at the top *because nothing else was tried*.
 
 use floom_signal::SignalUpdate;
 use floom_types::Rect;

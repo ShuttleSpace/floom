@@ -1,58 +1,3 @@
-//! Material 3 dialog, ported to the Floom 2.0 widget API.
-//!
-//! ## What the port settled
-//!
-//! Correction 11 stopped at "a dialog cannot own its `open: RwSignal<bool>`". The answer
-//! turned out to be that the architecture had already made the decision — the host owns
-//! presence, through `OverlayKind::Dialog`, `OverlayHandle` and the state-driven overlay
-//! door — and the only thing missing was a flag a caller can *hold*. That is
-//! [`floom_widgets::text_input::SharedFlag`], an `Arc<Mutex<bool>>`, for the same reason
-//! `TextInput`'s buffer is an `Arc<Mutex<String>>`: a slot closure has to be `Send + Sync`.
-//!
-//! So the five v1 methods around `open` all become three:
-//!
-//! | v1 | here |
-//! |---|---|
-//! | `open(bool)` | `open(bool)` / `close()`, writing the flag |
-//! | `is_open()` | `is_open()`, reading it |
-//! | `open_signal() -> RwSignal<bool>` | [`MdDialog::open_flag`] |
-//! | `with_open_signal(RwSignal<bool>)` | [`MdDialog::with_open_flag`] |
-//! | `close()` | [`MdDialog::close`] |
-//!
-//! ## The card is the kit's, because of the close button
-//!
-//! v1's card is a composition — a title row carrying a close button, then the content,
-//! then a row of action buttons — and the engine's `Dialog::card` is a title above a
-//! body with no slot for a close button. Rather than give the engine a
-//! `close_button: Option<Child>` that three kits would fill differently (and whose
-//! placement differs per design system), the card is built here and handed over through
-//! [`floom_widgets::Dialog::card_with`]. The engine keeps doing the one thing only it can:
-//! mounting it as a modal overlay over the viewport.
-//!
-//! With a card supplied, `Dialog::title` applies **only to semantics** — the accessible
-//! name — so this does not get two titles.
-//!
-//! ## Two losses
-//!
-//! * **v1's pop-in animation is gone.** v1 scaled the card from 95% to 100%. 2.0 has
-//!   `AnimationSpec` and `AnimatedContent`, and the host drives animations, so this is
-//!   reachable — but wiring a scale into a card that lives inside an overlay's factory is
-//!   a separate piece of work and is recorded rather than half-done.
-//! * **v1's click-to-close-on-the-scrim is the host's job now**, which is better: a
-//!   widget cannot see a press that lands outside itself, so v1's `on_event(Click)` on the
-//!   scrim only ever worked because the scrim covered the window. The host's
-//!   `dismiss_top_overlay_on_press` does it for real, and a *modal* overlay is
-//!   deliberately not light-dismissed — so this dialog now stays up when the user clicks
-//!   outside it, where v1's would have closed. **That is a behaviour change**, and it is
-//!   the host's rule rather than the kit's.
-//!
-//! ## `FontWeight` is mapped a second time
-//!
-//! [`to_engine_weight`] mirrors `floom_widget_md_list_item::to_engine_weight` rather than
-//! importing it. That is duplication, and it is deliberate for now: the theme's weight
-//! enum lives in `floom-core-theme`, which the engine does not depend on, so the mapping
-//! cannot live in `floom-widgets` without inverting the dependency. A second caller is
-//! the signal that it wants a home, and this note is where that is recorded.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -69,26 +14,11 @@ use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::typography::FontWeight as ThemeFontWeight;
 
-/// The theme's weight enum -> the engine's.
-///
-/// Mirrors `floom_widget_md_list_item::to_engine_weight`. Duplicated rather than imported
-/// for the reason the module note gives: the enum is in `floom-core-theme`, which the
-/// engine does not depend on, so this cannot move into `floom-widgets` yet.
-///
-/// v1 called `FontWeight::to_floom()`, which returns a `parley::style::FontWeight` — a
-/// third type with the same name. Going through parley's numeric weight would mean
-/// reaching into a dependency's internals from a kit crate to avoid naming nine variants.
-///
-/// One difference from v1, recorded rather than inherited: v1's `to_floom()` sends
-/// **`Black` to `EXTRA_BOLD` (800)**, because parley's table has no 900. Here `Black`
-/// maps to `floom_types::Black` (900). Unverifiable from here — no call site reads
-/// `Black` — and it is deliberately the only place the two answers differ.
 pub fn to_engine_weight(w: ThemeFontWeight) -> FontWeight {
     match w {
         ThemeFontWeight::Thin => FontWeight::Thin,
         ThemeFontWeight::ExtraLight => FontWeight::ExtraLight,
         ThemeFontWeight::Light => FontWeight::Light,
-        // v1's name for 400 is `NORMAL`; the theme's is `Regular`.
         ThemeFontWeight::Regular => FontWeight::Normal,
         ThemeFontWeight::Medium => FontWeight::Medium,
         ThemeFontWeight::SemiBold => FontWeight::SemiBold,
@@ -104,13 +34,8 @@ type Callback = std::sync::Arc<dyn Fn() + Send + Sync + 'static>;
 /// Material's dialog.
 pub struct MdDialog {
     props: DialogProps,
-    /// The shared "is it up" flag.
-    ///
-    /// Not an `RwSignal`: that is `Rc`-based and cannot cross a `Send + Sync` slot
-    /// boundary, which is the whole of correction 11.
     open: SharedFlag,
     theme: RwSignal<MultiTheme>,
-    /// v1's `Box<dyn Fn()>`, stored so `props()` keeps reporting it.
     on_close: Option<Callback>,
     /// The action buttons, as `(label, callback)` in `Send + Sync` form.
     actions: Vec<(String, Callback)>,
@@ -120,7 +45,6 @@ impl MdDialog {
     pub fn new() -> Self {
         let props = DialogProps::default();
         MdDialog {
-            // v1 seeded the signal from `props.open`, and the props default is `false`.
             open: shared_flag(props.open),
             theme: RwSignal::new(MultiTheme::new_for(
                 floom_core_theme::global_theme::DesignSystem::Material,
@@ -141,11 +65,6 @@ impl MdDialog {
         self
     }
 
-    /// Open or close the dialog.
-    ///
-    /// Writes the shared flag rather than asking the widget, because the widget is built
-    /// by [`Self::view`] and a caller holding only this value must still be able to open
-    /// it — which is the whole reason v1 handed out `open_signal()`.
     pub fn open(mut self, open: bool) -> Self {
         self.props.open = open;
         write_flag(&self.open, open);
@@ -162,19 +81,10 @@ impl MdDialog {
         read_flag(&self.open)
     }
 
-    /// The shared open flag, so an external trigger (a button, a route) can drive it.
-    ///
-    /// v1's `open_signal()`, and the reason this whole shape exists.
     pub fn open_flag(&self) -> SharedFlag {
         self.open.clone()
     }
 
-    /// Drive this dialog from a flag somebody else owns.
-    ///
-    /// v1's `with_open_signal(RwSignal<bool>)`. Two dialogs sharing one flag is
-    /// meaningful — a dialog and the button that opens it — and `Arc::ptr_eq` in the test
-    /// is what makes "shares" mean shares rather than "coincidentally holds the same
-    /// value twice".
     pub fn with_open_flag(mut self, open: SharedFlag) -> Self {
         self.open = open;
         self.props.open = read_flag(&self.open);
@@ -190,7 +100,6 @@ impl MdDialog {
         self
     }
 
-    /// Add an action button, as v1's `action(label, callback)` did.
     pub fn action(
         mut self,
         label: impl Into<String>,
@@ -233,24 +142,19 @@ impl MdDialog {
             border_radius: tokens.border_radius,
             surface: to_paint(theme.colors().surface),
             on_surface: to_paint(theme.colors().on_surface),
-            // v1's `with_alpha(on_surface, 222)` on the content — the body text is
-            // deliberately lighter than the title, and the number is the reason.
             content_alpha: 222,
             primary: to_paint(theme.colors().primary),
             title_size: theme.typography().headline.small.font_size,
             body_size: theme.typography().body.medium.font_size,
             action_size: theme.typography().label.large.font_size,
             action_weight: to_engine_weight(theme.typography().label.large.font_weight),
-            // v1's call-site numbers, none of them tokens.
             action_padding_horizontal: 12.0,
             action_padding_vertical: 10.0,
             action_radius: 8.0,
             action_gap: 8.0,
             close_padding: 4.0,
             close_icon_size: 20.0,
-            // v1's `with_alpha(black, 30)` on the card's shadow.
             shadow_alpha: 30,
-            // v1's `with_alpha(primary, 8)` on an action's hover fill.
             action_hover_alpha: 8,
         }
     }
@@ -263,15 +167,10 @@ impl MdDialog {
         let actions = self.actions.clone();
         let on_close = self.on_close.clone();
         let open = self.open.clone();
-        // `MdIcon::resolve()` is total, so this is `Some` for Material. It is still an
-        // `Option` because a kit whose table *can* miss — Cupertino and Fluent, which
-        // fall back to a dot — has to have somewhere to put that.
         let close_icon: Option<floom_widgets::VectorIcon> =
             floom_widget_md_icon::MdIcon::new("close").resolve().into();
 
         Dialog::new()
-            // Semantics only: the card below carries its own title row, so setting the
-            // engine's title as well would render two.
             .title(title.clone())
             .with_shared_presence(open.clone())
             .card_with(move || {
@@ -318,11 +217,6 @@ pub struct DialogStyle {
     pub action_hover_alpha: u8,
 }
 
-/// The card: v1's composition, built here because of the close button.
-///
-/// A free function taking ownership, for the reason `combobox::row_widget` is: it is
-/// three `Fn` levels deep otherwise, and each level would need its own clone of the same
-/// six values.
 fn build_card(
     style: DialogStyle,
     title: String,
@@ -343,7 +237,6 @@ fn build_card(
         })
         .max_width(style.max_width);
 
-    // The action row.
     let mut action_row = Stack::new(Axis::Horizontal)
         .gap(style.action_gap)
         .align(floom_widgets::Align::End, floom_widgets::Align::Center);
@@ -353,8 +246,6 @@ fn build_card(
             let open = open.clone();
             move || {
                 let label = label.clone();
-                // `.label(..)` runs after the inner closures have taken `label` by
-                // move, so it gets its own copy taken here.
                 let label_text = label.clone();
                 let callback = callback.clone();
                 let open = open.clone();
@@ -391,7 +282,6 @@ fn build_card(
                         },
                     ))
                     .on_click(move || {
-                        // v1: the callback, then close.
                         callback();
                         write_flag(&open, false);
                     })
@@ -423,7 +313,6 @@ fn build_card(
             let open = open.clone();
             let close_icon = close_icon.clone();
             move || {
-                // Built here, not captured: `Pressable` is a builder, not a `Clone`.
                 Box::new(close_button(
                     style,
                     close_icon.clone(),
@@ -485,12 +374,6 @@ fn build_card(
     )
 }
 
-/// The close button: v1's icon in a padded box, and the only thing in the card that
-/// closes the dialog.
-///
-/// Its own function because `Pressable` is a builder rather than a `Clone` value, so it
-/// has to be constructed inside the slot closure that mounts it — the same rule
-/// `combobox`'s chevron follows.
 fn close_button(
     style: DialogStyle,
     icon: Option<floom_widgets::VectorIcon>,
@@ -518,8 +401,6 @@ fn close_button(
         },
     ))
     .on_click(move || {
-        // v1 fired `on_close` and *then* set `open = false`. Both, in that order: a
-        // callback that reads the flag sees it still true, exactly as v1's did.
         if let Some(on_close) = &on_close {
             on_close();
         }

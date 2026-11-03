@@ -1,64 +1,5 @@
 //! Cupertino system bar, ported to the Floom 2.0 widget API.
 //!
-//! A system bar is the thin status strip at the very top of the application
-//! shell -- the window controls, the clock, the battery.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a [`Surface`] for the bar -- the decorated box
-//! that holds the caller's content -- and the process-wide layout registry
-//! `cupertino-main` reads to inset the content region. There is nothing here
-//! that a widget could own and the vocabulary does not already say.
-//!
-//! ## What this kit answers
-//!
-//! * the bar's height and its padding: `SystemBarTokens` (Cupertino 22 tall
-//!   and 6 of padding), unless the caller overrides them;
-//! * the bar's fill: `surface_variant`; the dark variant's: `scrim`;
-//! * the colour of the bar's content: `on_surface_variant`; the dark
-//!   variant's: `on_surface`.
-//!
-//! ## The theme
-//!
-//! v1's Cupertino system bar took a *snapshot* of its own design system rather
-//! than reading the app-wide signal, so a change of theme does not reach it.
-//! That difference is v1's, and it is kept.
-//!
-//! The snapshot names a design system it does not pin: `MultiTheme` reads
-//! the *current* design system at read time, so a Cupertino bar in an app
-//! whose active design system is Material shows Material's colours. That is
-//! v1's behaviour too -- the same `MultiTheme` v1 snapshotted -- and it is
-//! kept rather than papered over.
-//!
-//! ## The padding v1 wrote on every side
-//!
-//! `SystemBarProps::pad` calls itself *horizontal* padding, but v1 wrote
-//! `.padding(pad)` on the bar, which insets the content on all four sides.
-//! The code is the specification, so the port pads on all four sides too, and
-//! the mismatch with the prop's own doc is named here rather than resolved
-//! silently in either direction.
-//!
-//! ## The colour v1 could not hand on
-//!
-//! v1 ended the bar's style with `.color(fg)`, and that was what the caller's
-//! `Label` inherited. 2.0's `Text` carries its own colour and a decoration
-//! carries no colour at all, so a bar cannot hand its content an ink. The
-//! style still reports it, and [`CupertinoSystemBar::content_color`] gives it
-//! to a caller that wants to paint with it.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The child is a slot, not a view.** v1's `child(..)` took an
-//!   `impl IntoView`; 2.0's takes a [`Child`], because a 2.0 widget is
-//!   mounted by its parent rather than returned.
-//! * **The style does not name the design system.** v1's
-//!   `CupertinoSystemBarStyle` had no `design_system` field, so the three
-//!   kits' styles could not be told apart. The port's names it, because a kit
-//!   that cannot say which design system it is is a kit that cannot be tested
-//!   against one.
-//! * **The accessors.** v1's system bar had `props()` and `theme()` but no
-//!   `with_theme()`. The port gives all three kits the same three, because a
-//!   kit that cannot be given a theme cannot be tested against one.
 
 use floom_core::Child;
 use floom_core::LayoutRequest;
@@ -157,7 +98,6 @@ impl CupertinoSystemBar {
         };
         // v1's own choice, in both places it appears: the dark bar is the
         // scrim with the ordinary ink on it, the light one the surface
-        // variant with the variant ink.
         let (surface, content) = if self.props.dark {
             (theme.colors().scrim, theme.colors().on_surface)
         } else {
@@ -235,7 +175,6 @@ impl CupertinoSystemBar {
         match child {
             Some(child) => bar.child(child),
             // v1 substituted an empty view. A `Surface` with no children is the
-            // same answer without a node.
             None => bar,
         }
     }

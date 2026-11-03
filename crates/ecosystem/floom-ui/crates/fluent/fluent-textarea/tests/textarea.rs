@@ -1,15 +1,4 @@
 //! The ported Fluent textarea -- a bordered box with a text field in it,
-//! sized by the rows.
-//!
-//! The shape is the engine's vocabulary plus the engine's `TextInput`, so what
-//! is tested here is the translation and the pixels: the tokens reach the
-//! style, the box is painted in v1's colours, and the dead numbers v1 wrote
-//! are still the ones the style reports.
-//!
-//! ## The tripwires
-//!
-//! `the_box_is_painted_in_v1_s_colours` and `the_dead_numbers_are_v1_s` would
-//! fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -30,9 +19,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -41,7 +27,6 @@ fn kit() -> FluentTextarea {
     FluentTextarea::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -51,7 +36,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of<W: Widget + ?Sized>(widget: &W) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -61,7 +45,6 @@ fn ops_of<W: Widget + ?Sized>(widget: &W) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// A character typed into the field.
 fn type_text<W: Widget + ?Sized>(widget: &mut W, ch: char) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -69,9 +52,7 @@ fn type_text<W: Widget + ?Sized>(widget: &mut W, ch: char) {
     widget.event(&mut key, id);
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentTextareaStyle = kit().resolved_style();
@@ -113,9 +94,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// The numbers v1 wrote and never drew are still the ones the style reports:
-/// the disabled ink and the disabled rim at 97, and the token's height with no
-/// rows in it.
 #[test]
 fn the_dead_numbers_are_v1_s() {
     let style = kit().disabled(true).resolved_style();
@@ -148,9 +126,7 @@ fn the_dead_numbers_are_v1_s() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The box is painted in v1's colours.
 #[test]
 fn the_box_is_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -174,7 +150,6 @@ fn the_box_is_painted_in_v1_s_colours() {
     assert_eq!(rim, Some(paint(resolved.border_color)), "the box's rim");
 }
 
-/// The text is painted in v1's ink, at v1's size.
 #[test]
 fn the_text_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -196,7 +171,6 @@ fn the_text_is_painted_in_v1_s_ink() {
     assert_eq!(ink, paint(theme().colors().on_surface), "v1's ink");
 }
 
-/// The box is as tall as the rows ask for.
 #[test]
 fn the_box_is_as_tall_as_the_rows_ask() {
     let style = kit().rows(4).resolved_style();
@@ -212,9 +186,7 @@ fn the_box_is_as_tall_as_the_rows_ask() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
-/// Typing fires the callback.
 #[test]
 fn typing_fires_the_callback() {
     let seen: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
@@ -237,7 +209,6 @@ fn typing_fires_the_callback() {
     );
 }
 
-/// A disabled field does not answer.
 #[test]
 fn a_disabled_field_does_not_answer() {
     let seen: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
@@ -261,8 +232,6 @@ fn a_disabled_field_does_not_answer() {
     );
 }
 
-/// The text is a shared buffer the host can read and write -- v1's
-/// `set_value()`'s buffer, under a name that can cross a slot boundary.
 #[test]
 fn the_text_is_a_shared_buffer() {
     let kit = kit().value("Hi");
@@ -275,8 +244,6 @@ fn the_text_is_a_shared_buffer() {
     );
 }
 
-/// The props report the text, and the shared props' own callback slot stays
-/// empty: the kit keeps a shareable copy of its own.
 #[test]
 fn the_props_report_the_text() {
     let kit = kit().value("Hi").placeholder("Type").rows(5).disabled(true);
@@ -291,12 +258,8 @@ fn the_props_report_the_text() {
     );
 }
 
-/// The theme: v1's Fluent textarea took a *snapshot* of its own design system,
-/// so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentTextarea::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

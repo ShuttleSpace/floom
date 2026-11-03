@@ -1,62 +1,5 @@
 //! Cupertino dialog, ported to the Floom 2.0 widget API.
 //!
-//! ## The one number this kit disagrees with the others on
-//!
-//! Cupertino is the *rounder* of the two: v1 read `theme.radius().lg` for the card while Material read its token and Fluent read `radius().sm`.
-//!
-//! ## What the port settled
-//!
-//! Correction 11 stopped at "a dialog cannot own its `open: RwSignal<bool>`". The answer
-//! turned out to be that the architecture had already made the decision — the host owns
-//! presence, through `OverlayKind::Dialog`, `OverlayHandle` and the state-driven overlay
-//! door — and the only thing missing was a flag a caller can *hold*. That is
-//! [`floom_widgets::text_input::SharedFlag`], an `Arc<Mutex<bool>>`, for the same reason
-//! `TextInput`'s buffer is an `Arc<Mutex<String>>`: a slot closure has to be `Send + Sync`.
-//!
-//! So the five v1 methods around `open` all become three:
-//!
-//! | v1 | here |
-//! |---|---|
-//! | `open(bool)` | `open(bool)` / `close()`, writing the flag |
-//! | `is_open()` | `is_open()`, reading it |
-//! | `open_signal() -> RwSignal<bool>` | [`CupertinoDialog::open_flag`] |
-//! | `with_open_signal(RwSignal<bool>)` | [`CupertinoDialog::with_open_flag`] |
-//! | `close()` | [`CupertinoDialog::close`] |
-//!
-//! ## The card is the kit's, because of the close button
-//!
-//! v1's card is a composition — a title row carrying a close button, then the content,
-//! then a row of action buttons — and the engine's `Dialog::card` is a title above a
-//! body with no slot for a close button. Rather than give the engine a
-//! `close_button: Option<Child>` that three kits would fill differently (and whose
-//! placement differs per design system), the card is built here and handed over through
-//! [`floom_widgets::Dialog::card_with`]. The engine keeps doing the one thing only it can:
-//! mounting it as a modal overlay over the viewport.
-//!
-//! With a card supplied, `Dialog::title` applies **only to semantics** — the accessible
-//! name — so this does not get two titles.
-//!
-//! ## Two losses
-//!
-//! * **v1's pop-in animation is gone.** v1 scaled the card from 95% to 100%. 2.0 has
-//!   `AnimationSpec` and `AnimatedContent`, and the host drives animations, so this is
-//!   reachable — but wiring a scale into a card that lives inside an overlay's factory is
-//!   a separate piece of work and is recorded rather than half-done.
-//! * **v1's click-to-close-on-the-scrim is the host's job now**, which is better: a
-//!   widget cannot see a press that lands outside itself, so v1's `on_event(Click)` on the
-//!   scrim only ever worked because the scrim covered the window. The host's
-//!   `dismiss_top_overlay_on_press` does it for real, and a *modal* overlay is
-//!   deliberately not light-dismissed — so this dialog now stays up when the user clicks
-//!   outside it, where v1's would have closed. **That is a behaviour change**, and it is
-//!   the host's rule rather than the kit's.
-//!
-//! ## `FontWeight` is mapped a second time
-//!
-//! [`to_engine_weight`] mirrors `floom_widget_md_list_item::to_engine_weight` rather than
-//! importing it. That is duplication, and it is deliberate for now: the theme's weight
-//! enum lives in `floom-core-theme`, which the engine does not depend on, so the mapping
-//! cannot live in `floom-widgets` without inverting the dependency. A second caller is
-//! the signal that it wants a home, and this note is where that is recorded.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -246,7 +189,6 @@ impl CupertinoDialog {
             body_size: theme.typography().body.medium.font_size,
             action_size: theme.typography().label.large.font_size,
             action_weight: to_engine_weight(theme.typography().label.large.font_weight),
-            // v1's call-site numbers, none of them tokens.
             action_padding_horizontal: 12.0,
             action_padding_vertical: 10.0,
             action_radius: 8.0,
@@ -276,7 +218,6 @@ impl CupertinoDialog {
 
         Dialog::new()
             // Semantics only: the card below carries its own title row, so setting the
-            // engine's title as well would render two.
             .title(title.clone())
             .with_shared_presence(open.clone())
             .card_with(move || {
@@ -359,7 +300,6 @@ fn build_card(
             move || {
                 let label = label.clone();
                 // `.label(..)` runs after the inner closures have taken `label` by
-                // move, so it gets its own copy taken here.
                 let label_text = label.clone();
                 let callback = callback.clone();
                 let open = open.clone();

@@ -54,10 +54,6 @@ fn pixel(host: &WidgetHost, size: Size) -> PixelSnapshot {
 
 const BOX: Size = Size::new(160.0, 40.0);
 
-// ---------------------------------------------------------------------------
-// Scene goldens — portable.
-// ---------------------------------------------------------------------------
-
 #[test]
 fn text_scene_matches_golden() {
     let host = mounted(BOX, Text::new("Hello, Floom"));
@@ -110,10 +106,8 @@ fn a_stack_of_three_widgets_is_golden_as_a_composite() {
     snap.assert(snapshots_dir!(), "widget_stack_composite_scene");
 }
 
-// ---------------------------------------------------------------------------
 // Semantics goldens — portable, and the layer that catches a11y regressions
 // that no amount of pixel comparison would.
-// ---------------------------------------------------------------------------
 
 #[test]
 fn button_semantics_matches_golden() {
@@ -139,10 +133,6 @@ fn a_disabled_widget_reports_a_different_semantics_than_an_enabled_one() {
         a.text, b.text
     );
 }
-
-// ---------------------------------------------------------------------------
-// Pixel layer. One glyph-free golden; the rest are within-run comparisons.
-// ---------------------------------------------------------------------------
 
 #[test]
 fn container_pixel_matches_golden() {

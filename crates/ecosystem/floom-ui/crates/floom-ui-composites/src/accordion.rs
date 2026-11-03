@@ -1,14 +1,3 @@
-//! An accordion, and the select group that shares its expand/collapse machinery.
-//!
-//! Both are "one of several, and the chosen one shows more". They share a style type, an indicator builder and an expansion state machine, so they share a file -- and with them the inline tests that pin that state machine.
-//!
-//! It lived in `floom-widgets/src/compose.rs` beside the layout vocabulary
-//! (`Stack`, `List`, `Grid`, `Conditional`, `Crossfade`). The two are not the
-//! same kind of thing: a `Stack` arranges children along an axis, which is
-//! arithmetic; this decides *what a control looks like*, which is a product
-//! decision. So it moved up a layer with the tree, the counter and the select,
-//! and the dependency runs one way -- this crate composes the engine's
-//! vocabulary rather than the other way round.
 
 use std::any::Any;
 use std::sync::atomic::Ordering;
@@ -1210,16 +1199,6 @@ fn is_selected_indices(selected: &Mutex<Vec<bool>>) -> Vec<usize> {
 
 #[cfg(test)]
 mod select_group_tests {
-    //! The **selectable** reference widget.
-    //!
-    //! Where `accordion_tests` pins a value that shows and hides a subtree, this
-    //! pins one that *restyles* the rows around it: choosing a row changes the fill
-    //! and outline of every row, not only the chosen one. The three things that make
-    //! that hard are each a test here.
-    //!
-    //! The tests stand in for the host, for the reason `accordion_tests` gives: the
-    //! update pass visits every node every frame and dirtiness is *reported by*
-    //! `update()`. So what is checked is that each row reports its own change.
 
     use floom_accessibility::SemanticsState;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -1832,17 +1811,6 @@ mod select_group_tests {
 
 #[cfg(test)]
 mod accordion_tests {
-    //! The **stateful** reference widget.
-    //!
-    //! `tests/badge.rs` pins a description and `tests/controls.rs` a single
-    //! interaction. This pins the part that is easy to get wrong and hard to see:
-    //! a value that changes after mount, a subtree that mounts and unmounts with
-    //! it, and a header that must *keep its identity* across the toggle.
-    //!
-    //! The tests stand in for the host, which is enough because the host's
-    //! contribution here is a documented one — the update pass visits every node
-    //! every frame and dirtiness is *reported by* `update()`. So what is checked
-    //! is that each widget reports its own change, not that it was told.
 
     use floom_accessibility::SemanticsState;
 

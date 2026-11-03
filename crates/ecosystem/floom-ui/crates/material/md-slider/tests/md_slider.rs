@@ -1,21 +1,3 @@
-//! Material's slider as a kit crate: the token translation, and the two things
-//! v1 drew that the other two kits did not -- a halo behind the thumb, and a
-//! token-derived disabled palette.
-//!
-//! Material is the reference kit for sliders, so several of its numbers sit
-//! close to the engine's defaults. That is exactly why the Cupertino and Fluent
-//! files use those defaults as controls: a "just take the default" edit has to
-//! fail here, not pass by accident.
-//!
-//! ## What this file deliberately does not assert
-//!
-//! v1 drew the halo at 20 percent while hovered and 30 percent while dragging,
-//! and drew it only while hovered or dragging at all. `SliderStyle` has one
-//! `halo_color` for both states and no gate on its presence, so neither detail
-//! can be pinned from here. They are recorded in `resolved_style`'s comment and
-//! in the port report instead, rather than asserted -- a kit test asserting them
-//! would really be a test of the engine, and would break the day the engine
-//! grows a `halo_dragging_color`.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -87,11 +69,7 @@ fn fills_of(ops: &[PaintOp]) -> Vec<PaintColor> {
         .collect()
 }
 
-// --- the numbers that are this kit's own -----------------------------------
 
-/// The track is `on_surface_variant` at 97 percent -- dimmed, where the other
-/// two kits use an undimmed `surface_variant`. The alpha is the half that
-/// differs, so it is asserted as well as the rgb.
 #[test]
 fn the_track_is_on_surface_variant_at_97() {
     let binding = theme();
@@ -142,9 +120,6 @@ fn the_thumb_carries_a_forty_pixel_halo_at_twenty_percent() {
     );
 }
 
-/// A disabled Material slider dims all three boxes to token alphas: the track to
-/// 60 percent of `on_surface_variant`, the fill and the thumb to 120 percent of
-/// `primary`. v1 composed exactly these, in its three style closures.
 #[test]
 fn a_disabled_slider_dims_to_the_tokens() {
     let binding = theme();
@@ -166,25 +141,16 @@ fn a_disabled_slider_dims_to_the_tokens() {
     );
     assert_ne!(off.thumb_color, on.thumb_color, "the thumb dims");
 
-    // The branch changes colour only. Geometry is the tokens' in both states,
-    // so a disabled slider is still measured and laid out identically.
     assert_eq!(off.track_height, on.track_height);
     assert_eq!(off.thumb_size, on.thumb_size);
     assert_eq!(off.thumb_radius, on.thumb_radius);
 }
 
-/// **This is why the kit composes the disabled colours instead of the style
-/// carrying them.** `SliderStyle` has no disabled field at all, so if the
-/// composition were dropped the disabled slider would be identical to the
-/// enabled one -- and this assertion is what would notice.
 #[test]
 fn a_disabled_slider_is_not_the_enabled_one() {
     assert_ne!(disabled_style(), style());
 }
 
-/// v1 gave no box a hover or press colour of its own, so all three variants are
-/// `None`. The engine's default is the opposite on all three, which is what
-/// makes this a real answer rather than an omission.
 #[test]
 fn none_of_the_interaction_variants_are_this_kits_own() {
     let style = style();
@@ -201,7 +167,6 @@ fn none_of_the_interaction_variants_are_this_kits_own() {
     );
 }
 
-/// v1's Material thumb carried no drop shadow.
 #[test]
 fn the_thumb_carries_no_drop_shadow() {
     let style = style();
@@ -212,7 +177,6 @@ fn the_thumb_carries_no_drop_shadow() {
     assert_eq!(alpha_of(style.shadow_color), 0);
 }
 
-// --- what is shared -------------------------------------------------------
 
 #[test]
 fn the_geometry_is_the_slider_tokens() {
@@ -226,14 +190,6 @@ fn the_geometry_is_the_slider_tokens() {
     assert_eq!(style.thumb_radius, tokens.thumb_radius);
 }
 
-/// **The three design systems still resolve identical tokens, so a kit's
-/// identity lives in its constants.** `MultiTheme::new_for` calls `activate`,
-/// which the theme crate documents as a no-op placeholder, so Material,
-/// Cupertino and Fluent hand back one identical set of colours and one
-/// `SliderTokens`. Every colour assertion above is therefore on a number *this
-/// kit wrote*, never on a token value -- a token assertion would pass for all
-/// three kits whatever any of them did. This is the tripwire for the day
-/// per-DS tokens land.
 #[test]
 fn the_three_design_systems_still_resolve_identical_tokens() {
     let material_theme = theme();
@@ -253,7 +209,6 @@ fn the_three_design_systems_still_resolve_identical_tokens() {
     assert_eq!(tokens.track_height, style().track_height);
 }
 
-// --- mounting -------------------------------------------------------------
 
 /// The style the kit resolved is the style the engine paints: the recorded
 /// track, fill, halo and thumb carry this kit's colours, in `paint`'s order.
@@ -280,9 +235,6 @@ fn the_mounted_slider_paints_this_kits_four_shapes() {
     );
 }
 
-/// v1's props were `f32`; the engine's widget is `f64`. The widening happens in
-/// `view()`, and this is where it is checked -- including the clamp, which is
-/// what stops a caller handing the engine a value outside its own range.
 #[test]
 fn mounting_carries_the_props_as_f64() {
     let slider = MdSlider::new()
@@ -331,10 +283,6 @@ fn the_callback_reports_the_engines_value_narrowed_to_f32() {
         KeyEvent::down(Key::Named(NamedKey::ArrowRight)).into()
     ));
 
-    // Note the tolerance: `SliderProps::step` is an `f32`, so the engine is
-    // handed 0.1 widened from `f32`, which is 0.10000000149011612, and its
-    // value is exactly that. A 1e-9 tolerance here would fail on the f32/f64
-    // boundary rather than on anything the kit did.
     assert!(
         (slider.value() - 0.1).abs() < 1e-6,
         "engine value is the widened f32 step, got {:?}",
@@ -347,9 +295,6 @@ fn the_callback_reports_the_engines_value_narrowed_to_f32() {
     );
 }
 
-/// A disabled kit slider hands the engine a disabled widget *and* the disabled
-/// palette. The two are separate, and a test that only checked the flag would
-/// pass with the enabled colours still in the style.
 #[test]
 fn a_disabled_slider_is_disabled_in_both_places() {
     let enabled = MdSlider::new().with_theme(theme()).view();
@@ -373,9 +318,6 @@ fn a_disabled_slider_is_disabled_in_both_places() {
     );
 }
 
-/// A slider's intrinsic height is the thumb, because the thumb is the tallest
-/// thing on it -- so a kit that widens its thumb pins its own height rather than
-/// being measured wrong.
 #[test]
 fn mounting_reports_a_height_of_this_kits_thumb() {
     let style = style();

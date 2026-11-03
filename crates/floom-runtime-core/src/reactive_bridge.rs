@@ -191,7 +191,6 @@ impl BindingRegistry {
     }
 }
 
-/// Plan-shaped helpers.
 pub fn bind_signal<T: Clone + 'static>(
     registry: &mut BindingRegistry,
     arena: Rc<RefCell<ElementArena>>,

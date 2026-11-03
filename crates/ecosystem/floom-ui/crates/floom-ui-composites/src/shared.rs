@@ -1,15 +1,3 @@
-//! `SharedNumber` -- a shared number.
-//!
-//! The engine's shared family has a flag, a buffer and a map, and no number.
-//! So it has one now: a number behind a mutex, in the same shape as the
-//! other three, so that a value which changes after mount can cross a slot
-//! boundary.
-//!
-//! The numbers the floem-ui kits needed were not the same number: a
-//! parallax's scroll offset and a scroller's content height are in layout
-//! units (`f32`, like the engine's own `LayoutRequest`), while a scroller's
-//! pixel offset is in the engine's scroll units (`f64`, like `ScrollOffset`).
-//! The `f32` one is this.
 
 use std::sync::{Arc, Mutex};
 

@@ -1,41 +1,5 @@
 //! Cupertino item group, ported to the Floom 2.0 widget API.
 //!
-//! This is a **token-to-style wrapper**, and the shortest port in the library —
-//! deliberately. Where `md-toolbar` kept its own composition and `md-footer` kept
-//! its own layout registration, this component's whole job turned out to be the
-//! state machine, and the state machine is not this component's:
-//!
-//! `md-item_group`, `cupertino-item_group` and `fluent-item_group` are 209, 208
-//! and 208 lines with **123 of 149** substantive lines identical. Everything they
-//! share — the shared selection state, the single/multiple/mandatory click rules,
-//! the row's two appearances, the click target, and the padding that is `pad`
-//! across and `pad / 2` down — is [`floom_widgets::SelectGroup`], promoted into
-//! the engine for the same reason [`floom_widgets::Accordion`] was.
-//!
-//! What is left here is the part that genuinely differs per design system: which
-//! tokens, and which colours mean "chosen". For Cupertino that is its own
-//! `ItemGroupTokens` and its own palette — the rows, the surface they sit on,
-//! and the pair of colours that means "this row is chosen" are all
-//! Cupertino's.
-//!
-//! # What changed from v1
-//!
-//! * **Two signals became one shared state.** v1 held `single: RwSignal<usize>`
-//!   *and* `multi: RwSignal<Vec<usize>>`, kept in step by hand, and read
-//!   `multi.contains(&i)` to decide a row's appearance. A value that changes after
-//!   mount cannot be held in a signal and read during render in 2.0, so the
-//!   selection is one `Arc<Mutex<Vec<bool>>>` and the two accessors
-//!   ([`CupertinoItemGroup::selected`] and [`CupertinoItemGroup::selected_multi`]) are derived
-//!   from it rather than stored beside it.
-//! * **`cursor(CursorStyle::Pointer)` is gone.** 2.0's `PaintContext` has no
-//!   cursor vocabulary, so the pointer is not carried over; the row is still a
-//!   `Pressable`, so it is still activatable by keyboard, which the pointer was
-//!   not. Recorded rather than worked around.
-//! * **`hide()` on an empty group has no 2.0 equivalent**, so an empty group is a
-//!   stack with no children. See `SelectGroup`'s doc.
-//! * **Semantics are an addition, not a translation.** v1's rows were a
-//!   `Container` with a click handler: invisible to a screen reader. Rows here are
-//!   radios (single mode) or checkboxes (multiple).
 
 use floom_core::Axis;
 use floom_signal::{RwSignal, SignalGet};
@@ -190,13 +154,10 @@ impl CupertinoItemGroup {
             height: None,
             pad: style.pad,
             // v1's item text sat directly under the top padding, not in the
-            // middle of the row.
             content_placement: ContentPlacement::Top,
             // v1's item group was a radio group: tapping the chosen row left it
-            // chosen.
             toggles_off_in_single_mode: false,
             // v1's item group read `mandatory` in *both* modes -- the last
-            // chosen item could not be un-chosen.
             mandatory_in_multiple_mode: true,
             radius: style.radius,
             // v1 wrote `.border(1.0)` unconditionally — a fixed 1px, not a token.
@@ -281,7 +242,6 @@ impl CupertinoItemGroup {
             // Wrapped rather than passed as the `Arc` itself: the slot wants an
             // `Fn`, and an `Arc<dyn Fn>` is one by being callable. This is also why
             // the alias above exists — a rebuild needs its own handle to move into
-            // the slot.
             let content = row.content;
             group = match row.label {
                 Some(label) => group.row(label, move || content()),

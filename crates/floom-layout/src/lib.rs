@@ -2,9 +2,6 @@
 
 mod taffy_adapter;
 
-/// Re-exported because [`LayoutStyle`]'s dimensions are `Option<Length>`: a
-/// caller writing one needs the type, and should not have to know which
-/// lower crate it lives in.
 pub use floom_types::Length;
 
 pub use taffy_adapter::{

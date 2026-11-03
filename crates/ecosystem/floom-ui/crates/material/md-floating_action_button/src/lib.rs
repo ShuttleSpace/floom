@@ -1,25 +1,3 @@
-//! Material floating action button, ported to the Floom 2.0 widget API.
-//!
-//! A circular, elevated primary button -- optionally extended with a label.
-//!
-//! ## What the port reproduces
-//!
-//! * the circle: the token's `border_radius` (9999, a full circle) on a box of the
-//!   token's `size`;
-//! * the elevation: v1 wrote `box_shadow_blur(2.0 + elevation)` with a spread of
-//!   1 and a black-at-30% ink, and the port writes the same shadow;
-//! * the palette: `primary` with `on_primary` ink, and -- when the button is
-//!   disabled -- `on_surface` at 12% for the fill and 38% for the ink;
-//! * the extended shape: a label beside the icon, the same height as the circle,
-//!   20dp of padding at the sides and an 8dp gap, which turns the circle into a
-//!   pill.
-//!
-//! ## The click
-//!
-//! v1 put the action on the container. 2.0's clickable is a [`Pressable`] --
-//! interaction without the drawing -- so the button is a `Pressable` around the
-//! `Surface` that paints it, and the pressable carries the disabled state, so a
-//! disabled button does not fire.
 
 use std::sync::Arc;
 
@@ -131,13 +109,11 @@ impl MaterialFloatingActionButton {
         let disabled = self.props.disabled;
         MaterialFloatingActionButtonStyle {
             design_system: "material",
-            // v1: the fill is `primary`, or `on_surface` at 12% when disabled.
             background: if disabled {
                 with_alpha(theme.colors().on_surface, 12)
             } else {
                 theme.colors().primary
             },
-            // v1: the ink is `on_primary`, or `on_surface` at 38% when disabled.
             foreground: if disabled {
                 with_alpha(theme.colors().on_surface, 38)
             } else {
@@ -162,8 +138,6 @@ impl MaterialFloatingActionButton {
         let on_click = self.on_click.clone();
         let disabled = self.props.disabled;
 
-        // The content is built inside the surface's slot, because the slot is a
-        // replayed `Fn` and the content is a fresh subtree every mount.
         let surface = Surface::new()
             .request(
                 LayoutRequest::new()
@@ -173,7 +147,6 @@ impl MaterialFloatingActionButton {
             .background(to_paint(style.background))
             .radius(style.border_radius)
             .shadow(Shadow {
-                // v1: `box_shadow_blur(2.0 + elevation)`, spread 1, black at 30%.
                 color: to_paint(with_alpha(Color::rgba(0, 0, 0, 255), 30)),
                 blur: 2.0 + f64::from(style.elevation),
                 offset_x: 0.0,
@@ -182,9 +155,6 @@ impl MaterialFloatingActionButton {
             })
             .push(move || {
                 if extended {
-                    // The extended shape: the leading content and the label side by
-                    // side. The label is cloned here, because the slot is a
-                    // replayed `Fn` and the inner slot cannot move out of it.
                     let label = label.clone();
                     Box::new(
                         Stack::new(Axis::Horizontal)
@@ -210,7 +180,6 @@ impl MaterialFloatingActionButton {
                             }),
                     )
                 } else {
-                    // The circle: the leading content, centred.
                     Box::new(
                         Stack::new(Axis::Horizontal)
                             .request(
@@ -238,7 +207,6 @@ impl MaterialFloatingActionButton {
         ))
         .disabled(disabled)
         .on_click(move || {
-            // v1 fired the callback only when the button was not disabled.
             if !disabled {
                 if let Some(cb) = &on_click {
                     cb();

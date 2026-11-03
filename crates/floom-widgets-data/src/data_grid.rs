@@ -205,8 +205,6 @@ impl DataGrid {
         self
     }
 
-    // --- inspection --------------------------------------------------------
-
     pub fn columns(&self) -> &[Column] {
         &self.columns
     }
@@ -269,8 +267,6 @@ impl DataGrid {
         self.container
     }
 
-    // --- geometry ----------------------------------------------------------
-
     /// Total width of all columns.
     pub fn total_width(&self) -> f64 {
         self.columns.iter().map(|column| column.width).sum()
@@ -306,8 +302,6 @@ impl DataGrid {
     pub fn row_at(&self, y: f64) -> Option<usize> {
         self.row_at_in(self.container, y)
     }
-
-    // --- viewport ----------------------------------------------------------
 
     /// Tells the grid how big its box is. Returns whether the window moved.
     pub fn set_container(&mut self, rect: Rect) -> bool {
@@ -387,8 +381,6 @@ impl DataGrid {
         viewport.materialized_count()
     }
 
-    // --- data --------------------------------------------------------------
-
     /// Writes a cell, re-deriving the display order and the selection.
     pub fn set_cell(&mut self, row: RowId, column: ColumnId, value: CellValue) -> bool {
         if !self.model.set_cell(row, column, value) {
@@ -429,8 +421,6 @@ impl DataGrid {
         }
         changed
     }
-
-    // --- editing -----------------------------------------------------------
 
     /// Opens an editor on the cursor cell, if that cell is editable.
     pub fn begin_edit(&mut self) -> bool {
@@ -524,8 +514,6 @@ impl DataGrid {
         self.recompute();
         self.pending_repaint = true;
     }
-
-    // --- internals ---------------------------------------------------------
 
     fn refresh_sizes(&mut self) {
         let count = self.model.row_count();
@@ -631,8 +619,6 @@ impl DataGrid {
             self.pending_repaint = true;
         }
     }
-
-    // --- event handling ----------------------------------------------------
 
     fn pointer(
         &mut self,

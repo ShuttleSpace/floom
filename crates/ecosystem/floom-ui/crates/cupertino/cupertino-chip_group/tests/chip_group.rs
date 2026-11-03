@@ -1,25 +1,5 @@
 //! The ported Cupertino chip group -- a row of chips whose **ink** follows the
 //! choice.
-//!
-//! The state machine and the row's box live in the engine's `SelectGroup`, so
-//! what is tested here is the *translation* and the *pixels*: the tokens reach
-//! the engine's style, the chip paints the fill and the ink v1 painted, and
-//! v1's click rules -- the ones a radio would not have -- still hold.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a chip that paints its fill with the unchosen
-//! colour from one that paints it with the chosen colour while the label keeps
-//! the unchosen ink. Only the paint log can, so most of these tests read what
-//! the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! Four of these tests would fail if the kit stopped being this kit:
-//! `the_chosen_chip_paints_the_chosen_appearance` (the ink follows the
-//! choice), `the_chosen_chip_comes_off_when_it_is_tapped_again` (a chip is
-//! not a radio), `mandatory_does_nothing_in_multiple_mode_as_it_did_in_v1`
-//! (v1's rule, not the engine's) and `the_chip_paints_its_own_label_at_v1_s_size`.
 
 use floom_core::{Child, ChildKey, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::Color;
@@ -51,7 +31,6 @@ const AT: Point = Point { x: 20.0, y: 20.0 };
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }

@@ -1,12 +1,5 @@
 //! The ported Cupertino item group — the shortest port in the library, and the
 //! one that proves the promotion was right.
-//!
-//! 209 lines of v1 became a token-to-style wrapper, because 123 of 149
-//! substantive lines are shared with the cupertino and fluent copies. So this
-//! suite is mostly *not* about the state machine — that lives in
-//! `floom-widgets`' `compose::select_group_tests`, which is the right boundary for
-//! it. What is here is the translation: the tokens reach the engine's style, the
-//! colours mean what they meant, and the props reach the rules.
 
 use floom_core::Widget;
 use floom_types::{Insets, Rect};
@@ -189,7 +182,6 @@ fn every_declared_row_reaches_the_widget() {
     assert_eq!(widget.children().len(), 3);
 
     // `row_unlabelled` appends, like `row` does — a fourth row, not a
-    // replacement.
     let four = three_rows()
         .row_unlabelled(|| Box::new(floom_widgets::Text::new("x")))
         .view(None::<fn(usize)>, None::<fn(Vec<usize>)>);
@@ -252,7 +244,6 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
     assert!(resolved.radius > 0.0);
 
     // And a hand-built widget with those exact numbers is indistinguishable from
-    // the port's own.
     let by_hand =
         floom_ui_composites::SelectGroup::new().style(floom_ui_composites::SelectGroupStyle {
             gap: resolved.gap,

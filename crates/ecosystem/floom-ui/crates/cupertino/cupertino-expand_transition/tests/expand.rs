@@ -1,12 +1,5 @@
 //! Cupertino expand transition: the transition it plays, and the flag that
 //! drives it.
-//!
-//! ## The claim
-//!
-//! v1 mounted the child only while a `show` signal was true, and played an
-//! animation on the way in and on the way out. The assertions are about those
-//! two things: the transition the kit chooses, and the child following the
-//! shared flag.
 
 use floom_core::{ElementId, Widget};
 use floom_types::{PresenceChannel, PresenceTransition};
@@ -93,7 +86,6 @@ fn the_content_follows_the_flag() {
     // The flag goes back to false. This kit plays **no** transition -- v1's
     // height reveal cannot be expressed in 2.0 -- so there is no exit to play
     // and the content unmounts at once, rather than staying mounted for a
-    // departure that does not exist.
     floom_widgets::text_input::write_flag(&flag, false);
     conditional.update(&mut ctx, id);
     assert_eq!(

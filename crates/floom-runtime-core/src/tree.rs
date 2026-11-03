@@ -193,7 +193,6 @@ impl ElementTree {
     }
 }
 
-/// Plan-shaped free functions.
 pub fn append_child(
     tree: &mut ElementTree,
     arena: &mut ElementArena,

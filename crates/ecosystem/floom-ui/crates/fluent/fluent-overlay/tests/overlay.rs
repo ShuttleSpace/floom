@@ -1,24 +1,4 @@
 //! Fluent's overlay as a kit crate: the token translation, plus the wiring that
-//! is this kit's own rather than the engine's.
-//!
-//! This crate had never been compiled, which is how three near-identical scrim
-//! kits came to exist without anyone noticing the engine already mounts a modal
-//! `Dialog`. So the point of this file is to pin the palette *this kit wrote*
-//! and the show/flag wiring, in the places where a plausible-looking edit would
-//! change a pixel or a click.
-//!
-//! ## What v1 drew that this port cannot
-//!
-//! **The overlay-over-a-child positioning is gone** -- v1 wrapped arbitrary
-//! content in a scrim and mounted it as a layer. The engine `Dialog` mounts the
-//! card as a host modal over the viewport, and the scrim is the card (the engine
-//! paints no scrim of its own). That is a faithful one-to-one: v1's scrim-plus-
-//! content *is* the card. The only behaviour that does not transfer verbatim is
-//! **v1's click-anywhere-outside-content dismiss**: 2.0's modal is not
-//! light-dismissed, so the scrim is a `Pressable` carrying the dismiss. If 2.0's
-//! event model bubbles a content click up to that `Pressable`, the content click
-//! would also dismiss -- v1 `Stop`-ed propagation on the content, which 2.0's
-//! `EventPropagation` does not expose here. Recorded, not worked around.
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
@@ -74,8 +54,6 @@ fn with_show_signal_reads_back_the_external_flag() {
         .with_show_signal(external.clone());
     assert!(read_flag(&o.open_flag()));
     write_flag(&external, false);
-    // The kit copied the flag's value at construction; the held flag is the same
-    // `Arc`, so reading it back sees the change.
     assert!(!read_flag(&o.open_flag()));
 }
 

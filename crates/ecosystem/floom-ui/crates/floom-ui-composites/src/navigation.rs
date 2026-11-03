@@ -1,15 +1,3 @@
-//! Navigation chrome — Tier-2 widgets.
-//!
-//! [`NavigationBar`] (a bottom bar), [`NavigationRail`] (a side rail) and
-//! [`NavigationDrawer`] (a modal side panel) all present the same thing: a list
-//! of [`NavDestination`]s and a single selected index held in a shared
-//! `Arc<AtomicUsize>`, so a destination button can flip selection from its own
-//! `on_click` and `update` notices the change.
-//!
-//! Following [`floom_widgets::compose::Tabs`], the active index is mixed into every
-//! button's [`ChildKey`]. Flipping selection therefore re-keys the strip, the
-//! host remounts it, and the highlight updates — no in-place mutation of a
-//! mounted button is needed.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

@@ -1,10 +1,5 @@
 //! Cupertino linear progress, ported to the Floom 2.0 widget API.
 //!
-//! ## Disagreements preserved in this adapter
-//!
-//! This kit prefers a **static indeterminate segment**, truncated percentages, and
-//! **rounded fill** (both track and bar). The engine defaults give the majority
-//! (two kits) rather than Material, so this kit must override in its style.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;

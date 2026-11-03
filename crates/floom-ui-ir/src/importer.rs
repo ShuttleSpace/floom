@@ -267,7 +267,6 @@ fn walk(
     let key = key_for(design, is_root, used_keys)?;
     used_keys.push(key.as_str().to_string());
 
-    // Style properties shared by every role.
     let mut props: Vec<Prop> = Vec::new();
     if let Some(hex) = &design.fill {
         let fill = parse_hex(hex, &design.name)?;

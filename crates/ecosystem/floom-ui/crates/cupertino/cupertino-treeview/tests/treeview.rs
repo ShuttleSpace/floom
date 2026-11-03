@@ -1,8 +1,5 @@
 //! The ported Cupertino tree view.
 //!
-//! The engine suite (`floom-widgets/tests/tree_view.rs`) owns the structure and the
-//! shared expansion state; this suite owns the translation, which is Cupertino's six
-//! numbers, its colours, and its icon names.
 
 use floom_core::Widget;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};

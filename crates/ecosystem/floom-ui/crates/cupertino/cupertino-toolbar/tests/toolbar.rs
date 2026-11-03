@@ -1,10 +1,5 @@
 //! The ported Cupertino toolbar.
 //!
-//! The toolbar is the first ported component that brings its **own content**, so
-//! it is the first one whose tests are about composition as much as decoration:
-//! where the leading icon lands relative to the title, where the title lands
-//! relative to the trailing actions, and whether the `Medium` weight and the
-//! 64px-plus-full-width request actually reach the engine.
 
 use floom_core::Widget;
 use floom_types::{Insets, Rect, Size};
@@ -52,7 +47,6 @@ fn the_bar_declares_its_own_height_and_full_width() {
     );
 
     // And the surface actually carries it, rather than the caller having to put
-    // it on the slot.
     let surface = toolbar().view();
     let declared = surface
         .layout_request()
@@ -65,7 +59,6 @@ fn the_bar_declares_its_own_height_and_full_width() {
 fn the_title_carries_the_medium_weight() {
     // The whole point of the `font_weight` capability, seen from a kit: the title
     // is `Medium`, and the style struct says so in data rather than the widget
-    // builder hard-coding it.
     let style = toolbar().title("Settings").resolved_style();
     assert_eq!(
         style.title_weight,
@@ -102,7 +95,6 @@ fn the_leading_icon_is_optional() {
         "an icon renders when one was named"
     );
     // v1 substituted `Empty` for a missing leading icon; 2.0 pushes no child at
-    // all, which is the same answer without a node.
     let group = toolbar().title("Settings").leading_group();
     assert_eq!(
         group.child_count(),

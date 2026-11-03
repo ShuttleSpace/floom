@@ -1,17 +1,5 @@
 //! The ported Cupertino navigation drawer -- a panel that slides in from the
 //! edge of the app over a dimmed scrim.
-//!
-//! The shape is the engine's vocabulary plus the composites that own the
-//! presence, so what is tested here is the translation and the pixels: the
-//! tokens reach the style, the panel and the scrim are painted in v1's
-//! colours, the panel is pinned to the edge v1 pinned it to, and a click on
-//! the scrim closes the drawer.
-//!
-//! ## The tripwires
-//!
-//! `the_panel_is_painted_v1_s_colour` and
-//! `the_scrim_closes_the_drawer_when_it_is_clicked` would fail if this kit
-//! stopped being this kit.
 
 use floom_core::{ElementId, Event, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
@@ -37,7 +25,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -236,7 +223,6 @@ fn the_hairline_is_on_the_edge_the_drawer_is_not_on() {
 fn panel_border(widget: &dyn Widget) -> Option<f32> {
     // The panel is a `Surface`; its decoration is reachable through the
     // widget's own type, which the test cannot name generically -- so the
-    // border is read from the paint instead.
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
     let mut recorder = SceneRecorder::new(BOX);
@@ -263,7 +249,6 @@ fn the_scrim_closes_the_drawer_when_it_is_clicked() {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = pressable.create(&mut create);
     // A press and a release over the same spot: v1's scrim closed the drawer
-    // on the click.
     let mut down = TestEventContext::new(
         id,
         BOX,
@@ -295,7 +280,6 @@ fn the_props_report_the_side_and_the_width() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoNavigationDrawer::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

@@ -1,33 +1,3 @@
-//! `ConfirmEdit` -- a value, and the buttons that edit it.
-//!
-//! Two rows: the display row, which shows the value (or the caller's own
-//! child) and an edit affordance, and the editing row, which shows a field, a
-//! tick and a cross. The two rows are different subtrees, and 2.0's tree is
-//! built once, so the widget that owns them asks for the rebuild when the
-//! mode changes.
-//!
-//! The three floem-ui confirm-edit kits each used to carry their own copy of
-//! this widget; they share the engine's one now.
-//!
-//! ## What the kits still answer
-//!
-//! The gap between the parts of a row, the field's radius, the glyphs' size,
-//! the padding around a glyph, the field's width, its font size, its
-//! horizontal padding and its outline width, and four inks: the field's, the
-//! cross's and the edit affordance's, the tick's, and the field's outline.
-//!
-//! ## The glyphs are a kit's own
-//!
-//! The edit affordance, the tick and the cross are glyphs, and each design
-//! system has its own. So the engine is told what to draw: the three path
-//! data and the box they are drawn in, as [`ConfirmEditGlyphs`].
-//!
-//! ## The value travels in shared state
-//!
-//! The committed value, the draft being edited and the flag that says which
-//! row is on show all change after mount -- a click moves them -- so they
-//! cannot live in a signal, which is `Rc`-based and cannot cross a slot
-//! boundary. They live in the engine's shared buffer and shared flag.
 
 use std::sync::{Arc, Mutex};
 

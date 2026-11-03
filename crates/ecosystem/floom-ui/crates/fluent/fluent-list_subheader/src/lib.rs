@@ -1,16 +1,4 @@
 //! Fluent list subheader, ported to the Floom 2.0 widget API.
-//!
-//! A subheader is a row of small, muted text above a group of list items. v1
-//! spelled it as a `Container` holding a `Label`; 2.0 spells it a [`Surface`]
-//! holding a [`Text`], which is the same two things with the roles named: the
-//! surface is the row, the text is the label, and the colour belongs to the
-//! text rather than to the box.
-//!
-//! ## The two paddings
-//!
-//! A subheader is padded one way when it lines up with the list's own content
-//! and another when it is *inset* from it -- v1's `inset` flag chose between
-//! `padding_horizontal` and `inset_padding`, and the port keeps both.
 
 use floom_core::LayoutRequest;
 use floom_signal::{RwSignal, SignalGet};
@@ -33,7 +21,6 @@ pub struct FluentListSubheaderStyle {
     pub letter_spacing: f32,
 }
 
-/// Fluent's list subheader.
 pub struct FluentListSubheader {
     props: ListSubheaderProps,
     theme: RwSignal<MultiTheme>,
@@ -52,7 +39,6 @@ impl FluentListSubheader {
         }
     }
 
-    /// Pad the subheader from the list's own edge rather than its content's.
     pub fn inset(mut self, inset: bool) -> Self {
         self.props.inset = inset;
         self
@@ -81,7 +67,6 @@ impl FluentListSubheader {
             color: theme.colors().on_surface_variant,
             font_size: tokens.font_size,
             height: tokens.height,
-            // v1: `if inset { tk.inset_padding } else { tk.padding_horizontal }`.
             padding: if self.props.inset {
                 tokens.inset_padding
             } else {
@@ -92,8 +77,6 @@ impl FluentListSubheader {
         }
     }
 
-    /// The row: a padded, full-width box with the subheader's text centred in
-    /// it.
     pub fn view(self) -> Surface {
         let style = self.resolved_style();
         let text = self.props.text.clone();
@@ -104,11 +87,9 @@ impl FluentListSubheader {
                 LayoutRequest::new()
                     .height(style.height)
                     .padding_horiz(f64::from(style.padding))
-                    // v1's `items_center()`: the text is centred on the cross axis.
                     .cross_align(Align::Center),
             )
             .push(move || {
-                // The slot is a replayed `Fn`, so the text is cloned per mount.
                 let text = text.clone();
                 Box::new(Text::new(text).size(font_size).color(color))
             })

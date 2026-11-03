@@ -1,16 +1,5 @@
 //! The ported Cupertino stepper -- a row of numbered steps, a tick behind the
 //! current one, and a connector between each pair.
-//!
-//! The engine has no stepper, and its tree is built once, so what is tested
-//! here is the translation *and* the widget: the tokens reach the style, the
-//! markers and the labels are painted in v1's colours, and a change of
-//! selection asks the host to rebuild the row.
-//!
-//! ## The tripwires
-//!
-//! `the_current_step_is_filled_and_the_ones_ahead_are_not` and
-//! `a_change_of_selection_asks_for_a_new_row` would fail if this kit stopped
-//! being this kit.
 
 use floom_core::{ElementId, Event, Point, Rect, Widget, WidgetAny};
 use floom_types::{Color, PointerEvent};
@@ -35,7 +24,6 @@ const ROW: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -470,7 +458,6 @@ fn a_non_linear_stepper_makes_every_step_clickable() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoStepper::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

@@ -1,14 +1,3 @@
-//! Surface bookkeeping shared by the composites whose window floats above the tree.
-//!
-//! Which node owns the surface, how many layers deep it is, and where a dismissal goes. The overlay, the dialog, the popup and the bottom sheet all share it, and a modal that could not tell whether it was already up would open twice.
-//!
-//! It lived in `floom-widgets/src/compose.rs` beside the layout vocabulary
-//! (`Stack`, `List`, `Grid`, `Conditional`, `Crossfade`). The two are not the
-//! same kind of thing: a `Stack` arranges children along an axis, which is
-//! arithmetic; this decides *what a control looks like*, which is a product
-//! decision. So it moved up a layer with the tree, the counter and the select,
-//! and the dependency runs one way -- this crate composes the engine's
-//! vocabulary rather than the other way round.
 
 use std::any::Any;
 use std::sync::atomic::Ordering;
@@ -23,9 +12,7 @@ use crate::overlay::Overlay;
 use floom_widgets::primitives::Text;
 use floom_widgets::Grid;
 
-// ---------------------------------------------------------------------------
 // Overlay-backed surface plumbing
-// ---------------------------------------------------------------------------
 
 /// Bookkeeping shared by the composites whose surface belongs *above* the tree.
 ///

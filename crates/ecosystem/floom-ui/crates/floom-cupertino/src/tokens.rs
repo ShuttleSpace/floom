@@ -1,9 +1,3 @@
-//! Cupertino colour and metric tokens.
-//!
-//! Values follow Apple's publicly documented system colours and the 8pt layout
-//! grid. Type is specified by *point size* only: the crate names the platform's
-//! default UI font via `system-ui` rather than bundling or naming a licensed
-//! typeface, so nothing proprietary ships here.
 
 use floom_theme::{ColorScheme, Theme};
 use floom_types::Color;

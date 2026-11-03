@@ -1,85 +1,3 @@
-//! Material confirm-edit, ported to the Floom 2.0 widget API.
-//!
-//! A confirm-edit is a value with an edit affordance beside it: click the
-//! affordance and the value becomes a field with a tick and a cross beside it;
-//! the tick saves and the cross cancels.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a horizontal `Stack` for each of the two rows, the
-//! engine's `TextInput` for the field, a `Pressable` for each of the three
-//! buttons, and the engine's `VectorIcon` for the three glyphs.
-//!
-//! **The engine's `Dialog` is not used.** v1's confirm-edit is an inline row,
-//! not a modal panel: the edit affordance swaps a field in beside the value,
-//! with no scrim and no overlay. `floom-ui-composites::Dialog` would be the
-//! wrong shape for it.
-//!
-//! ## The engine's confirm-edit
-//!
-//! The one thing the vocabulary cannot do is *choose between two rows*. 2.0's
-//! tree is built once: a child's builder closure runs when its slot is
-//! mounted, and a slot that is still there is not built again. The engine's
-//! `Conditional` follows a shared flag, but it holds *one* child and shows it
-//! while the flag is true -- so it can show the editing row and not the display
-//! row, but not both.
-//!
-//! So the widget reads the "editing" flag in `update` and asks the host to
-//! reconcile its children; the two rows carry different keys, so the host
-//! mounts the other one. That widget is the engine's now:
-//! `floom_ui_composites::ConfirmEdit` is a value and the buttons that edit it,
-//! and the three kits use it.
-//!
-//! The three glyphs -- the edit affordance, the tick and the cross -- are the
-//! design system's own, so the kit hands the widget their path data and the
-//! box they are drawn in.
-//!
-//! ## What this kit answers
-//!
-//! * the gap between the parts of a row and the field's radius: the tokens;
-//! * the tick's colour: `primary`; the cross's and the edit affordance's:
-//!   `on_surface_variant`; the field's text: `on_surface`; its outline:
-//!   `outline`.
-//!
-//! ## The token that never showed
-//!
-//! `ConfirmEditTokens::icon_size` is 20, and v1 never used it: all three
-//! glyphs were drawn at 16. The port keeps the number in the style and draws
-//! the glyphs at v1's 16.
-//!
-//! ## The numbers v1 wrote as literals
-//!
-//! The glyphs' size (16), the padding around a glyph (8), the field's width
-//! (160), its font size (14), its horizontal padding (8) and its outline (1).
-//! v1's style reported none of them, so the port's style adds them.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The display label's style.** v1's display label carried no style at
-//!   all -- no size, no colour -- so it inherited the engine's default text.
-//!   The port does the same, which is why the value is black while the field
-//!   is `on_surface`.
-//! * **The child's factory.** v1's `child(..)` took a closure that built an
-//!   `AnyView`; 2.0's takes a [`floom_core::Child`], because a 2.0 widget is
-//!   mounted by its parent rather than returned.
-//! * **The callback's shape.** v1's was `Box<dyn Fn(String)>`; the port's is
-//!   `Arc<dyn Fn(String) + Send + Sync>`, because a callback that reaches a
-//!   2.0 slot has to cross a thread boundary. The props' own `on_save` slot
-//!   stays empty: the shared props type is `Box<dyn Fn(String)>` and cannot
-//!   hold the `Send + Sync` handle the kit uses.
-//! * **The three signals.** v1 held the value, the draft and the "editing"
-//!   flag in `RwSignal`s. A 2.0 slot closure is `Send + Sync` and an
-//!   `RwSignal` is `Rc`-based, so the port uses the engine's shared types: a
-//!   `SharedBuffer` for the value, a `SharedBuffer` for the draft and a
-//!   `SharedFlag` for the flag.
-//! * **The accessors.** v1's confirm-edits had no `props()`, `theme()` or
-//!   `with_theme()`. The port gives all three kits the same three.
-//!
-//! ## The theme
-//!
-//! Material reads the app-wide theme signal, so a change of theme re-themes
-//! the confirm-edit along with everything else. Cupertino and Fluent take a
-//! snapshot of their own design system instead -- which is what v1 did.
 
 use std::sync::{Arc, Mutex};
 
@@ -98,17 +16,11 @@ use floom_core_theme::tokens::color::Color;
 use floom_widget_md_icon::{MdIcon, MD_ICON_VIEW_BOX};
 use floom_widget_runtime::theme_signal;
 
-/// The glyphs' size. A v1 literal -- the token's `icon_size` (20) never showed.
 const GLYPH_SIZE: f32 = 16.0;
-/// The padding around a glyph. A v1 literal.
 const BUTTON_PADDING: f32 = 8.0;
-/// The field's width. A v1 literal.
 const INPUT_WIDTH: f32 = 160.0;
-/// The field's font size. A v1 literal.
 const INPUT_FONT_SIZE: f32 = 14.0;
-/// The field's horizontal padding. A v1 literal.
 const INPUT_PADDING_HORIZ: f32 = 8.0;
-/// The field's outline width. A v1 literal.
 const INPUT_BORDER: f32 = 1.0;
 
 /// Write a shared buffer.
@@ -118,7 +30,6 @@ fn write_buffer(buffer: &SharedBuffer, text: impl Into<String>) {
     }
 }
 
-/// The confirm-edit's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialConfirmEditStyle {
     pub design_system: &'static str,
@@ -126,19 +37,12 @@ pub struct MaterialConfirmEditStyle {
     pub gap: f32,
     /// The field's radius. The token's `radius`.
     pub radius: f32,
-    /// The token's icon size, which v1 never used: the glyphs were 16.
     pub icon_size: f32,
-    /// The glyphs' size. A v1 literal.
     pub glyph_size: f32,
-    /// The padding around a glyph. A v1 literal.
     pub button_padding: f32,
-    /// The field's width. A v1 literal.
     pub input_width: f32,
-    /// The field's font size. A v1 literal.
     pub input_font_size: f32,
-    /// The field's horizontal padding. A v1 literal.
     pub input_padding_horiz: f32,
-    /// The field's outline width. A v1 literal.
     pub input_border: f32,
     /// The field's ink.
     pub on_surface: Color,
@@ -193,9 +97,6 @@ impl MaterialConfirmEdit {
         self
     }
 
-    /// Fired with the new value when the edit is confirmed.
-    ///
-    /// `Send + Sync`, where v1's was not: the callback reaches a 2.0 slot.
     pub fn on_save(mut self, callback: impl Fn(String) + Send + Sync + 'static) -> Self {
         self.on_save = Some(Arc::new(callback));
         self

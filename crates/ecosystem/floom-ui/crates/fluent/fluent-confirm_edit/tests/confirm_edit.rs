@@ -1,15 +1,4 @@
 //! The ported Fluent confirm-edit -- a value with an edit affordance beside
-//! it, and a field with a tick and a cross when it is open.
-//!
-//! The engine has no confirm-edit, and its tree is built once, so what is
-//! tested here is the translation *and* the widget: the tokens reach the
-//! style, the display row shows the value, the edit affordance opens the
-//! field, and the tick saves while the cross cancels.
-//!
-//! ## The tripwires
-//!
-//! `the_display_row_shows_the_value` and `the_tick_saves_and_the_cross_cancels`
-//! would fail if this kit stopped being this kit.
 
 use floom_core::{
     Child, ChildKey, ElementId, Event, Key, KeyEvent, LayoutRequest, Rect, Widget, WidgetAny,
@@ -25,7 +14,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 
 use floom_widget_fluent_confirm_edit::{FluentConfirmEdit, FluentConfirmEditStyle};
 
-/// The box the confirm-edit is laid out in.
 const ROW: Rect = Rect {
     x0: 0.0,
     y0: 0.0,
@@ -34,9 +22,6 @@ const ROW: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -45,7 +30,6 @@ fn kit() -> FluentConfirmEdit {
     FluentConfirmEdit::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -60,7 +44,6 @@ fn allocate(widget: &dyn Widget) -> ElementId {
     widget.create(&mut create)
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -70,18 +53,15 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// Dispatch an event to a widget held behind a trait object.
 fn dispatch_any(widget: &mut dyn WidgetAny, id: ElementId, bounds: Rect, event: Event) -> bool {
     let mut cx = TestEventContext::new(id, bounds, event);
     widget.event(&mut cx, id)
 }
 
-/// The row the confirm-edit holds, in the mode it is in.
 fn row_of(widget: &dyn Widget) -> Box<dyn WidgetAny> {
     widget.children().remove(0).build()
 }
 
-/// Click a widget, the way a pointer does: a press and a release.
 fn click(widget: &mut dyn WidgetAny) {
     let id = allocate(&*widget);
     dispatch_any(
@@ -98,9 +78,7 @@ fn click(widget: &mut dyn WidgetAny) {
     );
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens reach the style.
 #[test]
 fn the_tokens_reach_the_style() {
     let style: FluentConfirmEditStyle = kit().resolved_style();
@@ -117,7 +95,6 @@ fn the_tokens_reach_the_style() {
     );
 }
 
-/// The colours reach the style.
 #[test]
 fn the_colours_reach_the_style() {
     let style = kit().resolved_style();
@@ -132,8 +109,6 @@ fn the_colours_reach_the_style() {
     assert_eq!(style.outline, colors.outline, "the field's outline");
 }
 
-/// The numbers v1 wrote as literals are in the style, because v1's style did
-/// not report them and the paint used them.
 #[test]
 fn the_literals_are_in_the_style() {
     let style = kit().resolved_style();
@@ -150,16 +125,13 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// The props report the value.
 #[test]
 fn the_props_report_the_value() {
     let kit = kit().value("Hello");
     assert_eq!(kit.props().value, "Hello");
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The display row: the value and the edit affordance.
 #[test]
 fn the_display_row_holds_the_value_and_the_edit_affordance() {
     let widget = kit().value("Hello").view();
@@ -168,7 +140,6 @@ fn the_display_row_holds_the_value_and_the_edit_affordance() {
     assert_eq!(row.children().len(), 2, "the value and the edit affordance");
 }
 
-/// The caller's child replaces the value in the display row.
 #[test]
 fn the_callers_child_replaces_the_value() {
     let child = Child::new(ChildKey::index(0), LayoutRequest::new(), || {
@@ -188,7 +159,6 @@ fn the_callers_child_replaces_the_value() {
     assert_eq!(text, "Custom", "the caller's child is what is shown");
 }
 
-/// The editing row: the field, the tick and the cross.
 #[test]
 fn the_editing_row_holds_the_field_and_the_two_buttons() {
     let widget = kit().value("Hello").view();
@@ -197,9 +167,7 @@ fn the_editing_row_holds_the_field_and_the_two_buttons() {
     assert_eq!(row.children().len(), 3, "the field, the tick and the cross");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The display row shows the value.
 #[test]
 fn the_display_row_shows_the_value() {
     let widget = kit().value("Hello").view();
@@ -219,7 +187,6 @@ fn the_display_row_shows_the_value() {
     assert_eq!(size, 14.0, "v1's display label carried no size of its own");
 }
 
-/// The edit affordance is a glyph, painted in `on_surface_variant`.
 #[test]
 fn the_edit_affordance_is_a_glyph_in_on_surface_variant() {
     let widget = kit().value("Hello").view();
@@ -248,9 +215,7 @@ fn the_edit_affordance_is_a_glyph_in_on_surface_variant() {
     );
 }
 
-// --- the interaction ------------------------------------------------------
 
-/// The edit affordance opens the field, and the draft takes the value.
 #[test]
 fn the_edit_affordance_opens_the_field() {
     let widget = kit().value("Hello").view();
@@ -263,7 +228,6 @@ fn the_edit_affordance_opens_the_field() {
     assert_eq!(widget.draft(), "Hello", "the draft took the value");
 }
 
-/// The tick saves: the value takes the draft and the callback fires.
 #[test]
 fn the_tick_saves_and_the_cross_cancels() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
@@ -277,7 +241,6 @@ fn the_tick_saves_and_the_cross_cancels() {
         })
         .view();
 
-    // Open the field and type into it.
     widget.edit();
     let row = row_of(&widget);
     let mut input = row.children().remove(0).build();
@@ -290,7 +253,6 @@ fn the_tick_saves_and_the_cross_cancels() {
     );
     assert_eq!(widget.draft(), "Hello!", "the field holds the edit");
 
-    // The tick saves.
     let row = row_of(&widget);
     let mut save = row.children().remove(1).build();
     click(&mut *save);
@@ -302,7 +264,6 @@ fn the_tick_saves_and_the_cross_cancels() {
     );
     assert!(!widget.is_editing(), "and the field closed");
 
-    // The cross cancels: the draft goes back to the value.
     widget.edit();
     {
         let draft = widget.draft_buffer();
@@ -316,8 +277,6 @@ fn the_tick_saves_and_the_cross_cancels() {
     assert!(!widget.is_editing(), "and the field closed");
 }
 
-/// A change of mode asks the host for the other row: the two rows are
-/// different subtrees, and 2.0's tree is built once.
 #[test]
 fn a_change_of_mode_asks_for_the_other_row() {
     let mut widget = kit().value("Hello").view();
@@ -340,14 +299,9 @@ fn a_change_of_mode_asks_for_the_other_row() {
     );
 }
 
-// --- the theme source -----------------------------------------------------
 
-/// The theme: v1's Fluent confirm-edit took a *snapshot* of its own design
-/// system, so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentConfirmEdit::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

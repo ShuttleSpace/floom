@@ -206,7 +206,6 @@ fn color_rect_widget_lifecycle() {
         other => panic!("expected pointer event, got {other:?}"),
     }
 }
-// --- composition -----------------------------------------------------------
 
 /// Minimal child widget.
 struct Row {

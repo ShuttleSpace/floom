@@ -1,53 +1,3 @@
-//! Material list group, ported to the Floom 2.0 widget API.
-//!
-//! A list group is a titled, collapsible group of rows. v1 built it as a
-//! clickable header over a stack of rows that appeared and disappeared with an
-//! `RwSignal<bool>`.
-//!
-//! ## What the port uses
-//!
-//! The header-plus-body shape, the chevron that changes with the state, and the
-//! body that is mounted only while the group is open -- that is the engine's
-//! [`Accordion`], and one list group is one accordion with a single panel. The
-//! engine owns the open/close state, so the kit does not need a signal of its
-//! own, and the toggle callback is the accordion's `on_change`.
-//!
-//! ## Where the padding lives
-//!
-//! v1 padded the *items* -- each row took `indent` or `content_padding` of
-//! horizontal padding -- and the stack around them took the vertical padding.
-//! The accordion's own `content_padding` would put that inset on the body box
-//! on *all four* sides, and v1 had no horizontal inset there, so the
-//! accordion's is left at zero and the kit's own stack carries the vertical
-//! one.
-//!
-//! ## What v1 drew that this port does not
-//!
-//! * **The outline around the header row.** v1 put a 1px outline on the
-//!   *header* -- `border(1.0).border_color(with_alpha(outline, 30))` -- so the
-//!   outline was the header row's own box. 2.0's accordion draws the outline
-//!   around the *panel*: the header and, while it is open, the rows. The box
-//!   that would have to carry the header's outline is a leaf, and a leaf
-//!   cannot hold the row it would be outlining; the engine says as much, and
-//!   outlining the panel is what Material 3's outlined expansion panel does.
-//!   The width and the colour are v1's; the shape is the engine's.
-//! * **`cursor(CursorStyle::Pointer)` on the header.** 2.0's paint context has
-//!   no cursor vocabulary, so the pointer is not carried over; the header is
-//!   still a `Pressable`, so it is still activatable by keyboard, which the
-//!   pointer was not.
-//!
-//! ## The theme
-//!
-//! v1's Material list group read the *app-wide* theme signal, so a change of
-//! theme re-themes the group with everything else. The Cupertino and Fluent
-//! copies took a snapshot of their own design system instead, and still do.
-//! That difference is v1's, and it is kept.
-//!
-//! ## The chevron
-//!
-//! The indicator is this design system's own glyph: `expand_more` and
-//! `chevron_right` are different drawings in each icon table, and a lookup that
-//! reached for another system's table would draw a foreign chevron.
 
 use std::sync::Arc;
 
@@ -66,11 +16,6 @@ use floom_core_theme::tokens::color_ext::*;
 use floom_widget_md_icon::MdIcon;
 use floom_widget_runtime::theme_signal;
 
-/// The header title's size, in logical pixels.
-///
-/// v1 drew the title with a plain `Label`, which takes the default text size;
-/// the engine's own label size is 14, and the port names it rather than
-/// leaving it implicit.
 const LABEL_FONT_SIZE: f32 = 14.0;
 
 /// A callback in the shape 2.0's slots need.
@@ -98,8 +43,6 @@ pub struct MaterialListGroup {
     props: ListGroupProps,
     items: Vec<String>,
     theme: RwSignal<MultiTheme>,
-    /// The toggle callback in the shape 2.0's slots need. v1's props held a
-    /// `Box<dyn Fn(bool)>`, which is not shareable.
     on_toggle: Option<Callback>,
 }
 
@@ -139,8 +82,6 @@ impl MaterialListGroup {
 
     /// Called with the new expanded state whenever the header is toggled.
     pub fn on_toggle(mut self, callback: impl Fn(bool) + Send + Sync + 'static) -> Self {
-        // Stored twice, from one closure: a v1 `Box<dyn Fn(bool)>` for the props
-        // and an `Arc<dyn Fn(bool) + Send + Sync>` for the engine's slot.
         let shared: Callback = Arc::new(callback);
         self.props.on_toggle = Some(Box::new({
             let shared = shared.clone();
@@ -169,12 +110,9 @@ impl MaterialListGroup {
             unreachable!("ComponentId::ListGroup must resolve to ListGroupTokens")
         };
         MaterialListGroupStyle {
-            // v1's header title was a plain `Label`, which takes the default ink.
             title_color: theme.colors().on_surface,
-            // v1's header border: `border_color(with_alpha(outline, 30))`.
             outline: theme.colors().outline,
             item_color: theme.colors().on_surface,
-            // v1's indicator: `color(t.colors().on_surface_variant)`.
             indicator_color: theme.colors().on_surface_variant,
             item_font_size: theme.typography().body.medium.font_size,
             header_height: tokens.header_height,
@@ -187,10 +125,6 @@ impl MaterialListGroup {
         }
     }
 
-    /// The two indicator glyphs, at the token's size and the muted ink.
-    ///
-    /// The collapsed one and the expanded one, in that order. Public because a
-    /// caller that draws its own header wants the same glyphs.
     pub fn indicator(&self) -> (VectorIcon, VectorIcon) {
         let style = self.resolved_style();
         let color = to_paint(style.indicator_color);
@@ -229,15 +163,12 @@ impl MaterialListGroup {
         let mut accordion = Accordion::new()
             .style(AccordionStyle {
                 header_height: style.header_height,
-                // v1's header: `padding_horiz(content_padding)`.
                 header_padding: style.content_padding,
-                // The padding belongs to the rows, as it did in v1.
                 content_padding: 0.0,
                 content_indent: 0.0,
                 gap: 0.0,
                 title_color: to_paint(style.title_color),
                 title_size: LABEL_FONT_SIZE,
-                // v1's header: `border(1.0).border_color(with_alpha(outline, 30))`.
                 border_width: 1.0,
                 border_color: to_paint(with_alpha(style.outline, 30)),
                 radius: 0.0,
@@ -253,22 +184,13 @@ impl MaterialListGroup {
                     Box::new(icon)
                 },
                 move || {
-                    // v1's items: a vertical stack, each row padded, with the stack
-                    // itself padded vertically.
                     let mut stack = Stack::new(Axis::Vertical)
                         .gap(row_gap)
-                        // v1: `padding_vert(content_padding)` on the stack that
-                        // holds the items. The accordion's own `content_padding`
-                        // would inset the body box on *all four* sides, and v1 had
-                        // no horizontal inset there -- the rows carried their own --
-                        // so the vertical inset belongs here.
                         .request(LayoutRequest::new().padding_vert(f64::from(vertical_padding)));
                     for label in items.iter() {
                         let label = label.clone();
                         let color = item_color;
                         stack = stack.push(move || {
-                            // The slot is a replayed `Fn`, so the label is cloned
-                            // again for the inner slot that draws it.
                             let label = label.clone();
                             Box::new(
                                 Stack::new(Axis::Horizontal)
@@ -279,8 +201,6 @@ impl MaterialListGroup {
                                             .cross_align(Align::Center),
                                     )
                                     .push(move || {
-                                        // The slot is a replayed `Fn`, so it borrows
-                                        // the label rather than moving it out.
                                         Box::new(
                                             Text::new(label.clone())
                                                 .size(item_font_size)
@@ -294,8 +214,6 @@ impl MaterialListGroup {
                 },
             );
 
-        // v1 seeded the expanded flag from the props, and the engine's
-        // accordion starts closed.
         accordion.set_open(0, self.props.expanded);
 
         if let Some(on_toggle) = on_toggle {

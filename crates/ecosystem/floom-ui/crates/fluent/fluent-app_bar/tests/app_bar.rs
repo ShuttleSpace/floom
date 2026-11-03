@@ -1,14 +1,4 @@
 //! The ported Fluent app bar -- an optional leading slot, a title, and
-//! optional trailing actions.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the bar is painted
-//! the colour v1 painted, and the title is drawn in v1's ink at v1's size.
-//!
-//! ## The tripwires
-//!
-//! `the_bar_is_painted_in_v1_s_colour` and `the_callers_height_wins_over_the
-//! token` would fail if this kit stopped being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Rect, Widget};
 use floom_types::Color;
@@ -27,9 +17,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -38,7 +25,6 @@ fn kit() -> FluentAppBar {
     FluentAppBar::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -48,16 +34,13 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// A caller's own slot, for the leading and the actions.
 fn slot(text: &'static str) -> Child {
     Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
         Box::new(floom_widgets::Text::new(text))
     })
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentAppBarStyle = kit().resolved_style();
@@ -87,7 +70,6 @@ fn the_tokens_and_colours_reach_the_style() {
     );
 }
 
-/// The caller's height wins over the token's, as it did in v1.
 #[test]
 fn the_callers_height_wins_over_the_token() {
     let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::AppBar) {
@@ -111,9 +93,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The bar is painted in v1's colour, and the title in v1's ink.
 #[test]
 fn the_bar_is_painted_in_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -131,7 +111,6 @@ fn the_bar_is_painted_in_v1_s_colour() {
     });
     assert_eq!(fill, Some(paint(resolved.bar_color)), "the bar's fill");
 
-    // The title is inside the bar.
     let row = bar.children().remove(0).build();
     let title = row.children().remove(0).build();
     let mut create = AllocatingCreateContext::new();
@@ -154,7 +133,6 @@ fn the_bar_is_painted_in_v1_s_colour() {
     assert_eq!(ink, paint(resolved.title_color), "and v1's title ink");
 }
 
-/// An elevation draws the shadow v1 drew.
 #[test]
 fn an_elevation_draws_the_shadow() {
     let flat = kit().title("Title").view();
@@ -188,9 +166,7 @@ fn an_elevation_draws_the_shadow() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The caller's leading slot and actions are mounted.
 #[test]
 fn the_callers_slots_are_mounted() {
     let bar = kit()
@@ -199,7 +175,6 @@ fn the_callers_slots_are_mounted() {
         .actions(vec![slot("A")])
         .view();
     let row = bar.children().remove(0).build();
-    // The leading, the title, the spacer, the actions.
     assert_eq!(
         row.children().len(),
         4,
@@ -220,7 +195,6 @@ fn the_callers_slots_are_mounted() {
     );
 }
 
-/// The props report the title and the elevation.
 #[test]
 fn the_props_report_the_title() {
     let kit = kit().title("Title").elevation(3);
@@ -228,12 +202,8 @@ fn the_props_report_the_title() {
     assert_eq!(kit.props().elevation, 3);
 }
 
-/// The theme: v1's Fluent app bar took a *snapshot* of its own design system,
-/// so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentAppBar::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

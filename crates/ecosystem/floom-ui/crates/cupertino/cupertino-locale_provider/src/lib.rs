@@ -1,17 +1,5 @@
 //! Cupertino locale_provider, ported to the Floom 2.0 widget API.
 //!
-//! A provider owns a BCP-47 locale tag and shares it with its subtree. v1 held it in an
-//! `RwSignal`; 2.0 holds it in a shared buffer, because an `RwSignal` is
-//! `Rc`-based and cannot cross a `Send + Sync` slot boundary -- the same reason
-//! the dialogs' `open_signal()` became a shared flag.
-//!
-//! ## The subtree is not re-themed
-//!
-//! v1's own note said it: because Rust uses static dispatch, a provider cannot
-//! re-theme a subtree the way a dynamically-typed framework could. It hands its
-//! descendants a typed handle and they read it. 2.0 cannot do it either, and
-//! the port does not pretend to: the handle is shared, and whoever writes it is
-//! the one who decides what the subtree shows.
 
 use std::sync::{Arc, Mutex};
 

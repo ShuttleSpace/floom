@@ -1,13 +1,4 @@
 //! The ported Fluent alert banner.
-//!
-//! Two claims, and the second is the one that would have been easy to get wrong:
-//!
-//! * the tokens and the four-variant accent table reach the engine;
-//! * **the dismiss slot is absent when the alert is not dismissible.** v1 mounted
-//!   an empty `Label` there, so the row always had two children and the 8px gap was
-//!   spent on nothing. Reproducing that faithfully would mean reproducing a bug, and
-//!   dropping it is a behaviour change rather than a translation — so it is pinned
-//!   here where the difference is visible.
 
 use floom_core::Widget;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
@@ -19,12 +10,6 @@ use floom_widgets::{Stack, Surface};
 
 use floom_widget_fluent_alert::{alert_accent, FluentAlert};
 
-/// Activate Fluent and hand back a theme that will read it.
-///
-/// `MultiTheme::new_for(ds)` does **not** select `ds` (the porting plan's
-/// correction 9) — it reads a process-global at every access. The selection
-/// has to happen before the kit resolves anything, so the alert helper calls
-/// this first.
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
@@ -46,7 +31,6 @@ fn to_paint(c: floom_core_theme::tokens::color::Color) -> floom_types::Color {
     }
 }
 
-// --- the tokens -----------------------------------------------------------
 
 #[test]
 fn the_tokens_reach_the_engine_surface() {
@@ -79,8 +63,6 @@ fn the_tokens_reach_the_engine_surface() {
     );
 }
 
-/// v1's container colour is the accent at **26/255** — about 10%, a tint rather than
-/// a wash. 26 is a strange number to survive a port by accident, so it is asserted.
 #[test]
 fn the_container_is_the_accent_at_26() {
     let theme = theme();
@@ -107,11 +89,7 @@ fn the_container_is_the_accent_at_26() {
     );
 }
 
-// --- the accent table -----------------------------------------------------
 
-/// Three of the four accents are fixed RGB and only `error` reads the theme. Kept
-/// as v1 wrote it: they are the design, not an oversight, and resolving them through
-/// the theme would change three kits' colours.
 #[test]
 fn three_accents_are_fixed_literals_and_one_is_the_themes_error() {
     let theme = theme();
@@ -134,8 +112,6 @@ fn three_accents_are_fixed_literals_and_one_is_the_themes_error() {
         );
     }
 
-    // The control: four variants really are four different accents, so the table is
-    // not accidentally constant.
     let all = [
         alert_accent(&theme, AlertVariant::Error),
         alert_accent(&theme, AlertVariant::Info),
@@ -149,7 +125,6 @@ fn three_accents_are_fixed_literals_and_one_is_the_themes_error() {
     }
 }
 
-/// The variant reaches the style, and through it the tint.
 #[test]
 fn the_variant_selects_the_accent_and_therefore_the_tint() {
     let error = alert().variant(AlertVariant::Error).resolved_style();
@@ -161,9 +136,7 @@ fn the_variant_selects_the_accent_and_therefore_the_tint() {
     );
 }
 
-// --- the tree -------------------------------------------------------------
 
-/// The outer shape: a tinted, rounded `Surface` holding one row.
 #[test]
 fn the_banner_is_a_surface_holding_one_row() {
     let surface = alert().view();
@@ -173,14 +146,6 @@ fn the_banner_is_a_surface_holding_one_row() {
     assert!(row.as_any().is::<Stack>(), "the row is a horizontal stack");
 }
 
-/// The dismiss slot, which is the whole point of the difference from v1.
-///
-/// v1 wrote `if dismissible { FluentIcon.. } else { Label::new("") }`, so the row had
-/// two children either way and the 8px gap after the content was spent on an empty
-/// label. Here the slot is absent, so a non-dismissible banner's row has **one**
-/// child. A port that reproduced v1 exactly would pass a "two children" test and be
-/// wrong; a port that dropped the dismiss button entirely would also pass one. This
-/// asserts both halves.
 #[test]
 fn the_dismiss_slot_is_absent_unless_the_alert_is_dismissible() {
     let plain = alert().view();
@@ -199,9 +164,6 @@ fn the_dismiss_slot_is_absent_unless_the_alert_is_dismissible() {
     assert_eq!(row.child_count(), 2, "and a dismissible one has the button");
 }
 
-/// The dismiss affordance is a `Pressable` around an icon — the 2.0 spelling of
-/// v1's `.on_event(listener::Click, ..)` chain, and the site of the removed
-/// the icon kit's `view()`.
 #[test]
 fn the_dismiss_affordance_is_a_pressable_icon() {
     let banner = alert().dismissible(true).view();
@@ -226,7 +188,6 @@ fn the_dismiss_affordance_is_a_pressable_icon() {
     );
 }
 
-/// The content row: the accent dot and the text column, 12px apart.
 #[test]
 fn the_content_is_a_dot_and_a_text_column() {
     let banner = alert().view();
@@ -252,7 +213,6 @@ fn the_content_is_a_dot_and_a_text_column() {
     );
 }
 
-/// The text column: the title above the message, 4px apart, title bold.
 #[test]
 fn the_text_column_is_a_bold_title_over_a_message() {
     let banner = alert().view();
@@ -276,7 +236,6 @@ fn the_text_column_is_a_bold_title_over_a_message() {
     assert_eq!(title.content(), "Sync failed");
 }
 
-/// The message is the second line, and it is not bold.
 #[test]
 fn the_message_is_the_second_line_and_not_bold() {
     let banner = alert().view();
@@ -299,10 +258,7 @@ fn the_message_is_the_second_line_and_not_bold() {
     );
 }
 
-// --- the props ------------------------------------------------------------
 
-/// `on_dismiss` is stored twice — a v1 `Box` for the props and an
-/// `Arc<dyn Fn() + Send + Sync>` for the engine — from one closure.
 #[test]
 fn the_props_report_the_dismiss_callback() {
     let hits = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -318,8 +274,6 @@ fn the_props_report_the_dismiss_callback() {
     );
 }
 
-/// A non-dismissible alert with a callback is still non-dismissible: v1's
-/// `dismissible` flag is what mounted the button, and the callback alone did not.
 #[test]
 fn a_callback_alone_does_not_mount_the_button() {
     let alert = alert().on_dismiss(|| {});
@@ -330,5 +284,4 @@ fn a_callback_alone_does_not_mount_the_button() {
     assert_eq!(row.child_count(), 1, "so there is no button");
 }
 
-/// `Text` under the name the assertions above use.
 type Text_ = floom_widgets::Text;

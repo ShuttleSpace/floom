@@ -1,15 +1,4 @@
 //! The ported Fluent number input -- a text field with a `-` and a `+`
-//! beside it.
-//!
-//! The shape is the engine's vocabulary plus the engine's `TextInput`, so what
-//! is tested here is the translation and the pixels: the tokens reach the
-//! style, the field is painted in v1's colours at v1's sizes, the two steppers
-//! answer, and a disabled one does not.
-//!
-//! ## The tripwires
-//!
-//! `the_field_is_painted_in_v1_s_colours` and `the_stepper_moves_the_number`
-//! would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -30,9 +19,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -41,7 +27,6 @@ fn kit() -> FluentNumberInput {
     FluentNumberInput::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -51,7 +36,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of<W: Widget + ?Sized>(widget: &W) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -61,7 +45,6 @@ fn ops_of<W: Widget + ?Sized>(widget: &W) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// A press and a release over the same spot: what a click is.
 fn click<W: Widget + ?Sized>(widget: &mut W) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -79,7 +62,6 @@ fn click<W: Widget + ?Sized>(widget: &mut W) {
     widget.event(&mut up, id);
 }
 
-/// A character typed into a field.
 fn type_text<W: Widget + ?Sized>(widget: &mut W, ch: char) {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -87,20 +69,16 @@ fn type_text<W: Widget + ?Sized>(widget: &mut W, ch: char) {
     widget.event(&mut key, id);
 }
 
-/// The field: the last child of the column.
 fn field_of(view: &floom_widgets::Stack) -> Box<dyn floom_core::WidgetAny> {
     let mut children = view.children();
     children.remove(children.len() - 1).build()
 }
 
-/// The row inside the field.
 fn row_of(field: &dyn floom_core::WidgetAny) -> Box<dyn floom_core::WidgetAny> {
     field.children().remove(0).build()
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentNumberInputStyle = kit().resolved_style();
@@ -159,9 +137,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The field is painted in v1's colours, at v1's sizes.
 #[test]
 fn the_field_is_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -200,7 +176,6 @@ fn the_field_is_painted_in_v1_s_colours() {
     );
 }
 
-/// The text is painted in v1's ink, at v1's size.
 #[test]
 fn the_text_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -225,7 +200,6 @@ fn the_text_is_painted_in_v1_s_ink() {
     assert_eq!(ink, paint(resolved.text_color), "v1's ink");
 }
 
-/// The two steppers are tiles of the token's size, filled with v1's colour.
 #[test]
 fn the_two_steppers_are_tiles_of_the_token_s_size() {
     let resolved = kit().resolved_style();
@@ -254,7 +228,6 @@ fn the_two_steppers_are_tiles_of_the_token_s_size() {
             Some(paint(resolved.button_background)),
             "the tile's fill"
         );
-        // A widget paints only itself, so the glyph is the tile's *child*.
         let mark = tile.children().remove(0).build();
         let text = ops_of(&*mark)
             .iter()
@@ -267,9 +240,7 @@ fn the_two_steppers_are_tiles_of_the_token_s_size() {
     }
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The label sits above the field, and the gap between them is v1's.
 #[test]
 fn the_label_sits_above_the_field() {
     let view = kit().label("Quantity").view();
@@ -296,14 +267,12 @@ fn the_label_sits_above_the_field() {
     );
 }
 
-/// v1 left the label out when there was none, and so does this.
 #[test]
 fn no_label_leaves_only_the_field() {
     let view = kit().view();
     assert_eq!(view.children().len(), 1, "only the field");
 }
 
-/// The stepper moves the number and fires the callback.
 #[test]
 fn the_stepper_moves_the_number() {
     let seen: Arc<Mutex<Vec<i64>>> = Arc::new(Mutex::new(Vec::new()));
@@ -335,7 +304,6 @@ fn the_stepper_moves_the_number() {
     );
 }
 
-/// The `-` button steps down.
 #[test]
 fn the_decrement_button_steps_down() {
     let kit = kit().value(4).step(2);
@@ -353,7 +321,6 @@ fn the_decrement_button_steps_down() {
     );
 }
 
-/// The number is clamped to the bounds, and the text follows it.
 #[test]
 fn the_number_is_clamped_to_the_bounds() {
     let kit = kit().value(20).min(0).max(10);
@@ -374,7 +341,6 @@ fn the_number_is_clamped_to_the_bounds() {
     assert_eq!(text, "10", "and the field shows the clamped number");
 }
 
-/// Typing a number moves the value and fires the callback.
 #[test]
 fn typing_a_number_moves_the_value() {
     let seen: Arc<Mutex<Vec<i64>>> = Arc::new(Mutex::new(Vec::new()));
@@ -406,7 +372,6 @@ fn typing_a_number_moves_the_value() {
     );
 }
 
-/// A disabled field does not answer: the value does not move.
 #[test]
 fn a_disabled_field_does_not_answer() {
     let seen: Arc<Mutex<Vec<i64>>> = Arc::new(Mutex::new(Vec::new()));
@@ -439,7 +404,6 @@ fn a_disabled_field_does_not_answer() {
     );
 }
 
-/// A disabled stepper does not answer either.
 #[test]
 fn a_disabled_stepper_does_not_answer() {
     let kit = kit().value(4).disabled(true);
@@ -457,7 +421,6 @@ fn a_disabled_stepper_does_not_answer() {
     );
 }
 
-/// The disabled palette is v1's: the ink and the rim at 38, the fill at 4.
 #[test]
 fn the_disabled_palette_is_v1_s() {
     let style = kit().disabled(true).resolved_style();
@@ -489,8 +452,6 @@ fn the_disabled_palette_is_v1_s() {
     );
 }
 
-/// The props report the number, and the shared props' own callback slot stays
-/// empty: the kit keeps a shareable copy of its own.
 #[test]
 fn the_props_report_the_number() {
     let kit = kit().value(7).min(1).max(9).step(3).label("Quantity");
@@ -506,12 +467,8 @@ fn the_props_report_the_number() {
     );
 }
 
-/// The theme: v1's Fluent number input took a *snapshot* of its own design
-/// system, so a change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentNumberInput::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

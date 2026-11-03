@@ -1,16 +1,3 @@
-//! `TextField` through the host: platform events in, real control state out.
-//!
-//! These four bodies moved here from `floom-app`'s test files for the reason
-//! `radio_measure.rs` moved: the widget is no longer reachable from the root
-//! workspace, so a test that needs it has to live where the widget does. Every
-//! assertion is kept as it was.
-//!
-//! What they are actually for is the wiring *around* the widget, which the
-//! unit file cannot reach: that a pointer press the platform reports focuses
-//! the field, that a character key reaches whatever holds focus, that an OS
-//! `ImePreedit` reaches the field's own composition and an `ImeCommit` lands in
-//! its value, and that a native participant taking focus makes the framework
-//! stop publishing an IME caret.
 
 use floom_app::{AppRunner, RunStats, WidgetHost};
 use floom_layout::{AbsoluteInset, LayoutStyle, Length, Position};

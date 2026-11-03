@@ -1,14 +1,4 @@
 //! The ported Fluent speed dial -- a floating action button and a fan of
-//! smaller ones.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the button is
-//! painted in v1's inks, and the fan is mounted only while the dial is open.
-//!
-//! ## The tripwires
-//!
-//! `the_button_is_painted_in_v1_s_ink` and `the_fan_is_mounted_only_while_the
-//! _dial_is_open` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -33,9 +23,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -44,7 +31,6 @@ fn kit() -> FluentSpeedDial {
     FluentSpeedDial::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -54,10 +40,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The fan's buttons, once the dial is open.
-///
-/// The fan is the engine's `Conditional`, so it is mounted in an update pass
-/// -- the way the host does it every frame.
 fn fan_buttons(dial: &Stack, fan_index: usize) -> Vec<Box<dyn WidgetAny>> {
     let mut fan = dial.children().remove(fan_index).build();
     let mut create = AllocatingCreateContext::new();
@@ -76,7 +58,6 @@ fn fan_buttons(dial: &Stack, fan_index: usize) -> Vec<Box<dyn WidgetAny>> {
         .collect()
 }
 
-/// The button's fill: the circle the `Pressable` wraps.
 fn fab_fill(dial: &Stack, fab_index: usize) -> Option<Color> {
     let pressable = dial.children().remove(fab_index).build();
     let surface = pressable.children().remove(0).build();
@@ -92,7 +73,6 @@ fn fab_fill(dial: &Stack, fab_index: usize) -> Option<Color> {
     })
 }
 
-/// The button's icon ink.
 fn fab_icon_ink(dial: &Stack, fab_index: usize) -> Option<Color> {
     let pressable = dial.children().remove(fab_index).build();
     let surface = pressable.children().remove(0).build();
@@ -108,8 +88,6 @@ fn fab_icon_ink(dial: &Stack, fab_index: usize) -> Option<Color> {
     })
 }
 
-/// Taps the child at `index`, the way a pointer would: a press and a release
-/// over the same spot.
 fn tap(dial: &Stack, index: usize) {
     let mut pressable = dial.children().remove(index).build();
     let mut create = AllocatingCreateContext::new();
@@ -121,9 +99,7 @@ fn tap(dial: &Stack, index: usize) {
     pressable.event(&mut up, id);
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentSpeedDialStyle = kit().resolved_style();
@@ -170,7 +146,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// A disabled dial's button is v1's dimmed pair.
 #[test]
 fn a_disabled_dial_is_v1_s_dimmed_pair() {
     let style = kit().disabled(true).resolved_style();
@@ -183,14 +158,11 @@ fn a_disabled_dial_is_v1_s_dimmed_pair() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The button is painted in v1's colours, at v1's size.
 #[test]
 fn the_button_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
     let dial = kit().view();
-    // v1's `Up` puts the fan first and the button second.
     assert_eq!(
         fab_fill(&dial, 1),
         Some(paint(resolved.fab_background)),
@@ -203,7 +175,6 @@ fn the_button_is_painted_in_v1_s_ink() {
     );
 }
 
-/// The button is the size the token says.
 #[test]
 fn the_button_is_the_size_the_token_says() {
     let resolved = kit().resolved_style();
@@ -220,9 +191,7 @@ fn the_button_is_the_size_the_token_says() {
     );
 }
 
-// --- the rules ------------------------------------------------------------
 
-/// The fan is mounted only while the dial is open.
 #[test]
 fn the_fan_is_mounted_only_while_the_dial_is_open() {
     let closed = kit().action("edit", None).action("delete", None).view();
@@ -240,7 +209,6 @@ fn the_fan_is_mounted_only_while_the_dial_is_open() {
     assert_eq!(fan_buttons(&open, 0).len(), 2, "an open dial has both");
 }
 
-/// Tapping the button opens the dial.
 #[test]
 fn tapping_the_button_opens_the_dial() {
     let dial = kit().action("edit", None).view();
@@ -252,7 +220,6 @@ fn tapping_the_button_opens_the_dial() {
     );
 }
 
-/// A disabled dial does not open.
 #[test]
 fn a_disabled_dial_does_not_open() {
     let dial = kit().disabled(true).action("edit", None).view();
@@ -264,7 +231,6 @@ fn a_disabled_dial_does_not_open() {
     );
 }
 
-/// An action reports its index.
 #[test]
 fn an_action_reports_its_index() {
     let seen = Arc::new(Mutex::new(Vec::new()));
@@ -289,10 +255,8 @@ fn an_action_reports_its_index() {
     assert_eq!(seen.lock().unwrap().as_slice(), &[1], "the action's index");
 }
 
-/// The direction decides the order of the fan and the button.
 #[test]
 fn the_direction_decides_the_order() {
-    // v1's `Up` was `Stack::vertical((actions, fab))`: the fan first.
     let up = kit()
         .direction(SpeedDialDirection::Up)
         .open(true)
@@ -300,7 +264,6 @@ fn the_direction_decides_the_order() {
         .view();
     assert_eq!(fan_buttons(&up, 0).len(), 1, "the fan is first");
 
-    // v1's `Down` was `Stack::vertical((fab, actions))`: the button first.
     let down = kit()
         .direction(SpeedDialDirection::Down)
         .open(true)
@@ -309,7 +272,6 @@ fn the_direction_decides_the_order() {
     assert_eq!(fan_buttons(&down, 1).len(), 1, "the fan is second");
 }
 
-/// The props report the direction and the button's icon.
 #[test]
 fn the_props_report_the_direction() {
     let kit = kit()
@@ -321,12 +283,8 @@ fn the_props_report_the_direction() {
     assert!(kit.props().disabled);
 }
 
-/// The theme: v1's Fluent speed dial read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentSpeedDial::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

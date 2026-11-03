@@ -1,48 +1,4 @@
-//! The editor widget.
-//!
-//! ## What the widget is
-//!
-//! A leaf widget that paints the document itself: the gutter, the text, the
-//! selection and the caret. It has no children, because every part of it is
-//! drawn from the same layout and the same state — a gutter as a child would
-//! have to be told the same thing the text is told, and the two would drift.
-//!
-//! ## Where the geometry comes from
-//!
-//! Every question the editor asks about the text — which byte is under the
-//! pointer, where is the caret, what does the selection cover — is answered by
-//! the engine's [`TextLayout`], from *one* shaping per line. The widget lays
-//! the line out and the host paints it, and the two agree because both are
-//! given the same description: the widget's [`StyledText`] and the host's are
-//! the same value, so the glyphs the caret was measured against are the
-//! glyphs that get painted.
-//!
-//! ## The line model
-//!
-//! A source line is one or more **rows** on screen. With soft wrap off a line
-//! is one row; with it on, a long line is several, and the engine decides
-//! where the breaks fall — the widget asks the layout how many rows a line
-//! took and places them a line height apart.
-//!
-//! The line height is the same for every row, and it is a number the *widget*
-//! knows rather than one it measures: the engine is told the height, so the
-//! rows it shapes are exactly that far apart, and the scroll position, the
-//! gutter and the "which row is the caret on" question all agree because they
-//! are all counting the same thing.
-//!
-//! The scroll position is anchored on a source line rather than on a pixel
-//! offset into the document. A pixel offset would need the height of every
-//! line above the viewport to be interpreted, which is a whole document of
-//! layout for a number that only ever moves a little at a time; anchoring it
-//! on a line means scrolling forward is one line of layout and scrolling
-//! backward is one line of layout.
-//!
-//! ## The selection
-//!
-//! The selection is one or more regions, and it is the editor core's own
-//! [`Selection`] rather than a single region. A selection with one region is
-//! an ordinary selection; a selection with several is the editor's multiple
-//! cursors — every edit applies to all of them, and every caret is drawn.
+
 
 use std::collections::HashMap;
 use std::ops::Range;

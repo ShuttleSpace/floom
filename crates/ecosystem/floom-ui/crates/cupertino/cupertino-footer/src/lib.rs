@@ -1,48 +1,5 @@
 //! Cupertino footer, ported to the Floom 2.0 widget API.
 //!
-//! The one thing this kit answers differently from Material is the design
-//! system it resolves against: the bar is 44dp tall with 12dp of
-//! padding, from the Cupertino tokens, and every colour comes from the
-//! Cupertino palette.
-//!
-//! The theme is a `MultiTheme` snapshot rather than the app-wide signal that
-//! Material's kit uses. That is v1's difference, kept: v1 held a snapshot here
-//! and the live signal there.
-//!
-//! # What changed from v1
-//!
-//! v1 built a view by composing and styling:
-//!
-//! ```ignore
-//! Container::new(child).style(move |s| {
-//!     let mut s = s.width_pct(100.0).height(h).padding(pad).items_center()
-//!                .background(surface).color(on_surface);
-//!     if bordered { s = s.border_color(outline_variant).border_top(border); }
-//!     if elevation > 0 { s = s.box_shadow_blur(6.0)..; }
-//!     s
-//! })
-//! ```
-//!
-//! Each of those becomes a different thing in 2.0:
-//!
-//! * the box is a [`Surface`] — a decorated box that holds its child and pads it;
-//! * `items_center` is [`Surface::request`]'s `main_align` / `cross_align`, not a
-//!   property of the fill, because the child is what gets centred;
-//! * `border_top` is [`Surface::border_edges`] with [`Edges::TOP`], the one thing
-//!   v1's four-sided stroke could not say;
-//! * `color(..)` on the box does not exist in 2.0 at all: colour belongs to the
-//!   thing that draws, so the content colour is exposed as
-//!   [`CupertinoFooter::content_color`] for the child to use.
-//!
-//! # The layout registry is kept
-//!
-//! v1 called `register_layout(LayoutSlot::Footer, height)` while building the
-//! view, and `md-main` reads that process-wide signal to inset the content
-//! region. Dropping it would leave every footer's content overlapped by the bar,
-//! so [`CupertinoFooter::view`] still publishes — at build time, exactly as v1 did, not
-//! reactively. A footer whose height changes after mount does not re-publish,
-//! which was already true in v1 and is recorded in
-//! [`CupertinoFooter::publish_layout`] rather than quietly improved.
 
 use floom_core::{LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
@@ -286,7 +243,6 @@ impl CupertinoFooter {
             Some(child) => surface.push(move || child()),
             // v1 substituted an empty view. A `Surface` with no children is the
             // same answer without a node, and leaves the bar's centring
-            // uncontested.
             None => surface,
         }
     }

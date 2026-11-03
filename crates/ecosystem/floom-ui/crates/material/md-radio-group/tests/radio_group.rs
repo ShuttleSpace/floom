@@ -1,15 +1,3 @@
-//! The ported Material radio group -- a column of options, each a ring with a
-//! dot in it when it is chosen.
-//!
-//! The state lives in the engine's `SelectGroup`, so what is tested here is the
-//! *translation* and the *pixels*: the tokens reach the style, and the ring,
-//! the dot and the label are painted the way v1 painted them.
-//!
-//! ## The tripwires
-//!
-//! `the_ring_and_the_dot_are_painted_in_v1_s_colours` and
-//! `the_chosen_option_is_the_one_with_a_dot` would fail if this kit stopped
-//! being this kit.
 
 use floom_core::{ElementId, Rect, Widget};
 use floom_types::Color;
@@ -29,9 +17,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -60,12 +45,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// One option's row: the ring, and the label beside it.
-///
-/// The group's own decoration sits between the row and the row's content: the
-/// group, the row, the `Pressable` that catches the click, and the `Surface`
-/// the group paints the row's fill on. The content -- the stack that holds the
-/// ring and the label -- is inside that surface.
 fn row_of(group: &SelectGroup, index: usize) -> Box<dyn Widget> {
     let pressable = group.children()[index].build().children().remove(0).build();
     let surface = pressable.children().remove(0).build();
@@ -77,7 +56,6 @@ fn ring_of(row: &dyn Widget) -> Box<dyn Widget> {
     row.children().remove(0).build()
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -112,9 +90,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The ring and the dot are painted in v1's colours, at v1's sizes.
 #[test]
 fn the_ring_and_the_dot_are_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -124,7 +100,6 @@ fn the_ring_and_the_dot_are_painted_in_v1_s_colours() {
     let ring = ring_of(&*row);
     let ring_ops = ops_of(&*ring);
 
-    // The ring is an outline, not a fill.
     let (width, colour) = ring_ops
         .iter()
         .find_map(|op| match op {
@@ -142,7 +117,6 @@ fn the_ring_and_the_dot_are_painted_in_v1_s_colours() {
         "in v1's ring colour"
     );
 
-    // And the dot inside it.
     let dot = ring.children().remove(0).build();
     let dot_ops = ops_of(&*dot);
     let fill = dot_ops.iter().find_map(|op| match op {
@@ -181,7 +155,6 @@ fn the_chosen_option_is_the_one_with_a_dot() {
     );
 }
 
-/// The label is painted in v1's ink, at v1's size.
 #[test]
 fn the_label_is_painted_in_v1_s_ink() {
     let group = kit().option("One").selected(0).view();
@@ -202,7 +175,6 @@ fn the_label_is_painted_in_v1_s_ink() {
     assert_eq!(ink, Color::BLACK, "and the engine's default ink");
 }
 
-// --- the rules ------------------------------------------------------------
 
 /// The option chosen before mount is the chosen one.
 #[test]
@@ -234,12 +206,8 @@ fn the_props_report_the_options() {
     assert_eq!(kit.props().selected, Some(1));
 }
 
-/// The theme: v1's Material radio group read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialRadioGroup::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

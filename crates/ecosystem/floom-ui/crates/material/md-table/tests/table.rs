@@ -1,16 +1,3 @@
-//! The ported Material 3 table -- a header row and body rows in a shared
-//! grid.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the frame is
-//! outlined in v1's colour, the header and the rows are filled in v1's
-//! colours, and the cells are painted in v1's ink at v1's sizes.
-//!
-//! ## The tripwires
-//!
-//! `the_header_row_is_filled_in_v1_s_colour` and
-//! `the_cells_are_painted_in_v1_s_ink` would fail if this kit stopped being
-//! this kit.
 
 use floom_core::{ElementId, Rect, Widget, WidgetAny};
 use floom_types::{Color, FontWeight};
@@ -29,9 +16,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -119,7 +103,6 @@ fn cell_text(cell: &Box<dyn WidgetAny>) -> Option<(String, f32, Color, FontWeigh
     })
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -170,7 +153,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-/// v1's dense factors: `row_height * 0.78` and `header_height * 0.82`.
 #[test]
 fn a_dense_table_is_shorter_by_v1_s_factors() {
     let style = kit().dense(true).resolved_style();
@@ -197,9 +179,7 @@ fn the_props_report_the_table() {
     assert!(kit.props().striped);
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The frame is outlined in v1's colour, at v1's width, with v1's radius.
 #[test]
 fn the_frame_is_outlined_in_v1_s_colour() {
     let frame = table().view();
@@ -212,7 +192,6 @@ fn the_frame_is_outlined_in_v1_s_colour() {
     assert_eq!(border.edges(), floom_core::Edges::ALL, "all four sides");
     assert_eq!(frame.decoration().corner_radius(), tokens().border_radius);
 
-    // And the outline is what the frame paints: a stroke, not a fill.
     let ops = ops_of(&frame);
     assert!(
         ops.iter().any(|op| matches!(
@@ -231,7 +210,6 @@ fn the_frame_is_outlined_in_v1_s_colour() {
     );
 }
 
-/// The header row is filled in v1's colour and carries no rule.
 #[test]
 fn the_header_row_is_filled_in_v1_s_colour() {
     let style = table().resolved_style();
@@ -273,7 +251,6 @@ fn the_rows_are_filled_in_v1_s_colours() {
     );
 }
 
-/// v1's rows carry a rule under them, in the outline colour.
 #[test]
 fn the_body_rows_carry_v1_s_rule() {
     let style = table().resolved_style();
@@ -283,13 +260,11 @@ fn the_body_rows_carry_v1_s_rule() {
     assert_eq!(fills[1], paint(style.outline), "v1's rule colour");
 }
 
-/// The cells are painted in v1's ink at v1's sizes.
 #[test]
 fn the_cells_are_painted_in_v1_s_ink() {
     let style = table().resolved_style();
     let rows = rows(&table().view());
 
-    // The header's cells.
     let header_cells = cells(&rows[0]);
     assert_eq!(header_cells.len(), 2, "one cell per header");
     let (text, size, ink, weight) = cell_text(&header_cells[0]).expect("the header's text");
@@ -298,7 +273,6 @@ fn the_cells_are_painted_in_v1_s_ink() {
     assert_eq!(ink, paint(style.on_surface), "v1's header ink");
     assert_eq!(weight, style.header_weight, "v1's header weight");
 
-    // The body cells.
     let body_cells = cells(&rows[1]);
     assert_eq!(body_cells.len(), 2, "one cell per value");
     let (text, size, ink, _) = cell_text(&body_cells[0]).expect("the cell's text");
@@ -307,7 +281,6 @@ fn the_cells_are_painted_in_v1_s_ink() {
     assert_eq!(ink, paint(style.on_surface_variant), "v1's body ink");
 }
 
-// --- the structure --------------------------------------------------------
 
 /// The table holds the header first, then the body rows.
 #[test]
@@ -340,7 +313,6 @@ fn the_frame_declares_the_minimum_width() {
     );
 }
 
-/// The rows declare v1's heights.
 #[test]
 fn the_rows_declare_v1_s_heights() {
     let style = table().resolved_style();
@@ -354,14 +326,9 @@ fn the_rows_declare_v1_s_heights() {
     assert_eq!(body.height.and_then(|h| h.px()), Some(style.row_height));
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// v1's Material table read the *app-wide* theme signal, so a change of theme
-/// re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialTable::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

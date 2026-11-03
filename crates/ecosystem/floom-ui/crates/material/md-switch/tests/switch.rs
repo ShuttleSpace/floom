@@ -1,16 +1,3 @@
-//! Material switch: v1's geometry and colours, exactly.
-//!
-//! ## Why this suite is mostly assertions about tokens
-//!
-//! The three v1 kits wrote the same switch — measured: their `resolved_style()`
-//! bodies are byte-identical once naming is stripped. So there is no per-kit
-//! behaviour to test, only that the engine reproduces one shared shape.
-//!
-//! What matters is that the shape is v1's and not the engine's default. The
-//! engine derives 40x20 with a full-height flush knob; v1 drew 52x32 with a 24
-//! knob inset 2px on both ends. Both tests below state which is which, because
-//! an adapter that quietly fell back to the default would render a
-//! plausible-looking switch that is 20% narrower than the one it replaced.
 
 use floom_core::{ElementId, Widget};
 use floom_types::{Point, Rect};
@@ -32,11 +19,7 @@ fn material() -> MdSwitch {
     MdSwitch::new().with_theme(MultiTheme::new_for(DesignSystem::Material))
 }
 
-// --- geometry --------------------------------------------------------------
 
-/// **The control for every geometry assertion below.** The engine's own
-/// derivation gives 40x20, so "52 wide" and "32 tall" are both *not* the
-/// default and cannot pass by inheriting it.
 #[test]
 fn the_engine_default_would_have_drawn_a_different_switch() {
     let engine = floom_widgets::Switch::new("").track_bounds(ROW);
@@ -48,9 +31,6 @@ fn the_engine_default_would_have_drawn_a_different_switch() {
     );
 }
 
-/// v1's three tokens, used as given. None of them satisfies the engine's
-/// derivation: `52 * 0.5` is 26, not 32, and a knob as tall as the track would
-/// be 32, not 24.
 #[test]
 fn the_track_is_the_tokens_verbatim() {
     let track = material().switch().track_bounds(ROW);
@@ -58,24 +38,6 @@ fn the_track_is_the_tokens_verbatim() {
     assert_eq!(track.height(), 32.0, "not 52 * 0.5 = 26");
 }
 
-/// **All three kits share one set of switch tokens.** Measured against the
-/// theme layer, not inferred from the adapters:
-///
-/// ```text
-/// Material:  width=52 height=32 thumb_size=24
-/// Cupertino: width=52 height=32 thumb_size=24
-/// Fluent:    width=52 height=32 thumb_size=24
-/// ```
-///
-/// There is a single `SwitchTokens` in `floom-core-theme`, reached through
-/// `ComponentId::Switch`, so the three design systems cannot disagree here even
-/// in principle.
-///
-/// Two of the three crates carried an older `tests/api.rs` asserting 51 x 31
-/// (cupertino) and 40 x 20 (fluent). Those assertions were stale — they
-/// predate the tokens being shared — and following them would have given two
-/// kits the wrong switch. The measurement above is what the theme layer returns
-/// today.
 #[test]
 fn the_track_is_the_shared_switch_token() {
     let track = material().switch().track_bounds(ROW);
@@ -96,9 +58,6 @@ fn the_knob_is_24_square_and_centred_in_the_track() {
     );
 }
 
-/// **The v1 reproduction, stated as a claim.** v1 wrote `padding(2.0)` on the
-/// track with the knob centred inside it and justified to one end, so the knob
-/// sat 2px from that end and nowhere touched the track's edge.
 #[test]
 fn a_knob_inside_the_track_with_2px_gaps() {
     let off = material().switch().knob_bounds(ROW);
@@ -107,15 +66,9 @@ fn a_knob_inside_the_track_with_2px_gaps() {
     assert_eq!(off.x0, ROW.x0 + 2.0, "2px from the start");
     assert_eq!(on.x1, ROW.x0 + 52.0 - 2.0, "2px from the far end");
 
-    // And the travel is the gap between those two, not the track width.
     assert_eq!(on.x0 - off.x0, 24.0, "52 - 24 - 2 - 2");
 }
 
-/// **The dead field.** v1's style struct carried `thumb_offset = width -
-/// height` = 20, which would have dropped the knob off-centre by 8px. `view()`
-/// never read it. If this crate reproduced the formula instead of v1's
-/// `justify_start`/`justify_end`, the checked knob would land at x = 20 rather
-/// than 26.
 #[test]
 fn the_dead_thumb_offset_is_not_reproduced() {
     let on = material().checked(true).switch().knob_bounds(ROW);
@@ -127,7 +80,6 @@ fn the_dead_thumb_offset_is_not_reproduced() {
     assert_ne!(on.x0, ROW.x0 + 20.0, "the formula v1 never applied");
 }
 
-// --- colours ---------------------------------------------------------------
 
 /// The resting colours are the theme's, which is the whole reason a kit has to
 /// be able to supply a palette at all.
@@ -164,9 +116,6 @@ fn the_palette_reaches_the_painted_pixels() {
     );
 }
 
-/// v1's disabled alphas are two different roles at two different strengths —
-/// `on_surface` at 12/255 for the track and `outline` at 38/255 for the knob.
-/// Neither is "half alpha", which is what the engine would have done.
 #[test]
 fn the_disabled_alphas_are_v1_s_own_two_values() {
     let theme = MultiTheme::new_for(DesignSystem::Material);
@@ -215,7 +164,6 @@ fn a_disabled_switch_paints_the_explicit_disabled_colours() {
     assert!(painted.contains(&track), "expected {track} in {painted}");
 }
 
-// --- behaviour -------------------------------------------------------------
 
 /// The checked flag reaches the engine, so the knob is on the right by default.
 #[test]
@@ -227,8 +175,6 @@ fn the_checked_flag_reaches_the_engine() {
 /// The disabled flag reaches the engine too.
 #[test]
 fn the_disabled_flag_reaches_the_engine() {
-    // The control: the flag defaults to enabled, so the second assertion below
-    // is "and not this" rather than a restatement.
     assert!(
         !material().switch().interaction().disabled,
         "a fresh switch is interactive"
@@ -269,8 +215,6 @@ fn the_knob_is_inside_its_track_in_both_states() {
     }
 }
 
-/// The engine's label is empty, because v1's switch has no text in it — the
-/// `Switch::new` label is a floom-widget affordance, not a v1 field.
 #[test]
 fn the_engine_label_is_empty() {
     let switch = material().switch();

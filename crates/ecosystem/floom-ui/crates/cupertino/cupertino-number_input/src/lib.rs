@@ -1,67 +1,5 @@
 //! Cupertino number input, ported to the Floom 2.0 widget API.
 //!
-//! A number input is a text field with a `-` and a `+` button beside it: the
-//! text can be edited freely, and the two buttons step the number.
-//!
-//! ## What the port uses
-//!
-//! The engine's [`TextInput`] for the text, the engine's `Pressable` for the
-//! two buttons, and the engine's vocabulary -- a `Surface` for the field's box,
-//! a `Stack` for the row and for the column -- for everything else. There is
-//! nothing here that a widget could own and the vocabulary does not already
-//! say.
-//!
-//! ## What this kit answers
-//!
-//! * the field's height and width, the buttons' size, the field's horizontal
-//!   padding, the rim's width, the corner radius and the text's size: the
-//!   tokens;
-//! * the text's ink: `on_surface`; the field's fill: `surface`; the rim:
-//!   `outline`; the buttons' fill: `surface_variant` and their ink:
-//!   `on_surface`; the label's ink: `on_surface_variant`;
-//! * the disabled palette: `on_surface` at 38 for the ink and for the rim,
-//!   and `on_surface` at 4 for the fill. v1's numbers, read out of the style
-//!   closures v1 wrote them in.
-//!
-//! ## The style struct v1 did not have
-//!
-//! v1's number input had no `resolved_style` at all: every colour was
-//! resolved inside a `style` closure, so nothing reported what the widget
-//! drew. The port adds [`CupertinoNumberInputStyle`], which reports the tokens
-//! and the colours the paint uses -- including the two v1 never named, the
-//! buttons' fill and the label's ink, each of which v1 wrote in a closure
-//! and never surfaced.
-//!
-//! ## The number is a shared number, and the engine has none
-//!
-//! v1 kept the value in an `RwSignal<i64>` beside the text's
-//! `RwSignal<String>`. 2.0 cannot: a slot closure has to be `Send + Sync`,
-//! and an `RwSignal` is `Rc`-based. The text is the engine's `SharedBuffer`;
-//! the number is [`SharedNumber`], which is `Arc<Mutex<i64>>` -- the same
-//! shape as the engine's three shared types, and the piece the engine is
-//! missing.
-//!
-//! ## The theme
-//!
-//! v1's Cupertino number input took a *snapshot* of its own design system, so
-//! a change of the app-wide theme did not reach it. The port keeps that.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **A disabled field still takes keystrokes.** v1's `TextInput` had a
-//!   `disabled` flag and refused the keyboard; the engine's has none. The port
-//!   keeps the *value* and the callback from moving while the field is
-//!   disabled, and the field's own text still shows what was typed into it.
-//! * **The cursor.** v1's field asked for the text cursor and its buttons for
-//!   the pointer. Neither the engine's `TextInput` nor its `Pressable` answers
-//!   the cursor question, so both show the platform arrow.
-//! * **`width_pct(100.0)` on the field's text.** The port asks the text to
-//!   grow instead, which is the flexbox way of saying "take the rest of the
-//!   row": a percentage of the row's width would be the whole row *and* the
-//!   two buttons beside it.
-//! * **The accessors.** v1's number input had no `props()`, `theme()` or
-//!   `with_theme()`. The port gives all three kits the same three, because a
-//!   kit that cannot be given a theme cannot be tested against one.
 
 use std::sync::{Arc, Mutex};
 
@@ -462,7 +400,6 @@ impl CupertinoNumberInput {
             // *start* of the buffer, while `with_text` opens it at the end.
             // A kit that hands out its own buffer cannot ask for the second
             // one, so the caret is moved here -- v1's field opened with the
-            // caret after the value.
             let caret = buffer.lock().map(|text| text.len()).unwrap_or(0);
             move || {
                 let mut input = TextInput::new(buffer.clone())
@@ -471,13 +408,11 @@ impl CupertinoNumberInput {
                         font_size,
                         color: text_color,
                         // The field's box carries the fill and the rim; the
-                        // text input is the text.
                         background: None,
                         border_width: 0.0,
                         radius: 0.0,
                         // v1's `TextInput` had a padding of its own that the
                         // v1 source does not record, so the field's padding is
-                        // the only inset here.
                         padding_horiz: 0.0,
                         padding_vert: 0.0,
                         ..TextInputStyle::default()
@@ -489,12 +424,10 @@ impl CupertinoNumberInput {
                     move |text: String| {
                         // A disabled field does not move: v1's `TextInput`
                         // refused the keyboard, and the engine's has no such
-                        // flag.
                         if disabled {
                             return;
                         }
                         // v1 parsed the text and ignored anything that was
-                        // not a number, leaving the value where it was.
                         let Ok(parsed) = text.trim().parse::<i64>() else {
                             return;
                         };
@@ -515,7 +448,6 @@ impl CupertinoNumberInput {
         // The field's row: the two steppers and the text between them.
         let row = Stack::new(Axis::Horizontal)
             // v1's field was `items_center`, so the row sat on the field's
-            // middle line.
             .align(Align::Start, Align::Center)
             .push_layout(
                 LayoutRequest::new()
@@ -526,7 +458,6 @@ impl CupertinoNumberInput {
             .push_layout(
                 // The text takes the rest of the row. v1 wrote
                 // `width_pct(100.0)`, which in a row asks for the whole row
-                // *and* the two buttons beside it.
                 LayoutRequest::new().grow(1.0),
                 text,
             )
@@ -543,7 +474,6 @@ impl CupertinoNumberInput {
                 LayoutRequest::new()
                     .height(style.field_height)
                     .width(style.field_width)
-                    // v1's field was `items_center`.
                     .cross_align(Align::Center),
             )
             .padding(Insets {

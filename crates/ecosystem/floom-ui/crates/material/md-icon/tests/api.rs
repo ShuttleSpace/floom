@@ -1,10 +1,3 @@
-//! The ported Material 3 icon.
-//!
-//! v1 built an icon by handing SVG markup to a `svg` view inside a style closure
-//! that re-read the theme on every use. 2.0 has neither, so what is under test
-//! is the translation itself: the theme's tokens reach the widget, the glyph's
-//! outline survives the parser, and accessibility intent that v1 dropped
-//! entirely now reaches the semantics channel.
 
 use floom_core::{Color as EngineColor, Rect, Widget};
 use floom_core_theme::global_theme::DesignSystem;
@@ -59,9 +52,6 @@ fn the_size_falls_back_to_the_icon_tokens() {
 
 #[test]
 fn a_label_implies_the_icon_is_not_decorative() {
-    // v1's `svg` view had no accessibility wiring at all, so this pairing was
-    // inert. It is load-bearing now: `decorative` defaults true, and a labelled
-    // icon that stayed decorative would be invisible to a screen reader.
     let icon = MdIcon::new("home").label("Home");
     assert!(!icon.props().decorative);
 
@@ -95,7 +85,6 @@ fn resolve_fills_the_outline_in_the_themes_foreground() {
         "expected a filled path, got {ops:?}"
     );
 
-    // The design system colour has to survive as the engine's colour.
     let expected = theme.colors().on_surface_variant;
     let hex = format!(
         "#{:02X}{:02X}{:02X}{:02X}",
@@ -128,8 +117,6 @@ fn an_unlabelled_resolved_icon_is_decorative() {
 
 #[test]
 fn an_unknown_name_falls_back_to_the_dot_and_still_paints() {
-    // The fallback matters: a typo in an icon name must not silently remove a
-    // control's affordance.
     let icon = MdIcon::new("definitely_not_a_real_glyph");
     let widget = icon.resolve();
     let (id, _create) = allocate(&widget);
@@ -143,9 +130,6 @@ fn an_unknown_name_falls_back_to_the_dot_and_still_paints() {
 
 #[test]
 fn every_named_glyph_in_the_set_parses() {
-    // The real risk in this port is not the widget, it is the parser meeting
-    // 30-odd paths of real icon data. If any of them failed to parse, the icon
-    // would paint nothing and no single-glyph test would notice.
     for name in [
         "menu",
         "close",
@@ -190,8 +174,6 @@ fn every_named_glyph_in_the_set_parses() {
 
 #[test]
 fn name_normalisation_is_underscore_insensitive() {
-    // The kits' callers disagree about spelling (`expand_more` vs `expandMore`
-    // vs `Expand More`), and v1 accepted all three.
     let a = MdIcon::new("expand_more");
     let b = MdIcon::new("expandMore");
     let c = MdIcon::new("Expand More");
@@ -209,10 +191,6 @@ fn the_view_box_is_the_material_24() {
 
 #[test]
 fn the_v1_markup_helper_still_matches_the_glyph_data() {
-    // `md_icon_svg` survives only for crates still on v1. It and the new path
-    // accessor must not drift: both come from the same table, and a divergence
-    // would mean the same icon name rendering differently before and after its
-    // crate is ported.
     let data = floom_widget_md_icon::MdIcon::new("home").path_data();
     let markup = floom_widget_md_icon::md_icon_svg("home");
     assert!(
@@ -223,8 +201,6 @@ fn the_v1_markup_helper_still_matches_the_glyph_data() {
 
 #[test]
 fn resolving_twice_is_stable() {
-    // 2.0 rebuilds widgets inside `Child` closures, so `resolve` has to be a
-    // pure function of the props -- not something that mutates `self`.
     let icon = MdIcon::new("home").size(20.0).label("Home");
     let a = icon.resolve();
     let b = icon.resolve();
@@ -240,8 +216,6 @@ trait SizeOf {
 
 impl SizeOf for floom_widgets::VectorIcon {
     fn size_of(&self) -> Option<f32> {
-        // A request's dimension is a `Length`; a percentage has no pixel value
-        // until the containing block is known, so this asks for the pixel part.
         self.layout_request()
             .and_then(|r| r.width)
             .and_then(|l| l.px())

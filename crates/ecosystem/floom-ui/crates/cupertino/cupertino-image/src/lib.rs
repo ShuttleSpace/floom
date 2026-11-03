@@ -1,71 +1,5 @@
 //! Cupertino image, ported to the Floom 2.0 widget API.
 //!
-//! An image in a box: the picture, or -- when there is no picture -- the alt
-//! text on the placeholder fill, in a box that may be rounded and may have a
-//! size of its own.
-//!
-//! ## The gap: 2.0 has no in-kit image loading
-//!
-//! v1's image named a **source**: a local file path or an `http(s)://` URL.
-//! The kit read the file itself (`std::fs::read`), handed the bytes to
-//! v1's `img` view, and fell back to the placeholder for a URL or a missing
-//! file.
-//!
-//! 2.0's `Image` widget draws a **resource id**, and only the host can mint
-//! one: `WidgetHost::register_image_decoded` decodes the bytes and interns
-//! them in the registry the renderer reads from. A kit is below the host and
-//! has no way to reach that registry, so:
-//!
-//! * the port takes the resource the **caller** registered -- see
-//!   [`CupertinoImage::resource`] -- and the caller also says how big the
-//!   picture is -- see [`CupertinoImage::intrinsic_size`], which is what the
-//!   engine's `Cover` and `Contain` need to scale it;
-//! * there is **no network**: an `http(s)://` source has no 2.0 equivalent at
-//!   all, because 2.0 has no HTTP stack;
-//! * the **missing picture** case is reproduced: with no resource, the kit
-//!   draws v1's placeholder.
-//!
-//! [`CupertinoImage::src`] is kept so the props keep reporting the source v1
-//! named, but it records it and nothing else: it loads nothing and draws
-//! nothing.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a [`Surface`] for the box, the engine's `Image`
-//! for the picture and a `Text` for the placeholder.
-//!
-//! ## What this kit answers
-//!
-//! * the corner radius and the placeholder fill: the tokens;
-//! * the placeholder's ink: `on_surface_variant` at 180/255;
-//! * the placeholder's size: 14, which is v1's default label size;
-//! * the box's size: the caller's, if it gave one;
-//! * the corner radius: the token's, but only when the image is rounded.
-//!
-//! ## The style the port adds
-//!
-//! v1's `MdImageStyle` reported the corner radius, the placeholder fill, the
-//! size and the rounded flag -- and nothing else, although the paint also used
-//! whether the image covered its box, the placeholder's ink and its size. The
-//! port reports all of them, and names the design system, which v1's style
-//! did not.
-//!
-//! ## The theme source
-//!
-//! v1's Cupertino image took a **snapshot** of its own design system's theme
-//! rather than reading the app-wide signal, so an app-wide theme change
-//! does not re-theme it. The port keeps that difference.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The box's own ink.** v1 set `.color(on_surface_variant)` on the box,
-//!   which is the ink any text inside it would inherit. 2.0's `Surface` paints
-//!   a fill and only the child knows it is text, and the placeholder carries
-//!   its own ink, so the box's ink has nowhere to go.
-//! * **The corner radius on the picture.** v1 rounded the *box*; the picture
-//!   inside it was not clipped. 2.0 rounds the fill the same way, and the
-//!   picture is not clipped either -- the engine's clip is a separate
-//!   declaration, and this kit does not make one.
 
 use floom_core::LayoutRequest;
 use floom_signal::{RwSignal, SignalGet};
@@ -255,7 +189,6 @@ impl CupertinoImage {
             .push(move || match resource {
                 Some(resource) => Box::new(
                     Image::new(resource)
-                        // v1's `object_fit`.
                         .fit(if cover {
                             ImageFit::Cover
                         } else {

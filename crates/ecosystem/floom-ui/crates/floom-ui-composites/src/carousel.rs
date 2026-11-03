@@ -1,21 +1,3 @@
-//! `Carousel` -- a box with one slide on show, arrows and dots.
-//!
-//! Only the current slide is mounted; the arrows move between the slides and
-//! the dots say which one is on show. The three floem-ui carousel kits each
-//! used to carry their own copy of this; they share the engine's one now.
-//!
-//! ## What the kits still answer
-//!
-//! The box's fill and radius, the arrow glyphs' ink, the dots' ink, the
-//! outline's colour, width and alpha, the box's height, the dots' size and
-//! gap, the inactive dots' opacity, the arrow glyph's size and width, and
-//! the token's slide gap, which v1 never read.
-//!
-//! ## The slide on show travels in shared flags
-//!
-//! One flag per slide: exactly one of them is set, and that one is the slide
-//! on screen. A flag changes after mount -- a click moves it -- so it cannot
-//! live in a signal, which is `Rc`-based and cannot cross a slot boundary.
 
 use std::sync::Arc;
 

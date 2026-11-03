@@ -214,7 +214,7 @@ impl<'a> Lexer<'a> {
 
     fn string(&mut self) -> Result<String, DslError> {
         let start = self.span();
-        self.bump(); // opening quote
+        self.bump();
         let mut out = String::new();
         loop {
             // The span of the character this iteration is about to consume.
@@ -256,7 +256,7 @@ impl<'a> Lexer<'a> {
 
     fn color(&mut self) -> Result<Rgba, DslError> {
         let start = self.span();
-        self.bump(); // '#'
+        self.bump();
         let mut digits = String::new();
         while let Some(c) = self.peek() {
             if c.is_ascii_hexdigit() {
@@ -274,7 +274,7 @@ impl<'a> Lexer<'a> {
 
     fn reference(&mut self) -> Result<String, DslError> {
         let start = self.span();
-        self.bump(); // '@'
+        self.bump();
         if !self
             .peek()
             .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')

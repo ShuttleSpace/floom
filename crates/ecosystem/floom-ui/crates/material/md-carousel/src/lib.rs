@@ -1,72 +1,3 @@
-//! Material carousel, ported to the Floom 2.0 widget API.
-//!
-//! A carousel shows one slide at a time, with arrows to step through them
-//! and a row of dots to jump to one.
-//!
-//! ## What the port uses
-//!
-//! The engine's `Carousel`: the box, the slides, the arrows and the dots. The
-//! three floem-ui carousel kits each used to carry their own copy of all of
-//! it, down to the dot that repaints itself when the slide moves.
-//!
-//! The engine's vocabulary:
-//!
-//! * a [`Surface`] for the slide area: the fill, the radius, the outline;
-//! * a `Stack` for the area's contents, every one of them absolutely
-//!   positioned the way v1 positioned them;
-//! * [`Conditional`] for each slide's *presence*, so that only the current
-//!   slide is mounted at all -- v1's `hide()`;
-//! * [`Pressable`] for the arrows and the dots.
-//!
-//! ## The current slide is a set of flags
-//!
-//! v1 held the index in an `RwSignal<usize>` and every arrow and dot wrote
-//! it. 2.0's slots are `Send + Sync` and an `RwSignal` is `Rc`-based, so the
-//! index cannot be one. It is a *set of shared flags* instead -- one per
-//! slide, exactly one of them set -- and the index is derived from them by
-//! looking for the one that is set. That keeps a single source of truth: the
-//! flags are the state, and the index is a reading of it, not a second copy.
-//!
-//! The engine's shared types cover a bool, a string and a map; a *set of
-//! bools* is the first of those, repeated, and it is what the presence
-//! machinery already speaks.
-//!
-//! ## What this kit answers
-//!
-//! * the area's fill: `surface`; its outline: `outline` at 80 alpha;
-//! * the arrows' ink: `on_surface`; the current dot's: `primary`; the other
-//!   dots': `on_surface` at the token's inactive opacity;
-//! * the area's height: the *prop's* when it is positive, the token's
-//!   otherwise;
-//! * the radius, the dot's size and gap, and the arrow's size: the tokens.
-//!
-//! ## The token that never showed
-//!
-//! `CarouselTokens::slide_gap` (8) is read by nobody in v1: the slides were
-//! absolutely positioned on top of each other, so there was no gap to keep.
-//! The port keeps the number in the style and names it here.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The auto-play never ran.** v1's props carry `auto_play` and
-//!   `interval_ms`, and its view reads neither: there is no timer in the
-//!   kit. The port keeps both props, because they are part of the API a
-//!   caller sets, and names them here.
-//! * **The area was clipped.** v1 wrote `overflow_x(Clip).overflow_y(Clip)`
-//!   on the area. 2.0's `Surface` has no clip builder -- a widget declares
-//!   a clip through the `Widget` trait, and the box does not -- so the
-//!   slides are not clipped. They fill the area, so it only shows when a
-//!   slide's own content overflows.
-//! * **The arrows' pointer cursor.** v1 set `cursor(Pointer)` on the arrows
-//!   and on the dots. The dots keep it, because the dot is this kit's own
-//!   widget and can answer it; the arrows do not, because 2.0's `Pressable`
-//!   does not ask for a cursor and the arrow's child is a plain `Text`.
-//! * **The slides are slots, not views.** v1's `slides(Vec<AnyView>)` took
-//!   views; 2.0's takes [`Child`] slots, because a 2.0 widget is mounted by
-//!   its parent rather than returned.
-//! * **The accessors.** v1's carousel had no `props()`, `theme()` or
-//!   `with_theme()`. The port gives all three kits the same three, because a
-//!   kit that cannot be given a theme cannot be tested against one.
 
 use std::sync::Arc;
 
@@ -84,44 +15,30 @@ use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 use floom_widget_runtime::theme_signal;
 
-/// The outline's alpha. A v1 literal.
 const BORDER_ALPHA: u8 = 80;
-/// The outline's width. A v1 literal.
 const BORDER_WIDTH: f32 = 1.0;
-/// The arrow's width. A v1 literal.
 const ARROW_WIDTH: f32 = 40.0;
-/// The arrow glyph's size, as a fraction of the arrow's size. A v1 literal.
 const ARROW_FONT_RATIO: f32 = 0.6;
-/// The dots' distance from the bottom, as a fraction of the area's height.
-/// The carousel's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialCarouselStyle {
     pub design_system: &'static str,
     pub surface: Color,
     pub on_surface: Color,
-    /// v1 reported this and the view never used it -- see the module note.
     pub on_surface_variant: Color,
     pub primary: Color,
     pub border_radius: f32,
     pub height: f32,
     pub dot_size: f32,
     pub arrow_size: f32,
-    /// The outline's colour, before the alpha below. v1's style did not
-    /// report it.
     pub outline: Color,
-    /// The outline's width. A v1 literal.
     pub border_width: f32,
-    /// The outline's alpha. A v1 literal.
     pub border_alpha: u8,
     /// The gap between the dots. The token.
     pub dot_gap: f32,
     /// The opacity of the dots that are not the current one. The token.
     pub dot_inactive_opacity: f32,
-    /// The arrow glyph's size: v1 wrote `arrow_size * 0.6`.
     pub arrow_font_size: f32,
-    /// The arrow's width. A v1 literal.
     pub arrow_width: f32,
-    /// The token's slide gap. v1 never read it -- see the module note.
     pub slide_gap: f32,
 }
 
@@ -134,9 +51,6 @@ pub struct MaterialCarousel {
     /// One flag per slide: exactly one of them is set, and that one is the
     /// slide on screen.
     flags: Vec<SharedFlag>,
-    /// v1's `Box<dyn Fn(usize)>`, kept in a shareable form so a slot closure
-    /// can hold it. The props' own slot stays filled so `props()` still
-    /// reports one.
     on_change: Option<Arc<dyn Fn(usize) + Send + Sync + 'static>>,
 }
 
@@ -162,24 +76,16 @@ impl MaterialCarousel {
         self
     }
 
-    /// The area's height. v1's rule: the prop's when it is positive, the
-    /// token's otherwise.
     pub fn height(mut self, height: f32) -> Self {
         self.height = height;
         self
     }
 
-    /// Whether the carousel advances on a timer.
-    ///
-    /// v1 carried this and never ran it -- see the module note.
     pub fn auto_play(mut self, auto_play: bool) -> Self {
         self.props.auto_play = auto_play;
         self
     }
 
-    /// The auto-advance interval, in milliseconds.
-    ///
-    /// v1 carried this and never ran it -- see the module note.
     pub fn interval_ms(mut self, interval_ms: u64) -> Self {
         self.props.interval_ms = interval_ms;
         self
@@ -197,16 +103,10 @@ impl MaterialCarousel {
         self
     }
 
-    /// Called with the new index when the slide changes.
-    ///
-    /// `Send + Sync`, because 2.0's slots are shared between threads and v1's
-    /// `Box<dyn Fn(usize)>` was not.
     pub fn on_change(mut self, callback: impl Fn(usize) + Send + Sync + 'static) -> Self {
         let shared: Arc<dyn Fn(usize) + Send + Sync + 'static> = Arc::new(callback);
         self.props.on_change = Some(Box::new({
             let shared = shared.clone();
-            // The props' callback takes no index; the shared one does, and the
-            // slide that is showing is the one it names.
             move |index| shared(index)
         }));
         self.on_change = Some(shared);

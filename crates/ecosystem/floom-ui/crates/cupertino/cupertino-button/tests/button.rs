@@ -1,25 +1,5 @@
 //! Cupertino's button: the palette translation, and the fill/label pair the
 //! engine button actually paints.
-//!
-//! ## The bug this file exists to catch
-//!
-//! The engine `Button` paints a *fill* and a *label*, and they are two different
-//! knobs: `Button::color` is the fill, `Button::text_color` is the label. A kit
-//! that passes the foreground to `color` paints a foreground-coloured button
-//! with a white label on it -- and it compiles, and the style resolves, and the
-//! click fires. Nothing about the API says the button is upside down.
-//!
-//! So the assertions here are about *painted pixels*, not about the style
-//! struct: the fill the engine draws must be the kit's background, and the
-//! label it draws must be the kit's foreground. The style struct alone cannot
-//! catch the swap; only the paint can.
-//!
-//! ## The disabled palette and the engine's dimming rule
-//!
-//! The engine halves the alpha of a disabled control's fill and its label, so
-//! the kit hands it a double-alpha colour and the halving lands on v1's value.
-//! A test that read the *style* would see the doubled alpha and think the value
-//! is wrong; a test that reads the *paint* sees v1's 12 and 38.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

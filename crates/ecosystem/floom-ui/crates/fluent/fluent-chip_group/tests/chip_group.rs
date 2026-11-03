@@ -1,25 +1,4 @@
 //! The ported Fluent chip group -- a row of chips whose **ink** follows the
-//! choice.
-//!
-//! The state machine and the row's box live in the engine's `SelectGroup`, so
-//! what is tested here is the *translation* and the *pixels*: the tokens reach
-//! the engine's style, the chip paints the fill and the ink v1 painted, and
-//! v1's click rules -- the ones a radio would not have -- still hold.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style struct cannot tell a chip that paints its fill with the unchosen
-//! colour from one that paints it with the chosen colour while the label keeps
-//! the unchosen ink. Only the paint log can, so most of these tests read what
-//! the engine actually drew.
-//!
-//! ## The tripwires
-//!
-//! Four of these tests would fail if the kit stopped being this kit:
-//! `the_chosen_chip_paints_the_chosen_appearance` (the ink follows the
-//! choice), `the_chosen_chip_comes_off_when_it_is_tapped_again` (a chip is
-//! not a radio), `mandatory_does_nothing_in_multiple_mode_as_it_did_in_v1`
-//! (v1's rule, not the engine's) and `the_chip_paints_its_own_label_at_v1_s_size`.
 
 use floom_core::{Child, ChildKey, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::Color;
@@ -49,9 +28,6 @@ const ROW: Rect = Rect {
 const AT: Point = Point { x: 20.0, y: 20.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -60,7 +36,6 @@ fn group() -> FluentChipGroup {
     FluentChipGroup::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -70,14 +45,11 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// The chip's own box: the row holds a pressable, the pressable holds the
-/// surface, and the surface holds the label.
 fn chip_of(group: &SelectGroup, index: usize) -> Box<dyn WidgetAny> {
     let pressable = group.children()[index].build().children().remove(0).build();
     pressable.children().remove(0).build()
 }
 
-/// The fill and the ink one chip actually painted.
 fn chip_painted(group: &SelectGroup, index: usize) -> (Option<Color>, Option<Color>) {
     let surface = chip_of(group, index);
 
@@ -106,7 +78,6 @@ fn chip_painted(group: &SelectGroup, index: usize) -> (Option<Color>, Option<Col
     (fill, ink)
 }
 
-/// The text and the size one chip's label painted.
 fn chip_label(group: &SelectGroup, index: usize) -> (String, f32) {
     let surface = chip_of(group, index);
     let label = surface.children().remove(0).build();
@@ -125,7 +96,6 @@ fn chip_label(group: &SelectGroup, index: usize) -> (String, f32) {
         .expect("a chip paints its label")
 }
 
-/// Taps a chip, the way the host would.
 fn tap(group: &SelectGroup, index: usize) {
     let mut mounted = group.children()[index].build().children().remove(0).build();
     let pressable = mounted
@@ -146,10 +116,7 @@ fn tap(group: &SelectGroup, index: usize) {
     }
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The whole of this port: the tokens and the colours in the engine's
-/// vocabulary, with the shape of a chip and v1's rules attached.
 #[test]
 fn the_tokens_and_colours_reach_the_engine_style() {
     let style = group().select_group_style();
@@ -192,7 +159,6 @@ fn the_tokens_and_colours_reach_the_engine_style() {
     );
 }
 
-/// The numbers v1 wrote as literals, rather than as tokens.
 #[test]
 fn the_numbers_v1_wrote_as_literals_are_literals_here() {
     let resolved = group().resolved_style();
@@ -210,8 +176,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(group().resolved_style().design_system, "fluent");
 }
 
-/// The style struct is the port's whole output, so a caller can build the
-/// widget by hand from it -- which is what `view` does internally.
 #[test]
 fn the_resolved_style_is_enough_to_build_the_widget() {
     let resolved: FluentChipGroupStyle = group().resolved_style();
@@ -239,9 +203,7 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
     assert_eq!(by_hand.declared_style(), by_port);
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The chip that is not chosen: `surface_variant` with `on_surface` ink.
 #[test]
 fn the_unchosen_chip_paints_the_unchosen_appearance() {
     let resolved = group().resolved_style();
@@ -251,13 +213,6 @@ fn the_unchosen_chip_paints_the_unchosen_appearance() {
     assert_eq!(ink, Some(paint(resolved.foreground)), "and the ink");
 }
 
-/// The chosen chip: `secondary_container` with `on_secondary_container` ink.
-///
-/// The ink is the point. v1 wrote `.color(fg)` on the chip's *box*, so the
-/// label changed with the choice and not only the fill. 2.0's `Surface` paints
-/// a fill and only the child knows it is text, so the content builder has to
-/// be able to see the choice -- which is what the engine's `row_with_state` is
-/// for.
 #[test]
 fn the_chosen_chip_paints_the_chosen_appearance() {
     let resolved = group().resolved_style();
@@ -277,7 +232,6 @@ fn the_chosen_chip_paints_the_chosen_appearance() {
     assert_eq!(ink, Some(paint(resolved.foreground)), "is untouched");
 }
 
-/// The chip's own text, at v1's size.
 #[test]
 fn the_chip_paints_its_own_label_at_v1_s_size() {
     let group = group().chip("One").view();
@@ -286,9 +240,7 @@ fn the_chip_paints_its_own_label_at_v1_s_size() {
     assert_eq!(size, 13.0, "v1 wrote `.font_size(13.0)`");
 }
 
-// --- the rules ------------------------------------------------------------
 
-/// A chip can be tapped off; a radio cannot. v1's chip group did.
 #[test]
 fn the_chosen_chip_comes_off_when_it_is_tapped_again() {
     let group = group().chip("One").chip("Two").view();
@@ -301,7 +253,6 @@ fn the_chosen_chip_comes_off_when_it_is_tapped_again() {
     );
 }
 
-/// Unless it is mandatory.
 #[test]
 fn a_mandatory_chip_stays_chosen() {
     let group = group().chip("One").chip("Two").mandatory(true).view();
@@ -310,7 +261,6 @@ fn a_mandatory_chip_stays_chosen() {
     assert_eq!(group.selection(), vec![0], "v1's `cur && mandatory` guard");
 }
 
-/// Several at once, when `multiple`.
 #[test]
 fn several_chips_may_be_chosen_at_once() {
     let group = group()
@@ -324,9 +274,6 @@ fn several_chips_may_be_chosen_at_once() {
     assert_eq!(group.selection(), vec![0, 2]);
 }
 
-/// v1 read `mandatory` only in the single-mode branch, so in multiple mode it
-/// did nothing: the last chosen chip still came off. The engine is told the
-/// same thing, so the rule survives the port.
 #[test]
 fn mandatory_does_nothing_in_multiple_mode_as_it_did_in_v1() {
     let group = group()
@@ -343,7 +290,6 @@ fn mandatory_does_nothing_in_multiple_mode_as_it_did_in_v1() {
     );
 }
 
-/// One at a time, when not `multiple`.
 #[test]
 fn one_chip_at_a_time_by_default() {
     let group = group().chip("One").chip("Two").view();
@@ -352,9 +298,7 @@ fn one_chip_at_a_time_by_default() {
     assert_eq!(group.selection(), vec![1], "not [0, 1]");
 }
 
-// --- the callback ---------------------------------------------------------
 
-/// The callback reports the chosen chips.
 #[test]
 fn the_change_callback_reports_the_chosen_chips() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -368,16 +312,10 @@ fn the_change_callback_reports_the_chosen_chips() {
     tap(&group, 1);
     assert_eq!(seen.lock().unwrap().as_slice(), &[vec![1]]);
 
-    // One at a time, so the second tap *replaces* the choice rather than adding
-    // to it -- v1 cleared every other chip before setting this one.
     tap(&group, 0);
     assert_eq!(seen.lock().unwrap().as_slice(), &[vec![1], vec![0]]);
 }
 
-/// The one difference that is left, pinned: v1 reported the selection after
-/// *every* click, including a click that changed nothing, so tapping the
-/// chosen chip of a `mandatory` group reported the same indices again. The
-/// engine reports a *change*, so that click reports nothing.
 #[test]
 fn a_mandatory_chip_that_changes_nothing_reports_nothing() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -400,9 +338,6 @@ fn a_mandatory_chip_that_changes_nothing_reports_nothing() {
     );
 }
 
-/// The props report the shape, and not the callback: the kit holds that as an
-/// `Arc` of its own, because 2.0's slots are `Send + Sync` and the props'
-/// `Box<dyn Fn(..)>` is not.
 #[test]
 fn the_props_report_the_shape_and_not_the_callback() {
     let group = group().multiple(true).mandatory(true);

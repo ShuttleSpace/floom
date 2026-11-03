@@ -1,9 +1,3 @@
-//! Material gallery snapshots.
-//!
-//! These pin the *whole* grid, which is the one thing per-property tests cannot
-//! do: a change that keeps every individual assertion true but rearranges the
-//! result still shows up here. The last two tests exist to prove the snapshots
-//! can fail — a golden file that nothing can move is a file nobody reads.
 
 use floom_design::{CELL_H, ControlSize, GAP, GallerySample, InteractionState, gallery_size};
 use floom_material::{

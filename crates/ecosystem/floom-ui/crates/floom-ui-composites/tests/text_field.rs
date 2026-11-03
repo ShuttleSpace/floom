@@ -1,18 +1,3 @@
-//! `TextField`'s own logic, and the claim that its default style is the pixels
-//! the engine painted before the move.
-//!
-//! These moved with the widget from `floom_widgets/tests/controls.rs` and from
-//! `floom-testkit/tests/testkit.rs`, for the reason `radio.rs` moved: a test of a
-//! widget's behaviour belongs with the widget, and this file is what has to be
-//! deleted with it. The two IME tests came from the harness crate rather than
-//! the widgets crate and are the awkward part of the move -- see their own
-//! section below.
-//!
-//! What is new here is the half the move made possible. The old files could not
-//! say "the default style is the old palette", because there was no style --
-//! they could only assert behaviour. With `TextFieldStyle` in existence every
-//! value in its table is a promise about pixels, and the tests below are what
-//! hold it to that.
 
 use std::cell::Cell;
 use std::rc::Rc;

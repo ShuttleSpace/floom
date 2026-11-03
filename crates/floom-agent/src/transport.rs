@@ -30,8 +30,6 @@ use crate::session::AgentSession;
 /// a hostile length prefix cannot allocate for an attacker.
 const MAX_MESSAGE: u32 = 16 * 1024 * 1024;
 
-// --- local channel -----------------------------------------------------------
-
 /// An in-memory request/response pair over which the protocol runs unmodified.
 pub fn local_channel() -> (LocalClient, LocalServer) {
     let (requests_tx, requests_rx) = mpsc::channel::<AgentRequest>();
@@ -100,8 +98,6 @@ impl LocalServer {
             .expect("the client half of the channel lives as long as this server");
     }
 }
-
-// --- loopback TCP ------------------------------------------------------------
 
 /// Bind a listener for the agent transport.
 ///
@@ -203,8 +199,6 @@ fn write_message(stream: &mut TcpStream, bytes: &[u8]) -> std::io::Result<()> {
     stream.write_all(bytes)?;
     stream.flush()
 }
-
-// --- client ------------------------------------------------------------------
 
 /// A client for the loopback transport. One connection per call: an agent
 /// issues a handful of commands per decision, and per-call connections keep

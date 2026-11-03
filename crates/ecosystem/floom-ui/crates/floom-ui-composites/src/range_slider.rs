@@ -1,20 +1,3 @@
-//! `RangeSlider` -- a track with two thumbs.
-//!
-//! The engine's `Slider` is a *single*-valued control: it paints a track, a fill
-//! that runs from the left end to its value, and one thumb. A range slider needs
-//! a fill that starts where the low thumb is, and `SliderStyle` has no way to
-//! say that -- two engine sliders side by side would be two tracks, two fills
-//! and two drags, which is not this component.
-//!
-//! So this is that widget: the engine's `Slider` with two values.
-//!
-//! ## The two values travel in a shared map
-//!
-//! The values change after mount -- a drag writes them -- so they cannot live
-//! in a signal, which is `Rc`-based and cannot cross a slot boundary. They live
-//! in the engine's shared map, under `"low"` and `"high"`. The numbers travel as
-//! decimal text, which is what a map of strings is; a caller that wants a
-//! number reads it back out of the map.
 
 use std::collections::HashMap;
 use std::sync::Arc;

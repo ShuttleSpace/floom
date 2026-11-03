@@ -90,8 +90,6 @@ fn labels(tree: &Tree) -> Vec<String> {
     tree.rows().iter().map(|r| r.label.clone()).collect()
 }
 
-// --- flattening ------------------------------------------------------------
-
 #[test]
 fn a_collapsed_tree_shows_only_its_roots() {
     let tree = tree_with(model());
@@ -171,8 +169,6 @@ fn toggle_flips_one_node() {
     assert!(tree.toggle(TreeNodeId(1)));
     assert!(!tree.is_expanded(TreeNodeId(1)));
 }
-
-// --- navigation ------------------------------------------------------------
 
 #[test]
 fn right_expands_then_drills_into_the_first_child() {
@@ -289,8 +285,6 @@ fn up_and_down_walk_the_visible_rows_only() {
     assert_eq!(tree.selection().cursor(), Some(TreeNodeId(4)), "deep.rs");
 }
 
-// --- pointer ---------------------------------------------------------------
-
 #[test]
 fn clicking_the_disclosure_toggles_and_clicking_the_label_selects() {
     let mut tree = tree_with(model());
@@ -332,8 +326,6 @@ fn a_nested_row_indents_its_disclosure_column() {
     assert_eq!(b.y0, ROW_H);
     assert_eq!(b.y1, 2.0 * ROW_H);
 }
-
-// --- virtualization --------------------------------------------------------
 
 #[test]
 fn the_visible_window_and_the_row_pool_stay_bounded_on_a_huge_tree() {
@@ -388,8 +380,6 @@ fn paint_cost_is_flat_in_the_node_count() {
     );
     assert!(big_rec.ops().len() < 100);
 }
-
-// --- semantics -------------------------------------------------------------
 
 #[test]
 fn semantics_report_the_visible_and_expanded_counts() {

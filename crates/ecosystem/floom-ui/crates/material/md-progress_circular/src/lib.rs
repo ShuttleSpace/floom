@@ -1,34 +1,3 @@
-//! Material circular progress, ported to the Floom 2.0 widget API.
-//!
-//! v1 drew an SVG ring: a track circle and an accent arc over it, with the
-//! arc's length and start set by the value. 2.0's [`CircularProgress`] draws
-//! the same two things with the engine's own path and stroke, so the kit is a
-//! thin adapter over it.
-//!
-//! ## What this kit answers
-//!
-//! * **the size**: the props' size when it is set, and the token's otherwise;
-//! * **the colours**: `surface_variant` for the track, `primary` for the arc;
-//! * **the indeterminate arc**: //! **30% of the ring, starting at twelve o'clock** -- and it
-//! spins, which is the one thing v1 did that 2.0 cannot do for itself
-//!
-//! ## The size token is never read
-//!
-//! v1 wrote `if self.props.size > 0.0 { self.props.size } else { tokens.size }`,
-//! and the props' default size is **36.0** -- so the props always win and
-//! `ProgressCircularTokens::size` is dead. v1's own doc on `size()` said
-//! "Zero -- the default -- defers to the token", which is wrong: the default is
-//! 36.0, not 0. The rule is kept, because the rule is what v1 drew, and the
-//! lie is named here rather than corrected silently.
-//!
-//! ## The rotation
-//!
-//! //! Material's v1 ring spun by writing to a signal from a background thread every
-//! sixteen milliseconds. 2.0's host owns the clock, so the rotation is a value the
-//! caller sets through [`set_rotation`] -- and nothing in this crate advances it,
-//! which means the ring sits at twelve o'clock until a host drives it. Named, in
-//! the same way `floom-widgets`' linear progress names its sliding segment: the
-//! driver belongs at the host, not in a widget.
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_widgets::{CircularProgress, CircularProgressStyle};
@@ -111,7 +80,6 @@ impl MaterialProgressCircular {
             design_system: DESIGN_SYSTEM,
             track_color: theme.colors().surface_variant,
             fill_color: theme.colors().primary,
-            // v1: the props' size when it is set, the token's otherwise.
             size: if self.props.size > 0.0 {
                 self.props.size
             } else {
@@ -129,7 +97,6 @@ impl MaterialProgressCircular {
         let mut progress = if self.props.indeterminate {
             CircularProgress::indeterminate()
         } else {
-            // v1's value is a percentage; the engine's is a fraction.
             CircularProgress::determinate((self.props.value as f64 / 100.0).clamp(0.0, 1.0))
         };
         progress = progress
@@ -139,19 +106,12 @@ impl MaterialProgressCircular {
             .fill_color(to_paint(style.fill_color))
             .style(CircularProgressStyle {
                 indeterminate_fraction: style.indeterminate_fraction,
-                // v1 rotated the determinate arc to twelve o'clock in all three.
                 start_rad: -std::f64::consts::FRAC_PI_2,
                 indeterminate_start_rad: style.indeterminate_start_rad,
             });
         progress
     }
 
-    /// The arc's rotation, in turns.
-    ///
-    /// v1's Material ring spun by writing to a signal from a background thread
-    /// every sixteen milliseconds -- which is how a thread ends up driving a
-    /// widget. 2.0's host owns the clock, so the rotation is a value the caller
-    /// sets, and nothing in this crate advances it.
     pub fn set_rotation(progress: &mut CircularProgress, turns: f64) {
         progress.set_rotation(turns);
     }

@@ -1,15 +1,5 @@
 //! The ported Cupertino tooltip -- a bubble that comes up while the pointer
 //! rests on the control.
-//!
-//! The state machine is the engine's; what is tested here is the translation
-//! and the pixels: the tokens reach the engine's style, the bubble is painted
-//! the colour v1 painted, and v1's own numbers -- the gap below the control,
-//! the text size -- are the ones the port uses.
-//!
-//! ## The tripwires
-//!
-//! `the_bubble_paints_v1_s_appearance` and `the_gap_is_v1_s` would fail if
-//! this kit stopped being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget};
 use floom_types::{Color, PointerPhase};
@@ -35,7 +25,6 @@ const AT: Point = Point { x: 10.0, y: 10.0 };
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -215,7 +204,6 @@ fn the_props_report_the_text() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoTooltip::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

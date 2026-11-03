@@ -1,37 +1,4 @@
 //! Cupertino's text field as a kit crate: the token translation, and the one
-//! thing this kit answers that the other two answer differently.
-//!
-//! It is a focus affordance -- it tints that rim on hover, at
-//! `primary` alpha 120, rather than thickening the rim or ringing
-//! a ring outside it.
-//!
-//! `tests/api.rs` in this crate has never been compiled: it was written against
-//! the v1 API and nothing built it, which is how three kits came to disagree
-//! with themselves about a text field for this long. It has been rewritten for 2.0
-//! and now runs; this file covers what it does not.
-//!
-//! ## Why every test here pins the design system first
-//!
-//! `MultiTheme::activate` is documented in the theme crate as a no-op
-//! placeholder, and `MultiTheme::ds()` reads a process-wide signal at access
-//! time. So `with_theme(MultiTheme::new_for(DesignSystem::Cupertino))` does **not**
-//! make this kit read Cupertino's tokens: it reads whichever design system the process
-//! happens to be in, which is Material until something says otherwise.
-//! `theme()` below says otherwise, per thread, before every number is read.
-//!
-//! That is a property of the theme crate and not of this kit, so nothing in the
-//! kit works around it -- but it is the only reason this kit's own 44pt
-//! row and its own 17pt type are observable at all today, and it is why
-//! the numbers are pinned after the pin rather than instead of it.
-//!
-//! ## The tripwires
-//!
-//! * `the_focus_affordance_is_a_hovered_rim_of_primary_at_120`, which fails if
-//!   this kit swaps its hover tint for Material's thicker rim or Fluent's ring,
-//! * `the_placeholder_and_the_preedit_are_inherited_not_themed`, which fails if
-//!   one of the two colours v1 never named quietly acquires a theme colour,
-//! * `the_field_measures_its_own_content_rather_than_filling_its_parent`, which
-//!   fails if someone re-adds the full-width layout v1 had.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -343,7 +310,6 @@ fn the_placeholder_and_the_preedit_are_inherited_not_themed() {
     assert_eq!(style.preedit_color, default.preedit_color);
 
     // Named, because "same as the default" is a claim that a later edit to the
-    // default would silently satisfy.
     assert_eq!(default.placeholder_color, Color::rgb(0x9A, 0xA5, 0xB1));
     assert_eq!(default.preedit_color, Color::rgb(0x2B, 0x6C, 0xB0));
 
@@ -617,7 +583,6 @@ fn the_props_cross_into_the_widget() {
     );
 }
 
-// --- the focus affordance --
 
 /// **The tripwire for the three kits converging.** Cupertino tints its rim on
 /// hover, Material thickens it on focus, Fluent rings the box on focus. Each of

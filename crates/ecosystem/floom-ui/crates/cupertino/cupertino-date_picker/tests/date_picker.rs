@@ -1,15 +1,5 @@
 //! The ported Cupertino date picker -- a field, and the calendar that opens
 //! under it.
-//!
-//! The calendar is a host overlay, so what is tested here is the translation,
-//! the field's pixels, and the request the picker makes of the host: the
-//! rectangle it asks for, and what the calendar it asked for actually draws.
-//!
-//! ## The tripwires
-//!
-//! `the_calendar_is_asked_of_the_host_below_the_field` and
-//! `the_calendar_draws_the_month_and_its_days` would fail if this kit stopped
-//! being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -39,7 +29,6 @@ const FIELD: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -330,7 +319,6 @@ fn the_calendar_draws_the_month_and_its_days() {
     let mut cx = RecordingUpdateContext::with_bounds(FIELD);
     widget.update(&mut cx, id);
     // The vector is held in a local: a borrow of a temporary would not
-    // outlive the statement.
     let opened = cx.opened_overlays();
     let OverlayCall::Open {
         bounds, content, ..
@@ -372,7 +360,6 @@ fn the_calendar_draws_its_weekday_row_and_its_arrows() {
     let mut cx = RecordingUpdateContext::with_bounds(FIELD);
     widget.update(&mut cx, id);
     // The vector is held in a local: a borrow of a temporary would not
-    // outlive the statement.
     let opened = cx.opened_overlays();
     let OverlayCall::Open {
         bounds, content, ..
@@ -421,14 +408,12 @@ fn choosing_a_day_sets_the_value_and_closes_the_calendar() {
         Event::Pointer(PointerEvent::primary_up(Point::new(10.0, 10.0))),
     );
     // A host with no overlays: the calendar is mounted in the tree instead,
-    // which is the only way a test can hold on to it.
     let mut cx = RecordingUpdateContext::without_overlay_support();
     widget.update(&mut cx, id);
     let children = widget.children();
     assert_eq!(children.len(), 1, "the in-tree fallback");
     // The in-tree fallback puts the calendar on the overlay's layer, so the
     // calendar is one level deeper than the picker: the layer, then the
-    // calendar the layer holds.
     let layer = children[0].build();
     let mut calendar = layer.children().remove(0).build();
 
@@ -439,7 +424,6 @@ fn choosing_a_day_sets_the_value_and_closes_the_calendar() {
         y1: calendar_height(&style),
     };
     // The first of August 2026 is a Saturday, so it sits in the seventh
-    // column of the first week.
     let cell = cell_rect(&style, bounds, 0, 6);
     let mut event = TestEventContext::new(
         id,
@@ -517,7 +501,6 @@ fn the_props_report_the_date_and_the_placeholder() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoDatePicker::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

@@ -1,97 +1,3 @@
-//! Material file input, ported to the Floom 2.0 widget API.
-//!
-//! A file input is a trigger -- a bordered box the user clicks -- and a readout
-//! of the path that was chosen. The native picker is the host's: the trigger
-//! fires `on_change` with the current path so the host can open a real dialog,
-//! and the host writes the result back through [`MaterialFileInput::path_buffer`].
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a [`Pressable`] around a [`Surface`] for the box, and
-//! a horizontal `Stack` of two `Text`s inside it -- the trigger's label and the
-//! readout. There is nothing here that a widget could own, so the shape stays in
-//! the kit.
-//!
-//! ## What this kit answers
-//!
-//! * the box's height, its horizontal padding, its radius and the text's size:
-//!   the tokens;
-//! * the trigger label's ink: `primary`; the readout's: `on_surface` when a path
-//!   is chosen and `on_surface_variant` when it is not;
-//! * the box's rim: `outline`, or `on_surface` at 38 while disabled; the box's
-//!   fill: `surface`, or `on_surface` at 4 while disabled;
-//! * the trigger label's weight: the theme's `label.large` weight, which is
-//!   where v1 read it from;
-//! * the gap between the two texts (12), the rim's width (1) and the readout's
-//!   "No file chosen": v1 literals.
-//!
-//! ## The style the port adds
-//!
-//! v1's file input had **no** `resolved_style` at all -- the colours were read
-//! inline inside two style closures and were never reported anywhere. The port
-//! adds [`MaterialFileInputStyle`], because a kit whose appearance cannot be
-//! asked about cannot be tested against one, and because the style is the only
-//! place the differences between the three kits can be written down.
-//!
-//! ## The readout does not follow the path
-//!
-//! v1's readout was a `Label::derived` over the path signal, so it changed the
-//! moment the host wrote the path. 2.0's tree is mounted once -- a slot's build
-//! closure runs when the key is new and never again -- so the readout shows the
-//! path as it was when the kit was built. The *trigger* is live: it reports the
-//! path as it is at the moment of the click, which is what the host needs in
-//! order to open a picker. A host that wants a live readout rebuilds the kit.
-//!
-//! ## The content slot
-//!
-//! v1's file input had **no** slot for the caller's own content: the box held
-//! the trigger label and the readout, and nothing else. The port adds an
-//! optional [`Child`] slot after the readout, for one reason: the readout
-//! cannot follow the path in 2.0 (see above), so a caller who needs a live
-//! one has to supply it. With the slot empty -- which is how the port is used
-//! by default -- the box is exactly v1's.
-//!
-//! With the slot filled, the row's `justify_between` spreads three children
-//! instead of two, so the readout is no longer hard against the right edge.
-//! That is named here rather than left to be discovered.
-//!
-//! ## The path is a buffer, not a signal
-//!
-//! v1's `path_signal()` returned an `RwSignal<Option<String>>`. 2.0's slot
-//! closures must be `Send + Sync` and an `RwSignal` is `Rc`-based, so the path is
-//! the engine's [`SharedBuffer`]: an `Arc<Mutex<String>>`. An empty buffer is
-//! v1's `None` -- "no file chosen".
-//!
-//! ## The callback
-//!
-//! v1's `on_change` was a `Box<dyn Fn(Option<String>)>` in the shared props.
-//! 2.0's slots are shared between threads, so the kit keeps its own
-//! `Arc<dyn Fn(Option<String>) + Send + Sync>` and the props' slot stays empty.
-//!
-//! ## The weight the port maps
-//!
-//! v1's `to_floom()` answered in parley's `FontWeight`, because v1's text style
-//! took parley's. 2.0's `Text` takes the engine's own nine weights, so the kit
-//! maps between them. The two scales are the same nine names except that the
-//! theme says `Regular` where the engine says `Normal`.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **`cursor(CursorStyle::Pointer)`.** 2.0's paint context has no cursor
-//!   vocabulary. The trigger is still a `Pressable`, so it is still activatable
-//!   by keyboard, which the pointer was not.
-//! * **`accept` and `multiple`.** v1 stored both and the view read neither: they
-//!   are hints for the host's picker, not something the view enforces. The port
-//!   keeps them in the props, and the props still report them.
-//! * **The accessors.** v1's file inputs had no `with_theme()`. The port gives
-//!   all three kits the same set, because a kit that cannot be given a theme
-//!   cannot be tested against one.
-//!
-//! ## The one thing the port adds to the trigger
-//!
-//! v1's box published nothing to assistive technology. 2.0's `Pressable` does,
-//! so the port gives it the trigger's label as its accessible name. That is a
-//! fix rather than a translation, and it is named here rather than slipped in.
 
 use std::sync::{Arc, Mutex};
 
@@ -113,18 +19,13 @@ use floom_widget_runtime::theme_signal;
 /// A callback in the shape 2.0's slots need.
 type Callback = Arc<dyn Fn(Option<String>) + Send + Sync + 'static>;
 
-/// The gap between the trigger label and the readout. A v1 literal.
 const GAP: f32 = 12.0;
-/// The rim's width. A v1 literal.
 const BORDER_WIDTH: f32 = 1.0;
 /// What the readout says when no path has been chosen. A v1 literal.
 const NO_FILE_CHOSEN: &str = "No file chosen";
-/// v1's disabled rim: `on_surface` at 38.
 const DISABLED_ALPHA: u8 = 38;
-/// v1's disabled fill: `on_surface` at 4.
 const DISABLED_FILL_ALPHA: u8 = 4;
 
-/// The file input's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MaterialFileInputStyle {
     pub design_system: &'static str,
@@ -152,9 +53,7 @@ pub struct MaterialFileInputStyle {
     pub font_size: f32,
     /// The trigger label's weight, from the theme's type scale.
     pub trigger_font_weight: FontWeight,
-    /// The gap between the trigger label and the readout. A v1 literal.
     pub gap: f32,
-    /// The rim's width. A v1 literal.
     pub border_width: f32,
     /// What the readout says when no path has been chosen. A v1 literal.
     pub empty_path_label: &'static str,
@@ -164,22 +63,8 @@ pub struct MaterialFileInputStyle {
 pub struct MaterialFileInput {
     props: FileInputProps,
     theme: RwSignal<MultiTheme>,
-    /// The caller's own content, after the readout.
-    ///
-    /// v1's file input had no such slot; see the module documentation.
     child: Option<Child>,
-    /// The chosen path, shared with whoever writes it.
-    ///
-    /// A [`SharedBuffer`] rather than v1's `RwSignal<Option<String>>`: a 2.0 slot
-    /// closure has to be `Send + Sync` and an `RwSignal` is `Rc`-based. An empty
-    /// buffer is v1's `None`.
     path: SharedBuffer,
-    /// The change callback in the shape 2.0's slots need.
-    ///
-    /// `Send + Sync` is required, not incidental: 2.0 rebuilds a widget inside a
-    /// `Child` closure the host may hand between threads, so the callback is
-    /// shared as an `Arc`. v1's callback was a `Box<dyn Fn(..)>` in the shared
-    /// props, which cannot cross that boundary.
     on_change: Option<Callback>,
 }
 
@@ -194,19 +79,11 @@ impl MaterialFileInput {
         }
     }
 
-    /// The trigger's label. v1's default is "Upload".
     pub fn label(mut self, label: impl Into<String>) -> Self {
         self.props.label = label.into();
         self
     }
 
-    /// Supply content to put in the box, after the readout.
-    ///
-    /// v1 had no such slot: the box held the trigger label and the readout,
-    /// and nothing else. The port adds one for one reason -- the readout cannot
-    /// follow the path in 2.0 (see the module documentation), so a caller who
-    /// needs a live one has to supply it. With the slot empty, which is how the
-    /// port is used by default, the box is exactly v1's.
     pub fn child(mut self, child: Child) -> Self {
         self.child = Some(child);
         self
@@ -237,11 +114,6 @@ impl MaterialFileInput {
         self
     }
 
-    /// The shared props, for a caller that reads the design-system-neutral shape.
-    ///
-    /// `on_change` is deliberately absent from what it reports: the kit holds
-    /// that as an `Arc` of its own (see the field's note), and `FileInputProps`
-    /// is the v1 carrier of a `Box<dyn Fn(..)>` that 2.0 cannot use.
     pub fn props(&self) -> &FileInputProps {
         &self.props
     }
@@ -255,10 +127,6 @@ impl MaterialFileInput {
         self
     }
 
-    /// The shared path buffer, so the host can write the picker's result.
-    ///
-    /// v1's `path_signal()`. The type changed because the type had to: a 2.0
-    /// slot closure cannot hold an `RwSignal`.
     pub fn path_buffer(&self) -> SharedBuffer {
         self.path.clone()
     }
@@ -310,7 +178,6 @@ impl MaterialFileInput {
         let disabled = self.props.disabled;
         let label_text = self.props.label.clone();
 
-        // The readout is read once, here: 2.0's tree is mounted once.
         let path = self.path();
         let chosen = !path.is_empty();
         let readout_text = if chosen {
@@ -328,10 +195,8 @@ impl MaterialFileInput {
         let font_size = style.font_size;
         let trigger_weight = style.trigger_font_weight;
 
-        // v1's `Stack::horizontal((label, readout))`.
         let mut row = Stack::new(Axis::Horizontal)
             .gap(style.gap)
-            // v1's `.items_center().justify_between()`.
             .align(Align::SpaceBetween, Align::Center)
             .request(LayoutRequest::new().width_pct(100.0))
             .push({
@@ -356,9 +221,6 @@ impl MaterialFileInput {
                 }
             });
 
-        // The caller's own content, if any. It goes after the readout, so the
-        // row's `justify_between` spreads three children instead of two and
-        // the readout is no longer hard against the right edge.
         if let Some(child) = self.child.clone() {
             row = row.child(child);
         }
@@ -378,7 +240,6 @@ impl MaterialFileInput {
             .request(
                 LayoutRequest::new()
                     .height(style.height)
-                    // v1's `.items_center()` on the box.
                     .cross_align(Align::Center),
             )
             .padding_horiz(f64::from(style.padding_horizontal))
@@ -398,12 +259,9 @@ impl MaterialFileInput {
             LayoutRequest::new(),
             move || Box::new(surface.clone()),
         ))
-        // v1's `set_disabled(disabled.get())`.
         .disabled(disabled)
         .label(label_text)
         .on_click(move || {
-            // v1's `.action(..)`: the callback fires only when the control is not
-            // disabled, and it is handed the path as it is at that moment.
             if disabled {
                 return;
             }
@@ -425,12 +283,6 @@ impl Default for MaterialFileInput {
     }
 }
 
-/// The theme's weight, in the engine's vocabulary.
-///
-/// v1's `to_floom()` answered in parley's `FontWeight`, because v1's text style
-/// took parley's. 2.0's `Text` takes the engine's own nine weights, and the two
-/// scales differ in one name: the theme says `Regular` where the engine says
-/// `Normal`.
 fn engine_weight(weight: ThemeFontWeight) -> FontWeight {
     match weight {
         ThemeFontWeight::Thin => FontWeight::Thin,

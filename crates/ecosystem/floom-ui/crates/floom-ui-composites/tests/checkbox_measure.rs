@@ -1,19 +1,3 @@
-//! A checkbox's intrinsic extent, measured through a real host.
-//!
-//! This is the half of `floom-app/tests/composite_measure.rs` that belongs to the
-//! widget rather than to the crate. Nothing named `Checkbox` was left asserted
-//! there after the move -- the file's switch row covers "indicator + gap +
-//! label, height fits both" for the control that stayed -- but the measurement
-//! still has to be pinned somewhere, and it has to be pinned *here*, because
-//! `layout_request` now reads the style and a kit's 20px box is laid out from the
-//! style's own numbers rather than from the engine's.
-//!
-//! The 20px case is the reason this file exists rather than the default's 16.
-//! All three v1 kits read `CheckboxTokens::size`, and Material's is 20, so a
-//! layout that measured the label at the engine's 14 and reserved the engine's
-//! 16 would clip a fifth of the control. That is the same defect the `Slider`
-//! and `Radio` ports fixed, and the assertions below are what hold the fix in
-//! place.
 
 use floom_app::{NodeId, WidgetHost};
 use floom_core::Widget;

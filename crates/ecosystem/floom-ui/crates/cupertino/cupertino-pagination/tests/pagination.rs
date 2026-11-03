@@ -1,17 +1,5 @@
 //! The ported Cupertino pagination -- the page buttons, and the arrows either
 //! side of them.
-//!
-//! ## Why the pixels and not the style
-//!
-//! A style assertion cannot see a fill swap: the selected page is `primary`
-//! and the others are nothing at all, and only the paint log can tell them
-//! apart. So the tests read what was drawn.
-//!
-//! ## The tripwires
-//!
-//! `the_selected_page_is_filled_in_primary`,
-//! `the_other_pages_are_filled_with_nothing` and
-//! `the_controls_are_a_column` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -37,7 +25,6 @@ const AT: Point = Point { x: 20.0, y: 20.0 };
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -162,7 +149,6 @@ fn the_design_system_is_named_in_the_style() {
 fn the_selected_page_is_filled_in_primary() {
     let style = kit().resolved_style();
     // The controls are: the previous arrow, page one, page two, page three,
-    // and the next arrow.
     let control = control_at(kit().total(3).current(2), 2);
     let ops = ops_of(&*box_of(control.as_ref()));
     let (fill, radius) = ops
@@ -368,7 +354,6 @@ fn the_props_report_the_totals() {
     );
 
     // v1's props held the callback too, so a kit that was given one reports
-    // one.
     let with_callback = kit().total(7).current(3).on_change(|_| {});
     assert!(
         with_callback.props().on_change.is_some(),

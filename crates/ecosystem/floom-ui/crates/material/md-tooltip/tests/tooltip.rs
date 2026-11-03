@@ -1,15 +1,3 @@
-//! The ported Material tooltip -- a bubble that comes up while the pointer
-//! rests on the control.
-//!
-//! The state machine is the engine's; what is tested here is the translation
-//! and the pixels: the tokens reach the engine's style, the bubble is painted
-//! the colour v1 painted, and v1's own numbers -- the gap below the control,
-//! the text size -- are the ones the port uses.
-//!
-//! ## The tripwires
-//!
-//! `the_bubble_paints_v1_s_appearance` and `the_gap_is_v1_s` would fail if
-//! this kit stopped being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget};
 use floom_types::{Color, PointerPhase};
@@ -33,9 +21,6 @@ const BOX: Rect = Rect {
 const AT: Point = Point { x: 10.0, y: 10.0 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -91,7 +76,6 @@ fn bubble_painted(tooltip: &Tooltip) -> (Option<Color>, Option<Color>) {
         _ => None,
     });
 
-    // The text is the bubble's child.
     let label = bubble.children().remove(0).build();
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = label.create(&mut create);
@@ -106,7 +90,6 @@ fn bubble_painted(tooltip: &Tooltip) -> (Option<Color>, Option<Color>) {
     (fill, ink)
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the engine's style.
 #[test]
@@ -133,7 +116,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-/// The gap below the control is v1's: v1 wrote `translate_y(4.0)` on the bubble
 #[test]
 fn the_gap_is_v1_s() {
     assert_eq!(
@@ -143,10 +125,7 @@ fn the_gap_is_v1_s() {
     );
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The bubble is painted the colour v1 painted: the fill at 230 and the text
-/// in the surface colour.
 #[test]
 fn the_bubble_paints_v1_s_appearance() {
     let resolved = kit().resolved_style();
@@ -210,12 +189,8 @@ fn the_props_report_the_text() {
     assert_eq!(kit.props().text, "Hello");
 }
 
-/// The theme: v1's Material tooltip read the *app-wide* theme signal, so a
-/// change of theme re-themes the tooltip with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialTooltip::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

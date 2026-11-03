@@ -1,20 +1,5 @@
 //! The ported Material counter.
 //!
-//! ## What this suite is actually about
-//!
-//! A token adapter is the shortest port in the library, and the risk in it is not
-//! the code — it is a number that is silently wrong. So the tests here are mostly
-//! **"is this value read, or is it a literal in disguise?"**, and the control for
-//! each is the same number coming from a different kit.
-//!
-//! ## The one literal, and why it is not a bug
-//!
-//! v1 wrote `s.font_size(16.0)` on the readout in all three kits and
-//! `CounterTokens` has no font-size field. So the 16.0 is a constant of the design
-//! system rather than a token, it is named [`READOUT_FONT_SIZE`] rather than
-//! inlined, and all three crates declare the same value — which is a *measured*
-//! agreement, not an assumption. See
-//! `the_readout_font_size_is_sixteen_and_is_not_a_token`.
 
 use std::sync::{Arc, Mutex};
 

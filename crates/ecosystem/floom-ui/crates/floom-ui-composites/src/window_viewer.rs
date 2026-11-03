@@ -1,26 +1,3 @@
-//! `WindowViewer` -- a box with a page on show, arrows and dots.
-//!
-//! The shape v1's `Stack::new(children)` had, in a widget that can say which
-//! page is on show: 2.0 mounts a tree once, so a widget whose children depend
-//! on a value that changes has to say so, and re-declare itself when it does.
-//!
-//! The three floem-ui window kits each used to carry their own copy of this
-//! viewer; they share the engine's one now.
-//!
-//! ## What the kits still answer
-//!
-//! The box's fill and radius, its outline's thickness and colour, the box's
-//! height, the arrow glyphs' ink, the dots' fill and diameter, the gap between
-//! the dots, and how far the dots sit above the bottom edge. All of those are
-//! design-system answers; the *shape* -- a box with a page on show, arrows and
-//! dots -- is not.
-//!
-//! ## The page on show travels in a shared counter
-//!
-//! The page changes after mount -- an arrow or a dot moves it -- so it cannot
-//! live in a signal, which is `Rc`-based and cannot cross a slot boundary. It
-//! is an atomic counter the kit, the viewer, the arrows and the dots all
-//! share.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

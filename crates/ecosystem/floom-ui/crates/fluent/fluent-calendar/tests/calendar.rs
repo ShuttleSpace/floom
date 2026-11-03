@@ -1,16 +1,4 @@
 //! The ported Fluent calendar -- a month of days, with the selected date
-//! picked out.
-//!
-//! The shape is the engine's vocabulary plus a kit-local body, so what is
-//! tested here is the translation and the pixels: the tokens reach the style,
-//! the panel is painted in v1's colours, the title names the month, the
-//! selected day is filled in `primary` and every other day is not, and
-//! clicking a day picks it.
-//!
-//! ## The tripwires
-//!
-//! `the_selected_day_is_filled_and_the_others_are_not` and
-//! `clicking_a_day_picks_it` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -33,9 +21,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -44,7 +29,6 @@ fn kit() -> FluentCalendar {
     FluentCalendar::new().with_theme(theme())
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -54,7 +38,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -64,7 +47,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The text a widget paints, if it paints one.
 fn text_of(widget: &dyn Widget) -> Option<(String, f32, Color)> {
     ops_of(widget).into_iter().find_map(|op| match op {
         PaintOp::Text {
@@ -74,12 +56,10 @@ fn text_of(widget: &dyn Widget) -> Option<(String, f32, Color)> {
     })
 }
 
-/// The calendar's body: the header, the weekday row and the grid.
 fn body_of(kit: FluentCalendar) -> Box<dyn WidgetAny> {
     kit.view().children().remove(0).build()
 }
 
-/// The header's title: the month and the year.
 fn title_of(kit: FluentCalendar) -> Option<(String, f32, Color)> {
     let body = body_of(kit);
     let header = body.children().remove(0).build();
@@ -87,7 +67,6 @@ fn title_of(kit: FluentCalendar) -> Option<(String, f32, Color)> {
     text_of(&*title)
 }
 
-/// The cell whose number is `label`.
 fn cell_widget(kit: FluentCalendar, label: &str) -> Box<dyn WidgetAny> {
     let body = body_of(kit);
     let grid = body.children().remove(2).build();
@@ -95,8 +74,6 @@ fn cell_widget(kit: FluentCalendar, label: &str) -> Box<dyn WidgetAny> {
         let row = grid.children().remove(week).build();
         for column in 0..row.children().len() {
             let cell = row.children().remove(column).build();
-            // The cell is a pressable around the round box that holds the
-            // number.
             let surface = cell.children().remove(0).build();
             let text = surface.children().remove(0).build();
             let painted = text_of(&*text);
@@ -108,7 +85,6 @@ fn cell_widget(kit: FluentCalendar, label: &str) -> Box<dyn WidgetAny> {
     panic!("the month has no cell labelled {label}");
 }
 
-/// The fill and the number a cell paints.
 fn cell_paint(cell: &dyn WidgetAny) -> (Option<Color>, Option<(String, f32, Color)>) {
     let surface = cell.children().remove(0).build();
     let text = surface.children().remove(0).build();
@@ -120,9 +96,7 @@ fn cell_paint(cell: &dyn WidgetAny) -> (Option<Color>, Option<(String, f32, Colo
     (fill, text_of(&*text))
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentCalendarStyle = kit().resolved_style();
@@ -179,9 +153,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The panel is painted in v1's colours: the fill, and the outline.
 #[test]
 fn the_panel_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -208,7 +180,6 @@ fn the_panel_is_painted_v1_s_colour() {
     );
 }
 
-/// The header names the month and the year.
 #[test]
 fn the_header_names_the_month() {
     let resolved = kit().resolved_style();
@@ -218,8 +189,6 @@ fn the_header_names_the_month() {
     assert_eq!(ink, paint(resolved.on_surface), "v1's title ink");
 }
 
-/// The selected day is filled with `primary` and its number is `on_primary`;
-/// every other day is not filled, and its number is `on_surface`.
 #[test]
 fn the_selected_day_is_filled_and_the_others_are_not() {
     let resolved = kit().resolved_style();
@@ -249,10 +218,7 @@ fn the_selected_day_is_filled_and_the_others_are_not() {
     assert_eq!(ink, paint(resolved.on_surface), "v1's day ink");
 }
 
-// --- the structure --------------------------------------------------------
 
-/// Clicking a day picks it: the callback is called with the date, and the
-/// date is the one the cell shows.
 #[test]
 fn clicking_a_day_picks_it() {
     let picked: Arc<Mutex<Option<CalendarDate>>> = Arc::new(Mutex::new(None));
@@ -263,7 +229,6 @@ fn clicking_a_day_picks_it() {
         }
     });
 
-    // The fifteenth of the month, wherever it falls.
     let mut cell = cell_widget(kit, "15");
 
     let id = ElementId::new(0, 1);
@@ -294,12 +259,8 @@ fn clicking_a_day_picks_it() {
     );
 }
 
-/// The week numbers are drawn only when the caller asks for them, and they
-/// take a column of their own.
 #[test]
 fn the_week_numbers_are_drawn_only_when_asked_for() {
-    // The second week, not the first: August 2026 opens on a Saturday, so
-    // the first week holds the first of the month and nothing else.
     let body = body_of(kit());
     let grid = body.children().remove(2).build();
     let row = grid.children().remove(1).build();
@@ -319,9 +280,6 @@ fn the_week_numbers_are_drawn_only_when_asked_for() {
     );
 }
 
-/// The props report the date and the week-number flag, and the callback slot
-/// stays empty: the props' callback is a `Box<dyn Fn(CalendarDate)>`, which
-/// cannot cross a 2.0 slot.
 #[test]
 fn the_props_report_the_date() {
     let kit = kit()
@@ -341,10 +299,7 @@ fn the_props_report_the_date() {
     );
 }
 
-// --- the theme source ---
 
-/// The theme: v1's Fluent calendar took a *snapshot* of its own design
-/// system, so a change of the app-wide theme does not re-theme it.
 #[test]
 fn the_theme_is_a_snapshot() {
     assert_ne!(

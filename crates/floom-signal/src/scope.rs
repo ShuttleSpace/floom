@@ -80,14 +80,12 @@ impl Scope {
     /// ```
     pub fn set_parent(&self, new_parent: Scope) {
         RUNTIME.with(|runtime| {
-            // Remove from old parent's children set (if any)
             if let Some(old_parent) = runtime.parents.borrow_mut().remove(&self.0)
                 && let Some(children) = runtime.children.borrow_mut().get_mut(&old_parent)
             {
                 children.remove(&self.0);
             }
 
-            // Add to new parent's children set
             runtime
                 .children
                 .borrow_mut()
@@ -95,7 +93,6 @@ impl Scope {
                 .or_default()
                 .insert(self.0);
 
-            // Set new parent
             runtime.parents.borrow_mut().insert(self.0, new_parent.0);
         });
     }

@@ -1,14 +1,5 @@
 //! The ported Cupertino speed dial -- a floating action button and a fan of
 //! smaller ones.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the button is
-//! painted in v1's inks, and the fan is mounted only while the dial is open.
-//!
-//! ## The tripwires
-//!
-//! `the_button_is_painted_in_v1_s_ink` and `the_fan_is_mounted_only_while_the
-//! _dial_is_open` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 
@@ -35,7 +26,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -326,7 +316,6 @@ fn the_props_report_the_direction() {
 #[test]
 fn the_theme_is_the_app_wide_one() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoSpeedDial::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

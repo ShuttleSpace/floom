@@ -1,17 +1,4 @@
 //! Fluent text, ported to the Floom 2.0 widget API.
-//!
-//! v1 drew a `Label` and styled it with a closure that re-read the theme on
-//! every use. 2.0's [`Text`] is a widget the caller holds and restyles, so the
-//! theme is resolved once and handed over as explicit values.
-//!
-//! ## What the port names
-//!
-//! * **`max_lines` and `selectable` are carried but not applied.** v1 set both
-//!   on the props and neither reached the view -- it drew a plain `Label` -- and
-//!   2.0's `Text` has no knob for either. So the props keep reporting them and
-//!   no kit claims a truncation or a selection it does not perform.
-//! * **the label's type is the theme's**: `typography().body.medium`'s size and
-//!   weight, and `on_surface` for the colour.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, FontWeight};
@@ -35,7 +22,6 @@ pub struct FluentTextStyle {
     pub typography: TextStyle,
 }
 
-/// Fluent's text.
 pub struct FluentText {
     props: TextProps,
     theme: RwSignal<MultiTheme>,
@@ -54,14 +40,12 @@ impl FluentText {
         }
     }
 
-    /// Truncate to this many lines. Carried on the props, as v1 carried it;
     /// see the module note.
     pub fn max_lines(mut self, max_lines: usize) -> Self {
         self.props.max_lines = Some(max_lines);
         self
     }
 
-    /// Make the text selectable. Carried on the props, as v1 carried it; see
     /// the module note.
     pub fn selectable(mut self, selectable: bool) -> Self {
         self.props.is_selectable = selectable;
@@ -93,7 +77,6 @@ impl FluentText {
         }
     }
 
-    /// The text, ready to mount.
     pub fn view(self) -> Text {
         let style = self.resolved_style();
         let content = self.props.content.clone();
@@ -110,23 +93,16 @@ impl Default for FluentText {
     }
 }
 
-/// The theme's weight enum -> the engine's.
-///
-/// v1 called `to_floom()`, which returns a `parley::style::FontWeight` -- a third
-/// type with the same name. 2.0's `Text::weight` takes the engine's own
-/// `FontWeight`, so the nine variants are named here.
 pub fn to_engine_weight(w: ThemeFontWeight) -> FontWeight {
     match w {
         ThemeFontWeight::Thin => FontWeight::Thin,
         ThemeFontWeight::ExtraLight => FontWeight::ExtraLight,
         ThemeFontWeight::Light => FontWeight::Light,
-        // v1's name for 400 is `NORMAL`; the theme's is `Regular`.
         ThemeFontWeight::Regular => FontWeight::Normal,
         ThemeFontWeight::Medium => FontWeight::Medium,
         ThemeFontWeight::SemiBold => FontWeight::SemiBold,
         ThemeFontWeight::Bold => FontWeight::Bold,
         ThemeFontWeight::ExtraBold => FontWeight::ExtraBold,
-        // v1's `to_floom()` sent `Black` to 800; parley's table has no 900.
         ThemeFontWeight::Black => FontWeight::Black,
     }
 }

@@ -350,7 +350,6 @@ fn a_property_written_twice_is_refused() {
         "r",
         r#",{"name":"size","value":{"Number":9.0}}"#,
     ));
-    // `label` is already there; add a second `label`.
     let json = json.replace(
         r#"{"name":"size","value":{"Number":9.0}}"#,
         r#"{"name":"label","value":{"Text":"y"}}"#,

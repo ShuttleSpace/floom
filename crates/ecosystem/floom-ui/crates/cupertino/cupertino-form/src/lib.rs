@@ -1,92 +1,5 @@
 //! Cupertino form, ported to the Floom 2.0 widget API.
 //!
-//! A form is a grouping surface: the caller's own fields, an optional summary
-//! of the errors, and a submit button that only answers while the form is
-//! valid.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a [`Surface`] for the form's surface, a vertical
-//! `Stack` for the column inside it, `Text` for the error messages, a
-//! [`Pressable`] for the submit button, and the engine's [`Conditional`] to
-//! choose between the button's two appearances. There is nothing here that a
-//! widget could own, so the shape stays in the kit.
-//!
-//! ## What this kit answers
-//!
-//! * the form surface's fill: `surface`; its radius: the theme's `radius().md`;
-//! * the padding inside the surface and the gap between the stacked children:
-//!   the **props**, not the tokens -- see the dead tokens below;
-//! * the submit button's height and radius: the form token; its fill:
-//!   `primary` while the form is valid and `surface_variant` while it is not;
-//! * the error messages' size and the gap between them: the validation
-//!   messages' token; their ink: `error`;
-//! * the submit label's size (14), its weight (medium) and the button's
-//!   horizontal padding (24): v1 literals.
-//!
-//! ## The content slot
-//!
-//! v1's `child(..)` took an `impl IntoView`; 2.0's takes a [`Child`], because a
-//! 2.0 widget is mounted by its parent rather than returned. The content is
-//! otherwise the caller's own, in the same place.
-//!
-//! ## The validity gate
-//!
-//! v1's `valid_signal()` returned an `RwSignal<bool>`. 2.0's slot closures must
-//! be `Send + Sync` and an `RwSignal` is `Rc`-based, so the gate is the
-//! engine's [`SharedFlag`]. The button has two appearances and the engine's
-//! `Conditional` follows one flag, so the kit keeps **a pair** -- the flag and
-//! its inverse -- and writes them together through
-//! [`CupertinoForm::set_valid`]. That is the only writer, so the two cannot
-//! drift apart.
-//!
-//! ## The errors
-//!
-//! v1's `errors_signal()` returned an `RwSignal<Vec<String>>`. The port's
-//! errors are the engine's [`SharedMap`], keyed by the message's index, so
-//! that a caller can write them from outside the tree; [`CupertinoForm::set_errors`]
-//! and [`CupertinoForm::errors`] are the readable way in and out.
-//!
-//! The summary is the errors **as they were when the kit was built**: 2.0's
-//! tree is mounted once, so a host that changes the errors afterwards has to
-//! rebuild the kit. v1's summary was a `dyn_view` over the signal and followed
-//! it.
-//!
-//! ## The style the port adds
-//!
-//! v1's `CupertinoFormStyle` reported the surface, the padding, the gap, the radius
-//! and the submit button's height and radius -- and no colours at all, though
-//! the paint used six. The port reports them, and it reports the submit
-//! button's label ink, which the paint used. The port also adds a
-//! `design_system` field, which v1's form style did not have: the other three
-//! families' styles name theirs, and a style that does not say which design
-//! system it belongs to cannot be told apart from its siblings.
-//!
-//! ## The dead tokens
-//!
-//! v1's `FormTokens` carry a `pad` and a `gap`, and v1's view read **neither**:
-//! it read the *props*' `pad` and `gap`, which `FormProps` defaults to the same
-//! two numbers. The port reports the props' numbers, as v1 did, and the
-//! tokens' are named here so they are not mistaken for a second answer.
-//!
-//! ## The invalid submit button's label
-//!
-//! v1 wrote the invalid button's colour on the **container**, where the label's
-//! own `on_primary` overrode it -- so the invalid button's label was
-//! `on_primary` on a `surface_variant` fill, which is very nearly invisible.
-//! The port reproduces that, because a port that quietly improves a design is
-//! a port that changes the design. The colour v1 wrote and never showed is
-//! still in the style, as
-//! [`CupertinoFormStyle::invalid_submit_ink`], so the trap cannot re-arm itself.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **`cursor(CursorStyle::Pointer)`** on the valid submit button. 2.0's paint
-//!   context has no cursor vocabulary. The button is still a `Pressable`, so it
-//!   is still activatable by keyboard, which the pointer was not.
-//! * **The accessors.** v1's form had no `with_theme()`. The port gives all
-//!   three kits the same set, because a kit that cannot be given a theme
-//!   cannot be tested against one.
 
 use std::sync::Arc;
 
@@ -307,7 +220,6 @@ impl CupertinoForm {
             submit_radius: tokens.submit_radius,
             submit_background: c.primary,
             invalid_submit_background: c.surface_variant,
-            // v1's label was always `on_primary`.
             submit_ink: c.on_primary,
             // v1 wrote this on the container, where the label's own ink won.
             invalid_submit_ink: c.on_surface_variant,
@@ -353,7 +265,6 @@ impl CupertinoForm {
         let show_submit = self.props.show_submit;
 
         // v1's column: the caller's content, the error summary, the submit
-        // button.
         let mut content = Stack::new(Axis::Vertical)
             .gap(gap)
             // v1's `.items_start()`.
@@ -399,7 +310,6 @@ struct SubmitContext {
 fn build_submit(show_submit: bool, ctx: SubmitContext) -> Box<dyn floom_widgets::WidgetAny> {
     if !show_submit {
         // v1's `Empty::new()`: the slot was still there, so the gap still
-        // counted.
         return Box::new(Stack::new(Axis::Horizontal));
     }
     let valid_flag = ctx.valid.clone();

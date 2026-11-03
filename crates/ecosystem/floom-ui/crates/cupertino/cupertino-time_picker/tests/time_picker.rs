@@ -1,15 +1,5 @@
 //! The ported Cupertino time picker -- a field, and the panel that opens under
 //! it.
-//!
-//! The panel is a host overlay, so what is tested here is the translation, the
-//! field's pixels, the request the picker makes of the host, and the panel's
-//! own arithmetic: the hour wraps over twenty-four and the minute over sixty.
-//!
-//! ## The tripwires
-//!
-//! `the_panel_is_asked_of_the_host_below_the_field` and
-//! `the_hour_wraps_over_twenty_four` would fail if this kit stopped being this
-//! kit.
 
 use floom_core::{ElementId, Event, OverlayKind, Point, Rect, Widget};
 use floom_types::{Color, PointerEvent};
@@ -37,7 +27,6 @@ const FIELD: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -285,7 +274,6 @@ fn the_panel_draws_the_hour_the_minute_and_done() {
     let mut cx = RecordingUpdateContext::with_bounds(FIELD);
     widget.update(&mut cx, id);
     // The vector is held in a local: a borrow of a temporary would not
-    // outlive the statement.
     let opened = cx.opened_overlays();
     let OverlayCall::Open {
         bounds, content, ..
@@ -300,7 +288,6 @@ fn the_panel_draws_the_hour_the_minute_and_done() {
     let texts = texts(recorder.ops());
 
     // The hour and the minute are both "00" when nothing is chosen, so they
-    // are counted rather than matched.
     assert_eq!(
         texts.iter().filter(|(text, _, _)| text == "00").count(),
         2,
@@ -338,14 +325,12 @@ fn the_hour_wraps_over_twenty_four() {
         Event::Pointer(PointerEvent::primary_up(Point::new(10.0, 10.0))),
     );
     // A host with no overlays: the panel is mounted in the tree instead, which
-    // is the only way a test can hold on to it.
     let mut cx = RecordingUpdateContext::without_overlay_support();
     widget.update(&mut cx, id);
     let children = widget.children();
     assert_eq!(children.len(), 1, "the in-tree fallback");
     // The in-tree fallback puts the panel on the overlay's layer, so the panel
     // is one level deeper than the picker: the layer, then the panel the
-    // layer holds.
     let layer = children[0].build();
     let mut panel = layer.children().remove(0).build();
 
@@ -415,7 +400,6 @@ fn the_props_report_the_time_and_the_placeholder() {
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoTimePicker::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

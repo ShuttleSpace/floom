@@ -1,48 +1,5 @@
 //! Cupertino's checkbox, ported to the 2.0 widget API.
 //!
-//! ## What the port changed
-//!
-//! * v1 was a `Stack::horizontal` over a `Container` holding an absolutely
-//!   positioned hover box and an `svg` mark, plus a `Label`, driven by three
-//!   `on_event` listeners. It is the engine's `Checkbox` widget now: one
-//!   `Widget` with `layout_request` and `paint`, which strokes the rim over the
-//!   fill and fills the checkmark as a path rather than as a document.
-//! * The `checked` `RwSignal` is gone, and so is the `hover` one: the widget
-//!   owns the value and an `InteractionState`, and a kit asking whether it is
-//!   hovered was reaching past its own layer. `disabled` was a builder prop
-//!   rather than a signal, so it survives.
-//! * v1's `on_change` was `Fn(bool)` and so is the engine's `on_toggle`, but the
-//!   engine flips the value itself and reports the one it moved *to* -- so the
-//!   closure a host wrote for v1 crosses unchanged.
-//! * `cursor(Pointer)` is gone with the style layer: the engine answers the
-//!   cursor from `disabled` rather than from a style.
-//!
-//! ## The dead `resolved_style`, and the 97 this crate does not use
-//!
-//! v1's `CupertinoCheckboxStyle` carried one answer for the rim -- `on_surface` at
-//! **97** while disabled -- and *nothing ever read it*: every `view()` resolved
-//! its own colours inline. All three kits' `resolved_style` functions were
-//! byte-identical apart from the type name, and all three disagreed with their
-//! own `view()`. The number v1 actually painted is 38, and that is the one this
-//! port carries; 97 is pinned in the test as a dead value so the trap cannot
-//! re-arm itself.
-//!
-//! ## `design_system` became a const
-//!
-//! v1's style struct carried `design_system: "cupertino"` as a field. The
-//! engine's `CheckboxStyle` names no design system, because it is not one -- so
-//! the string moved to [`DESIGN_SYSTEM`] and the struct went with it.
-//!
-//! ## Cupertino and the other two differ in the layer and in focus
-//!
-//! The three kits agree on every colour of the indicator and disagree about
-//! everything else: this kit's layer is a box `size + 8` across, tinted
-//! `primary`@10, gated on hover alone and suppressed while disabled, where
-//! Material's is a flat 40 circle that opens on hover, press *and* focus and
-//! is never suppressed. And this kit answers focus with a 2px `primary`
-//! ring, where Material's focus is its layer's. The tests on both sides of
-//! each answer are what keep a "harmonise the kits" edit from quietly
-//! landing.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -122,7 +79,6 @@ impl CupertinoCheckbox {
             },
             // A fixed binding, not the live signal -- the same choice v1 made,
             // and the same one `cupertino-radio` makes. Only Material's kits
-            // follow the app theme here.
             theme: RwSignal::new(MultiTheme::new_for(DesignSystem::Cupertino)),
         }
     }
@@ -197,14 +153,11 @@ impl CupertinoCheckbox {
             label_gap: LABEL_GAP,
             // v1 read `typography().body.medium.font_size`, which is not a
             // `CheckboxTokens` field -- the tokens carry only `size` and
-            // `border_radius`.
             label_font_size: theme.typography().body.medium.font_size,
 
-            // --- the indicator, resolved per state ---
             // v1's `bg` was `if checked { primary } else { transparent }`, then
             // overwritten with `on_surface`@12 while disabled. Splitting that
             // one conditional into three independent fields is the whole reason
-            // the field exists three times.
             container_color: to_paint(colors.primary),
             container_color_unchecked: to_paint(Color::rgba(0, 0, 0, 0)),
             container_color_disabled: to_paint(with_alpha(
@@ -218,13 +171,11 @@ impl CupertinoCheckbox {
             border_color_unchecked: to_paint(colors.outline),
             border_color_disabled: to_paint(with_alpha(colors.on_surface, DISABLED_ALPHA)),
 
-            // --- the mark ---
             mark_color: to_paint(colors.on_primary),
             mark_color_unchecked: to_paint(Color::rgba(0, 0, 0, 0)),
             mark_color_disabled: to_paint(with_alpha(colors.on_surface, DISABLED_ALPHA)),
             mark_scale: MARK_SCALE,
 
-            // --- the label ---
             label_color: to_paint(colors.on_surface),
             label_color_disabled: to_paint(with_alpha(colors.on_surface, DISABLED_ALPHA)),
 
@@ -232,10 +183,8 @@ impl CupertinoCheckbox {
                 color: to_paint(with_alpha(colors.primary, LAYER_ALPHA)),
                 // v1 read one alpha, from `hover` alone. There is no pressed
                 // variant to carry, so `None` -- which means the layer keeps
-                // `color` -- rather than a second copy of it.
                 color_pressed: None,
                 // Relative: four points of padding on each side. Material's is a
-                // flat 40, and the two must not converge.
                 size: layer_size,
                 shape: LayerShape::Box {
                     padding: LAYER_PADDING,
@@ -248,13 +197,11 @@ impl CupertinoCheckbox {
                 suppressed_when_disabled: true,
             },
 
-            // v1 ended this closure with
             // `.focus(|s| s.outline(2.0).outline_color(colors().primary))`, so a
             // focused checkbox drew a 2px `primary` ring around the whole
             // control -- indicator and label together, because the closure was on
             // the container holding both. That is exactly a `FocusRing`, and
             // `layer.on_focus` is `false` above so the two mechanisms do not both
-            // fire.
             focus_ring: Some(FocusRing {
                 width: FOCUS_RING_WIDTH,
                 color: to_paint(colors.primary),

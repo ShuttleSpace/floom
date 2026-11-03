@@ -1,25 +1,5 @@
 //! Cupertino floating action button, ported to the Floom 2.0 widget API.
 //!
-//! A circular, elevated primary button -- optionally extended with a label.
-//!
-//! ## What the port reproduces
-//!
-//! * the circle: the token's `border_radius` (9999, a full circle) on a box of the
-//!   token's `size`;
-//! * the elevation: v1 wrote `box_shadow_blur(2.0 + elevation)` with a spread of
-//!   1 and a black-at-30% ink, and the port writes the same shadow;
-//! * the palette: `primary` with `on_primary` ink, and -- when the button is
-//!   disabled -- `on_surface` at 12% for the fill and 38% for the ink;
-//! * the extended shape: a label beside the icon, the same height as the circle,
-//!   20dp of padding at the sides and an 8dp gap, which turns the circle into a
-//!   pill.
-//!
-//! ## The click
-//!
-//! v1 put the action on the container. 2.0's clickable is a [`Pressable`] --
-//! interaction without the drawing -- so the button is a `Pressable` around the
-//! `Surface` that paints it, and the pressable carries the disabled state, so a
-//! disabled button does not fire.
 
 use std::sync::Arc;
 

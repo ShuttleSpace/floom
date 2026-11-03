@@ -1,21 +1,3 @@
-//! Material Design 3 scale tokens carried by `floom-material`.
-//!
-//! [`MaterialTheme`] (in `tokens.rs`) already owns the colour *roles* and the
-//! baseline/derived schemes. This module adds the remaining MD3 token
-//! dimensions that the upstream [`gpui-mobile`] project ships as a standalone
-//! `theme.rs` but which `floom-material` had not yet expressed:
-//!
-//! * [`TypeScale`] — the display/headline/title/body/label size ladder,
-//! * [`ShapeScale`] — the corner-radius ladder,
-//! * [`ElevationLevel`] — the 0–5 elevation steps,
-//! * [`MotionDuration`] — the standard motion durations,
-//! * [`StateLayer`] — the interactive-state overlay opacities.
-//!
-//! These are pure values (logical pixels / milliseconds / opacities) that any
-//! Material widget can read. They deliberately do *not* replace the role-based
-//! colour system in `tokens.rs`; they are the other half of the token set.
-//!
-//! [`gpui-mobile`]: https://github.com/itsbalamurali/gpui-mobile
 
 use floom_types::{Color, Easing, Transition};
 

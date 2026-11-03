@@ -1,32 +1,3 @@
-//! `ParallaxLayer` -- content that moves at a fraction of the page's rate.
-//!
-//! A layer and nothing else: it declares no size of its own -- v1's
-//! `Container` had none either -- so the caller's slot decides how big the
-//! layer is. The content is moved by `-scroll * factor`.
-//!
-//! ## The translate is a compositor channel
-//!
-//! `LayoutRequest` has no translate, so the layer declares one: a zero-length
-//! tween whose endpoints are the offset it wants, which the host parks on the
-//! node and folds onto the whole subtree. The key of that tween carries the
-//! revision, so a moved offset is a new declaration -- and the host sees it
-//! as one.
-//!
-//! ## The offset is a shared number
-//!
-//! The engine's shared family has a flag, a buffer and a map, and no number.
-//! So the engine has one now: [`SharedScroll`], a shared `f32`, beside the
-//! others. A host owns the scroll source and writes to it; the layer reads
-//! it.
-//!
-//! ## Why the host owns the offset
-//!
-//! The engine's `Scroll` keeps its offset in a private
-//! `Arc<Mutex<ScrollOffset>>` and applies **one** offset to its whole
-//! subtree, so a descendant cannot ask an ancestor how far it has scrolled,
-//! and a layer inside it moves at the page's rate rather than a fraction of
-//! it. That gap is the engine's, and this keeps v1's contract -- the host
-//! owns the scroll source -- while the shared number makes it writable.
 
 use crate::shared::SharedNumber;
 use std::any::Any;

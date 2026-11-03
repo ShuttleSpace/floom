@@ -1,15 +1,5 @@
 //! Cupertino badge, ported to the Floom 2.0 widget API.
 //!
-//! v1 wrapped a child with an absolutely-positioned bubble at the top-right
-//! corner. 2.0's `Badge` is the bubble itself. So what is left is the token
-//! translation: read the palette (`error` / `on_error`) and the `BadgeTokens`,
-//! hand them to `Badge`, and return it.
-//!
-//! See `floom-widget-md-badge`'s module docs for the full rationale of what the
-//! port drops (the overlay over a child). The only thing this kit answers
-//! differently from Material is nothing in the palette -- both use `error` /
-//! `on_error` -- so the two are kept only because the engine widget plus a
-//! two-line palette is the whole port and the family is trivially three crates.
 
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::badge::BadgeProps;

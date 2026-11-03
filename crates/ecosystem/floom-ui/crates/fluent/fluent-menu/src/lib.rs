@@ -1,49 +1,4 @@
 //! Fluent menu, ported to the Floom 2.0 widget API.
-//!
-//! A menu is a list of choices in a floating panel: the panel appears over the
-//! page, a row is filled while the pointer is over it, and choosing a row runs
-//! its callback and closes the menu.
-//!
-//! ## What the engine grew
-//!
-//! **A `Menu` composite.** v1's menu was an overlay holding a container of
-//! labels, hidden by a signal and shown by the same signal. 2.0's host owns the
-//! overlay layers, so the panel is asked of the host and sized by the engine
-//! (the widest row, clamped to the tokens' bounds) -- and the row that is
-//! filled, the row that is clicked and the menu closing are all one widget's
-//! business now, rather than three kits' worth of event handlers.
-//!
-//! ## What this kit answers
-//!
-//! * the panel's fill: `surface`; the rows' ink: `on_surface`;
-//! * a hovered row: `on_surface` at 8;
-//! * the panel's width, the row's height and the panel's padding: the tokens;
-//! * the row's padding (12 at the sides, 8 above and below): v1 literals;
-//! * the panel's radius: the theme's `sm` radius, where Material wrote a
-//!   literal 4 and Cupertino the theme's `md`.
-//!
-//! ## What the port's style carries that v1's did not
-//!
-//! v1's `FluentMenuStyle` reported six numbers, and its paint used more than
-//! that: the maximum width, the radius, the shadow, the hovered row's colour,
-//! the row's padding and the row's text size were all in the markup and none
-//! of them in the style. The port's style reports all of them, because a style
-//! that does not say what the widget draws is not the widget's output.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **`open_signal()` was an `RwSignal<bool>`.** 2.0's shared state is a
-//!   `SharedFlag`, and the menu and the thing that opens it share one.
-//! * **`item(..)` took a `Box<dyn Fn()>`.** The engine's slots are
-//!   `Send + Sync`, so the callback is `Fn() + Send + Sync`.
-//! * **The menu's own position.** v1's panel went into an overlay at the
-//!   overlay's origin, and the caller chose where that was by choosing the
-//!   slot the menu was declared in. 2.0 keeps that: the caller still chooses
-//!   the slot, and the host does the arithmetic.
-//! * **The row's text is not centred.** v1 put it `padding_vert` below the
-//!   row's top edge, in a row twice as tall as the text; the port reproduces
-//!   that, because the padding is in v1's markup and a row whose label sits
-//!   above its middle is v1's doing.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -60,15 +15,11 @@ use floom_core_theme::tokens::color_ext::with_alpha;
 
 const DESIGN_SYSTEM: &str = "fluent";
 
-/// The menu's appearance, in the terms v1 used.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FluentMenuStyle {
     pub design_system: &'static str,
-    /// The panel's fill.
     pub container_color: Color,
-    /// The rows' ink.
     pub text_color: Color,
-    /// The fill behind the row the pointer is over.
     pub hover_color: Color,
     pub min_width: f32,
     pub max_width: f32,
@@ -81,10 +32,8 @@ pub struct FluentMenuStyle {
     pub shadow: Shadow,
 }
 
-/// Fluent's menu.
 pub struct FluentMenu {
     props: MenuProps,
-    /// Whether the menu is up, shared with whoever opens it.
     open: SharedFlag,
     theme: RwSignal<MultiTheme>,
 }
@@ -100,7 +49,6 @@ impl FluentMenu {
         }
     }
 
-    /// Append a row.
     pub fn item(
         mut self,
         label: impl Into<String>,
@@ -113,7 +61,6 @@ impl FluentMenu {
         self
     }
 
-    /// Whether the menu starts open.
     pub fn open(mut self, open: bool) -> Self {
         self.props.open = open;
         floom_widgets::write_flag(&self.open, open);
@@ -133,27 +80,15 @@ impl FluentMenu {
         self
     }
 
-    /// The flag that says whether the menu is up.
-    ///
-    /// v1's `open_signal()` handed out an `RwSignal<bool>`. 2.0's shared state
-    /// is a `SharedFlag` -- a bool behind an `Arc<Mutex<bool>>` -- because a
-    /// value that changes after mount cannot be held in a signal and read
-    /// during render.
     pub fn open_flag(&self) -> SharedFlag {
         self.open.clone()
     }
 
-    /// Use a flag the caller already has, so the thing that opens the menu and
-    /// the menu itself share one truth.
     pub fn with_open_flag(mut self, open: SharedFlag) -> Self {
         self.open = open;
         self
     }
 
-    /// Choose the row at `index`, as if it had been clicked.
-    ///
-    /// v1's `select(..)` did the same: it ran the row's callback and nothing
-    /// else -- it did not close the menu.
     pub fn select(&self, index: usize) {
         if let Some(item) = self.props.items.get(index) {
             if let Some(callback) = &item.on_select {
@@ -162,7 +97,6 @@ impl FluentMenu {
         }
     }
 
-    /// The menu's appearance, in the terms v1 used.
     pub fn resolved_style(&self) -> FluentMenuStyle {
         let theme = self.theme.get();
         let ComponentTokens::Menu(tokens) = theme.component(ComponentId::Menu) else {
@@ -172,21 +106,15 @@ impl FluentMenu {
             design_system: DESIGN_SYSTEM,
             container_color: theme.colors().surface,
             text_color: theme.colors().on_surface,
-            // v1's hovered row: `with_alpha(on_surface, 8)`.
             hover_color: with_alpha(theme.colors().on_surface, 8),
             min_width: tokens.min_width,
             max_width: tokens.max_width,
             item_height: tokens.item_height,
-            // v1's row: `padding_horiz(12.0).padding_vert(8.0)`.
             item_padding_horizontal: 12.0,
             item_padding_vertical: 8.0,
-            // v1's row: `font_size(t.typography().label.large.font_size)`.
             item_font_size: theme.typography().body.medium.font_size,
             padding: tokens.padding,
-            // v1's panel: the theme's `sm` radius.
             radius: theme.radius().sm,
-            // v1's panel: `box_shadow_blur(12.0).box_shadow_spread(1.0)
-            // .box_shadow_color(with_alpha(black, 24))`.
             shadow: Shadow {
                 color: to_paint(with_alpha(Color::rgba(0, 0, 0, 255), 24)),
                 blur: 12.0,
@@ -197,7 +125,6 @@ impl FluentMenu {
         }
     }
 
-    /// The menu: the panel, its rows, and the flag that says whether it is up.
     pub fn view(self) -> Menu {
         let style = self.resolved_style();
         let mut menu = Menu::new()

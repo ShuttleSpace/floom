@@ -1,27 +1,3 @@
-//! `Chip` — a pill: a rounded box with a label in the middle, and a click.
-//!
-//! Theme-agnostic by design, like [`Badge`]: a 2.0 widget takes explicit
-//! values rather than reading a global theme signal, so resolving the palette
-//! and the token sizes is the *kit's* job.
-//!
-//! ## Why this is a widget and not a box with a child
-//!
-//! v1's chip was a `Container` holding a `Label`, and the two things that made
-//! it a chip were on the container: the label was **centred** in it
-//! (`items_center`, `justify_center`) and the label's **ink** was the
-//! container's own `color`. 2.0's `Surface` paints a fill and only the child
-//! knows it is text, and a box's content sits at the padding's edge rather than
-//! in the middle. So the pill and its centred label are one widget here, the
-//! way they were one box in v1.
-//!
-//! ## Why the fill is painted here and not delegated
-//!
-//! Only one of the three kits changes a chip's fill while the pointer is over
-//! it, and the change is a *fill* rather than a layer over one. A fill that
-//! depends on the pointer cannot be delegated to a child box: the child is
-//! built once, and the pointer state lives in the widget that answers the
-//! pointer. So the chip holds the interaction state and paints the fill, the
-//! way [`Radio`](crate::radio::Radio) paints its halo.
 
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{

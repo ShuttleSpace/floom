@@ -1,15 +1,3 @@
-//! `Select` and the option list it opens.
-//!
-//! A single-choice selector is not a primitive: which glyph means "expand",
-//! how tall a row is and whether the list paints under the control or over it
-//! are all decisions a design system makes. What is here is the part that
-//! stays constant once the kit has answered them — the selection state, the
-//! clamping, the keyboard walk, and the overlay handshake that lets a list
-//! escape its own clip.
-//!
-//! It used to live in `floom-widgets` beside `Button` and `Slider`. Those
-//! describe what a box does; this describes what a control *is*, so it belongs
-//! one layer up, next to the tree and the navigation rail.
 
 use floom_accessibility::{SemanticsRole, SemanticsState};
 use floom_core::{

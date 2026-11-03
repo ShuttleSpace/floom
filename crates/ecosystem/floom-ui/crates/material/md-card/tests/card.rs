@@ -1,9 +1,3 @@
-//! The ported Material 3 card.
-//!
-//! This is the reference port for the floom-ui component library: it proves the
-//! v1 -> 2.0 translation end to end (theme tokens -> style struct -> 2.0
-//! widget) without depending on the v1 monolith. See
-//! `docs/porting-floem-ui-to-2.0.md`.
 
 use floom_core::Widget;
 use floom_types::Insets;
@@ -27,10 +21,6 @@ const AREA: floom_types::Rect = floom_types::Rect {
 
 #[test]
 fn the_surface_is_a_real_2p0_container_painting_shadow_behind_fill() {
-    // If this compiles and paints, the port produced an engine widget rather
-    // than a v1 view smuggled across. The two ops and their order are the real
-    // assertion: the shadow is asked for first so it lands behind the fill,
-    // which is the whole point of "cast behind its own fill".
     let mut create = AllocatingCreateContext::new();
     let surface = card().surface();
     let id = floom_core::Widget::create(&surface, &mut create);
@@ -55,8 +45,6 @@ fn elevation_selects_a_shadow_level_and_carries_its_spread() {
     let top = MdCard::new().elevation(5).resolved_style();
     let shadow = MdCard::new().elevation(3).shadow();
 
-    // Elevation clamps to the six declared levels, so 99 must resolve the same
-    // as 5 rather than index out of bounds.
     let clamped = MdCard::new().elevation(99).resolved_style();
     assert_eq!(
         clamped.shadow, top.shadow,
@@ -102,8 +90,6 @@ fn the_surface_uses_the_resolved_padding_radius_and_palette() {
     let style = MdCard::new().resolved_style();
     let surface = MdCard::new().surface();
 
-    // The engine container is what a caller actually mounts content into, so
-    // the theme values have to have reached it.
     assert!(
         style.border_radius > 0.0,
         "card tokens should carry a real radius"
@@ -114,12 +100,6 @@ fn the_surface_uses_the_resolved_padding_radius_and_palette() {
         "and the radius is on the surface the caller mounts"
     );
 
-    // The padding has to be found on the *surface*, not on the content's slot.
-    // Two earlier versions of this port got this wrong and this test passed both
-    // times: the first handed `Container` a padding the widget stored and never
-    // read, the second moved it onto the content's slot as a margin. Both are
-    // visible mistakes (text against the edge, content not inside the box) and
-    // both survived a test that only asserted the token was positive.
     assert_eq!(
         surface.padding_insets(),
         Insets::uniform(f64::from(style.padding)),
@@ -130,8 +110,6 @@ fn the_surface_uses_the_resolved_padding_radius_and_palette() {
         "and it leaves as padding, which is the only inset a box with children \
          can apply"
     );
-    // A no-op `background` would make the card invisible, so assert the paint
-    // op is not a transparent fill.
     let mut create = AllocatingCreateContext::new();
     let id = floom_core::Widget::create(&surface, &mut create);
     let snap = paint_snapshot(&surface, id, AREA);
@@ -143,13 +121,10 @@ fn the_surface_uses_the_resolved_padding_radius_and_palette() {
 
 #[test]
 fn theme_tokens_come_from_the_shared_theme_signal() {
-    // Two cards with no explicit theme must agree, because both read the one
-    // app-wide signal rather than each holding a private palette.
     let a = MdCard::new().resolved_style();
     let b = MdCard::new().resolved_style();
     assert_eq!(a, b, "cards must read one shared theme");
 
-    // And an explicitly-supplied theme is honoured over the signal.
     let custom = MdCard::new().with_theme(MultiTheme::new_for(
         floom_core_theme::global_theme::DesignSystem::default(),
     ));

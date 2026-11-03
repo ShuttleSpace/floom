@@ -1,75 +1,5 @@
 //! Cupertino navigation drawer, ported to the Floom 2.0 widget API.
 //!
-//! A navigation drawer is a panel that slides in from one edge of the app
-//! over a dimmed scrim, with a header above its content. Clicking the scrim
-//! closes it.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary, plus the composites that own the two things v1
-//! drew by hand:
-//!
-//! * [`Overlay`] for the layer the drawer lives in;
-//! * [`Conditional`] for the panel's *presence*, which is what carries the
-//!   motion: a fade for the scrim and a slide for the panel.
-//!
-//! The two conditionals are siblings, so the panel paints over the scrim and
-//! a click inside the panel never reaches the scrim's dismiss.
-//!
-//! ## What this kit answers
-//!
-//! * the panel's fill: `surface` at 235 alpha -- v1's translucent panel;
-//! * the panel's width: the *prop's*, and only the prop's: v1 took
-//!   `props.width.max(0.0)` with no token fallback, which is a different rule
-//!   from the other two kits' and is kept as it is;
-//! * the panel's padding: the token's;
-//! * the panel's hairline: half a point of `on_surface` at 30 alpha, on the
-//!   edge the drawer is *not* on;
-//! * the elevation shadow: v1's numbers, which differ per kit.
-//!
-//! ## The tokens that never showed
-//!
-//! `NavigationDrawerTokens::width` (300) is read by nobody in practice: the
-//! prop's width defaults to 360, and this kit takes the prop's whatever it
-//! is. The token is the *fallback* in the other two kits and nothing at all
-//! here; the port keeps this kit's rule and names it.
-//!
-//! `NavigationDrawerTokens::elevation` (4) is never read at all: every kit
-//! takes the elevation from the props, whose default is also 4. The port
-//! reports the prop's elevation, as v1 did, and does not pretend the token
-//! is in play.
-//!
-//! ## The style fields v1 never used
-//!
-//! v1's Cupertino style reported `header_color` and `content_color`, and the
-//! view used neither: the header is the caller's own widget, and the panel's
-//! ink was `on_surface`, not `on_surface_variant`. The port keeps both
-//! fields -- a style that omits a value the kit had is indistinguishable from
-//! one that chose to leave it at a default -- and names them here.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The panel's inherited ink.** v1 set `.color(on_surface)` on the panel,
-//!   which is what the caller's own child inherited. 2.0's `Text` carries
-//!   its own colour, so a caller's child keeps the colour it was given.
-//! * **The panel's click stopped the propagation.** v1's panel was a child of
-//!   the scrim, so it had to swallow the click to keep the scrim from
-//!   dismissing. Here the two are siblings, and a click inside the panel
-//!   never reaches the scrim at all.
-//! * **The scrim faded and the panel slid, and the panel faded with the
-//!   scrim.** v1's panel was inside the scrim, so the scrim's fade took the
-//!   panel with it. Here the panel has its own presence, and the only
-//!   channel a presence transition can drive is one, so the panel slides and
-//!   the scrim fades.
-//! * **The width was published reactively.** v1 registered the drawer's
-//!   width with the theme's layout slots from an effect over the open
-//!   signal, so the content area re-inset itself whenever the drawer opened
-//!   or closed. 2.0's `open` is a `SharedFlag`, which no effect can track,
-//!   so the width is published once, when the view is built -- the same
-//!   trade the ported footer makes.
-//! * **The child is a slot, not a view.** v1's `header(..)` and `child(..)`
-//!   took `impl IntoView`; 2.0's take a [`Child`], because a 2.0 widget is
-//!   mounted by its parent rather than returned.
 
 use floom_core::{Child, ChildKey, Inset, LayoutRequest, Position, PresenceTransition, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
@@ -237,7 +167,6 @@ impl CupertinoNavigationDrawer {
         CupertinoNavigationDrawerStyle {
             design_system: "cupertino",
             // v1 took the prop's width and clamped it at zero: no token
-            // fallback at all.
             width: self.props.width.max(0.0),
             elevation: self.props.elevation,
             padding: tokens.padding,
@@ -273,10 +202,7 @@ impl CupertinoNavigationDrawer {
         );
 
         // The scrim: a dimmed layer that dismisses the drawer when it is
-        // clicked.
-        //
         // `Pressable` is a builder rather than a `Clone` value, so the scrim
-        // is built inside the closure that mounts it.
         let scrim_color = to_paint(style.scrim_color);
         let scrim = Child::new(ChildKey::index(0), LayoutRequest::new().absolute_fill(), {
             let dismiss = open.clone();
@@ -307,7 +233,6 @@ impl CupertinoNavigationDrawer {
         };
         let padding = style.padding;
         // The slots are replayed `Fn`s, so each takes a copy rather than the
-        // value itself.
         let header = self.header.clone();
         let content = self.content.clone();
         let mut panel = Surface::new()
@@ -328,11 +253,9 @@ impl CupertinoNavigationDrawer {
         }
         let panel = panel.push(move || {
             // The slots are replayed `Fn`s, and the two inner slots want the
-            // header and the content, so each takes a copy.
             let header = header.clone();
             let content = content.clone();
             // v1's `Stack::vertical((header, content))`: the header over the
-            // content, eight points apart.
             // The two inner slots are replayed `Fn`s of their own, so the
             // header and the content are copied before they are handed over.
             let header = header.clone();
@@ -371,7 +294,6 @@ impl CupertinoNavigationDrawer {
                 move || {
                     Box::new(presence(
                         &scrim_flag,
-                        // v1's opacity animation on the scrim.
                         PresenceTransition::fade(MOTION_SECS),
                         scrim.clone(),
                     )) as Box<dyn WidgetAny>
@@ -390,7 +312,6 @@ impl CupertinoNavigationDrawer {
                     Box::new(presence(
                         &panel_flag,
                         // v1's slide: the panel starts a whole width outside
-                        // and travels in.
                         PresenceTransition::slide_x(MOTION_SECS, from),
                         Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
                             let panel = panel.clone();
@@ -445,7 +366,6 @@ fn panel_request(side: NavigationDrawerSide, width: f32) -> LayoutRequest {
             NavigationDrawerSide::Right => Some(0.0),
         },
         // v1's Cupertino panel was inset top *and* bottom, rather than given
-        // a height.
         bottom: Some(0.0),
     });
     request

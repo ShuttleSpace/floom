@@ -1,16 +1,5 @@
 //! Cupertino list subheader, ported to the Floom 2.0 widget API.
 //!
-//! A subheader is a row of small, muted text above a group of list items. v1
-//! spelled it as a `Container` holding a `Label`; 2.0 spells it a [`Surface`]
-//! holding a [`Text`], which is the same two things with the roles named: the
-//! surface is the row, the text is the label, and the colour belongs to the
-//! text rather than to the box.
-//!
-//! ## The two paddings
-//!
-//! A subheader is padded one way when it lines up with the list's own content
-//! and another when it is *inset* from it -- v1's `inset` flag chose between
-//! `padding_horizontal` and `inset_padding`, and the port keeps both.
 
 use floom_core::LayoutRequest;
 use floom_signal::{RwSignal, SignalGet};

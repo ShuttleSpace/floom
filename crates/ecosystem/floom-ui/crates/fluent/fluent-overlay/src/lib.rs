@@ -1,33 +1,4 @@
 //! Fluent overlay, ported to the Floom 2.0 widget API.
-//!
-//! v1 wrapped a full-viewport scrim around the caller's content and dismissed
-//! when the scrim was clicked. 2.0 has no standalone "scrim" widget, but its
-//! `Dialog` is a host-modal surface driven by a shared presence flag -- which is
-//! exactly v1's `show` / `with_show_signal` external trigger -- so the overlay
-//! becomes a `Dialog` whose card is the scrim plus the centered content.
-//!
-//! ## What the port reproduces
-//!
-//! * the external `show(bool)` / `with_show_signal` trigger, via `with_shared_presence`
-//!   and [`FluentOverlay::open_flag`] / [`FluentOverlay::with_open_flag`];
-//! * the scrim: a full-viewport layer tinted `scrim` at `opacity` alpha;
-//! * the centered content card: `surface` background, `on_surface` text,
-//!   `border_radius(12.0)`, padding from `OverlayTokens`;
-//! * dismiss on scrim click, firing the v1 `on_click` callback.
-//!
-//! ## What the port names (not fakes)
-//!
-//! * **v1 dismissed on any click outside the content; 2.0's modal is not
-//!   light-dismissed**, so the scrim is a `Pressable` that carries the dismiss.
-//!   If 2.0's event model bubbles a content click up to the scrim, that content
-//!   click would also dismiss -- v1 explicitly `Stop`-ed propagation on the
-//!   content, which 2.0's `EventPropagation` does not expose here. Recorded,
-//!   not worked around: a bubble-stop would be an engine change, not a kit one.
-//! * **Fluent's `border_radius(12.0)` is Fluent's number** --
-//!   the Fluent kit hardcoded `12.0` instead of a `tokens`- or
-//!   `radius().md`-derived value. Preserved as written (the tripwire keeping the
-//!   three kits three crates).
-//! * the engine `Dialog` paints no scrim of its own, so the scrim is the card.
 
 use std::sync::Arc;
 
@@ -45,7 +16,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 
-/// A v1-shaped dismiss callback, kept so `props()` still reports one.
 type Callback = Arc<dyn Fn() + Send + Sync + 'static>;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -54,18 +24,13 @@ pub struct FluentOverlayStyle {
     pub content_padding: f32,
 }
 
-/// Fluent's overlay.
 pub struct FluentOverlay {
-    /// Scrim opacity, 0.0 (transparent) .. 1.0 (opaque).
     opacity: f32,
-    /// The shared "is it up" flag -- not an `RwSignal` (cannot cross `Send+Sync`).
     show: SharedFlag,
     theme: RwSignal<MultiTheme>,
-    /// The caller's content, as a rebuildable + shareable factory (see `child`).
     child: Option<
         Arc<dyn Fn() -> Box<dyn floom_widgets::WidgetAny + Send + Sync> + Send + Sync + 'static>,
     >,
-    /// The v1 `on_click` dismiss callback, in `Send + Sync` form.
     on_dismiss: Option<Callback>,
 }
 
@@ -82,11 +47,6 @@ impl FluentOverlay {
         }
     }
 
-    /// Supply the content rendered above the scrim.
-    ///
-    /// v1's `child(impl IntoView)`. 2.0 takes a factory -- the same shape
-    /// `Dialog::card_with` and `Child::new` take -- because the card is rebuilt
-    /// on every mount, so an owned widget cannot be handed over.
     pub fn child(
         mut self,
         build: impl Fn() -> Box<dyn floom_widgets::WidgetAny + Send + Sync> + Send + Sync + 'static,
@@ -95,38 +55,31 @@ impl FluentOverlay {
         self
     }
 
-    /// Show or hide the overlay (writes the shared flag).
     pub fn show(mut self, show: bool) -> Self {
         self.opacity = if show { 0.5 } else { 0.0 };
         write_flag(&self.show, show);
         self
     }
 
-    /// Drive this overlay from a flag somebody else owns.
     pub fn with_show_signal(mut self, show: SharedFlag) -> Self {
         self.show = show;
         self.opacity = if read_flag(&self.show) { 0.5 } else { 0.0 };
         self
     }
 
-    /// The shared show flag, so an external trigger can drive it.
     pub fn open_flag(&self) -> SharedFlag {
         self.show.clone()
     }
 
-    /// Alias of [`Self::open_flag`] (v1 name).
     pub fn show_signal(&self) -> SharedFlag {
         self.show.clone()
     }
 
-    /// Fired when the scrim is clicked (v1's `on_click`).
     pub fn on_click(mut self, callback: impl Fn() + Send + Sync + 'static) -> Self {
         self.on_dismiss = Some(Arc::new(callback));
         self
     }
 
-    /// v1's props, reconstructed for callers that read them. `on_click` is kept
-    /// in `Send + Sync` form here; this rebuilds the v1 `Box<dyn Fn()>` shape.
     pub fn props(&self) -> OverlayProps {
         OverlayProps {
             opacity: self.opacity,
@@ -157,7 +110,6 @@ impl FluentOverlay {
         }
     }
 
-    /// The overlay, ready to mount as a modal `Dialog`.
     pub fn view(self) -> Dialog {
         let style = self.resolved_style();
         let opacity = self.opacity;
@@ -182,9 +134,6 @@ impl Default for FluentOverlay {
     }
 }
 
-/// The card: a full-viewport scrim tinted `scrim` at `alpha`, with the content
-/// `Surface` centered above it. Rebuilt from factories because `Surface` is not
-/// `Clone` and `Child::new` requires an `Fn` build (called per mount).
 fn build_card(
     alpha: u8,
     pad: f32,
@@ -211,7 +160,6 @@ fn build_card(
         a: alpha,
     };
 
-    // The content card: padded `Surface` with `surface` fill + `12.0` radius.
     let content_build: Arc<dyn Fn() -> Surface + Send + Sync> = {
         let child = child.clone();
         Arc::new(move || {
@@ -236,7 +184,6 @@ fn build_card(
         })
     };
 
-    // The scrim: a full-bleed tinted `Surface` that centers the content above it.
     let scrim_build: Arc<dyn Fn() -> Surface + Send + Sync> = {
         let content_build = content_build.clone();
         Arc::new(move || {

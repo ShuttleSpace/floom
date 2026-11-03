@@ -1,39 +1,5 @@
 //! Cupertino timeline, ported to the Floom 2.0 widget API.
 //!
-//! A timeline is a column of entries, each a dot with a line running down from
-//! it and a title and a description beside it.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a vertical `Stack` of rows, each row a horizontal
-//! `Stack` of a dot, a line, and the text. There is nothing here that a widget
-//! could own and the vocabulary does not already say.
-//!
-//! ## What this kit answers
-//!
-//! * the dot's size and the line's thickness: the tokens;
-//! * the dot's colour: `primary`; the line's: `outline_variant`;
-//! * the padding around the column, and the gap between the dot column and
-//!   the text: the token's `padding` -- v1 used the same number for both.
-//!
-//! ## The token that never showed
-//!
-//! v1's `item_gap` -- the vertical gap between entries -- was written on a
-//! container that held *one* child, so it had nothing to separate. The entries
-//! are stacked with no gap between them here too, and the style still reports
-//! the number, because v1's style did.
-//!
-//! ## The numbers v1 wrote as literals
-//!
-//! The title's size (15) and weight (semi-bold), the description's size (13),
-//! the gap between them (2) and the dot's radius (9999, a circle).
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The accessors.** v1's Material timeline had no `props()`, `theme()` or
-//!   `with_theme()` -- the other two kits had all three. The port gives all
-//!   three kits the same three, because a kit that cannot be given a theme
-//!   cannot be tested against one.
 
 use floom_core::LayoutRequest;
 use floom_signal::{RwSignal, SignalGet};
@@ -138,7 +104,6 @@ impl CupertinoTimeline {
         let count = self.props.items.len();
         let mut column = Stack::new(Axis::Vertical)
             // v1's container wrote `gap(item_gap)`, and it held one child: the
-            // entries are stacked with no gap between them.
             .request(
                 LayoutRequest::new()
                     .padding(Insets {
@@ -214,7 +179,6 @@ impl CupertinoTimeline {
 
                 Box::new(
                     Stack::new(Axis::Horizontal)
-                        // v1's row used the padding as its gap.
                         .gap(padding)
                         // v1's `.items_start()`.
                         .align(Align::Start, Align::Start)

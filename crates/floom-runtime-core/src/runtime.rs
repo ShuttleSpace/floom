@@ -1,34 +1,3 @@
-//! The convenience runtime, moved here from the crate that used to hold it.
-//!
-//! ## Why this moved
-//!
-//! `floom-runtime` was a 414-line crate whose entire production value was one
-//! module: `event.rs`, the hit-tester and event router. `floom-app` imported four
-//! symbols from it and nothing else in the workspace imported the crate at all.
-//! Everything else here — [`Runtime`], [`Event`], [`FrameStats`], [`RootHandle`]
-//! — is a convenience wrapper over facilities this crate already had: the
-//! element arena, the dirty set, the element tree, the scheduler.
-//!
-//! So the split was along a line that did not exist: a separate crate whose
-//! only used content was also available in its own dependency. `floom-app`
-//! depends on this crate; `floom-devtools` and `floom-hot-reload` depend on this
-//! crate. Making the event router reachable through a second crate identity cost
-//! a workspace entry and a version constraint and bought nothing.
-//!
-//! ## What this costs
-//!
-//! `floom-devtools` and `floom-hot-reload` now compile the scheduler and the
-//! event router as well. The scheduler is dependency-free and the router is one
-//! module, so this is a hundred-odd lines against several thousand — a fair
-//! trade for one fewer crate in the graph.
-//!
-//! ## What this does not do
-//!
-
-//! It does not prune [`Runtime`]. It has no callers inside this workspace, and
-//! deleting a public API because the workspace does not use it is a semver break
-//! justified by nothing. It stays, and it stays tested.
-
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Instant;

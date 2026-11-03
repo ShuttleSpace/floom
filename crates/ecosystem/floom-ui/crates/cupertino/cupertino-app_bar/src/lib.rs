@@ -1,33 +1,5 @@
 //! Cupertino app bar, ported to the Floom 2.0 widget API.
 //!
-//! An app bar is the strip at the top of a screen: an optional leading slot, a
-//! title, and optional trailing actions.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a `Surface` for the bar, a horizontal `Stack` for
-//! the row inside it, and `Text` for the title. v1's three kits were the same
-//! code under three names, and there is nothing here that a widget could own
-//! and the vocabulary does not already say.
-//!
-//! ## What this kit answers
-//!
-//! * the bar's fill: `surface`; the title's ink: `on_surface`;
-//! * the bar's height, its padding and the title's size: the tokens -- unless
-//!   the caller gave a height, which wins, as it did in v1;
-//! * the bar's elevation: the caller's, and the shadow it draws.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The leading and the actions are slots, not views.** v1's `leading(..)`
-//!   took an `impl IntoView` and its `actions(..)` took a `Vec<AnyView>`;
-//!   2.0's take [`Child`] slots, because a 2.0 widget is mounted by its
-//!   parent rather than returned.
-//! * **The title's `flex_grow(1)`.** v1 let the title's *box* take the room
-//!   between the leading slot and the actions. 2.0's `Text` is a leaf and
-//!   cannot grow, so the room is a flexible spacer instead: the title sits at
-//!   the left and the actions at the right, which is what the growing box
-//!   looked like.
 
 use floom_core::{Child, LayoutRequest};
 use floom_signal::{RwSignal, SignalGet};
@@ -160,7 +132,6 @@ impl CupertinoAppBar {
         let mut row = Stack::new(Axis::Horizontal)
             // v1's row: `items_center()`.
             .align(Align::Center, Align::Center)
-            // v1's row gap was the padding.
             .gap(padding)
             .request(LayoutRequest::new().padding_horiz(f64::from(padding)));
 
@@ -193,7 +164,6 @@ impl CupertinoAppBar {
         let height = style.height;
 
         // v1 registered the bar's height with the theme's layout slots, so an
-        // app could ask for it.
         floom_core_theme::layout::register_layout(
             floom_core_theme::layout::LayoutSlot::AppBar,
             height,

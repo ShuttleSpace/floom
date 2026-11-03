@@ -1,14 +1,5 @@
 //! The ported Cupertino snackbar -- a bar at the bottom of the page with a
 //! message in it.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the bar is painted
-//! in v1's colours, and the bar is only there while the snackbar is up.
-//!
-//! ## The tripwires
-//!
-//! `the_bar_is_painted_in_v1_s_colours` and `the_bar_is_only_there_while_the
-//! _snackbar_is_up` would fail if this kit stopped being this kit.
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -35,7 +26,6 @@ const BOX: Rect = Rect {
 fn theme() -> MultiTheme {
     // `MultiTheme::new_for` builds all three palettes and reads the *current*
     // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Cupertino);
     MultiTheme::new_for(DesignSystem::Cupertino)
 }
@@ -183,7 +173,6 @@ fn the_bar_is_painted_in_v1_s_colours() {
     let overlay = kit()
         .message("Saved")
         // v1 hid the bar while the snackbar was closed, so the bar is
-        // only there to look at while it is up.
         .with_open_flag(floom_widgets::shared_flag(true))
         .view();
     let surface = bar(&overlay).expect("the bar is up");
@@ -207,7 +196,6 @@ fn the_action_is_painted_in_v1_s_ink() {
         .message("Saved")
         .action_label(Some("Undo".into()))
         // v1 hid the bar while the snackbar was closed, so the bar is
-        // only there to look at while it is up.
         .with_open_flag(floom_widgets::shared_flag(true))
         .view();
     let surface = bar(&overlay).expect("the bar is up");
@@ -265,7 +253,6 @@ fn there_is_no_action_without_a_label() {
     let overlay = kit()
         .message("Saved")
         // v1 hid the bar while the snackbar was closed, so the bar is
-        // only there to look at while it is up.
         .with_open_flag(floom_widgets::shared_flag(true))
         .view();
     let surface = bar(&overlay).expect("the bar is up");
@@ -303,7 +290,6 @@ fn the_props_report_the_message() {
 #[test]
 fn the_theme_is_the_app_wide_one() {
     // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         CupertinoSnackbar::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

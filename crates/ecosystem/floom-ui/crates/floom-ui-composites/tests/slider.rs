@@ -1,10 +1,3 @@
-//! `Slider`'s own logic: quantisation, drag, the keyboard walk.
-//!
-//! These moved with the widget from `floom-widgets/tests/controls.rs`, for the
-//! reason `select_widget.rs` moved: a test of a widget's behaviour belongs with
-//! the widget, and this file is what has to be deleted with it. Nothing here
-//! paints: the appearance moved into `SliderStyle`, and a paint test would be a
-//! test of the style rather than of the widget.
 
 use std::cell::Cell;
 use std::rc::Rc;

@@ -1,80 +1,5 @@
 //! Cupertino speed dial, ported to the Floom 2.0 widget API.
 //!
-//! A speed dial is a floating action button and a fan of smaller ones: the
-//! button opens the fan, and a button in the fan does the work.
-//!
-//! ## What the port uses
-//!
-//! The engine's vocabulary: a `Stack` holding the fan and the button, with
-//! the fan mounted by the engine's `Conditional` while a shared flag says the
-//! dial is open. Each button is a `Pressable` around the `Surface` that
-//! paints it -- interaction without the drawing, the way the ported floating
-//! action button does it.
-//!
-//! ## What this kit answers
-//!
-//! * the button's size, the action buttons' size, the gap and the radius:
-//!   the tokens;
-//! * the button's fill: `primary`, its ink: `on_primary`; the action
-//!   buttons' fill: `secondary_container`, their ink: `on_secondary_container`;
-//! * when the dial is disabled, the button's fill is `on_surface` at 12 and
-//!   its ink `on_surface` at 38 -- v1's numbers;
-//! * the direction: which way the fan opens and which way its buttons line up.
-//!
-//! ## The icons
-//!
-//! v1's speed dial took **raw SVG markup** for the button's icon and for
-//! every action's icon. 2.0 has no SVG pipeline -- the engine draws one
-//! filled outline -- so the port takes an icon *name* and resolves it from
-//! this kit's own table, the same way the ported rating does. The default
-//! button icon is the table's `add` glyph, which is v1's plus: the two are
-//! the same path.
-//!
-//! ## The open state
-//!
-//! v1 held it in an `RwSignal<bool>` that `view()` created. 2.0 cannot hold
-//! it in a signal at all -- a slot closure has to be `Send + Sync` and an
-//! `RwSignal` is `Rc`-based -- so the port holds a shared flag, and the
-//! engine's `Conditional` follows it. The port adds `open_flag()` and
-//! `with_open_flag()`, which v1 did not have, so a caller can drive the dial
-//! from outside.
-//!
-//! ## What v1 wrote that this port does not carry
-//!
-//! * **The pointer cursor.** v1 gave the button and every action button
-//!   `cursor(CursorStyle::Pointer)`. 2.0's `Pressable` does not answer
-//!   `Widget::cursor`, so the pointer is not carried over.
-//! * **The callback in the shared props.** `SpeedDialProps::on_action` is a
-//!   `Box<dyn Fn(usize)>`, which cannot cross a `Send + Sync` slot boundary.
-//!   The kit keeps an `Arc<dyn Fn(usize) + Send + Sync>` of its own and the
-//!   props' slot stays empty.
-//! * **The accessors.** v1's Cupertino speed dial already had `props()`,
-//!   `theme()` and `with_theme()`. The port gives Material the same three, so
-//!   the three kits are one shape.
-//!
-//! ## The dead token
-//!
-//! `SpeedDialTokens::animation_ms` -- the open/close animation's duration --
-//! was never read by v1: the speed dial had no animation at all. The port
-//! keeps the number in its style, because v1's tokens are the shared record,
-//! and names it here: nothing in the port animates either.
-//!
-//! ## The dead field
-//!
-//! An action's `label` was stored by v1 and never rendered -- the fan is
-//! buttons, and a button carries an icon, not a caption. The port keeps the
-//! label in the action, and keeps not rendering it.
-//!
-//! ## The v1 quirk the port reproduces
-//!
-//! v1's `disabled` prop says "whether the whole dial is non-interactive",
-//! but only the button was gated: the action buttons answered a click
-//! whatever the flag said. The port gates the button and leaves the action
-//! buttons alone, which is v1's code rather than v1's promise.
-//!
-//! And v1's closed dial still had the gap between the empty fan and the
-//! button, because the empty fan was a child of the stack all the same. The
-//! port's `Conditional` is a child too, so the gap is there as well.
 
 use std::sync::Arc;
 
@@ -249,7 +174,6 @@ impl CupertinoSpeedDial {
         CupertinoSpeedDialStyle {
             design_system: "cupertino",
             // v1: `primary` with `on_primary` ink, or `on_surface` at 12 and
-            // 38 when the dial is disabled.
             fab_background: if disabled {
                 with_alpha(theme.colors().on_surface, 12)
             } else {
@@ -261,7 +185,6 @@ impl CupertinoSpeedDial {
                 theme.colors().on_primary
             },
             // v1: the action buttons were `secondary_container` with
-            // `on_secondary_container` ink, disabled or not.
             action_background: theme.colors().secondary_container,
             action_foreground: theme.colors().on_secondary_container,
             fab_size: tokens.fab_size,
@@ -281,7 +204,6 @@ impl CupertinoSpeedDial {
         let direction = self.props.direction;
 
         // The button: a filled circle with the icon in it, and the click
-        // target around it.
         let fab_icon = if self.props.fab_icon.is_empty() {
             DEFAULT_FAB_ICON.to_string()
         } else {
@@ -325,7 +247,6 @@ impl CupertinoSpeedDial {
                     .disabled(disabled)
                     .on_click(move || {
                         // v1 toggled the open signal, and only when the dial was
-                        // not disabled.
                         if !disabled {
                             let now = read_flag(&open);
                             write_flag(&open, !now);
@@ -366,7 +287,6 @@ impl CupertinoSpeedDial {
             buttons = buttons.push(move || {
                 // The `Pressable` is built *here*, inside the slot, for the
                 // same reason the button's is; and the values its closure
-                // takes are copied, because a slot is replayed.
                 let surface = surface.clone();
                 let on_action = on_action.clone();
                 Box::new(
@@ -377,7 +297,6 @@ impl CupertinoSpeedDial {
                     ))
                     .on_click(move || {
                         // v1 ran the action's callback and nothing else: the
-                        // fan stayed open.
                         if let Some(cb) = &on_action {
                             cb(index);
                         }
@@ -389,7 +308,6 @@ impl CupertinoSpeedDial {
 
         // The fan is mounted only while the dial is open. v1's `dyn_view`
         // answered the same question with an `Empty` view.
-        //
         // `Conditional::new(false)` starts "not yet seen", so the first update
         // reads the flag as a *change*: a dial that starts closed would have
         // its fan mounted at once, and the button's tap -- which is what opens

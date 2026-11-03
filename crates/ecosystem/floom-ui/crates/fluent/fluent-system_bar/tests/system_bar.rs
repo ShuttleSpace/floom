@@ -1,15 +1,4 @@
 //! The ported Fluent system bar -- the thin status strip at the top of the
-//! application shell.
-//!
-//! The shape is the engine's vocabulary, so what is tested here is the
-//! translation and the pixels: the tokens reach the style, the bar is painted
-//! in v1's colour, the dark variant swaps the fill, and the content keeps the
-//! colour it was given instead of inheriting the bar's.
-//!
-//! ## The tripwires
-//!
-//! `the_bar_is_painted_v1_s_colour` and `the_dark_variant_swaps_the_fill`
-//! would fail if this kit stopped being this kit.
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Rect, Widget, WidgetAny};
 use floom_types::{Color, Insets};
@@ -30,9 +19,6 @@ const BAR: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
     MultiTheme::new_for(DesignSystem::Fluent)
 }
@@ -48,7 +34,6 @@ fn tokens() -> floom_core_theme::component_tokens::SystemBarTokens {
     }
 }
 
-/// Theme colour -> engine colour.
 fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     Color {
         r: c.r,
@@ -58,7 +43,6 @@ fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
     }
 }
 
-/// One widget's paint ops.
 fn ops_of(widget: &dyn WidgetAny) -> Vec<PaintOp> {
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = widget.create(&mut create);
@@ -68,7 +52,6 @@ fn ops_of(widget: &dyn WidgetAny) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-/// The fill a painted box drew.
 fn fill_of(ops: &[PaintOp]) -> Option<Color> {
     ops.iter().find_map(|op| match op {
         PaintOp::Rect { color, .. } => Some(*color),
@@ -77,9 +60,7 @@ fn fill_of(ops: &[PaintOp]) -> Option<Color> {
     })
 }
 
-// --- the translation ------------------------------------------------------
 
-/// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentSystemBarStyle = kit().resolved_style();
@@ -103,7 +84,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-/// The props win over the tokens, and the tokens win by default.
 #[test]
 fn the_props_win_over_the_tokens() {
     assert_eq!(
@@ -120,7 +100,6 @@ fn the_props_win_over_the_tokens() {
     );
 }
 
-/// The props report the bar.
 #[test]
 fn the_props_report_the_bar() {
     let kit = kit().height(30.0).dark(true).pad(4.0);
@@ -129,9 +108,7 @@ fn the_props_report_the_bar() {
     assert_eq!(kit.props().pad, Some(4.0));
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The bar is painted in v1's colour.
 #[test]
 fn the_bar_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -143,8 +120,6 @@ fn the_bar_is_painted_v1_s_colour() {
     );
 }
 
-/// The dark variant swaps the fill *and* the ink: v1 branched on `dark` in
-/// both places.
 #[test]
 fn the_dark_variant_swaps_the_fill() {
     let dark = kit().dark(true).resolved_style();
@@ -158,8 +133,6 @@ fn the_dark_variant_swaps_the_fill() {
     );
 }
 
-/// v1's `.color(fg)` cascaded to the caller's label; 2.0's `Text` carries its
-/// own colour, so the content keeps what it was given.
 #[test]
 fn the_content_keeps_the_colour_it_was_given() {
     let child = Child::new(ChildKey::index(0), LayoutRequest::new(), || {
@@ -181,9 +154,7 @@ fn the_content_keeps_the_colour_it_was_given() {
     );
 }
 
-// --- the structure --------------------------------------------------------
 
-/// The bar declares its own height and the full width of its parent.
 #[test]
 fn the_bar_declares_its_own_height_and_full_width() {
     let request = kit().request();
@@ -200,8 +171,6 @@ fn the_bar_declares_its_own_height_and_full_width() {
     assert_eq!(declared.height.and_then(|h| h.px()), Some(tokens().height));
 }
 
-/// The padding is inside the box, on every side -- as v1 wrote it, whatever
-/// the prop's own doc says.
 #[test]
 fn the_padding_is_inside_the_box() {
     assert_eq!(
@@ -217,8 +186,6 @@ fn the_padding_is_inside_the_box() {
     );
 }
 
-/// v1's `items_center()`: the *child* is centred, so the alignment lives on
-/// the box's request rather than on its fill.
 #[test]
 fn the_content_is_centred() {
     use floom_widgets::Align;
@@ -230,11 +197,7 @@ fn the_content_is_centred() {
     );
 }
 
-// --- the layout registry --------------------------------------------------
 
-/// v1 published the bar's height to a process-wide signal, and `fluent-main`
-/// reads it to inset the content region. Dropping it would overlap the content
-/// with the bar, so the port keeps it.
 #[test]
 fn building_the_bar_publishes_its_height() {
     let _ = layout_signal().get().system_bar;
@@ -246,7 +209,6 @@ fn building_the_bar_publishes_its_height() {
     );
 }
 
-/// The token's own height when the props defer.
 #[test]
 fn the_published_height_defaults_to_the_token() {
     kit().view();
@@ -257,14 +219,9 @@ fn the_published_height_defaults_to_the_token() {
     );
 }
 
-// --- the theme ------------------------------------------------------------
 
-/// v1's Fluent system bar took a *snapshot* of its own design system, so a
-/// change of the app-wide theme does not reach it.
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_ne!(
         FluentSystemBar::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

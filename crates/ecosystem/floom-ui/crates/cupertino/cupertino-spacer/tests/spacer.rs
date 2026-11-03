@@ -1,18 +1,5 @@
 //! Cupertino's spacer: the grow factor, and the widget it reaches.
 //!
-//! ## The claim
-//!
-//! A spacer is an empty, flex-growing view. v1 wrote that as an empty
-//! `Container` with a `flex_grow` on it; 2.0 spells it `Spacer`, and the
-//! factor has to survive the trip -- a spacer that grew by 1.0 because that
-//! was the only number the engine could say would be a silent change to how
-//! the bar lays out.
-//!
-//! ## The engine gained the factor
-//!
-//! `Spacer::flexible` absorbs all the free space -- grow 1.0 -- and a
-//! fixed-extent spacer takes none. A *factor* in between was not expressible,
-//! so `Spacer::growing` was added, and `flexible()` is its 1.0 case.
 
 use floom_core::Widget;
 use floom_types::Length;

@@ -1,17 +1,3 @@
-//! The ported Material navigation drawer -- a panel that slides in from the
-//! edge of the app over a dimmed scrim.
-//!
-//! The shape is the engine's vocabulary plus the composites that own the
-//! presence, so what is tested here is the translation and the pixels: the
-//! tokens reach the style, the panel and the scrim are painted in v1's
-//! colours, the panel is pinned to the edge v1 pinned it to, and a click on
-//! the scrim closes the drawer.
-//!
-//! ## The tripwires
-//!
-//! `the_panel_is_painted_v1_s_colour` and
-//! `the_scrim_closes_the_drawer_when_it_is_clicked` would fail if this kit
-//! stopped being this kit.
 
 use floom_core::{ElementId, Event, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
@@ -33,9 +19,6 @@ const BOX: Rect = Rect {
 };
 
 fn theme() -> MultiTheme {
-    // `MultiTheme::new_for` builds all three palettes and reads the *current*
-    // one, and `set_design_system` writes a thread-local, so the selection is
-    // this test's alone.
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);
     MultiTheme::new_for(DesignSystem::Material)
 }
@@ -96,7 +79,6 @@ fn fill_of(widget: &dyn Widget) -> Option<Color> {
     })
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -149,9 +131,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-// --- the pixels -----------------------------------------------------------
 
-/// The panel is painted the colour v1 painted.
 #[test]
 fn the_panel_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -164,7 +144,6 @@ fn the_panel_is_painted_v1_s_colour() {
     );
 }
 
-/// The scrim is painted the colour v1 painted.
 #[test]
 fn the_scrim_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -179,7 +158,6 @@ fn the_scrim_is_painted_v1_s_colour() {
     assert_eq!(fill_of(&*scrim), Some(expected), "the scrim's fill");
 }
 
-// --- the structure --------------------------------------------------------
 
 /// A closed drawer mounts nothing at all.
 #[test]
@@ -191,7 +169,6 @@ fn a_closed_drawer_mounts_nothing() {
     );
 }
 
-/// The panel is pinned to the edge v1 pinned it to.
 #[test]
 fn the_panel_is_pinned_to_the_chosen_edge() {
     let presence = panel_presence(kit().open(true).side(NavigationDrawerSide::Left));
@@ -228,8 +205,6 @@ fn the_scrim_closes_the_drawer_when_it_is_clicked() {
     let mut pressable = presence.children().remove(0).build();
     let mut create = AllocatingCreateContext::new();
     let id: ElementId = pressable.create(&mut create);
-    // A press and a release over the same spot: v1's scrim closed the drawer
-    // on the click.
     let mut down = TestEventContext::new(
         id,
         BOX,
@@ -256,12 +231,8 @@ fn the_props_report_the_side_and_the_width() {
     assert_eq!(kit.props().width, 200.0);
 }
 
-/// The theme: v1's Material drawer read the *app-wide* theme signal, so a
-/// change of theme re-themes it with everything else.
 #[test]
 fn the_theme_is_the_app_wide_one() {
-    // Not `kit()`: the helper hands the widget a theme of its own, which is
-    // exactly the thing this test is about.
     assert_eq!(
         MaterialNavigationDrawer::new().theme().id(),
         floom_core_theme::global_theme::theme_signal().id(),

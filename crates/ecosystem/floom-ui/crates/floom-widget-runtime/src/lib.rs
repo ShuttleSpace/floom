@@ -1,18 +1,3 @@
-//! Shared runtime helpers for floem-elements components.
-//!
-//! The theme signal is delegated to [`floom_core_theme::global_theme`] so that
-//! every component (regardless of which crate it lives in) reads from one
-//! app-wide theme instance.
-//!
-//! If more than one Design System feature is enabled at once, the priority
-//! Fluent > Cupertino > Material is applied so this module resolves to exactly
-//! one `theme_signal`/`set_theme` definition set.
-//!
-//! # Ported to the 2.0 API
-//!
-//! Theme state is just an `RwSignal`, and the 2.0 prelude already re-exports
-//! `RwSignal` from `floom-signal`, so this crate needs no widget layer
-//! and no `floom` (v1) dependency. See `docs/porting-floem-ui-to-2.0.md`.
 
 use floom_signal::RwSignal;
 

@@ -1,40 +1,4 @@
 //! Fluent counter, ported to the Floom 2.0 widget API.
-//!
-//! ## The shortest possible port, and why that is a finding
-//!
-//! `fluent-counter`, `cupertino-counter` and `fluent-counter` are 151, 148 and 148
-//! lines, and after normalising the kit names away the three differ in **five
-//! lines — all of them the theme signal**. Every design value comes from
-//! `CounterTokens`, and the single literal (`font_size(16.0)` on the value readout)
-//! is the same literal in all three.
-//!
-//! So this is not "one component with three skins", and that is worth stating
-//! plainly: there is **no disagreement to preserve here**. Most shapes in this port
-//! turned out to disagree somewhere, and the disagreements are the substance. This
-//! one does not, and the honest report is "the kits agree" rather than a table of
-//! two rows.
-//!
-//! Everything that is left here is the translation from design tokens to
-//! [`CounterStyle`], plus the one value that is *not* a token — the readout's
-//! `16.0`.
-//!
-//! ## What changed from v1
-//!
-//! * **The state became shared.** v1 held a `RwSignal<i64>` created inside
-//!   `view()`, so a caller could set the value before mounting and read it
-//!   afterwards only by holding the signal — and `view()` returned `impl View`, so
-//!   it could not hand it back. 2.0 needs `Arc<Mutex<CounterState>>` for the reason
-//!   every other 2.0 shared value does: a slot is `Send + Sync` and `RwSignal` is
-//!   `Rc`-based. [`FluentCounter::view`] therefore hands the widget back, and
-//!   [`floom_widgets::Counter::state`] is how a caller reads it.
-//! * **`CursorStyle::Pointer` is gone.** 2.0's `PaintContext` has no cursor
-//!   vocabulary. The buttons are still `Pressable`s, so they are still reachable by
-//!   keyboard, which the cursor was not. Recorded rather than worked around.
-//! * **`clamp_value` moved into the engine**, unchanged, including which bound wins
-//!   when the range is inverted. See `floom_widgets::counter`.
-//! * **`on_change` still fires when a press cannot move the value.** v1 called back
-//!   unconditionally, and that is preserved — including the fact that the engine's
-//!   own `Slider` does the opposite.
 
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -48,16 +12,8 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 
-/// The design system this crate reads.
 const DESIGN_SYSTEM: &str = "fluent";
 
-/// The readout's font size, in px.
-///
-/// **Not a token.** v1 wrote `s.font_size(16.0)` inline in all three kits, and all
-/// three wrote the same 16.0 — so it is a literal here too, named rather than
-/// inlined so the three crates can be compared against each other by reading this
-/// line. The kits' agreement on it is measured, not assumed; see
-/// `tests/counter.rs::the_three_kits_agree_on_the_readout_font_size`.
 pub const READOUT_FONT_SIZE: f32 = 16.0;
 
 fn counter_tokens(theme: &MultiTheme) -> CounterTokens {
@@ -67,19 +23,12 @@ fn counter_tokens(theme: &MultiTheme) -> CounterTokens {
     }
 }
 
-/// Material's resolved counter appearance.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FluentCounterStyle {
     pub design_system: &'static str,
-    /// Fill of the two step buttons. v1 read `surface_variant`.
     pub button_background: Color,
-    /// Ink of the two glyphs. v1 read `on_surface`.
     pub button_foreground: Color,
-    /// Ink of the readout. v1 read `on_surface` — the *same* token as the glyphs,
-    /// which is why the engine carries one `value_font_size` for both and a kit
-    /// that wanted them to differ would need a second field.
     pub value_color: Color,
-    /// Outline of the band. v1 read `outline`.
     pub border_color: Color,
     pub button_size: f32,
     pub width: f32,
@@ -124,12 +73,6 @@ impl FluentCounter {
         self
     }
 
-    /// The change callback, held until [`Self::view`].
-    ///
-    /// `Send + Sync` where v1's was not, because the engine's callback crosses a
-    /// slot boundary. A caller that captured an `Rc` cannot; that is the port's
-    /// one hard requirement on callers, and it is the third time this port has had
-    /// to state it.
     pub fn on_change(mut self, callback: impl Fn(i64) + Send + Sync + 'static) -> Self {
         self.props.on_change = Some(Box::new(callback));
         self
@@ -166,7 +109,6 @@ impl FluentCounter {
         }
     }
 
-    /// The engine's style, which is the whole translation.
     pub fn counter_style(&self) -> CounterStyle {
         let style = self.resolved_style();
         CounterStyle {
@@ -184,11 +126,6 @@ impl FluentCounter {
         }
     }
 
-    /// The counter as an engine widget.
-    ///
-    /// Returns the widget rather than `impl View`, so a caller can read the value
-    /// off it afterwards — v1's `view()` returned an opaque view and left the value
-    /// unreachable.
     pub fn view(self) -> Counter {
         let mut counter = Counter::new(self.props.value).style(self.counter_style());
         if let Some(min) = self.props.min {

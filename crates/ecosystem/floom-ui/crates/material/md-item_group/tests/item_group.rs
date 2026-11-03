@@ -1,12 +1,3 @@
-//! The ported Material 3 item group — the shortest port in the library, and the
-//! one that proves the promotion was right.
-//!
-//! 209 lines of v1 became a token-to-style wrapper, because 123 of 149
-//! substantive lines are shared with the cupertino and fluent copies. So this
-//! suite is mostly *not* about the state machine — that lives in
-//! `floom-widgets`' `compose::select_group_tests`, which is the right boundary for
-//! it. What is here is the translation: the tokens reach the engine's style, the
-//! colours mean what they meant, and the props reach the rules.
 
 use floom_core::Widget;
 use floom_types::{Insets, Rect};
@@ -37,7 +28,6 @@ fn three_rows() -> MdItemGroup {
         .row("Three", || Box::new(floom_widgets::Text::new("three")))
 }
 
-// --- the translation ------------------------------------------------------
 
 /// The whole of this port: the theme's tokens and colours, in the engine's
 /// vocabulary, with no logic left over.
@@ -123,11 +113,7 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(group().resolved_style().design_system, "material");
 }
 
-// --- the props reach the rules --------------------------------------------
 
-/// v1 held two signals — `single` and `multi` — and read `multi.contains(&i)` for
-/// a row's appearance. 2.0 has one shared state, so the two accessors are derived
-/// from one widget rather than kept in step by hand.
 #[test]
 fn one_widget_answers_both_accessors() {
     let widget = group()
@@ -156,8 +142,6 @@ fn the_mode_and_mandatory_props_reach_the_widget() {
     assert!(many.is_mandatory());
 }
 
-/// v1's `selected(usize)` seeded both signals; here it seeds the one shared state,
-/// and both accessors have to agree about it.
 #[test]
 fn the_initial_selection_is_readable_through_both_accessors() {
     let widget = three_rows()
@@ -167,15 +151,12 @@ fn the_initial_selection_is_readable_through_both_accessors() {
     assert_eq!(floom_widget_md_item_group::selected_multi(&widget), vec![2]);
 }
 
-// --- the structure --------------------------------------------------------
 
 #[test]
 fn every_declared_row_reaches_the_widget() {
     let widget = three_rows().view(None::<fn(usize)>, None::<fn(Vec<usize>)>);
     assert_eq!(widget.children().len(), 3);
 
-    // `row_unlabelled` appends, like `row` does — a fourth row, not a
-    // replacement.
     let four = three_rows()
         .row_unlabelled(|| Box::new(floom_widgets::Text::new("x")))
         .view(None::<fn(usize)>, None::<fn(Vec<usize>)>);
@@ -187,10 +168,6 @@ fn every_declared_row_reaches_the_widget() {
     assert_eq!(one.children().len(), 1);
 }
 
-/// An empty group is a stack with no children. v1 wrote
-/// `apply_if(n == 0, |s| s.hide())` — hiding the *node* — and 2.0 has no `hide()`.
-/// The difference is real: a hidden node takes no space, an empty stack takes
-/// whatever the parent gives it. Recorded rather than papered over.
 #[test]
 fn an_empty_group_still_builds() {
     let widget = MdItemGroup::new()
@@ -200,11 +177,7 @@ fn an_empty_group_still_builds() {
     assert!(widget.layout_request().is_some(), "and it is still a stack");
 }
 
-// --- the callbacks --------------------------------------------------------
 
-/// v1 had two callbacks because it had two signals. A caller in single mode gets
-/// the index; a caller in multiple mode gets the set; both are reported so neither
-/// has to know which mode it is in.
 #[test]
 fn both_callbacks_are_reported_and_agree() {
     let seen_single = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -218,8 +191,6 @@ fn both_callbacks_are_reported_and_agree() {
         Some(move |next| m.lock().unwrap().push(next)),
     );
 
-    // The rules themselves are the engine's; what this pins is that both
-    // callbacks reach the same change rather than one shadowing the other.
     assert!(
         seen_single.lock().unwrap().is_empty(),
         "no click, no report"
@@ -227,9 +198,6 @@ fn both_callbacks_are_reported_and_agree() {
     assert!(seen_multi.lock().unwrap().is_empty());
 }
 
-/// The style struct is the port's whole output, so a caller can build the widget
-/// by hand from it — which is what `view` does internally, and what makes the
-/// component composable in a way v1's `AnyView` was not.
 #[test]
 fn the_resolved_style_is_enough_to_build_the_widget() {
     let resolved: MdItemGroupStyle = group().resolved_style();
@@ -237,8 +205,6 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
     assert!(resolved.pad > 0.0);
     assert!(resolved.radius > 0.0);
 
-    // And a hand-built widget with those exact numbers is indistinguishable from
-    // the port's own.
     let by_hand =
         floom_ui_composites::SelectGroup::new().style(floom_ui_composites::SelectGroupStyle {
             gap: resolved.gap,

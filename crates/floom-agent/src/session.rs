@@ -102,8 +102,6 @@ impl<'a> AgentSession<'a> {
         }
     }
 
-    // --- selector resolution ------------------------------------------------
-
     /// Resolve a wire selector against the live screen, refusing nothing
     /// quietly: a miss carries what *is* on screen so an agent can correct
     /// itself rather than re-guess blind.
@@ -146,8 +144,6 @@ impl<'a> AgentSession<'a> {
             .find(|hint| role_name(hint.role) == name.to_lowercase())
             .map(|hint| hint.role)
     }
-
-    // --- inspection -----------------------------------------------------------
 
     fn live_nodes(&self) -> Vec<(u64, SemanticsHint, floom_types::Rect)> {
         let host = self.app.host();
