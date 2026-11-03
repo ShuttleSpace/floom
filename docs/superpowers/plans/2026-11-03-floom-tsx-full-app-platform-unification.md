@@ -155,3 +155,39 @@ with those backends.
 - GUI visual acceptance of `examples/floom-tsx-app` on a machine with a GPU.
 - Reactive handler lowering (`onClick={() => …}`) so the counter demo can
   change text — the same gap tracked in the original plan's Task 10.
+
+### Phase 4 — nsh-style entry surface (added)
+
+nsh drives the runtime from TSX (`mount(App)` + `window.*` / `platform.*`
+callables) rather than returning a `defaultView`. floem-tsx now offers the same
+shape, compile-time:
+
+- `crates/floom-tsx/src/entry.rs` (new): `resolve()` scans top-level
+  `mount(App)`, `window.setTitle/setSize/setResizable`, `app.setName`,
+  `platform.require(cap, policy)`, resolves the named component's returned JSX,
+  and produces `Entry { root, AppConfig }`. `mount(() => <Stack/>)` inline works
+  too. Unknown window/app/platform methods and unknown capabilities/policies are
+  span-located errors.
+- `lower` no longer detects the `<App>` wrapper; `resolve` unwraps it (the
+  wrapper is not a widget) and applies its attributes as config, with explicit
+  `window.*` calls winning.
+- Generated `main.rs` goes through the unified `floom::platform::current().run(
+  AppRequest { … resizable }, …)` and emits a `floom::platform::require(..)` call
+  per `platform.require` — so the OnUnsupported policy is chosen in TSX.
+- `.d.ts` exports `declare module "floom"` with `mount` and the `window` / `app`
+  / `platform` handles.
+- `examples/floom-tsx-app/app.tsx` rewritten in this style.
+
+Verified: `floom run app.tsx --features ""` prints the IME `require` warning
+then the "no backend" error; `--no-run` links desktop + vello.
+
+### Decisions updated
+
+- **Scope**: still desktop-first. mobile/web/tui backends remain to be wired into
+  `floom::platform::current()`; the unified facade and the TSX entry surface are
+  backend-agnostic and already compile/run on desktop.
+
+### Known limitation restated
+
+- Event handler lowering (`onClick={() => …}`) is still not implemented — the
+  demo is static. That is the gap that keeps the GUI from being interactive.
