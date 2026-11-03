@@ -745,6 +745,15 @@ impl Platform for WinitPlatform {
             .unwrap_or_else(|| crate::native::desktop_capabilities(false))
     }
 
+    fn ime(&mut self, _window: WindowId) -> Option<&mut dyn Ime> {
+        // The OS input method is offered as a switch only while the focused
+        // view is IME-enabled; `WinitPlatform` is the IME bridge, so this is the
+        // object that turns the enable into a winit `set_ime_allowed`. Without
+        // it, a focused text field can never take a Chinese (or any) input
+        // source — the OS simply will not show one.
+        Some(self)
+    }
+
     /// Queue a window request; it is realised on the next event-loop callback.
     ///
     /// See the module docs for why this cannot create the window eagerly.

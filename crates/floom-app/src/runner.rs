@@ -86,6 +86,14 @@ struct WindowRecord {
     /// answers -- "never asked" versus "reset after leaving a control" -- so the
     /// default is stored rather than inferred from an absent field.
     cursor: Option<CursorStyle>,
+    /// Whether input-method composition is enabled for this window's view.
+    ///
+    /// macOS (and most platforms) will not expose an input method to switch
+    /// into until the focused view is IME-enabled, so a text widget that gains
+    /// focus has to flip this on. Coalesced: the platform call only fires on a
+    /// change, because toggling the OS input source every frame would fight the
+    /// user's own selection. `None` means "never reconciled yet".
+    ime_enabled: Option<bool>,
 }
 
 /// Connects a platform, a widget host and a presenter.
@@ -250,6 +258,7 @@ impl<R: Presenter> AppRunner<R> {
                         size,
                         scale,
                         cursor: None,
+                        ime_enabled: None,
                     },
                 );
                 if !self.order.contains(&window) {
@@ -454,6 +463,10 @@ impl<R: Presenter> AppRunner<R> {
                     self.attach(platform, window);
                 }
                 let _ = self.render();
+                // The frame just built the scene and (may have) changed which
+                // text widget holds focus, so reconcile the platform's IME
+                // enablement with the host's focused-caret state now.
+                self.sync_ime_enabled(platform, window);
                 // One frame is often not the whole answer: painting can dirty
                 // layout (a re-measured text leaf), and unmounts can owe the
                 // scene a node removal. Keep asking while there is work left,
@@ -487,6 +500,31 @@ impl<R: Presenter> AppRunner<R> {
                     self.stats.redraws_requested += 1;
                 }
             }
+        }
+    }
+
+    /// Keeps the platform's IME enablement matched to whether a text widget
+    /// currently wants composition: enabled when `ime_caret_rect()` is `Some`
+    /// (a focused, IME-aware text field), disabled otherwise.
+    ///
+    /// This is the missing half of Chinese (and any) input-method entry on
+    /// macOS: the OS will not offer an input method to switch into until the
+    /// focused view is IME-enabled, and nothing in the stack was flipping it
+    /// on. Coalesced against the window's last state so the platform call only
+    /// fires on a change — toggling the OS input source every frame would fight
+    /// the user's own selection.
+    fn sync_ime_enabled<P: Platform>(&mut self, platform: &mut P, window: WindowId) {
+        let wanted = self.host.ime_caret_rect().is_some();
+        let record = match self.windows.get_mut(&window.index()) {
+            Some(record) => record,
+            None => return,
+        };
+        if record.ime_enabled == Some(wanted) {
+            return;
+        }
+        record.ime_enabled = Some(wanted);
+        if let Some(ime) = platform.ime(window) {
+            ime.set_enabled(window, wanted);
         }
     }
 
