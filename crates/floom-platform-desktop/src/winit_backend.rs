@@ -531,6 +531,10 @@ impl WinitPlatform {
 
         match event {
             WindowEvent::CloseRequested => {
+                // winit does not close the window automatically — we must tell
+                // it to. Without this the native title-bar buttons fire the
+                // request, the event is queued, and the window stays open.
+                active.exit();
                 self.events.push(PlatformEvent::WindowClosed { window });
             }
             WindowEvent::Destroyed => {
@@ -1076,7 +1080,22 @@ impl<A: WinitApp> WinitDriver<A> {
 /// `windows` are queued before the loop starts and realised as soon as the OS
 /// allows window creation. Must be called from the main thread on macOS/iOS.
 pub fn run<A: WinitApp + 'static>(app: A, windows: Vec<WindowConfig>) -> Result<(), String> {
-    let event_loop = EventLoop::new().map_err(|err| format!("event loop: {err}"))?;
+    #[cfg(target_os = "macos")]
+    let mut builder = winit::event_loop::EventLoop::builder();
+    #[cfg(target_os = "macos")]
+    {
+        // Bring the app to the foreground when launched from a terminal or
+        // another app, so its title-bar buttons are not dimmed. Otherwise a
+        // window opened by `floom run` can sit behind the terminal with no
+        // responsive close/minimise/maximise controls.
+        use winit::platform::macos::EventLoopBuilderExtMacOS;
+        builder.with_activate_ignoring_other_apps(true);
+    }
+    #[cfg(not(target_os = "macos"))]
+    let builder = winit::event_loop::EventLoop::builder();
+    let event_loop = builder
+        .build()
+        .map_err(|err| format!("event loop: {err}"))?;
     event_loop.set_control_flow(ControlFlow::Wait);
 
     let mut platform = WinitPlatform::new();

@@ -19,10 +19,17 @@ window.setSize(640, 440);
 platform.require("ime", "warn");
 
 function App() {
-  // A reactive signal. The compiler lowers `createSignal` to a `SyncBaseSignal`
-  // and `status()` reads it inside the label closure — the closure-capture seam
-  // re-runs the read when the signal changes.
+  // A reactive string signal. The compiler lowers `createSignal` to a
+  // `SyncBaseSignal` seeded with this literal, so the first paint already
+  // reads the text rather than starting empty.
   const [status, setStatus] = createSignal("Click the button to flip the signal.");
+  // A reactive boolean signal for the Switch.
+  const [checked, setChecked] = createSignal(false);
+  // A reactive number signal driving the Progress bar. The Slider writes it
+  // through `onChange={(v) => setProgress(v)}`; the Progress reads it through
+  // `value={progress()}`. Both sides are the same signal, so dragging the
+  // slider thumb moves the bar.
+  const [progress, setProgress] = createSignal(64);
   return (
     <Stack axis="vertical" gap={16} padding={24}>
       <Text label="floom + tsx" size={32} foreground="#1a73e8" />
@@ -38,9 +45,11 @@ function App() {
       </Stack>
       <Text label="controls" foreground="#202124" />
       <Stack axis="horizontal" gap={12}>
-        <Switch label="enabled" checked={true} />
-        <Progress value={64} min={0} max={100} />
+        <Switch label="enabled" checked={checked()} onToggle={() => setChecked(!checked())} />
+        <Progress value={progress()} min={0} max={100} />
       </Stack>
+      <Text label="drag the slider to move the progress bar" foreground="#5f6368" />
+      <Slider value={progress()} min={0} max={100} onChange={(v) => setProgress(v)} />
     </Stack>
   );
 }

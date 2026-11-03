@@ -201,13 +201,32 @@ impl<'a> Lower<'a> {
 
     /// Translate an inline handler arrow into the Rust fragment for its body.
     fn translate_handler(&self, arrow: &ast::ArrowExpr) -> Result<String> {
-        // The arrow's parameters are simply ignored: this closed compiler does
-        // not expose event arguments (no `e => …` payloads yet), so only
-        // signal-driven bodies are in scope.
-        let _ = &arrow.params;
+        // The emitter's event setters take at most one payload argument and
+        // name it `_v` (see `handler_closure("_v", …)` in `floom-dsl`). An
+        // inline arrow that declares `(v) => …` therefore has to use that same
+        // name in its body, or the emitted closure references an undefined
+        // binding. Zero-argument arrows are left alone.
+        let renamed = match arrow.params.len() {
+            0 => None,
+            1 => match arrow.params.first() {
+                Some(pat) => Some(pat_ident_name(pat).ok_or_else(|| {
+                    self.err(
+                        arrow.span,
+                        "inline event handlers take a plain identifier parameter (e.g. `(value) => …`)",
+                    )
+                })?),
+                None => None,
+            },
+            _ => {
+                return Err(self.err(
+                    arrow.span,
+                    "inline event handlers take at most one parameter (e.g. `(value) => …`)",
+                ))
+            }
+        };
         let span = arrow.span;
-        match arrow.body.as_ref() {
-            ast::BlockStmtOrExpr::Expr(e) => self.translate_expr(e),
+        let body = match arrow.body.as_ref() {
+            ast::BlockStmtOrExpr::Expr(e) => self.translate_expr(e)?,
             ast::BlockStmtOrExpr::BlockStmt(block) => {
                 let mut out = String::new();
                 for stmt in &block.stmts {
@@ -228,9 +247,15 @@ impl<'a> Lower<'a> {
                         }
                     }
                 }
-                Ok(out)
+                out
             }
-        }
+        };
+        // `to_snake` is applied to identifiers, so a camelCase parameter
+        // (`newValue`) must be renamed in its snake form.
+        Ok(match renamed {
+            Some(param) => replace_ident(&body, &to_snake(&param), "_v"),
+            None => body,
+        })
     }
 
     /// Translate a JS expression into a Rust fragment, rewriting signal reads and
@@ -762,12 +787,16 @@ fn var_decl_signal(decl: &ast::VarDeclarator) -> Option<Binding> {
         "createSignal" | "createMemo" => {
             // `[count, setCount]` or `double`.
             let name = array_first_name(&decl.name).or_else(|| pat_ident_name(&decl.name))?;
-            let ty = call
-                .args
-                .first()
+            let first = call.args.first();
+            let ty = first
                 .map(|a| lit_type(a.expr.as_ref()))
                 .unwrap_or(ValueType::Text);
-            Some(Binding::value(name, ty))
+            // A signal's initial value is part of its observable behaviour, so
+            // carry it through to the emitter. Only literals are representable;
+            // a computed initial (`createSignal(f())`) falls back to the type
+            // default, which is the same compromise the old code made for all.
+            let init = first.and_then(|a| expr_lit_value(a.expr.as_ref(), ty));
+            Some(Binding::value_with_init(name, ty, init))
         }
         "useContext" => {
             let name = pat_ident_name(&decl.name)?;
@@ -834,6 +863,40 @@ fn pat_ident_name(pat: &ast::Pat) -> Option<String> {
         return Some(id.id.sym.as_str().to_string());
     }
     None
+}
+
+/// Replace `from` with `to` where it appears as a whole Rust identifier in
+/// `body`.
+///
+/// A textual replacement would rewrite `count` inside `discount`, so the scan
+/// only accepts a match whose neighbours are not identifier characters. This is
+/// enough for the closed inline-handler grammar: the body is a generated Rust
+/// fragment, not arbitrary user text.
+fn replace_ident(body: &str, from: &str, to: &str) -> String {
+    if from.is_empty() || from == to {
+        return body.to_string();
+    }
+    let mut out = String::with_capacity(body.len());
+    let mut rest = body;
+    while let Some(pos) = rest.find(from) {
+        let before = rest[..pos].chars().next_back();
+        let after = rest[pos + from.len()..].chars().next();
+        let boundary_before = before.is_none_or(|c| !is_ident_char(c));
+        let boundary_after = after.is_none_or(|c| !is_ident_char(c));
+        if boundary_before && boundary_after {
+            out.push_str(&rest[..pos]);
+            out.push_str(to);
+        } else {
+            out.push_str(&rest[..pos + from.len()]);
+        }
+        rest = &rest[pos + from.len()..];
+    }
+    out.push_str(rest);
+    out
+}
+
+fn is_ident_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
 }
 
 /// `const [count, setCount] = createSignal(0)` → `("count", "setCount")`.
@@ -952,17 +1015,32 @@ fn resolve_class(token: &str) -> Option<(&'static str, PropValue)> {
 }
 
 /// Infer a `ValueType` from a literal initial expression (default `Text`).
+///
+/// Numeric literals are inferred as `Number`, not `Int`, even when they have no
+/// fractional part: a signal's type is decided by how it is *written* (a setter
+/// call from a slider yields `f64`), and the two numeric seats a widget reads —
+/// [`Slider`](crate::emit) and [`Progress`](crate::emit) — both want `f64`. An
+/// `Int` signal would force every write site to cast.
 fn lit_type(expr: &ast::Expr) -> ValueType {
     match expr {
-        ast::Expr::Lit(ast::Lit::Num(n)) => {
-            if n.value.fract() == 0.0 {
-                ValueType::Int
-            } else {
-                ValueType::Number
-            }
-        }
+        ast::Expr::Lit(ast::Lit::Num(_)) => ValueType::Number,
         ast::Expr::Lit(ast::Lit::Str(_)) => ValueType::Text,
         ast::Expr::Lit(ast::Lit::Bool(_)) => ValueType::Bool,
         _ => ValueType::Text,
+    }
+}
+
+/// Turn a signal's initial expression into a `PropValue` when it is a literal
+/// representable in the IR. `None` means "no literal", so the emitter seeds
+/// the type's default instead of inventing a value.
+fn expr_lit_value(expr: &ast::Expr, ty: ValueType) -> Option<PropValue> {
+    match (expr, ty) {
+        (ast::Expr::Lit(ast::Lit::Str(s)), ValueType::Text | ValueType::Ident) => {
+            Some(PropValue::Text(s.value.as_str().unwrap_or_default().to_string()))
+        }
+        (ast::Expr::Lit(ast::Lit::Bool(b)), ValueType::Bool) => Some(PropValue::Bool(b.value)),
+        (ast::Expr::Lit(ast::Lit::Num(n)), ValueType::Int) => Some(PropValue::Int(n.value as i64)),
+        (ast::Expr::Lit(ast::Lit::Num(n)), _) => Some(PropValue::Number(n.value)),
+        _ => None,
     }
 }

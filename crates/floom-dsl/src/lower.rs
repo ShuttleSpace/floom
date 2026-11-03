@@ -173,6 +173,7 @@ pub fn lower(ast: &Ast) -> Result<Bound, DslError> {
         bindings.push(Binding {
             name: declaration.name.clone(),
             kind: binding_type(&declaration.ty, declaration.ty_span)?,
+            init: None,
         });
     }
 

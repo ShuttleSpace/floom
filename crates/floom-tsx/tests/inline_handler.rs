@@ -79,8 +79,6 @@ fn signal_read_in_prop_lowers_to_ref() {
 
 #[test]
 fn inline_handler_rejects_unsupported_expression() {
-    // A `new` expression is outside the supported subset, so it must be a
-    // span-based diagnostic rather than a silently-wrong emission.
     let src = r#"
         const [count, setCount] = createSignal(0);
         <Button onClick={() => setCount(new Foo())} />
@@ -89,4 +87,42 @@ fn inline_handler_rejects_unsupported_expression() {
         compile(src).is_err(),
         "unsupported expression in inline handler should fail"
     );
+}
+
+#[test]
+fn create_signal_seed_is_captured() {
+    let src = r#"
+        const [status, setStatus] = createSignal("hello world");
+        const [progress, setProgress] = createSignal(64);
+        const [on, setOn] = createSignal(true);
+        <Stack>
+            <Text label={status()} />
+        </Stack>
+    "#;
+    let doc = compile(src).expect("lower");
+
+    let status = doc
+        .bindings
+        .iter()
+        .find(|b| b.name == "status")
+        .expect("status binding");
+    assert_eq!(
+        status.init,
+        Some(PropValue::Text("hello world".to_string())),
+        "string initial value is seeded"
+    );
+
+    let progress = doc
+        .bindings
+        .iter()
+        .find(|b| b.name == "progress")
+        .expect("progress binding");
+    assert_eq!(progress.init, Some(PropValue::Number(64.0)));
+
+    let on = doc
+        .bindings
+        .iter()
+        .find(|b| b.name == "on")
+        .expect("on binding");
+    assert_eq!(on.init, Some(PropValue::Bool(true)));
 }

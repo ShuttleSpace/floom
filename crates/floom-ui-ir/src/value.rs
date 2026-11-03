@@ -168,10 +168,18 @@ pub enum BindingKind {
 }
 
 /// A named slot in the document's binding table.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Binding {
     pub name: String,
     pub kind: BindingKind,
+    /// The literal a value binding starts at, when the source declaration
+    /// carried one (`createSignal("hi")`). `None` means "the type's default",
+    /// which is what a DSL `bindings { title: Text }` row says. Keeping this
+    /// next to the binding rather than on the usage site is what lets the
+    /// emitter seed the signal with the author's value: a reactive read that
+    /// starts at `""` paints an empty label until something writes it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub init: Option<PropValue>,
 }
 
 impl Binding {
@@ -179,6 +187,20 @@ impl Binding {
         Self {
             name: name.into(),
             kind: BindingKind::Value(ty),
+            init: None,
+        }
+    }
+
+    /// A value binding that starts at a known literal.
+    pub fn value_with_init(
+        name: impl Into<String>,
+        ty: ValueType,
+        init: impl Into<Option<PropValue>>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            kind: BindingKind::Value(ty),
+            init: init.into(),
         }
     }
 
@@ -186,6 +208,7 @@ impl Binding {
         Self {
             name: name.into(),
             kind: BindingKind::Handler,
+            init: None,
         }
     }
 }

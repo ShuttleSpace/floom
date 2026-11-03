@@ -57,7 +57,12 @@ pub fn compile_file(path: &Path) -> Result<CompiledApp> {
 /// Emit the widget program for an app.
 pub fn emit_ui_gen(document: &UiDocument) -> Result<String> {
     let options = floom_dsl::EmitOptions {
-        widgets: floom_dsl::WidgetSource::Primitives,
+        // TSX authors reach for `Checkbox`/`Radio`/`Select`/`Slider`/
+        // `TextField` the same way they reach for `Button`; the primitives-only
+        // source turns those into placeholders. The `floom run` manifest adds
+        // `floom-ui-composites` to the generated crate so this is always
+        // resolvable.
+        widgets: floom_dsl::WidgetSource::WithComposites,
         reactive: is_reactive(document),
         ..Default::default()
     };

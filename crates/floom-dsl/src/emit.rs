@@ -835,8 +835,20 @@ impl<'a> Emitter<'a> {
             NodeKind::Switch => {
                 let label = self.text(node, "label").unwrap_or_default();
                 let mut out = format!("Switch::new({})", lit(&label));
-                if let Some(on) = self.boolean(node, "checked") {
-                    let _ = std::fmt::Write::write_fmt(&mut out, format_args!(".on({on})"));
+                let checked = if self.reactive {
+                    if let Some(name) = self.ref_prop(node, "checked") {
+                        Some(format!("{name}.get()"))
+                    } else {
+                        self.boolean(node, "checked").map(|on| on.to_string())
+                    }
+                } else {
+                    self.boolean(node, "checked").map(|on| on.to_string())
+                };
+                if let Some(checked) = checked {
+                    let _ = std::fmt::Write::write_fmt(
+                        &mut out,
+                        format_args!(".on({checked})"),
+                    );
                 }
                 if let Some(disabled) = self.boolean(node, "disabled") {
                     let _ =
@@ -852,14 +864,34 @@ impl<'a> Emitter<'a> {
                 out
             }
             NodeKind::Slider => {
-                let value = self.num(node, "value").unwrap_or(0.0);
-                let min = self.num(node, "min").unwrap_or(0.0);
-                let max = self.num(node, "max").unwrap_or(1.0);
+                let value = if self.reactive {
+                    if let Some(name) = self.ref_num(node, "value") {
+                        // `Slider::new` takes `f64`; a signal declared as
+                        // `Int`/`Number`/`f32` all reach it through `as f64`.
+                        format!("{name}.get() as f64")
+                    } else {
+                        match self.num(node, "value") {
+                            Some(value) => num_lit(value),
+                            None => "0.0".to_string(),
+                        }
+                    }
+                } else {
+                    match self.num(node, "value") {
+                        Some(value) => num_lit(value),
+                        None => "0.0".to_string(),
+                    }
+                };
+                let min = match self.num(node, "min") {
+                    Some(value) => num_lit(value),
+                    None => "0.0".to_string(),
+                };
+                let max = match self.num(node, "max") {
+                    Some(value) => num_lit(value),
+                    None => "1.0".to_string(),
+                };
                 let mut out = format!(
                     "Slider::new({}, {}, {})",
-                    num_lit(value),
-                    num_lit(min),
-                    num_lit(max)
+                    value, min, max
                 );
                 if let Some(disabled) = self.boolean(node, "disabled") {
                     let _ =
@@ -875,17 +907,38 @@ impl<'a> Emitter<'a> {
                 out
             }
             NodeKind::Progress => {
-                let mut out = match self.num(node, "value") {
-                    Some(value) => format!("Progress::determinate({})", num_lit(value)),
-                    None => String::from("Progress::indeterminate()"),
+                // `Progress::determinate` takes a fraction in `0..=1`, while the
+                // IR carries a value in `min..=max`. Reading `value` alone made
+                // a `value=64 min=0 max=100` bar paint full — the domain was
+                // silently thrown away. Normalise here, at compile time for a
+                // literal and at run time for a signal.
+                let min = self.num(node, "min").unwrap_or(0.0);
+                let max = self.num(node, "max").unwrap_or(100.0);
+                let span = if max > min { max - min } else { 1.0 };
+                let value = if self.reactive {
+                    if let Some(name) = self.ref_num(node, "value") {
+                        format!(
+                            "({name}.get() as f64 - {}) / {}",
+                            num_lit(min),
+                            num_lit(span)
+                        )
+                    } else {
+                        match self.num(node, "value") {
+                            Some(value) => num_lit(((value - min) / span).clamp(0.0, 1.0)),
+                            None => "0.0".to_string(),
+                        }
+                    }
+                } else {
+                    match self.num(node, "value") {
+                        Some(value) => num_lit(((value - min) / span).clamp(0.0, 1.0)),
+                        None => "0.0".to_string(),
+                    }
                 };
+                let mut out = format!("Progress::determinate({value})");
                 if let Some(disabled) = self.boolean(node, "disabled") {
                     let _ =
                         std::fmt::Write::write_fmt(&mut out, format_args!(".disabled({disabled})"));
                 }
-                // `min`/`max` are deliberately not read: `determinate` takes
-                // the value alone, so a domain has nowhere to go and is
-                // reported as a leftover instead of being approximated.
                 out
             }
             NodeKind::TextField => {
@@ -1065,13 +1118,18 @@ impl<'a> Emitter<'a> {
         let mut out = String::new();
         for binding in &document.bindings {
             if let BindingKind::Value(ty) = binding.kind {
+                // Seed the signal with the author's literal when the source
+                // carried one (`createSignal("hi")`); fall back to the type's
+                // default for DSL bindings that only declare a type. A label
+                // bound to an unseeded signal paints empty until first write,
+                // which reads as "the binding does not work".
+                let init = match &binding.init {
+                    Some(value) => seed_lit(value, ty),
+                    None => default_lit(ty),
+                };
                 let _ = std::fmt::Write::write_fmt(
                     &mut out,
-                    format_args!(
-                        "let {} = Arc::new(SyncBaseSignal::new({}));\n    ",
-                        binding.name,
-                        default_lit(ty)
-                    ),
+                    format_args!("let {} = Arc::new(SyncBaseSignal::new({}));\n    ", binding.name, init),
                 );
             }
         }
@@ -1080,6 +1138,14 @@ impl<'a> Emitter<'a> {
 
     /// The signal name a property reads, if its value is a `Ref`.
     fn ref_prop(&mut self, node: &UiNode, name: &str) -> Option<String> {
+        match self.prop(node, name) {
+            Some(PropValue::Ref(reference)) => Some(reference.clone()),
+            _ => None,
+        }
+    }
+
+    /// The signal name a numeric property reads, if its value is a `Ref`.
+    fn ref_num(&mut self, node: &UiNode, name: &str) -> Option<String> {
         match self.prop(node, name) {
             Some(PropValue::Ref(reference)) => Some(reference.clone()),
             _ => None,
@@ -1113,7 +1179,7 @@ impl<'a> Emitter<'a> {
         for name in &self.signals {
             // Only clone signals this body actually names, so unused ones are not
             // moved into the closure.
-            if child_expr.contains(name.as_str()) {
+            if mentions_ident(child_expr, name.as_str()) {
                 let _ = std::fmt::Write::write_fmt(
                     &mut clones,
                     format_args!("let {name} = {name}.clone(); "),
@@ -1133,7 +1199,7 @@ impl<'a> Emitter<'a> {
         }
         let mut clones = String::new();
         for name in &self.signals {
-            if body.contains(name.as_str()) {
+            if mentions_ident(body, name.as_str()) {
                 let _ = std::fmt::Write::write_fmt(
                     &mut clones,
                     format_args!("let {name} = {name}.clone(); "),
@@ -1334,6 +1400,41 @@ fn default_lit(ty: ValueType) -> String {
     }
 }
 
+/// The Rust literal a signal is seeded with, given its declared type.
+///
+/// The payload is coerced to the declared type rather than trusted: a TSX
+/// `createSignal(0)` infers `Int`, but a signal used by a `Number` prop must
+/// still start at `0.0f64` or the generated `SyncBaseSignal<i64>` will not
+/// match the `.get()` the prop expects.
+fn seed_lit(value: &PropValue, ty: ValueType) -> String {
+    match ty {
+        ValueType::Bool => match value {
+            PropValue::Bool(b) => b.to_string(),
+            _ => default_lit(ty),
+        },
+        ValueType::Int => match value {
+            PropValue::Int(i) => format!("{i}i64"),
+            PropValue::Number(n) => format!("{}i64", *n as i64),
+            _ => default_lit(ty),
+        },
+        ValueType::Number => match value {
+            PropValue::Number(n) => num_lit(*n),
+            PropValue::Int(i) => num_lit(*i as f64),
+            _ => default_lit(ty),
+        },
+        ValueType::Text | ValueType::Ident => match value {
+            PropValue::Text(text) => format!("{}.to_string()", lit(text)),
+            PropValue::Ident(text) => format!("{}.to_string()", lit(text)),
+            _ => default_lit(ty),
+        },
+        ValueType::Color => match value {
+            PropValue::Color(rgba) => color_lit(*rgba),
+            _ => default_lit(ty),
+        },
+        ValueType::List => default_lit(ty),
+    }
+}
+
 /// A Rust string literal.
 fn lit(text: &str) -> String {
     let mut out = String::with_capacity(text.len() + 2);
@@ -1350,6 +1451,62 @@ fn lit(text: &str) -> String {
     }
     out.push('"');
     out
+}
+
+/// True when `haystack` names `needle` as a whole Rust identifier, outside a
+/// string or char literal.
+///
+/// A plain `contains` would treat the word "progress" inside the label
+/// `"drag the slider to move the progress bar"` as a use of the `progress`
+/// signal, cloning it into a closure that never reads it. Cloning an `Arc` is
+/// cheap but the unused binding is a warning in every generated program. Skipping
+/// string/char literals is what makes the word a *label* rather than a read.
+fn mentions_ident(haystack: &str, needle: &str) -> bool {
+    if needle.is_empty() {
+        return false;
+    }
+    let ident = |c: char| c.is_alphanumeric() || c == '_';
+    let chars: Vec<char> = haystack.chars().collect();
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        // Skip a string literal, including its quotes and escapes.
+        if c == '"' {
+            i += 1;
+            while i < chars.len() {
+                match chars[i] {
+                    '\\' => i += 2,
+                    '"' => {
+                        i += 1;
+                        break;
+                    }
+                    _ => i += 1,
+                }
+            }
+            continue;
+        }
+        // Skip a char literal; `'a'`, `'\n'`. A lifetime is not a literal, so
+        // only skip when a closing quote is within reach.
+        if c == '\'' {
+            if let Some(close) = chars[i + 1..].iter().position(|&ch| ch == '\'') {
+                i += close + 2;
+                continue;
+            }
+        }
+        if c == '_' || c.is_alphabetic() {
+            let start = i;
+            while i < chars.len() && ident(chars[i]) {
+                i += 1;
+            }
+            let word: String = chars[start..i].iter().collect();
+            if word == needle {
+                return true;
+            }
+            continue;
+        }
+        i += 1;
+    }
+    false
 }
 
 fn char_lit(c: char) -> String {

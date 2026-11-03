@@ -256,6 +256,7 @@ pub struct EventBinding {
     pub handler: String,
     /// Inline Rust source for the handler body, set by the TSX compiler. `None`
     /// for a reference handler.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub body: Option<String>,
 }
 

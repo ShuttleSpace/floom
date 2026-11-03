@@ -5,7 +5,7 @@
 //! (it never ships in the application binary). Lowering — turning the JSX into a
 //! `floom_ui_ir::UiDocument` — lives in `lower.rs`.
 
-use swc_common::{FileName, SourceMap, sync::Lrc};
+use swc_common::{FileName, SourceMap, Spanned, sync::Lrc};
 use swc_common::comments::SingleThreadedComments;
 use swc_ecma_ast::EsVersion;
 use swc_ecma_parser::{lexer::Lexer, EsSyntax, Parser, StringInput, Syntax};
@@ -69,9 +69,39 @@ fn parse_inner(source: &str) -> Result<Parsed> {
         Some(&comments),
     );
     let mut parser = Parser::new_from(lexer);
-    let module = parser
-        .parse_module()
-        .map_err(|e| TsxError::new(format!("TSX parse error: {e:?}")))?;
+    let result = parser.parse_module();
+    // `parse_module` reports the *first* error it hit, but swc's recovery can
+    // re-interpret a perfectly good `import` as a dynamic-import expression
+    // when a later item fails to parse, so the returned error can point at the
+    // import line instead of the real syntax error. `take_errors` holds the
+    // recovered diagnostics; taking the one furthest into the source surfaces
+    // the line the author actually has to fix.
+    if let Err(original) = result {
+        let errors = parser.take_errors();
+        let best = errors
+            .into_iter()
+            .chain(std::iter::once(original))
+            .max_by_key(|e| e.span().lo())
+            .expect("a parse failure carries an error");
+        let loc = cm.lookup_char_pos(best.span().lo());
+        // swc sometimes re-interprets a valid top-level `import` as a
+        // dynamic-import expression when it fails to parse a later item, so the
+        // fatal error lands on the import line. Surface the real message, but
+        // note that the cause may be elsewhere when the flagged token is an
+        // `import`.
+        let base = format!("{:?}", best.kind());
+        let hint = if matches!(best.kind(), swc_ecma_parser::error::SyntaxError::InvalidImport) {
+            " — note: this may be swc's mis-recovery; check for an unclosed JSX tag, an unbalanced brace, or a malformed attribute elsewhere"
+        } else {
+            ""
+        };
+        return Err(TsxError::new(format!("TSX parse error: {base}{hint}"))
+            .at(loc.line, loc.col_display + 1));
+    }
+    let module = result.map_err(|err| {
+        let loc = cm.lookup_char_pos(err.span().lo());
+        TsxError::new(format!("TSX parse error: {err:?}")).at(loc.line, loc.col_display + 1)
+    })?;
     let root = extract_root(&module);
     Ok(Parsed { root, module, cm })
 }
