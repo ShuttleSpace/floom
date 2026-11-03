@@ -22,3 +22,9 @@ examples/ios/Cargo.lock
 # Python bytecode from the repo tools
 __pycache__/
 *.pyc
+
+# Test-run and rustdoc output under `tests/`; nothing here is a source file.
+/tests/floom-cli-test-*/
+/tests/tmp/
+/tests/doc/
+/tests/dsl-fixture/
