@@ -1,4 +1,6 @@
 /target
+# `floom run <app.tsx>` generates its throwaway crate here.
+.floom/
 /Cargo.lock
 /.lapce
 /.idea

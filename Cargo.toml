@@ -5,7 +5,13 @@ resolver = "3"
 # plugins); each is its own workspace, so the root `cargo test --workspace`
 # stays focused on the core. Build them from their own directory, or by path
 # from an application — `plugins/` is where every capability plugin lives.
-exclude = ["crates/vendor", "crates/ecosystem"]
+exclude = [
+  "crates/vendor",
+  "crates/ecosystem",
+  # A TSX-only app: it has no `Cargo.toml` on purpose (`floom run app.tsx`
+  # generates one), so the workspace cannot own it.
+  "examples/floom-tsx-app",
+]
 members = [
   "crates/floom-accessibility",
   "crates/floom-accuracy",

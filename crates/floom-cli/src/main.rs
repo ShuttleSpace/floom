@@ -4,6 +4,7 @@
 //! Rust core under `src/` plus one directory per target platform.
 
 mod native_project;
+mod run_app;
 mod templates;
 
 use std::fs;
@@ -17,9 +18,16 @@ USAGE:
     floom <COMMAND> [OPTIONS]
 
 COMMANDS:
+    run <APP.tsx>    Compile a TSX app and launch it (no Rust written by hand)
     create <NAME>    Scaffold a new Floom app
     create --plugin  Scaffold a Floom plugin (Rust half + native halves)
     help             Show this message
+
+OPTIONS (run):
+    --release              Build the app in release mode
+    --no-run               Compile the app without launching it
+    --features <LIST>      Backend features (default: desktop,renderer-gpu)
+    --floom-path <PATH>    Use a local Floom checkout instead of installed crates
 
 OPTIONS (create):
     --template <KIND>      app (default) or plugin
@@ -34,6 +42,8 @@ OPTIONS (create):
     --force                Overwrite an existing target directory
 
 EXAMPLES:
+    floom run app.tsx
+    floom run app.tsx --release
     floom create my_app
     floom create my_app --platforms android,ios
     floom create --plugin --platforms android,ios camera
@@ -57,6 +67,7 @@ fn run(args: &[String]) -> Result<(), String> {
         return Ok(());
     };
     match cmd.as_str() {
+        "run" => run_app::run(&args[1..]),
         "create" => create(&args[1..]),
         "help" | "-h" | "--help" => {
             print!("{USAGE}");
@@ -242,7 +253,6 @@ fn create(args: &[String]) -> Result<(), String> {
 
 /// Scaffold an app: a widget tree, plus one directory per platform.
 fn create_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
-    // --- Rust core -------------------------------------------------
     write(
         &root.join("Cargo.toml"),
         &templates::cargo_toml(&opts.name, &opts.floom_crate, opts.floom_path.as_deref()),
@@ -258,8 +268,6 @@ fn create_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
         "// Integration tests go here. Unit tests belong next to the code in `src/`.\n",
     )?;
 
-    // --- per-platform native projects ------------------------------
-    //
     // At the top level, next to `src/`, not under a `native/` directory: this
     // matches a Flutter project, where `android/` sits beside `lib/` and opens in
     // Android Studio without the reader having to know there is a hierarchy.
@@ -293,7 +301,6 @@ fn create_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
 fn create_plugin(opts: &CreateOpts, root: &Path) -> Result<(), String> {
     let android = opts.platforms.iter().any(|p| p == "android");
 
-    // --- Rust half -----------------------------------------------------
     write(
         &root.join("Cargo.toml"),
         &templates::plugin_cargo_toml(&opts.name, opts.platform_path.as_deref(), &opts.platforms),
@@ -354,8 +361,6 @@ fn create_plugin(opts: &CreateOpts, root: &Path) -> Result<(), String> {
         &templates::plugin_desktop_readme(&opts.name),
     )?;
 
-    // --- native halves -------------------------------------------------
-    //
     // Under `native/`, next to the `common/` directory that holds the C ABI.
     // The desktop half is written above rather than in this loop, because it
     // is *one* directory for all three desktop targets: the C ABI it
@@ -365,7 +370,6 @@ fn create_plugin(opts: &CreateOpts, root: &Path) -> Result<(), String> {
         emit_plugin_platform(opts, root, p)?;
     }
 
-    // --- example --------------------------------------------------------
     let example = root.join("example");
     write(
         &example.join("Cargo.toml"),

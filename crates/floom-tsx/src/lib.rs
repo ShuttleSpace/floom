@@ -11,12 +11,15 @@
 //! let rust = floom_dsl::emit::emit(&doc, &floom_dsl::EmitOptions::default()).unwrap();
 //! ```
 
+pub mod app;
 pub mod decl;
 pub mod error;
 pub mod lower;
 pub mod parser;
 
+pub use app::{CompiledApp, Generated, generate};
 pub use error::{Result, TsxError};
+pub use lower::AppConfig;
 
 use std::path::Path;
 

@@ -75,6 +75,8 @@ pub use floom_widgets;
 // Feature bundles (Phase 29.3): each adds exactly its own backend.
 #[cfg(feature = "devtools")]
 pub mod devtools;
+/// The one platform door: a single trait, a single entry, one degradation policy.
+pub mod platform;
 #[cfg(feature = "devtools")]
 pub use floom_devtools;
 #[cfg(feature = "mobile")]
@@ -100,95 +102,64 @@ pub use floom_renderer_vello;
 #[cfg(feature = "web")]
 pub use floom_renderer_web::WebPresenter;
 
-/// Run a Floom app in a real OS window — the desktop backend's one-call entry.
+/// Run a Floom app — the one unified entry point.
 ///
-/// `build` mounts the app's widget tree into the host; the rest (the winit event
-/// loop, window realisation, input mapping, the GPU frame loop) is handled by
-/// the backend. Requires `--features desktop,renderer-gpu`.
+/// `build` mounts the app's widget tree into the host; the rest (the backend's
+/// event loop, window realisation, input mapping, frame loop) is handled by the
+/// platform backend that is compiled in. This is the single external API the
+/// requirement asks for: callers write `floom::run(..)` and never name a
+/// concrete backend (`WinitApp`/`TuiApp`/`WebApp`/…) or a `run_desktop`/
+/// `run_android` split.
 ///
-/// The window is created before the loop starts, so `title`/`size`/`resizable`
-/// describe the first and only window. The presenter is
-/// [`VelloGpuPresenter`](floom_renderer_vello::VelloGpuPresenter); if no GPU
-/// adapter is usable the call fails with a message rather than panicking,
-/// because a window that can never paint is not a degraded app — it is a
-/// broken one.
+/// The compiled-in backend is selected by cargo features; on a desktop build
+/// (`--features desktop,renderer-gpu`) this is the winit + vello GPU window. A
+/// backend that is not compiled in is a hard error at this call, not a silent
+/// no-op.
+///
+/// The window is created before the loop starts, so `title`/`size` describe the
+/// first and only window. A backend that cannot paint reports the reason rather
+/// than panicking inside its event loop, because a window that can never paint
+/// is not a degraded app — it is a broken one.
+///
+/// For capability questions ("does this platform have a system clipboard?"),
+/// use [`platform::require`]; it applies the same policy in one place instead
+/// of every app inventing its own fallback.
 ///
 /// ```
 /// use floom::prelude::*;
 /// # #[cfg(all(feature = "desktop", feature = "renderer-gpu"))]
 /// # fn doc() -> Result<(), String> {
-/// // floom::run_desktop("my app", Size::new(480.0, 320.0), |host| {
+/// // floom::run("my app", Size::new(480.0, 320.0), |host| {
 /// //     host.mount_root(LayoutStyle::default(), Text::new("hello window"));
 /// // });
 /// # Ok(())
 /// # }
 /// ```
+pub fn run<F>(title: &str, size: floom_types::Size, build: F) -> Result<(), String>
+where
+    F: FnOnce(&mut floom_app::WidgetHost) + 'static,
+{
+    platform::current().run(
+        platform::AppRequest {
+            title: title.to_string(),
+            size,
+            resizable: true,
+        },
+        Box::new(build),
+    )
+}
+
+/// Backward-compatible alias for [`run`].
+///
+/// Kept so generated projects (and any caller) that still name `run_desktop`
+/// keep working; new code should call [`run`].
 #[cfg(all(feature = "desktop", feature = "renderer-gpu"))]
+#[deprecated(note = "use `floom::run`")]
 pub fn run_desktop<F>(title: &str, size: floom_types::Size, build: F) -> Result<(), String>
 where
     F: FnOnce(&mut floom_app::WidgetHost) + 'static,
 {
-    use floom_app::{AppRunner, WidgetHost};
-    use floom_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
-    use floom_renderer_vello::VelloGpuPresenter;
-
-    struct ClosureApp<F> {
-        build: Option<F>,
-        runner: Option<AppRunner<VelloGpuPresenter>>,
-    }
-
-    impl<F: FnOnce(&mut WidgetHost)> WinitApp for ClosureApp<F> {
-        fn window_created(
-            &mut self,
-            _platform: &mut WinitPlatform,
-            _window: floom_types::WindowId,
-        ) {
-            let Some(build) = self.build.take() else {
-                return;
-            };
-            let mut host = WidgetHost::new();
-            build(&mut host);
-            // `WinitApp` has no error channel, so a machine with no usable
-            // adapter is reported on stderr and the window is left unpainted
-            // rather than panicking inside the event loop.
-            let Some(presenter) = VelloGpuPresenter::new() else {
-                eprintln!(
-                    "floom::run_desktop: no usable GPU adapter; a desktop window needs one to paint"
-                );
-                return;
-            };
-            self.runner = Some(AppRunner::new(host, presenter));
-        }
-
-        fn events(&mut self, platform: &mut WinitPlatform) {
-            if let Some(runner) = self.runner.as_mut() {
-                runner.pump(platform);
-            }
-        }
-
-        fn about_to_wait(&mut self, platform: &mut WinitPlatform) {
-            // Drain once more so redraws the runner requested during the last
-            // `events` call are picked up before the loop blocks. Without this
-            // a state change made during dispatch would wait for the next
-            // external event to be noticed.
-            if let Some(runner) = self.runner.as_mut() {
-                runner.pump(platform);
-            }
-        }
-    }
-
-    let windows = vec![floom_platform::WindowConfig {
-        title: title.to_string(),
-        size,
-        resizable: true,
-    }];
-    run(
-        ClosureApp {
-            build: Some(build),
-            runner: None,
-        },
-        windows,
-    )
+    run(title, size, build)
 }
 
 /// Run a Floom app in a window with the devtools panel already wired — the

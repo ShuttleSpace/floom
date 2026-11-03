@@ -454,11 +454,47 @@ impl<'a> Lower<'a> {
     }
 }
 
+/// Window/app configuration declared by a top-level `<App>` wrapper in TSX.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AppConfig {
+    pub title: String,
+    pub width: f64,
+    pub height: f64,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            title: "floom".to_string(),
+            width: 480.0,
+            height: 320.0,
+        }
+    }
+}
+
 /// Lower a parsed TSX module into a validated `UiDocument`.
 pub fn lower(parsed: &Parsed) -> Result<UiDocument> {
+    Ok(lower_with_app(parsed)?.0)
+}
+
+/// Lower a parsed TSX module and surface the app/window config.
+///
+/// A top-level `<App title="\u2026" size="WxH">\u2026</App>` wrapper (TSX-as-full-app)
+/// is unwrapped: its child is the real tree root and its attributes describe the
+/// window. Without it, [`AppConfig::default`] applies.
+pub fn lower_with_app(parsed: &Parsed) -> Result<(UiDocument, AppConfig)> {
     // Module-level signal/context declarations are the authoritative bindings;
     // JSX-derived refs/handlers reference them and must not be duplicated.
     let module_bindings = collect_module_signals(&parsed.module);
+
+    // Detect a top-level `<App>` wrapper; its first child is the real root.
+    let (root_jsx, app) = match &parsed.root {
+        Some(RootJsx::Element(el)) if jsx_tag_name(&el.opening.name) == "App" => {
+            (app_inner_root(el), app_config(el))
+        }
+        Some(r) => (Some(r.clone()), AppConfig::default()),
+        None => (None, AppConfig::default()),
+    };
 
     let mut lower = Lower {
         parsed,
@@ -467,12 +503,13 @@ pub fn lower(parsed: &Parsed) -> Result<UiDocument> {
         handler_bindings: HashMap::new(),
         counter: 0,
     };
-    let root = match &parsed.root {
-        Some(RootJsx::Element(el)) => lower.element(el)?,
+    let root = match root_jsx {
+        Some(RootJsx::Element(el)) => lower.element(&el)?,
         Some(RootJsx::Fragment(frag)) => {
             let key = lower.next_key();
             let children = lower.children(&frag.children)?;
-            let node = UiNode::new(key.clone(), NodeKind::Stack).with_slot(Slot::default_slot(children));
+            let node = UiNode::new(key.clone(), NodeKind::Stack)
+                .with_slot(Slot::default_slot(children));
             lower.nodes.push(node);
             key
         }
@@ -509,8 +546,96 @@ pub fn lower(parsed: &Parsed) -> Result<UiDocument> {
     };
     doc.validate()
         .map_err(|e| TsxError::new(format!("IR validation failed: {e}")))?;
-    Ok(doc)
+    Ok((doc, app))
 }
+
+/// The tag name of a JSX element (`<App>` -> "App").
+fn jsx_tag_name(name: &ast::JSXElementName) -> String {
+    match name {
+        ast::JSXElementName::Ident(id) => id.sym.as_str().to_string(),
+        ast::JSXElementName::JSXMemberExpr(member) => member.prop.sym.as_str().to_string(),
+        ast::JSXElementName::JSXNamespacedName(ns) => ns.name.sym.as_str().to_string(),
+    }
+}
+
+/// The real root element inside an `<App>` wrapper (its first child element).
+fn app_inner_root(el: &ast::JSXElement) -> Option<RootJsx> {
+    for child in &el.children {
+        if let ast::JSXElementChild::JSXElement(inner) = child {
+            return Some(RootJsx::Element(inner.clone()));
+        }
+    }
+    None
+}
+
+/// Window config from an `<App title="\u2026" size="WxH" width=\u2026 height=\u2026>` wrapper.
+fn app_config(el: &ast::JSXElement) -> AppConfig {
+    let mut app = AppConfig::default();
+    for attr in &el.opening.attrs {
+        if let ast::JSXAttrOrSpread::JSXAttr(attr) = attr {
+            match jsx_attr_name(attr) {
+                name if name == "title" => {
+                    if let Some(v) = attr_string(attr) {
+                        app.title = v;
+                    }
+                }
+                name if name == "size" => {
+                    if let Some(v) = attr_string(attr) {
+                        parse_size(&v, &mut app);
+                    }
+                }
+                name if name == "width" => {
+                    if let Some(v) = attr_string(attr) {
+                        app.width = v.parse().unwrap_or(app.width);
+                    }
+                }
+                name if name == "height" => {
+                    if let Some(v) = attr_string(attr) {
+                        app.height = v.parse().unwrap_or(app.height);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    app
+}
+
+fn jsx_attr_name(attr: &ast::JSXAttr) -> String {
+    match &attr.name {
+        ast::JSXAttrName::Ident(id) => id.sym.as_str().to_string(),
+        ast::JSXAttrName::JSXNamespacedName(ns) => ns.name.sym.as_str().to_string(),
+    }
+}
+
+fn attr_string(attr: &ast::JSXAttr) -> Option<String> {
+    match &attr.value {
+        Some(ast::JSXAttrValue::Str(s)) => Some(s.value.as_str().unwrap_or_default().to_string()),
+        Some(ast::JSXAttrValue::JSXExprContainer(c)) => {
+            if let ast::JSXExpr::Expr(e) = &c.expr {
+                if let ast::Expr::Lit(ast::Lit::Str(s)) = e.as_ref() {
+                    Some(s.value.as_str().unwrap_or_default().to_string())
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+fn parse_size(s: &str, app: &mut AppConfig) {
+    if let Some((w, h)) = s.split_once('x') {
+        if let (Ok(w), Ok(h)) = (w.trim().parse::<f64>(), h.trim().parse::<f64>()) {
+            app.width = w;
+            app.height = h;
+        }
+    }
+}
+
+
 
 /// Recognize module-level signal/context declarations and turn them into
 /// `Binding`s. This is the compile-time half of the reactive shim: a TSX
