@@ -235,18 +235,46 @@ impl Slot {
     }
 }
 
-/// An event wired to a handler binding.
+/// An event wired to a handler.
+///
+/// There are two ways a handler arrives:
+///
+/// - *reference* — [`EventBinding::new`] ties the event to a named binding in the
+///   document's binding table (`onClick={onPress}`). `handler` is that binding's
+///   name and [`body`] is `None`.
+/// - *inline* — [`EventBinding::inline`] carries the handler's Rust source
+///   directly (`onClick={() => setCount(count() + 1)}`). The compiler lowers the
+///   JS arrow into Rust, so there is no binding name to look up and [`body`] holds
+///   the code. [`UiDocument::validate`] skips the binding lookup when [`body`] is
+///   set.
+///
+/// [`body`]: EventBinding::body
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EventBinding {
     pub event: EventName,
+    /// The binding name for a *reference* handler, or empty for an *inline* one.
     pub handler: String,
+    /// Inline Rust source for the handler body, set by the TSX compiler. `None`
+    /// for a reference handler.
+    pub body: Option<String>,
 }
 
 impl EventBinding {
+    /// Wire the event to a named binding (`onClick={onPress}`).
     pub fn new(event: EventName, handler: impl Into<String>) -> Self {
         Self {
             event,
             handler: handler.into(),
+            body: None,
+        }
+    }
+
+    /// Wire the event to an inline handler whose Rust body is already translated.
+    pub fn inline(event: EventName, body: impl Into<String>) -> Self {
+        Self {
+            event,
+            handler: String::new(),
+            body: Some(body.into()),
         }
     }
 }

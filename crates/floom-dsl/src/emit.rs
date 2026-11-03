@@ -319,6 +319,10 @@ struct Emitter<'a> {
     source: WidgetSource,
     /// Emit signal-backed properties as reactive closures.
     reactive: bool,
+    /// Signal names (the value bindings), so each reactive `push` closure can own
+    /// a clone. A signal is shared across closures via `Arc`, so a read (label)
+    /// and a write (handler) can both capture it.
+    signals: Vec<String>,
 }
 
 impl<'a> Emitter<'a> {
@@ -333,6 +337,16 @@ impl<'a> Emitter<'a> {
             .iter()
             .map(|node| (node.key.as_str(), node))
             .collect();
+        let signals = if reactive {
+            document
+                .bindings
+                .iter()
+                .filter(|b| matches!(b.kind, BindingKind::Value(_)))
+                .map(|b| b.name.clone())
+                .collect()
+        } else {
+            Vec::new()
+        };
         Self {
             nodes,
             order: document.nodes.iter().collect(),
@@ -344,6 +358,7 @@ impl<'a> Emitter<'a> {
             threshold: threshold.max(2),
             source,
             reactive,
+            signals,
         }
     }
 
@@ -420,9 +435,13 @@ impl<'a> Emitter<'a> {
 
         let mut out = header(self.source);
         if self.reactive {
-            // Signals are read with `.get()`; `SyncBaseSignal` is the `Send +
-            // Sync` signal a `push` closure can capture.
-            out.push_str("use floom_signal::{SignalGet, SyncBaseSignal};\n\n");
+            // Signals are read with `.get()` and written with `.set()` /
+            // `.update()`; `SyncBaseSignal` is the `Send + Sync` signal a `push`
+            // closure can capture. Each closure owns an `Arc` clone of the signal
+            // (so a read and a write can both capture it), hence `Arc` and the
+            // update trait in scope.
+            out.push_str("use std::sync::Arc;\n");
+            out.push_str("use floom_signal::{SignalGet, SignalUpdate, SyncBaseSignal};\n\n");
         }
         for (name, body) in bodies {
             let _ = std::fmt::Write::write_fmt(
@@ -487,7 +506,15 @@ impl<'a> Emitter<'a> {
         let mut events: Vec<(String, String)> = node
             .events
             .iter()
-            .map(|event| (event.event.name().to_string(), event.handler.clone()))
+            .map(|event| {
+                (
+                    event.event.name().to_string(),
+                    event
+                        .body
+                        .clone()
+                        .unwrap_or_else(|| event.handler.clone()),
+                )
+            })
             .collect();
         events.sort();
         for (event, handler) in &events {
@@ -586,7 +613,6 @@ impl<'a> Emitter<'a> {
         let mut out = String::from("{\n        let mut v = ");
         out.push_str(&base);
         out.push_str(";\n");
-        let kw = self.move_kw();
         for (run, child) in self.runs(children) {
             match run {
                 Some((count, fingerprint)) => {
@@ -599,19 +625,20 @@ impl<'a> Emitter<'a> {
                 None => {
                     let layout = self.layout_request(child);
                     let child_expr = self.resolve(child);
+                    let build = self.closure_block(&child_expr);
                     match layout {
                         Some(layout) => {
                             let _ = std::fmt::Write::write_fmt(
                                 &mut out,
                                 format_args!(
-                                    "        v = v.push_layout({layout}, {kw} {{ {child_expr} }});\n"
+                                    "        v = v.push_layout({layout}, {build});\n"
                                 ),
                             );
                         }
                         None => {
                             let _ = std::fmt::Write::write_fmt(
                                 &mut out,
-                                format_args!("        v = v.push({kw} {{ {child_expr} }});\n"),
+                                format_args!("        v = v.push({build});\n"),
                             );
                         }
                     }
@@ -662,10 +689,10 @@ impl<'a> Emitter<'a> {
                 .layout_request(child)
                 .unwrap_or_else(|| String::from("LayoutRequest::new()"));
             let child_expr = self.resolve(child);
-            let kw = self.move_kw();
+            let build = self.closure_block(&child_expr);
             let _ = std::fmt::Write::write_fmt(
                 &mut base,
-                format_args!(".show_with(0usize, {layout}, {kw} {{ {child_expr} }})"),
+                format_args!(".show_with(0usize, {layout}, {build})"),
             );
         }
         if children.len() > 1 {
@@ -757,9 +784,10 @@ impl<'a> Emitter<'a> {
                     );
                 }
                 if let Some(handler) = self.event(node, "click") {
+                    let closure = self.handler_closure("", &handler);
                     let _ = std::fmt::Write::write_fmt(
                         &mut out,
-                        format_args!(".on_click(|| {{ {handler} }})"),
+                        format_args!(".on_click({closure})"),
                     );
                 }
                 out
@@ -776,9 +804,10 @@ impl<'a> Emitter<'a> {
                         std::fmt::Write::write_fmt(&mut out, format_args!(".disabled({disabled})"));
                 }
                 if let Some(handler) = self.event(node, "toggle") {
+                    let closure = self.handler_closure("_v", &handler);
                     let _ = std::fmt::Write::write_fmt(
                         &mut out,
-                        format_args!(".on_toggle(|_v| {{ {handler} }})"),
+                        format_args!(".on_toggle({closure})"),
                     );
                 }
                 out
@@ -795,9 +824,10 @@ impl<'a> Emitter<'a> {
                         std::fmt::Write::write_fmt(&mut out, format_args!(".disabled({disabled})"));
                 }
                 if let Some(handler) = self.event(node, "toggle") {
+                    let closure = self.handler_closure("", &handler);
                     let _ = std::fmt::Write::write_fmt(
                         &mut out,
-                        format_args!(".on_select(|| {{ {handler} }})"),
+                        format_args!(".on_select({closure})"),
                     );
                 }
                 out
@@ -813,9 +843,10 @@ impl<'a> Emitter<'a> {
                         std::fmt::Write::write_fmt(&mut out, format_args!(".disabled({disabled})"));
                 }
                 if let Some(handler) = self.event(node, "toggle") {
+                    let closure = self.handler_closure("_v", &handler);
                     let _ = std::fmt::Write::write_fmt(
                         &mut out,
-                        format_args!(".on_toggle(|_v| {{ {handler} }})"),
+                        format_args!(".on_toggle({closure})"),
                     );
                 }
                 out
@@ -835,9 +866,10 @@ impl<'a> Emitter<'a> {
                         std::fmt::Write::write_fmt(&mut out, format_args!(".disabled({disabled})"));
                 }
                 if let Some(handler) = self.event(node, "change") {
+                    let closure = self.handler_closure("_v", &handler);
                     let _ = std::fmt::Write::write_fmt(
                         &mut out,
-                        format_args!(".on_change(|_v| {{ {handler} }})"),
+                        format_args!(".on_change({closure})"),
                     );
                 }
                 out
@@ -876,9 +908,10 @@ impl<'a> Emitter<'a> {
                 }
                 for (event, setter) in [("input", "on_change"), ("submit", "on_submit")] {
                     if let Some(handler) = self.event(node, event) {
+                        let closure = self.handler_closure("_v", &handler);
                         let _ = std::fmt::Write::write_fmt(
                             &mut out,
-                            format_args!(".{setter}(|_v| {{ {handler} }})"),
+                            format_args!(".{setter}({closure})"),
                         );
                     }
                 }
@@ -1035,7 +1068,7 @@ impl<'a> Emitter<'a> {
                 let _ = std::fmt::Write::write_fmt(
                     &mut out,
                     format_args!(
-                        "let {} = SyncBaseSignal::new({});\n    ",
+                        "let {} = Arc::new(SyncBaseSignal::new({}));\n    ",
                         binding.name,
                         default_lit(ty)
                     ),
@@ -1064,10 +1097,50 @@ impl<'a> Emitter<'a> {
         lit(&self.text(node, "label").unwrap_or_default())
     }
 
-    /// The closure keyword for a child build: `move` when reactive, so the
-    /// closure captures its signal by value.
-    fn move_kw(&self) -> &'static str {
-        if self.reactive { "move ||" } else { "||" }
+    /// The `push` build argument: a closure that builds the child. In reactive
+    /// mode it is a `move` closure wrapped in a block that first clones the
+    /// signals the body reads, so the closure owns an `Arc` handle rather than
+    /// moving the caller's binding out from under the closures around it.
+    ///
+    /// A signal that is both read (a label) and written (an inline handler) is
+    /// used by two closures; each must hold its own handle, so each captures an
+    /// `Arc` clone rather than the single binding.
+    fn closure_block(&self, child_expr: &str) -> String {
+        if !self.reactive {
+            return format!("|| {{ {child_expr} }}");
+        }
+        let mut clones = String::new();
+        for name in &self.signals {
+            // Only clone signals this body actually names, so unused ones are not
+            // moved into the closure.
+            if child_expr.contains(name.as_str()) {
+                let _ = std::fmt::Write::write_fmt(
+                    &mut clones,
+                    format_args!("let {name} = {name}.clone(); "),
+                );
+            }
+        }
+        format!("{{ {clones}move || {{ {child_expr} }} }}")
+    }
+
+    /// The argument to an event setter (`.on_click(…)`, `.on_toggle(…)`), which
+    /// is a `'static` closure and so must own the signals its body touches. In
+    /// reactive mode it captures an `Arc` clone of each signal it names, rather
+    /// than borrowing the enclosing closure's binding.
+    fn handler_closure(&self, param: &str, body: &str) -> String {
+        if !self.reactive {
+            return format!("|{param}| {{ {body} }}");
+        }
+        let mut clones = String::new();
+        for name in &self.signals {
+            if body.contains(name.as_str()) {
+                let _ = std::fmt::Write::write_fmt(
+                    &mut clones,
+                    format_args!("let {name} = {name}.clone(); "),
+                );
+            }
+        }
+        format!("{{ {clones}move |{param}| {{ {body} }} }}")
     }
 
     // --- property reads ----------------------------------------------------
@@ -1120,17 +1193,23 @@ impl<'a> Emitter<'a> {
         found
     }
 
-    /// Look up an event handler and mark the event as wired.
+    /// Look up an event handler and mark the event as wired, returning the Rust
+    /// code for the closure body.
     ///
-    /// The handler is a *name* in the document's binding table and there is no
-    /// such function in a generated program, so the wiring point is emitted
-    /// with an empty body and the substitution is reported.
+    /// An *inline* handler (the TSX compiler lowered `onClick={() => …}` to Rust)
+    /// already carries its body, so it is returned verbatim. A *reference*
+    /// handler is a name in the document's binding table for which no function
+    /// exists in a generated program, so an empty closure is wired and the
+    /// substitution is reported as a note.
     fn event(&mut self, node: &UiNode, name: &str) -> Option<String> {
         let binding = node
             .events
             .iter()
             .find(|binding| binding.event.name() == name)?;
         self.wired.insert((node.key.to_string(), name.to_string()));
+        if let Some(body) = &binding.body {
+            return Some(body.clone());
+        }
         let handler = binding.handler.clone();
         self.note(
             node,

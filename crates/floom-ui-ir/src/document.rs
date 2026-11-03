@@ -278,6 +278,11 @@ impl UiDocument {
             }
 
             for event in &node.events {
+                // An inline handler carries its own Rust body; there is no binding
+                // name to resolve (and no binding table entry to collide with).
+                if event.body.is_some() {
+                    continue;
+                }
                 let Some(binding) = bindings.get(event.handler.as_str()) else {
                     return Err(IrError::UnresolvedBinding {
                         key: node.key.to_string(),

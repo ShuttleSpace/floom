@@ -10,13 +10,13 @@
 //! the signal declaration (`createSignal(0)`) to a `Binding`; the
 //! `floom-dsl` emitter turns those into real `floom_signal` calls.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use floom_ui_ir::{
     Binding, EventBinding, EventName, NodeKey, NodeKind, Prop, PropValue, Rgba, Slot, UiDocument,
     UiNode, ValueType,
 };
-use swc_common::Span;
+use swc_common::{Span, Spanned};
 use swc_ecma_ast as ast;
 
 use crate::error::{Result, TsxError};
@@ -29,6 +29,12 @@ struct Lower<'a> {
     /// Bindings referenced by refs/handlers, keyed by name.
     value_bindings: HashMap<String, ValueType>,
     handler_bindings: HashMap<String, ()>,
+    /// Names of every declared signal (the `count` of `createSignal`), so an
+    /// inline handler can rewrite `count()` to `count.get()`.
+    signals: HashSet<String>,
+    /// Setter name → signal name (`setCount` → `count`), so an inline handler can
+    /// rewrite `setCount(x)` to `count.set(x)`.
+    setters: HashMap<String, String>,
     counter: usize,
 }
 
@@ -147,8 +153,7 @@ impl<'a> Lower<'a> {
             .strip_prefix("on")
             .and_then(|e| EventName::parse(&e.to_lowercase()))
         {
-            let handler = self.handler_name(attr)?;
-            events.push(EventBinding::new(event, handler));
+            events.push(self.handler_binding(attr, event)?);
             return Ok(());
         }
 
@@ -162,25 +167,131 @@ impl<'a> Lower<'a> {
         Ok(())
     }
 
-    /// The handler name for an `onXxx` attribute: an identifier reference like
-    /// `onClick={onPress}` becomes the binding `onPress`.
-    fn handler_name(&mut self, attr: &ast::JSXAttr) -> Result<String> {
+    /// The handler for an `onXxx` attribute. Two shapes are accepted:
+    ///
+    /// - a function reference `onClick={onPress}` → a *reference* binding named
+    ///   `onPress` (resolved later by the IR/document);
+    /// - an inline arrow `onClick={() => setCount(count() + 1)}` → the arrow body
+    ///   is translated to Rust and carried as an *inline* body on the binding.
+    fn handler_binding(&mut self, attr: &ast::JSXAttr, event: EventName) -> Result<EventBinding> {
         match &attr.value {
             Some(ast::JSXAttrValue::JSXExprContainer(container)) => {
                 if let ast::JSXExpr::Expr(expr) = &container.expr {
-                    if let ast::Expr::Ident(id) = &**expr {
-                        let name = id.sym.as_str().to_string();
-                        self.handler_bindings.insert(name.clone(), ());
-                        return Ok(name);
+                    match expr.as_ref() {
+                        ast::Expr::Ident(id) => {
+                            let name = id.sym.as_str().to_string();
+                            self.handler_bindings.insert(name.clone(), ());
+                            return Ok(EventBinding::new(event, name));
+                        }
+                        ast::Expr::Arrow(arrow) => {
+                            let body = self.translate_handler(arrow)?;
+                            return Ok(EventBinding::inline(event, body));
+                        }
+                        _ => {}
                     }
                 }
                 Err(self.err(
                     container.span,
-                    "event handlers must be a function reference (e.g. onClick={onPress})",
+                    "event handlers must be a function reference (e.g. onClick={onPress}) or an inline arrow (e.g. onClick={() => setCount(count() + 1)})",
                 ))
             }
             _ => Err(self.err(attr.span, "event handlers need a `={...}` expression")),
         }
+    }
+
+    /// Translate an inline handler arrow into the Rust fragment for its body.
+    fn translate_handler(&self, arrow: &ast::ArrowExpr) -> Result<String> {
+        // The arrow's parameters are simply ignored: this closed compiler does
+        // not expose event arguments (no `e => …` payloads yet), so only
+        // signal-driven bodies are in scope.
+        let _ = &arrow.params;
+        let span = arrow.span;
+        match arrow.body.as_ref() {
+            ast::BlockStmtOrExpr::Expr(e) => self.translate_expr(e),
+            ast::BlockStmtOrExpr::BlockStmt(block) => {
+                let mut out = String::new();
+                for stmt in &block.stmts {
+                    match stmt {
+                        ast::Stmt::Expr(es) => {
+                            out.push_str(&self.translate_expr(&es.expr)?);
+                            out.push(';');
+                        }
+                        ast::Stmt::Return(r) => {
+                            out.push_str("return ");
+                            if let Some(arg) = &r.arg {
+                                out.push_str(&self.translate_expr(arg)?);
+                            }
+                            out.push(';');
+                        }
+                        _ => {
+                            return Err(self.err(span, "unsupported statement in inline handler"))
+                        }
+                    }
+                }
+                Ok(out)
+            }
+        }
+    }
+
+    /// Translate a JS expression into a Rust fragment, rewriting signal reads and
+    /// setter calls. The supported subset is deliberately closed: anything beyond
+    /// identifiers, literals, calls, binary/unary ops, member access, parens, and
+    /// arrows is rejected with a span error rather than silently mis-emitted.
+    fn translate_expr(&self, expr: &ast::Expr) -> Result<String> {
+        match expr {
+            ast::Expr::Ident(id) => Ok(to_snake(id.sym.as_str())),
+            ast::Expr::Lit(lit) => Ok(lit_to_rust(lit)),
+            ast::Expr::Paren(p) => Ok(format!("({})", self.translate_expr(&p.expr)?)),
+            ast::Expr::Call(call) => self.translate_call(call),
+            ast::Expr::Bin(bin) => Ok(format!(
+                "{} {} {}",
+                self.translate_expr(&bin.left)?,
+                bin_op(bin.op),
+                self.translate_expr(&bin.right)?
+            )),
+            ast::Expr::Unary(u) => {
+                Ok(format!("{}{}", unary_op(u.op), self.translate_expr(&u.arg)?))
+            }
+            ast::Expr::Member(m) => {
+                let obj = self.translate_expr(&m.obj)?;
+                let prop = match &m.prop {
+                    ast::MemberProp::Ident(i) => to_snake(i.sym.as_str()),
+                    _ => {
+                        return Err(self.err(m.span, "unsupported computed member access"))
+                    }
+                };
+                Ok(format!("{obj}.{prop}"))
+            }
+            ast::Expr::Arrow(arrow) => self.translate_handler(arrow),
+            _ => Err(self.err(expr.span(), "unsupported expression in inline handler")),
+        }
+    }
+
+    /// Translate a call, rewriting signal reads and setters.
+    fn translate_call(&self, call: &ast::CallExpr) -> Result<String> {
+        let callee = match &call.callee {
+            ast::Callee::Expr(e) => e,
+            _ => return Err(self.err(call.span, "unsupported call callee")),
+        };
+        let name = match callee.as_ref() {
+            ast::Expr::Ident(id) => id.sym.as_str().to_string(),
+            _ => return Err(self.err(call.span, "unsupported call callee")),
+        };
+        let args = call
+            .args
+            .iter()
+            .map(|a| self.translate_expr(&a.expr))
+            .collect::<Result<Vec<_>>>()?;
+        let joined = args.join(", ");
+        // `setCount(x)` → `count.set(x)` (setter name resolves to its signal).
+        if let Some(signal) = self.setters.get(&name) {
+            return Ok(format!("{signal}.set({joined})"));
+        }
+        // `count()` → `count.get()` (a zero-arg call to a known signal).
+        if args.is_empty() && self.signals.contains(&name) {
+            return Ok(format!("{name}.get()"));
+        }
+        Ok(format!("{}({})", to_snake(&name), joined))
     }
 
     /// A string literal attribute value, if the attribute is a string literal.
@@ -470,13 +581,16 @@ pub fn lower_with_app(parsed: &Parsed) -> Result<(UiDocument, crate::entry::AppC
 pub fn lower_with_root(parsed: &Parsed, root_jsx: &Option<RootJsx>) -> Result<UiDocument> {
     // Module-level signal/context declarations are the authoritative bindings;
     // JSX-derived refs/handlers reference them and must not be duplicated.
-    let module_bindings = collect_module_signals(&parsed.module);
+    let module_signals = collect_module_signals(&parsed.module);
+    let module_bindings = module_signals.bindings.clone();
 
     let mut lower = Lower {
         parsed,
         nodes: Vec::new(),
         value_bindings: HashMap::new(),
         handler_bindings: HashMap::new(),
+        signals: module_signals.signals,
+        setters: module_signals.setters,
         counter: 0,
     };
     let root = match root_jsx {
@@ -527,34 +641,112 @@ pub fn lower_with_root(parsed: &Parsed, root_jsx: &Option<RootJsx>) -> Result<Ui
     Ok(doc)
 }
 
-/// Recognize module-level signal/context declarations and turn them into
-/// `Binding`s. This is the compile-time half of the reactive shim: a TSX
-/// `createSignal` becomes a `floom_signal` value binding, `provideContext` /
-/// `useContext` become context bindings, and `createEffect` is recognized but
-/// emits no binding (its body runs as an effect at runtime).
-fn collect_module_signals(module: &ast::Module) -> Vec<Binding> {
-    let mut out = Vec::new();
-    for item in &module.body {
-        match item {
-            ast::ModuleItem::Stmt(stmt) => match stmt {
-                ast::Stmt::Decl(ast::Decl::Var(var)) => {
-                    for decl in &var.decls {
-                        if let Some(b) = var_decl_signal(decl) {
-                            out.push(b);
-                        }
-                    }
-                }
-                ast::Stmt::Expr(expr_stmt) => {
-                    if let Some(b) = expr_stmt_signal(&expr_stmt.expr) {
-                        out.push(b);
-                    }
-                }
-                _ => {}
-            },
-            _ => {}
+/// The signal bookkeeping collected from a module.
+struct ModuleSignals {
+    /// All bindings (signal/context declarations) the module exposes.
+    bindings: Vec<Binding>,
+    /// Every declared signal name (`count` of `const [count, …] = createSignal`).
+    signals: HashSet<String>,
+    /// Setter name → signal name (`setCount` → `count`).
+    setters: HashMap<String, String>,
+}
+
+impl Default for ModuleSignals {
+    fn default() -> Self {
+        Self {
+            bindings: Vec::new(),
+            signals: HashSet::new(),
+            setters: HashMap::new(),
         }
     }
+}
+
+/// Recognize signal/context declarations anywhere in a module and turn them into
+/// `Binding`s plus the signal/setter maps the inline handler translator needs.
+///
+/// This is the compile-time half of the reactive shim: a TSX `createSignal`
+/// becomes a `floom_signal` value binding (and records its setter), `provideContext`
+/// / `useContext` become context bindings, and `createEffect` is recognized but
+/// emits no binding (its body runs as an effect at runtime).
+///
+/// Scanning is **recursive into function bodies** (e.g. `function App() { const
+/// [x, setX] = createSignal(0) }`), not just the module's top level — TSX authors
+/// declare signals inside components, so a top-level-only scan would miss them and
+/// the translator would fail to rewrite `setX(...)` / `x()`.
+fn collect_module_signals(module: &ast::Module) -> ModuleSignals {
+    let mut out = ModuleSignals::default();
+    for item in &module.body {
+        collect_module_item(item, &mut out);
+    }
     out
+}
+
+/// Recurse into a module item.
+fn collect_module_item(item: &ast::ModuleItem, out: &mut ModuleSignals) {
+    match item {
+        ast::ModuleItem::Stmt(stmt) => collect_stmt(stmt, out),
+        _ => {}
+    }
+}
+
+/// Recurse into a statement, descending into block/function bodies where signals
+/// are typically declared.
+fn collect_stmt(stmt: &ast::Stmt, out: &mut ModuleSignals) {
+    match stmt {
+        ast::Stmt::Decl(ast::Decl::Var(var)) => {
+            for decl in &var.decls {
+                if let Some(b) = var_decl_signal(decl) {
+                    out.bindings.push(b.clone());
+                    out.signals.insert(b.name.clone());
+                    if let Some((signal, setter)) = var_decl_signal_setter(decl) {
+                        out.setters.insert(setter, signal);
+                    }
+                }
+            }
+        }
+        ast::Stmt::Decl(ast::Decl::Fn(f)) => collect_fn(&f.function, out),
+        ast::Stmt::Expr(expr_stmt) => {
+            if let Some(b) = expr_stmt_signal(&expr_stmt.expr) {
+                out.bindings.push(b.clone());
+                out.signals.insert(b.name.clone());
+            }
+            collect_expr(&expr_stmt.expr, out);
+        }
+        ast::Stmt::Block(block) => collect_block(block, out),
+        _ => {}
+    }
+}
+
+fn collect_block(block: &ast::BlockStmt, out: &mut ModuleSignals) {
+    for stmt in &block.stmts {
+        collect_stmt(stmt, out);
+    }
+}
+
+fn collect_fn(f: &ast::Function, out: &mut ModuleSignals) {
+    if let Some(body) = &f.body {
+        collect_block(body, out);
+    }
+}
+
+fn collect_expr(expr: &ast::Expr, out: &mut ModuleSignals) {
+    match expr {
+        ast::Expr::Fn(f) => collect_fn(&f.function, out),
+        ast::Expr::Arrow(arrow) => {
+            if let ast::BlockStmtOrExpr::BlockStmt(block) = arrow.body.as_ref() {
+                collect_block(block, out);
+            }
+        }
+        ast::Expr::Call(call) => {
+            if let ast::Callee::Expr(e) = &call.callee {
+                collect_expr(e, out);
+            }
+            for arg in &call.args {
+                collect_expr(&arg.expr, out);
+            }
+        }
+        _ => {}
+    }
 }
 
 /// `const [count, setCount] = createSignal(0)` / `createMemo(..)` /
@@ -642,6 +834,103 @@ fn pat_ident_name(pat: &ast::Pat) -> Option<String> {
         return Some(id.id.sym.as_str().to_string());
     }
     None
+}
+
+/// `const [count, setCount] = createSignal(0)` → `("count", "setCount")`.
+///
+/// Returns the signal and setter names so the inline handler translator can rewrite
+/// `setCount(x)` to `count.set(x)`. Only array patterns from `createSignal` /
+/// `createMemo` qualify.
+fn var_decl_signal_setter(decl: &ast::VarDeclarator) -> Option<(String, String)> {
+    let init = decl.init.as_ref()?;
+    let call = match init.as_ref() {
+        ast::Expr::Call(c) => c,
+        _ => return None,
+    };
+    let callee = call_name(call)?;
+    if callee != "createSignal" && callee != "createMemo" {
+        return None;
+    }
+    let ast::Pat::Array(arr) = &decl.name else {
+        return None;
+    };
+    let signal = match arr.elems.first() {
+        Some(Some(ast::Pat::Ident(id))) => id.id.sym.as_str().to_string(),
+        _ => return None,
+    };
+    let setter = match arr.elems.get(1) {
+        Some(Some(ast::Pat::Ident(id))) => id.id.sym.as_str().to_string(),
+        _ => return None,
+    };
+    Some((signal, setter))
+}
+
+/// Convert a JS identifier to Rust `snake_case` (`setCount` → `set_count`).
+fn to_snake(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    for c in s.chars() {
+        if c.is_uppercase() {
+            if let Some(prev) = out.chars().last() {
+                if prev.is_lowercase() || prev.is_ascii_digit() {
+                    out.push('_');
+                }
+            }
+            out.push(c.to_ascii_lowercase());
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+/// Render a JS literal as a Rust literal fragment.
+fn lit_to_rust(lit: &ast::Lit) -> String {
+    match lit {
+        ast::Lit::Num(n) => {
+            if n.value.fract() == 0.0 {
+                format!("{:.0}", n.value)
+            } else {
+                n.value.to_string()
+            }
+        }
+        // String signals are emitted as `SyncBaseSignal<String>`, so a literal
+        // assigned through `setX(...)` must be a `String`, not a `&str`.
+        ast::Lit::Str(s) => format!("\"{}\".to_string()", s.value.as_str().unwrap_or_default()),
+        ast::Lit::Bool(b) => b.value.to_string(),
+        _ => String::new(),
+    }
+}
+
+/// Map a JS binary operator to its Rust spelling (`===` → `==`, `!==` → `!=`).
+fn bin_op(op: ast::BinaryOp) -> &'static str {
+    match op {
+        ast::BinaryOp::EqEqEq => "==",
+        ast::BinaryOp::NotEqEq => "!=",
+        ast::BinaryOp::EqEq => "==",
+        ast::BinaryOp::NotEq => "!=",
+        ast::BinaryOp::Lt => "<",
+        ast::BinaryOp::LtEq => "<=",
+        ast::BinaryOp::Gt => ">",
+        ast::BinaryOp::GtEq => ">=",
+        ast::BinaryOp::Add => "+",
+        ast::BinaryOp::Sub => "-",
+        ast::BinaryOp::Mul => "*",
+        ast::BinaryOp::Div => "/",
+        ast::BinaryOp::Mod => "%",
+        ast::BinaryOp::LogicalAnd => "&&",
+        ast::BinaryOp::LogicalOr => "||",
+        _ => "?",
+    }
+}
+
+/// Map a JS unary operator to its Rust spelling.
+fn unary_op(op: ast::UnaryOp) -> &'static str {
+    match op {
+        ast::UnaryOp::Bang => "!",
+        ast::UnaryOp::Minus => "-",
+        ast::UnaryOp::Plus => "+",
+        _ => "",
+    }
 }
 
 /// Resolve a `class="…"` design token to an IR style property.

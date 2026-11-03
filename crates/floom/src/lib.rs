@@ -444,41 +444,17 @@ where
 /// # Ok(())
 /// # }
 /// ```
+/// Run a Floom app in a terminal — a thin alias for [`run`] on the TUI backend.
+///
+/// Kept only for callers that already name it; the unified entry [`run`] picks the
+/// terminal backend automatically under `--features tui`.
 #[cfg(feature = "tui")]
+#[deprecated(note = "use `floom::run`")]
 pub fn run_tui<F>(build: F) -> Result<(), String>
 where
     F: FnOnce(&mut floom_app::WidgetHost) + 'static,
 {
-    use floom_app::{AppRunner, WidgetHost};
-    use floom_renderer_tui::TuiPresenter;
-
-    struct ClosureApp<F> {
-        build: Option<F>,
-        runner: Option<AppRunner<TuiPresenter<std::io::Stdout>>>,
-    }
-
-    impl<F: FnOnce(&mut WidgetHost)> TuiApp for ClosureApp<F> {
-        fn events(&mut self, platform: &mut TuiPlatform) {
-            if let Some(build) = self.build.take() {
-                let mut host = WidgetHost::new();
-                build(&mut host);
-                let size = platform.size();
-                let presenter = TuiPresenter::new(
-                    floom_renderer_tui::TerminalSize::new(size.cols, size.rows),
-                    std::io::stdout(),
-                );
-                self.runner = Some(AppRunner::new(host, presenter));
-            }
-            if let Some(runner) = self.runner.as_mut() {
-                runner.pump(platform);
-            }
-        }
-    }
-
-    floom_platform_tui::run(ClosureApp {
-        build: Some(build),
-        runner: None,
-    })
+    run("floom", floom_types::Size::new(800.0, 600.0), build)
 }
 
 /// Run a Floom app on Android — the Android backend's one-call entry.
@@ -507,61 +483,18 @@ where
 /// ```
 ///
 /// [`run_android`]: fn.run_android.html
+/// Run a Floom app on Android — a thin alias for [`run`] on the Android backend.
+///
+/// The `android_main` seam ([`floom_platform_android::set_android_app`] called once
+/// before this) is unchanged; the unified entry [`run`] picks the Android backend
+/// automatically under `--features mobile,renderer-gpu` on the `android` target.
 #[cfg(all(feature = "mobile", feature = "renderer-gpu", target_os = "android"))]
+#[deprecated(note = "use `floom::run`")]
 pub fn run_android<F>(title: &str, size: floom_types::Size, build: F) -> Result<(), String>
 where
     F: FnOnce(&mut floom_app::WidgetHost) + 'static,
 {
-    use floom_app::{AppRunner, WidgetHost};
-    use floom_platform_android::{AndroidPlatform, AndroidRunner, run};
-    use floom_renderer_vello::VelloGpuPresenter;
-
-    struct ClosureApp<F> {
-        build: Option<F>,
-        runner: Option<AppRunner<VelloGpuPresenter>>,
-    }
-
-    impl<F: FnOnce(&mut WidgetHost)> AndroidRunner for ClosureApp<F> {
-        fn events(&mut self, platform: &mut AndroidPlatform) {
-            if let Some(build) = self.build.take() {
-                let mut host = WidgetHost::new();
-                build(&mut host);
-                let Some(presenter) = VelloGpuPresenter::new() else {
-                    eprintln!(
-                        "floom::run_android: no usable GPU adapter; an Android surface needs one to paint"
-                    );
-                    return;
-                };
-                self.runner = Some(AppRunner::new(host, presenter));
-            }
-            if let Some(runner) = self.runner.as_mut() {
-                runner.pump(platform);
-            }
-        }
-
-        fn about_to_wait(&mut self, platform: &mut AndroidPlatform) {
-            // Drain once more so redraws queued during the last `events` call are
-            // honoured. Deliberately no `request_frame` here: that would make
-            // every `about_to_wait` emit another `RedrawRequested`, so the loop
-            // would never park (measured on the emulator: 2.7M redraws in 8s).
-            if let Some(runner) = self.runner.as_mut() {
-                runner.pump(platform);
-            }
-        }
-    }
-
-    let windows = vec![floom_platform::WindowConfig {
-        title: title.to_string(),
-        size,
-        resizable: false,
-    }];
-    run(
-        ClosureApp {
-            build: Some(build),
-            runner: None,
-        },
-        windows,
-    )
+    run(title, size, build)
 }
 
 /// Run a Floom app in a web browser — the Web backend's one-call entry.
@@ -583,40 +516,17 @@ where
 /// # Ok(())
 /// # }
 /// ```
+/// Run a Floom app in a web browser — a thin alias for [`run`] on the Web backend.
+///
+/// Kept only for callers that already name it; the unified entry [`run`] picks the
+/// Web backend automatically under `--features web` on `wasm32`.
 #[cfg(feature = "web")]
+#[deprecated(note = "use `floom::run`")]
 pub fn run_web<F>(build: F) -> Result<(), String>
 where
     F: FnOnce(&mut floom_app::WidgetHost) + 'static,
 {
-    use floom_app::{AppRunner, WidgetHost};
-    use floom_renderer_web::WebPresenter;
-
-    struct ClosureApp<F> {
-        build: Option<F>,
-        runner: Option<AppRunner<WebPresenter>>,
-    }
-
-    impl<F: FnOnce(&mut WidgetHost)> floom_platform_web::WebApp for ClosureApp<F> {
-        fn events(&mut self, platform: &mut floom_platform_web::WebPlatform) {
-            if let Some(build) = self.build.take() {
-                let mut host = WidgetHost::new();
-                build(&mut host);
-                let presenter = WebPresenter::new();
-                self.runner = Some(AppRunner::new(host, presenter));
-            }
-            if let Some(runner) = self.runner.as_mut() {
-                runner.pump(platform);
-            }
-        }
-    }
-
-    floom_platform_web::run(
-        ClosureApp {
-            build: Some(build),
-            runner: None,
-        },
-        "floom-canvas",
-    )
+    run("floom", floom_types::Size::new(800.0, 600.0), build)
 }
 
 /// The beginner-facing stable surface: semantic widgets and runtime

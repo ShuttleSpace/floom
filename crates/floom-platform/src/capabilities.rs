@@ -155,4 +155,21 @@ impl PlatformCapabilities {
             caps: Capability::WINDOWING | Capability::SOFTWARE_RENDER | Capability::CLIPBOARD,
         }
     }
+
+    /// What the Android backend can do.
+    ///
+    /// A winit platform whose pointers are touches, with the anchor view's
+    /// `Editable` delivering IME text and a GPU (`vello`) presenter. It does not
+    /// claim a system clipboard the way the desktop does — Android's clipboard is
+    /// reached over JNI and is reported by the backend where it exists — and it
+    /// has no OS-readable accessibility tree yet.
+    pub fn android_default() -> Self {
+        Self {
+            caps: Capability::WINDOWING
+                | Capability::TOUCH
+                | Capability::IME
+                | Capability::SOFTWARE_RENDER
+                | Capability::WEBGPU,
+        }
+    }
 }

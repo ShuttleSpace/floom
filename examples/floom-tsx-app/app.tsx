@@ -6,11 +6,12 @@
 //   floom run app.tsx
 
 import { app, mount, platform, window } from "floom";
+import { createSignal } from "floom";
 
 // The window title and size. `window.*` calls win over the old `<App title
 // size>` wrapper, so an author only ever touches TSX.
 app.setName("floom + tsx");
-window.setSize(640, 420);
+window.setSize(640, 440);
 
 // Gate on a capability the way nsh lets an app decide for itself: if the
 // backend cannot offer an input method, warn and carry on rather than failing
@@ -18,17 +19,22 @@ window.setSize(640, 420);
 platform.require("ime", "warn");
 
 function App() {
+  // A reactive signal. The compiler lowers `createSignal` to a `SyncBaseSignal`
+  // and `status()` reads it inside the label closure — the closure-capture seam
+  // re-runs the read when the signal changes.
+  const [status, setStatus] = createSignal("Click the button to flip the signal.");
   return (
     <Stack axis="vertical" gap={16} padding={24}>
       <Text label="floom + tsx" size={32} foreground="#1a73e8" />
-      <Text
-        label="This window was built from a single .tsx file."
-        foreground="#5f6368"
-      />
+      <Text label={status()} foreground="#5f6368" />
       <Divider />
       <Stack axis="horizontal" gap={12}>
-        <Button label="Filled" variant="filled" />
-        <Button label="Text" variant="text" />
+        <Button
+          label="Flip signal"
+          variant="filled"
+          onClick={() => setStatus("signal flipped — reactive state works!")}
+        />
+        <Button label="Reset" variant="text" onClick={() => setStatus("back to start")} />
       </Stack>
       <Text label="controls" foreground="#202124" />
       <Stack axis="horizontal" gap={12}>

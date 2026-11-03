@@ -128,12 +128,41 @@ pub fn require(cap: Capability, policy: OnUnsupported) -> Result<(), PlatformErr
 /// works on every target the binary was built for, and a target the binary was
 /// *not* built for fails loudly at [`run`](crate::run) instead of silently
 /// doing nothing.
+///
+/// The cascade mirrors the targets the backends target: a browser tab (wasm +
+/// `web`), an Android surface (`mobile` + target `android`), a desktop GPU
+/// window (`desktop` + `renderer-gpu`), and a terminal (`tui`). iOS and Harmony
+/// are `mobile` members but have no run loop yet, so on those targets the cascade
+/// falls through to [`NO_BACKEND`] rather than pretending to run.
 pub fn current() -> &'static dyn PlatformBackend {
-    #[cfg(all(feature = "desktop", feature = "renderer-gpu"))]
+    #[cfg(all(feature = "web", target_arch = "wasm32"))]
+    {
+        return &web::WebBackend;
+    }
+    #[cfg(all(feature = "mobile", feature = "renderer-gpu", target_os = "android"))]
+    {
+        return &android::AndroidBackend;
+    }
+    #[cfg(all(
+        feature = "desktop",
+        feature = "renderer-gpu",
+        not(target_arch = "wasm32"),
+        not(target_os = "android")
+    ))]
     {
         return &desktop::DesktopBackend;
     }
-    #[cfg(not(all(feature = "desktop", feature = "renderer-gpu")))]
+    #[cfg(all(
+        feature = "tui",
+        not(target_arch = "wasm32"),
+        not(target_os = "android")
+    ))]
+    {
+        return &tui::TuiBackend;
+    }
+    // No backend matches this build: either the right feature bundle is off, or
+    // the target (iOS, Harmony, embedded) has no run loop wired in yet.
+    #[allow(unreachable_code)]
     {
         &NO_BACKEND
     }
@@ -246,6 +275,192 @@ mod desktop {
     }
 }
 
+/// Terminal backend: the `floom-platform-tui` run loop behind the same door.
+#[cfg(all(
+    feature = "tui",
+    not(target_arch = "wasm32"),
+    not(target_os = "android")
+))]
+mod tui {
+    use std::io::Stdout;
+
+    use floom_app::{AppRunner, WidgetHost};
+    use floom_platform_tui::{TuiApp, TuiPlatform};
+    use floom_renderer_tui::{TerminalSize, TuiPresenter};
+
+    use super::{AppRequest, BuildFn, PlatformBackend, PlatformCapabilities};
+
+    pub struct TuiBackend;
+
+    impl PlatformBackend for TuiBackend {
+        fn name(&self) -> &'static str {
+            "tui (terminal)"
+        }
+
+        fn capabilities(&self) -> PlatformCapabilities {
+            PlatformCapabilities::tui_default()
+        }
+
+        fn run(&self, _request: AppRequest, build: BuildFn) -> Result<(), String> {
+            struct ClosureApp {
+                build: Option<BuildFn>,
+                runner: Option<AppRunner<TuiPresenter<Stdout>>>,
+            }
+
+            impl TuiApp for ClosureApp {
+                fn events(&mut self, platform: &mut TuiPlatform) {
+                    if let Some(build) = self.build.take() {
+                        let mut host = WidgetHost::new();
+                        build(&mut host);
+                        let size = platform.size();
+                        let presenter = TuiPresenter::new(
+                            TerminalSize::new(size.cols, size.rows),
+                            std::io::stdout(),
+                        );
+                        self.runner = Some(AppRunner::new(host, presenter));
+                    }
+                    if let Some(runner) = self.runner.as_mut() {
+                        runner.pump(platform);
+                    }
+                }
+            }
+
+            floom_platform_tui::run(ClosureApp {
+                build: Some(build),
+                runner: None,
+            })
+        }
+    }
+}
+
+/// Web backend: the `floom-platform-web` run loop behind the same door.
+///
+/// Only meaningful on `wasm32` — the backend's own `run` refuses any other target,
+/// and the crate's `web` feature also pulls in `floom-renderer-web`.
+#[cfg(all(feature = "web", target_arch = "wasm32"))]
+mod web {
+    use floom_app::{AppRunner, WidgetHost};
+    use floom_platform_web::{WebApp, WebPlatform};
+    use floom_renderer_web::WebPresenter;
+
+    use super::{AppRequest, BuildFn, PlatformBackend, PlatformCapabilities};
+
+    pub struct WebBackend;
+
+    impl PlatformBackend for WebBackend {
+        fn name(&self) -> &'static str {
+            "web (wasm + canvas)"
+        }
+
+        fn capabilities(&self) -> PlatformCapabilities {
+            // The browser's `navigator.gpu` probe decides the WebGPU bit; vello
+            // negotiates it at presenter creation, so claim it optimistically.
+            PlatformCapabilities::web_default(true)
+        }
+
+        fn run(&self, _request: AppRequest, build: BuildFn) -> Result<(), String> {
+            struct ClosureApp {
+                build: Option<BuildFn>,
+                runner: Option<AppRunner<WebPresenter>>,
+            }
+
+            impl WebApp for ClosureApp {
+                fn events(&mut self, platform: &mut WebPlatform) {
+                    if let Some(build) = self.build.take() {
+                        let mut host = WidgetHost::new();
+                        build(&mut host);
+                        let presenter = WebPresenter::new();
+                        self.runner = Some(AppRunner::new(host, presenter));
+                    }
+                    if let Some(runner) = self.runner.as_mut() {
+                        runner.pump(platform);
+                    }
+                }
+            }
+
+            floom_platform_web::run(
+                ClosureApp {
+                    build: Some(build),
+                    runner: None,
+                },
+                "floom-canvas",
+            )
+        }
+    }
+}
+
+/// Android backend: the `floom-platform-android` run loop behind the same door.
+///
+/// The `android_main` seam — [`floom_platform_android::set_android_app`] called
+/// exactly once before this — is unchanged: the caller still owns it, because the
+/// `AndroidApp` arrives before any Rust entry point and winit needs it while
+/// building the loop.
+#[cfg(all(feature = "mobile", feature = "renderer-gpu", target_os = "android"))]
+mod android {
+    use floom_app::{AppRunner, WidgetHost};
+    use floom_platform::WindowConfig;
+    use floom_platform_android::{AndroidPlatform, AndroidRunner};
+    use floom_renderer_vello::VelloGpuPresenter;
+
+    use super::{AppRequest, BuildFn, PlatformBackend, PlatformCapabilities};
+
+    pub struct AndroidBackend;
+
+    impl PlatformBackend for AndroidBackend {
+        fn name(&self) -> &'static str {
+            "android (winit + vello)"
+        }
+
+        fn capabilities(&self) -> PlatformCapabilities {
+            PlatformCapabilities::android_default()
+        }
+
+        fn run(&self, request: AppRequest, build: BuildFn) -> Result<(), String> {
+            struct ClosureApp {
+                build: Option<BuildFn>,
+                runner: Option<AppRunner<VelloGpuPresenter>>,
+            }
+
+            impl AndroidRunner for ClosureApp {
+                fn events(&mut self, platform: &mut AndroidPlatform) {
+                    if let Some(build) = self.build.take() {
+                        let mut host = WidgetHost::new();
+                        build(&mut host);
+                        let Some(presenter) = VelloGpuPresenter::new() else {
+                            eprintln!(
+                                "floom::run: no usable GPU adapter; an Android surface needs one to paint"
+                            );
+                            return;
+                        };
+                        self.runner = Some(AppRunner::new(host, presenter));
+                    }
+                    if let Some(runner) = self.runner.as_mut() {
+                        runner.pump(platform);
+                    }
+                }
+
+                fn about_to_wait(&mut self, platform: &mut AndroidPlatform) {
+                    if let Some(runner) = self.runner.as_mut() {
+                        runner.pump(platform);
+                    }
+                }
+            }
+
+            let windows = vec![WindowConfig {
+                title: request.title,
+                size: request.size,
+                resizable: request.resizable,
+            }];
+            floom_platform_android::run(
+                ClosureApp {
+                    build: Some(build),
+                    runner: None,
+                },
+                windows,
+            )
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
