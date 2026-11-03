@@ -88,7 +88,7 @@
 ### A2. 没有裁剪能力（Clip） — **P0 / M**
 
 - **现状**：场景 IR 无 clip 节点。裁剪只存在于渲染器内部，且是**宿主算好传进来的轴对齐矩形**：`crates/floom-app/src/lib.rs:2557`（`fn clip(&self, index, rect, viewport) -> Option<Rect>`）、软件渲染器 `crates/floom-renderer-software/src/lib.rs:531` 附近的 `clip_region`。
-- **对标**：Compose 有 `Modifier.clip(shape)`，`DrawScope` 本身还带"内容不裁剪、可溢出"的明确语义；Flutter 有 `ClipRRect` / `ClipPath` / `canvas.clipPath`。v1 floom 也有：`Renderer::clip(&impl Shape)` + `clear_clip`（`crates/floom-renderer/src/lib.rs:137,140`）与 `crates/floom/src/views/clip.rs`。
+- **对标**：Compose 有 `Modifier.clip(shape)`，`DrawScope` 本身还带"内容不裁剪、可溢出"的明确语义；Flutter 有 `ClipRRect` / `ClipPath` / `canvas.clipPath`。当前 `Renderer` 没有 clip 原语。
 - **补上判据**：场景级 `Clip { shape, children }`（或等效的 push/pop clip 栈），三后端像素一致；圆角裁剪与路径裁剪各一条黄金。
 
 ### A3. ~~没有画刷（渐变 / 图像笔刷）~~ — **P1 / M** — ✅ 已交付（S4）
@@ -99,7 +99,7 @@
 - **旧判据原文**：
 
 - **现状**：`SceneNode::Rect.fill` 是**单色 `Color`**（`crates/floom-scene/src/node.rs:12-20`），文字同理。
-- **对标**：Compose 所有绘制都有 `color:` 与 `brush:` 两个重载（`Brush.linearGradient` / `radialGradient` / `sweepGradient`）；Flutter `Paint..shader = LinearGradient(...).createShader(rect)`。v1 有 `fill(path, brush: impl Into<BrushRef>, blur_radius)`（`crates/floom-renderer/src/lib.rs:159`）。
+- **对标**：Compose 所有绘制都有 `color:` 与 `brush:` 两个重载（`Brush.linearGradient` / `radialGradient` / `sweepGradient`）；Flutter `Paint..shader = LinearGradient(...).createShader(rect)`。`Renderer` 目前没有画刷参数。
 - **补上判据**：`Brush { Solid(Color), Linear{stops, from, to}, Radial{..} }`，vello 映射 `peniko::Brush`、skia 映射 shader；一个渐变按钮/进度条黄金。
 
 ### A4. ~~没有模糊 / 阴影~~ — **P1 / M** — ✅ 已交付（S4：阴影；S7：通用滤镜）
@@ -114,7 +114,7 @@
 - **旧判据原文**：
 
 - **现状**：场景 IR 与 `PaintContext` 都没有 blur / shadow / renderEffect 字段。
-- **对标**：Compose `Modifier.blur`、`graphicsLayer { renderEffect = ... }`、`Modifier.shadow`；Flutter `ImageFiltered` / `BackdropFilter` / `BoxShadow` / `PhysicalModel`。v1 的 `fill(..., blur_radius)` 支持模糊（`crates/floom-renderer/src/lib.rs:159`）。
+- **对标**：Compose `Modifier.blur`、`graphicsLayer { renderEffect = ... }`、`Modifier.shadow`；Flutter `ImageFiltered` / `BackdropFilter` / `BoxShadow` / `PhysicalModel`。`Renderer` 目前没有模糊参数。
 - **补上判据**：至少一条 blur 通路（软件后端可显式跳过并记录降级），`shadow` 可由 blur + 偏移合成；黄金 + 一条"降级不静默"的断言。
 
 ### A5. ~~没有自定义着色器通路~~ — ~~**P2 / L**~~ — ✅ 已交付（A5 切片）
@@ -138,7 +138,7 @@
 
 ### A7. 没有 Canvas / Clip / Transform 容器控件，也没有 Spinner — **P1 / S–M**
 
-- **现状**：2.0 的控件清单（`crates/floom-widgets/src/compose.rs`、`primitives.rs`、`controls.rs` 的 `pub struct`）里**没有** Canvas、Clip、Transform/Rotate、Spinner、Svg、RichText。v1 有 `crates/floom/src/views/canvas.rs`（`canvas(paint_fn)`，闭包式自绘 + 依赖信号自动重绘，`:42`）、`clip.rs`、`svg.rs`、`rich_text.rs`。
+- **现状**：2.0 的控件清单（`crates/floom-widgets/src/compose.rs`、`primitives.rs`、`controls.rs` 的 `pub struct`）里**没有** Canvas、Clip、Transform/Rotate、Spinner、Svg、RichText。
 - **补上判据**：`Canvas` 控件（闭包式，尺寸来自布局，绘制走 `PaintContext`）＋ 依赖追踪触发重绘；Spinner 用 B3 的循环动画实现。
 
 ### A8. 自绘内容无法声明语义角色 — **P1 / S**
@@ -158,7 +158,7 @@
 
 ### B1. ~~没有缓动函数（easing）~~ — **P0 / S** — ✅ 已交付（S1）
 
-- **现状**：`Tween` 是纯线性插值 `from + (to - from) * u`（`crates/floom-animation/src/kinds.rs:43-49`）。2.0 全目录里 `easing` 这个词**只出现过一次**，还是文档注释里的 M3 规范链接（`crates/floom-material/src/scale.rs:133`）——**没有任何缓动实现**。v1 有完整的 `Easing` trait 与实现：`Linear` / `Step`(+`StepPosition`) / `Bezier`(三次贝塞尔参数) / `Spring`（`crates/floom/src/animate/easing.rs:53,62,78,159,208`）。
+- **现状**：`Tween` 是纯线性插值 `from + (to - from) * u`（`crates/floom-animation/src/kinds.rs:43-49`）。2.0 全目录里 `easing` 这个词**只出现过一次**，还是文档注释里的 M3 规范链接（`crates/floom-material/src/scale.rs:133`）——**没有任何缓动实现**。
 - **对标**：Compose `tween(easing = FastOutSlowInEasing)` 等；Flutter `Curves.easeInOut / bounceOut / elasticIn`。
 - **代价**：所有动画线性 → 观感机械，这是"开箱即用动画"的第一道门槛，也直接卡住 B6。
 - **补上判据**：`Easing`（至少 linear / cubic-bezier / spring 参数化）接入 `AnimKind::Tween`；**按 t=0.25/0.5/0.75 逐点断言数值**（不是只测端点）。
@@ -185,7 +185,7 @@
 - **黄金**：`floom-style` 第三幕（过渡按钮逐帧走、无过渡控件一帧到位、两者终值相同）；`floom-motion` 第七幕（`Opacity` 改值淡出、返回值从停留处淡回）；`crates/floom-app/tests/motion_host.rs` 三条（`an_opacity_transition_fades_from_its_old_value_to_the_new_one` / `an_opacity_without_a_transition_is_applied_instantly` / `an_opacity_transition_reverses_to_its_old_value_when_it_returns`）。并用**变异**证伪（`scripts/mutate-s8.sh`）。
 - **旧判据原文**：
 
-- **现状**：2.0 **没有**任何样式属性过渡机制（`Transition` / `easing` 在 2.0 目录零命中）。v1 有 `.transition(Background, Transition::ease_in_out(500.millis()))`（`examples/themes/src/main.rs:25-93`、`crates/floom/src/style/transition.rs`）。
+- **现状**：2.0 **没有**任何样式属性过渡机制（`Transition` / `easing` 在 2.0 目录零命中）。
 - **对标**：这正是 Compose 的 `animate*AsState` 家族（Float/Dp/Color/Int + 自定义类型的 `TwoWayConverter`）与 Flutter 的 `AnimatedXxx` 组件（`AnimatedContainer`/`AnimatedOpacity`/…）。**它覆盖两家约 70–80% 的实际用例**。
 - **代价**：hover / pressed 变色、展开收起、透明度变化——最常见的三个需求在 2.0 全部无 API。
 - **补上判据**：样式属性可声明过渡（属性 + 时长 + 缓动），状态变化时自动启动；hover 变色与展开收起各一条像素黄金。**注意：这条依赖 B1。**
@@ -224,7 +224,7 @@
 
 ### B8. ~~没有"给任意节点起动画"的入口~~ — **P0 / S** — ✅ 已交付（S1）
 
-- **现状**：全仓只有 **2 处** `AnimationScheduler::start`：宿主的原生过渡（`crates/floom-app/src/lib.rs:2199`）与 overlay 入场（`crates/floom-overlay/src/lib.rs:99`）。**app 与 widget 作者无法让任意节点动起来。** 同时 2.0 **没有** per-widget 重绘请求 API（`request_paint` / `invalidate_paint` 零命中；v1 有 `id.request_paint()`，见 `crates/floom/src/views/canvas.rs:82-84`）。
+- **现状**：全仓只有 **2 处** `AnimationScheduler::start`：宿主的原生过渡（`crates/floom-app/src/lib.rs:2199`）与 overlay 入场（`crates/floom-overlay/src/lib.rs:99`）。**app 与 widget 作者无法让任意节点动起来。** 同时 2.0 **没有** per-widget 重绘请求 API（`request_paint` / `invalidate_paint` 零命中）。
 - **补上判据**：`host.animate(node, AnimKind) -> AnimHandle` 之类的公开入口（或控件级 API）；并**用帧统计断言它只驱动重绘、不触发重排**——否则每个动画都会退化成全树布局。
 
 ### B9. 动画缺少自检门（金帧 + 稳定帧预算） — **P2 / S** — ◐ 半交付（S1 只补了稳定帧预算，金帧并入 S2）

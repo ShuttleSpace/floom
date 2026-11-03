@@ -1,7 +1,7 @@
 # 缺陷：vello GPU presenter 不绘制裸 `Text` 节点（macOS/Metal）
 
 > 发现日期：2026-09-28 · 发现途径：给 `floom::run_desktop` 做 Metal 冒烟截图
-> 状态：**未修，已定位到分层边界** · 影响面：所有走 `VelloGpuPresenter` 的 v2 应用
+> 状态：**未修，已定位到分层边界** · 影响面：所有走 `VelloGpuPresenter` 的应用
 
 ## 症状
 

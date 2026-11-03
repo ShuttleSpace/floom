@@ -147,12 +147,12 @@ cargo check -p floom-android-example --target aarch64-linux-android --features r
 It is **device-gated**: what is verified here is compile-level (host +
 `aarch64-linux-android` + the architecture gate), not first-frame on a device.
 
-### Removed with v1
+### Removed examples
 
-The rows below used to advertise example crates that were deleted along with the
-v1 stack. They are listed here rather than silently dropped, because "this
-existed and does not" is the answer to "where did the iOS example go" and a
-missing row does not answer it.
+The rows below used to advertise example crates that were deleted. They are
+listed here rather than silently dropped, because "this existed and does not" is
+the answer to "where did the iOS example go" and a missing row does not answer
+it.
 
 The names below are written without backticks on purpose: the index
 table above is recognised by its first column being code, and a second
@@ -160,13 +160,13 @@ code-first table would be read as more advertised examples.
 
 | was | what it was | why it is gone |
 | --- | --- | --- |
-| ios | the iOS app: counter, in-UI context menu, `UIPasteboard` clipboard, soft keyboard | v1 stack |
-| ohos | the OpenHarmony app: v1 as a `cdylib` loaded by an ArkTS Stage project | v1 stack |
-| webgpu | the browser app: v1 on `wasm32` + WebGPU | v1 stack |
-| webview, video, camera | embedded OS-provided views | v1 native-view path |
-| harmony | the HarmonyOS build | v1 stack |
-| web, embedded | wasm32 / no-std builds of v1 | v1 stack |
+| ios | the iOS app: counter, in-UI context menu, `UIPasteboard` clipboard, soft keyboard | targeted the removed stack |
+| ohos | the OpenHarmony app: a `cdylib` loaded by an ArkTS Stage project | targeted the removed stack |
+| webgpu | the browser app: `wasm32` + WebGPU | targeted the removed stack |
+| webview, video, camera | embedded OS-provided views | targeted the removed native-view path |
+| harmony | the HarmonyOS build | targeted the removed stack |
+| web, embedded | wasm32 / no-std builds | targeted the removed stack |
 
-Each of these is a target Floom 2.0 still has (`floom-platform-ios`,
+Each of these is a target Floom still has (`floom-platform-ios`,
 `floom-platform-web`, `floom-platform-embedded`, `floom-native` for the embedded
-views). What is missing is a *2.0 example* per target, not a backend.
+views). What is missing is a real example per target, not a backend.
