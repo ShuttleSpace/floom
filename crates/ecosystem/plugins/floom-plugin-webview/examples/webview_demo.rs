@@ -72,9 +72,7 @@ use floom_native_ffi::floom_native::{
     NativeViewKind, Rect,
 };
 
-use floom_plugin_webview::{
-    diagnostics, load_url, post_message, provider, set_message_callback,
-};
+use floom_plugin_webview::{diagnostics, load_url, post_message, provider, set_message_callback};
 
 /// The page loaded when no URL is given on the command line.
 ///

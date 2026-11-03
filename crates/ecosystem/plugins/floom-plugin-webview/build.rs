@@ -4,11 +4,19 @@
 //! compiled *into* the crate, not shipped beside it: there is no runtime
 //! plugin discovery and therefore no serialization boundary — a call from the
 //! app is a machine call, resolved when this crate is linked.
+//!
+//! Each platform's half lives in its own peer directory — `macos/` (Objective-C),
+//! `linux/` (C11 + GTK) — and `common/` holds the C ABI header both of them
+//! implement, so one contract cannot drift from the other.
 
 use std::path::PathBuf;
 
 fn main() {
+    println!("cargo:rerun-if-changed=common");
     println!("cargo:rerun-if-changed=macos");
+    println!("cargo:rerun-if-changed=linux");
+    println!("cargo:rerun-if-changed=ios");
+    println!("cargo:rerun-if-changed=windows");
     println!("cargo:rustc-check-cfg=cfg(floom_plugin_native)");
     // Platform/backend cfgs this crate will use on not-yet-built targets.
     println!("cargo:rustc-check-cfg=cfg(target_os, values(\"ohos\"))");
@@ -19,6 +27,7 @@ fn main() {
     );
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR is set by cargo"));
+    let common = manifest.join("common");
 
     // The provider ABI comes from the crate that owns it, so the two cannot
     // drift. The path is relative because the header is not a dependency:
@@ -36,35 +45,93 @@ fn main() {
     std::fs::copy(&provider_header, &copied)
         .unwrap_or_else(|e| panic!("copying {}: {e}", provider_header.display()));
 
-    if target_os != "macos" {
-        // The native half is Objective-C and reaches AppKit, so it exists on
-        // macOS only. On every other target the plugin has no native half,
-        // and says so rather than pretending.
-        println!(
-            "cargo:warning=floom-plugin-webview: the native half is \
-             Objective-C and exists on macOS only; the plugin compiles but \
-             enable() will report it"
-        );
-        return;
+    match target_os.as_str() {
+        "macos" => {
+            let source = manifest.join("macos").join("floom_webview.m");
+            println!("cargo:rerun-if-changed={}", source.display());
+
+            cc::Build::new()
+                .file(&source)
+                .include(&common)
+                .include(&out_dir)
+                .flag_if_supported("-fobjc-arc")
+                .warnings(true)
+                .compile("floom_webview");
+
+            // AppKit and Foundation: the frameworks the native half reaches. WebKit
+            // because a `WKWebView` comes from it — the capability this plugin now
+            // really provides, rather than a blank `NSView` standing in for one.
+            println!("cargo:rustc-link-lib=framework=AppKit");
+            println!("cargo:rustc-link-lib=framework=Foundation");
+            println!("cargo:rustc-link-lib=framework=WebKit");
+        }
+        "ios" => {
+            let source = manifest.join("ios").join("floom_webview.m");
+            println!("cargo:rerun-if-changed={}", source.display());
+
+            cc::Build::new()
+                .file(&source)
+                .include(&common)
+                .include(&out_dir)
+                .flag_if_supported("-fobjc-arc")
+                .warnings(true)
+                .compile("floom_webview");
+
+            // UIKit is the view hierarchy, WebKit the `WKWebView` the half
+            // builds into it. The frameworks are iOS set names, not macOS's.
+            println!("cargo:rustc-link-lib=framework=UIKit");
+            println!("cargo:rustc-link-lib=framework=Foundation");
+            println!("cargo:rustc-link-lib=framework=WebKit");
+        }
+        "linux" => {
+            let source = manifest.join("linux").join("floom_webview.c");
+            println!("cargo:rerun-if-changed={}", source.display());
+
+            cc::Build::new()
+                .file(&source)
+                .include(&common)
+                .include(&out_dir)
+                .warnings(true)
+                .compile("floom_webview");
+
+            // GTK3 + WebKitGTK are what the Linux half reaches. The exact
+            // pkg-config spelling is its own step: `system-deps` or a
+            // `pkg-config` build-dependency resolves the right `-l` flags per
+            // distro, and until that lands these are the two desktop distro
+            // spellings most hosts have.
+            println!("cargo:rustc-link-lib=dylib=gtk-3");
+            println!("cargo:rustc-link-lib=dylib=gdk-3");
+            println!("cargo:rustc-link-lib=dylib=webkit2gtk-4.1");
+        }
+        "windows" => {
+            let source = manifest.join("windows").join("floom_webview.cpp");
+            println!("cargo:rerun-if-changed={}", source.display());
+
+            cc::Build::new()
+                .file(&source)
+                .include(&common)
+                .include(&out_dir)
+                .warnings(true)
+                .compile("floom_webview");
+
+            // Win32 UI plumbing plus WebView2; the loader static lib is the
+            // WebView2 NuGet piece, resolved by the host's own build.
+            println!("cargo:rustc-link-lib=user32");
+            println!("cargo:rustc-link-lib=gdi32");
+            println!("cargo:rustc-link-lib=ole32");
+            println!("cargo:rustc-link-lib=WebView2LoaderStatic");
+        }
+        other => {
+            // No compiled native half on this target (ohos, or a host os we
+            // have not grown one for; web and tui never get one). The plugin
+            // still compiles, and `enable()` reports the absence honestly
+            // rather than pretending.
+            println!(
+                "cargo:warning=floom-plugin-webview: no compiled native half for target `{other}`; \
+                 enable() and provider() report it"
+            );
+        }
     }
-
-    let source = manifest.join("macos").join("floom_webview.m");
-    println!("cargo:rerun-if-changed={}", source.display());
-
-    cc::Build::new()
-        .file(&source)
-        .include(manifest.join("macos"))
-        .include(&out_dir)
-        .flag_if_supported("-fobjc-arc")
-        .warnings(true)
-        .compile("floom_webview");
-
-    // AppKit and Foundation: the frameworks the native half reaches. WebKit
-    // because a `WKWebView` comes from it — the capability this plugin now
-    // really provides, rather than a blank `NSView` standing in for one.
-    println!("cargo:rustc-link-lib=framework=AppKit");
-    println!("cargo:rustc-link-lib=framework=Foundation");
-    println!("cargo:rustc-link-lib=framework=WebKit");
 
     println!("cargo:rustc-cfg=floom_plugin_native");
 }

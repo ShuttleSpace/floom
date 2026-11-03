@@ -166,7 +166,7 @@ scripts/build.sh floom-capabilities android \
   `"not a url"` 并返回一个没有 scheme 的对象 —— 交给 WebKit 只会得到一张空白页，
   而不是一个失败。所以"拒绝"必须自己做。
 
-验证（`cargo run -p floom-plugin-nativeview --example native_view`，本机跑通）：
+验证（`cargo run -p floom-plugin-webview --example native_view`，本机跑通）：
 
 ```
 camera kind refused: provider failed: this plugin builds web views only, not kind 4 (example.camera)
@@ -199,13 +199,13 @@ Camera2 需要 Java 实现（`SurfaceHolder.Callback` / `TextureView.SurfaceText
 
 **2026-10-28 已按"引入 Java 半边"的方向落地代码**（未提交，等真机验证）：
 
-- `native/android/FloomCameraView.java` —— `TextureView` + Camera2，自己开
+- `crates/ecosystem/plugins/floom-plugin-camera/native/android/FloomCameraView.java` —— `TextureView` + Camera2，自己开
   `HandlerThread`、选后置摄像头、建 capture session；`openCamera` /
   `closeCamera` / `setPosition` / `setVisible` 由 Rust 调用。
-- `src/android.rs` —— `CameraProvider` 实现 `NativeViewProvider`，通过 JNI
+- `crates/ecosystem/plugins/floom-plugin-camera/src/android.rs` —— `CameraProvider` 实现 `NativeViewProvider`，通过 JNI
   创建 Java 视图、挂到 `decorView`、驱动几何与可见性；kind 不是
   `Custom("camera")` 时拒绝。
-- 交叉编译已验证：`cargo check -p floom-plugin-nativeview --target
+- 交叉编译已验证：`cargo check -p floom-plugin-camera --target
   aarch64-linux-android` 零错误。
 
 **仍然缺的一步**：示例的 `AndroidManifest.xml` 还是 `hasCode="false"`，
@@ -233,7 +233,7 @@ message handler，跨 FFI 仍然走 `floom-native-ffi` 的 C ABI。
 - 接收形态选的是**同步回调**，不是队列或 poll：WebKit 本来就在主线程投递，
   再排队只是把同一件事推迟一帧，还多一个需要清理的队列。
 
-验证（`cargo run -p floom-plugin-nativeview --example webview_demo`，本机跑通）：
+验证（`cargo run -p floom-plugin-webview --example webview_demo`，本机跑通）：
 
 ```
 web view placed, backing scale 2
@@ -414,7 +414,7 @@ cargo test -p floom-renderer-tui --test tui_pixels        # 5 项 ✓
 cargo run -p floom-capabilities
 
 # 原生视图插件（macOS，不需要设备）✓ 已验证跑通
-cargo run --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-nativeview --example webview_demo
+cargo run --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-webview --example webview_demo
 # 输出：window: <NSWindow: 0x...> / bound in mode Overlay / placed at 10,15 100x50
 #       the native half did all of it: one view created, placed, and destroyed.
 

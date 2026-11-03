@@ -1,4 +1,4 @@
-package com.example.floom.nativeview;
+package dev.floom.plugin.camera;
 
 import android.app.Activity;
 import android.content.Context;

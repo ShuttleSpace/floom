@@ -63,8 +63,9 @@ SDK 不携带任何能力插件。app 想要电池就连 `floom-plugin-battery`�
 这 6 个是 2026-10-24 从 TODO 桩补成真实现的那批（audit 的 A7b 行）。
 **它们的形态就是新插件的参照物**，尤其是 `Err` 的措辞——措辞本身是设计的一部分。
 
-另有一个不算能力插件但已存在的：`floom-plugin-nativeview`（provider ABI 的先行者，
-原生半边是 Objective-C）。它是 Tier B 的全部基础。
+另有一个不算能力插件但已存在的：`floom-plugin-webview`（provider ABI 的先行者，
+原生半边按平台各一份：macOS/iOS 的 WebKit、Windows 的 WebView2、Linux 的 WebKitGTK）。
+它是 Tier B 的全部基础。
 
 ---
 
@@ -358,13 +359,26 @@ provider ABI（`crates/floom-native-ffi/include/floom_native_provider.h`），
 - iOS / macOS `WKWebView` + `WKUserContentController` 做 JS 桥
 - JS→Rust 的方向走 provider 自己的回调表，不经过 `floom_<name>_arkts_call`
 
-### B2. `floom-plugin-camera` ← `camera`
+### B2. `floom-plugin-camera` ← `camera` ✅ 已实现（2026-10-29，Android）
 
 Flutter 侧是 6 个 federated 包，每个平台的相机 API 都不同。
 
 - Android CameraX（`camera_android_camerax` 就是干这个的独立包）
 - iOS AVFoundation
 - 帧的交付：**外部纹理**，不要每帧拷贝——这是文档里已经写明的原则
+
+**2026-10-29 落地**：camera 能力从 `floom-plugin-nativeview` 搬进自己的插件
+`floom-plugin-camera`，完成「一个能力一个 crate」的收口。nativeview 因此变成纯
+webview 插件（macOS `WKWebView`）；camera 留在 Android 一侧（`TextureView` +
+Camera2 经 JNI 驱动）。
+
+- `floom-plugin-camera` 依赖 `floom-native-ffi`（provider ABI）+ `floom-platform-mobile`
+  （JNI 桥）；桌面/iOS 臂返回诚实的「不可用」。
+- Java 半边：包 `dev.floom.plugin.camera`，`FloomCameraView`（`TextureView` +
+  `Camera2`），经 JNI 由 Rust provider 驱动 `openCamera` / `closeCamera` /
+  `setPosition` / `setVisible`。
+- 交叉编译已验证：`cargo check -p floom-plugin-camera --target
+  aarch64-linux-android` 零错误；host 侧编译通过（无 provider 的诚实拒绝）。
 
 `docs/platform-and-plugins.md` 已经点名 camera 是「第一个真正要 provider ABI 的能力」，
 现在 nativeview 已经把链路打通，camera 是顺理成章的下一步。

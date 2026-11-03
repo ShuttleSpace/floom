@@ -4,10 +4,9 @@
  * C11 + GTK3 with WebKitGTK 2.x, because that is what the host window the
  * host hands over lives inside and a plugin that contributes a native view
  * has to reach the toolkit that draws it. The contract it implements is the
- * C ABI in `../macos/floom_webview.h` (shared across platforms): the
- * plugin's own four functions, `load_url`, the JS bridge, diagnostics, and
- * the provider vtable that says how the view is created, placed and torn
- * down.
+ * C ABI shared across platforms (`floom_webview.h`): the plugin's own
+ * four functions, `load_url`, the JS bridge, diagnostics, and the provider
+ * vtable that says how the view is created, placed and torn down.
  *
  * No GTK main loop: the host owns the event loop; the widget repaints into
  * the host's own surface whenever GTK's event dispatch runs.
@@ -15,21 +14,22 @@
  * # Kinds
  *
  * As on macOS, `create` refuses every kind it cannot build with a message
- * naming the kind — see the macOS file for why a refusal is the right
- * answer, not a limitation to work around.
+ * naming the kind — a plugin that silently substituted a blank view for a
+ * camera would hand back a rectangle no one can tell apart from a view that
+ * was never asked for.
  *
  * # Host handles, and why attach has two paths
  *
  * `attach` is given the host's window once, as an opaque pointer. On Linux
  * that is either a `GtkWidget *` — a `GtkFixed` or `GtkLayout` the host set
  * aside as the area native participants land in — or a raw X11 `Window`
- * (an XEmbed socket) widened to a pointer width. A `Window` is a 32-bit XID,
+ * (an XEmbed socket) widened to pointer width. A `Window` is a 32-bit XID,
  * so the two are told apart by a size check, not by dereferencing an
  * arbitrary integer: see `looks_like_widget`.
  *
- * Widget path: the web view is `gtk_fixed_put` into the host widget at
- * `apply` time. Window path: `attach` wraps the XID in a `GtkPlug` and the
- * web view is a plain child of the plug.
+ * Widget path: the web view is `gtk_fixed_put` / `gtk_layout_put` into the
+ * host widget at `apply` time. Window path: `attach` wraps the XID in a
+ * `GtkPlug` and the web view is a plain child of the plug.
  *
  * # A per-slot table
  *
@@ -57,8 +57,8 @@
  * The host's window, one of:
  *   - `g_host_widget`: a GtkWidget (GtkFixed / GtkLayout) — child-of-host path
  *   - `g_host_plug`:   a GtkPlug built from an X11 Window XID — plug path
- * The host owns the handle, so the plugin does not ref it beyond what GTK
- * owns internally.
+ * The host owns the handle; the plugin keeps the cast pointer and nothing
+ * else.
  */
 static int g_host_is_widget = 0;
 static GtkWidget *g_host_widget = NULL;
@@ -75,10 +75,14 @@ typedef struct FloomView {
 
 static FloomView *g_views = NULL;
 
+/*
+ * Live participants, keyed by slot, newest first. The generation makes a
+ * recycled slot a different key by construction.
+ */
 static FloomView *find_view(FloomNativeSlot slot) {
-    for (FloomView *v = g_views; v != NULL; v = v->next) {
-        if (v->slot.index == slot.index && v->slot.generation == slot.generation) {
-            return v;
+    for (FloomView *view = g_views; view != NULL; view = view->next) {
+        if (view->slot.index == slot.index && view->slot.generation == slot.generation) {
+            return view;
         }
     }
     return NULL;
@@ -114,7 +118,7 @@ static void set_error(char *out_error, uint32_t out_capacity, const char *fmt, .
     va_end(ap);
 }
 
-/* Remember the reason of the last refusal, replacing any previous one. */
+/* The reason of the most recent refusal, replacing any previous one. */
 static void remember_refusal(const char *msg) {
     free(g_last_refusal);
     g_last_refusal = strdup(msg != NULL ? msg : "");
@@ -126,7 +130,7 @@ static void remember_url(const char *url) {
 }
 
 /* Initialize GTK at most once. The host owns the main loop; this only opens
- * the toolkit (frame buffers, input, fontconfig) so widgets can exist. */
+ * the toolkit (input, display, fontconfig) so widgets can exist. */
 static int gtk_ready(void) {
     static int ready = -1;
     if (ready < 0) {
@@ -141,21 +145,23 @@ static int gtk_ready(void) {
  *
  * `GTK_IS_WIDGET` dereferences the pointer, so an integer XID passed as a
  * pointer would crash inside it. The check is size, not type: an X11 Window
- * is a 32-bit XID, so the widened pointer keeps its high bits zero, while a
+ * is a 32-bit XID, so the widened value keeps its high bits zero, while a
  * live heap `GtkWidget *` on 64-bit Linux is a mmap address well above the
- * 4 GiB line. `GTK_IS_WIDGET` runs only when that held.
+ * 4 GiB line. `GTK_IS_WIDGET` runs only when that held. On 32-bit Linux the
+ * size test cannot fire, and the handle is assumed to be a widget — the XID
+ * path there needs a build that knows the difference.
  */
 static int looks_like_widget(const void *p) {
     if (p == NULL) {
         return 0;
     }
-    if ((uintptr_t)p <= 0xffffffffull && sizeof(void *) > 4) {
+    if (sizeof(void *) > 4 && (uintptr_t)p <= 0xffffffffull) {
         return 0;
     }
     return GTK_IS_WIDGET(p) ? 1 : 0;
 }
 
-/* The OS scale factor the parish places at, for the device-pixel division. */
+/* The scale factor the host places at, for the device-pixel division. */
 static double host_scale(void) {
     GtkWidget *w = g_host_is_widget ? g_host_widget : GTK_WIDGET(g_host_plug);
     if (w != NULL) {
@@ -169,7 +175,7 @@ static double host_scale(void) {
 
 /* Whether the host's widget accepts placed children (GtkFixed / GtkLayout).
  * Any other container gets the web view added as a plain child and manages
- * its own geometry. */
+ * the geometry itself. */
 static int host_is_placeable(void) {
     if (!g_host_is_widget || g_host_widget == NULL) {
         return 0;
@@ -201,54 +207,6 @@ int floom_webview_capability(void) {
 /* --- the provider -------------------------------------------------------- */
 
 /*
- * The host's window.
- *
- * The window arrives once, as an opaque pointer: a `GtkWidget *` the host
- * wants participants parented into, or an X11 XID it wants embedded into.
- * Which one decides everything create and apply do later, so it is decided
- * here — see the header comment for the two paths.
- */
-static int32_t webview_attach(void *self, const void *host_window) {
-    (void)self;
-    if (!gtk_ready()) {
-        return 1;
-    }
-    g_host_is_widget = looks_like_widget(host_window);
-    if (g_host_is_widget) {
-        g_host_widget = (GtkWidget *)host_window;
-        g_host_plug = NULL;
-    } else {
-        /* XEmbed socket: the plug is our top level inside the host's X window.
-         * Created now because the window does not change over the provider's
-         * life, and `gtk_plug_new` is a construction-time decision. */
-        g_host_widget = NULL;
-        g_host_plug = GTK_PLUG(gtk_plug_new((GdkNativeWindow)(uintptr_t)host_window));
-    }
-    return 0;
-}
-
-static FloomNativeCapabilities webview_capabilities(void *self) {
-    (void)self;
-    FloomNativeCapabilities caps;
-    memset(&caps, 0, sizeof(caps));
-    /* Overlay only: the web view is a child of a window above the
-     * framework's surface, composited by GTK, never imported as a texture. */
-    caps.modes[0] = FLOOM_NATIVE_MODE_OVERLAY;
-    caps.mode_count = 1;
-    caps.snapshot = 0;
-    /* A web view takes the pointer — see the macOS file for why a
-     * passthrough web view would look interactive and behave like a
-     * picture. */
-    caps.input_passthrough = 0;
-    caps.input_capture = 1;
-    /* Focusable: a web page has text fields, and a form the user cannot type
-     * into is not an embedded browser. */
-    caps.focusable = 1;
-    caps.clip = FLOOM_NATIVE_CLIP_PLATFORM;
-    return caps;
-}
-
-/*
  * `script-message-received::floomNative` fires with a `JSCValue` from 2.40
  * and a `WebKitJavascriptResult` before it; the same message arrives both
  * ways, only the wrapper changes.
@@ -265,6 +223,8 @@ static void on_script_message(WebKitUserContentManager *manager, JSCValue *value
     if (value == NULL) {
         return;
     }
+    /* A string is the message itself; anything else (objects, arrays) goes
+     * out as JSON, which is what the Rust callback expects. */
     char *json = jsc_value_is_string(value) ? jsc_value_to_string(value)
                                             : jsc_value_to_json(value, 0);
     webview_handle_js_message(data->slot, json != NULL ? json : "");
@@ -351,23 +311,26 @@ static int32_t webview_create(void *self, FloomNativeSlot slot, uint32_t kind,
 
     /*
      * Spoof a desktop Chrome UA. A bare WebKitGTK UA makes YouTube (and
-     * similar properties) serve a stripped page — as on macOS. Chrome's UA
-     * is the one they target.
+     * similar properties) serve a stripped page — as on macOS, because they
+     * fingerprint the UA and opt out of the full experience. Chrome's UA is
+     * the one they target.
      */
     WebKitSettings *settings = webkit_web_view_get_settings(WEBKIT_WEB_VIEW(view->web));
     webkit_settings_set_user_agent(
         settings,
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/120.0.0.0 Safari/537.36");
-    /* Developer extras: the inspector, on the view's context menu. */
+    /* Developer extras: the inspector, reachable from the view's context
+     * menu — WebKitGTK's "Inspect Element" asks for exactly this. */
     webkit_settings_set_enable_developer_extras(settings, TRUE);
 
     gtk_widget_show(view->web);
 
     /*
      * The widget path parents nothing yet: the web view is `gtk_fixed_put`
-     * (or `gtk_layout_put`) into the host widget at `apply` time, when the
-     * host has told us where. The plug path needs a parent to exist now.
+     * (or `gtk_layout_put`) into the host widget at `apply` time, once the
+     * host has told us where. The plug path needs a parent to exist now,
+     * because the plug *is* the participant's window.
      */
     if (!g_host_is_widget && g_host_plug != NULL) {
         gtk_container_add(GTK_CONTAINER(g_host_plug), view->web);
@@ -387,8 +350,10 @@ static void webview_destroy(void *self, FloomNativeSlot slot) {
         FloomView *view = *link;
         if (view->slot.index == slot.index && view->slot.generation == slot.generation) {
             *link = view->next;
+            /* Destroys the web view with it. The content manager and its
+             * signal die here too, before the SlotData it hangs off does. */
             gtk_widget_destroy(view->web);
-            g_free(link == &g_views ? NULL : NULL), g_free(view);
+            g_free(view);
             g_destroyed += 1;
             return;
         }
@@ -401,13 +366,14 @@ static void webview_destroy(void *self, FloomNativeSlot slot) {
 /*
  * Place the view.
  *
- * The rect arrives in whole device pixels; GTK's coordinates are in logical
- * pixels, so it is divided by the host's scale factor. That division is the
+ * The rect arrives in whole device pixels; GTK's coordinates are logical,
+ * so it is divided by the host's scale factor. That division is the
  * platform's own business — the framework snapped to whole device pixels
  * exactly once, and this is the other side of that boundary.
  *
- * Applying is absolute and idempotent: `size_request` and `move` overwrite
- * the previous state entirely, so a missed frame self-heals.
+ * Applying is absolute and idempotent: `move` plus `size_request` overwrite
+ * the previous state entirely, so a missed frame self-heals instead of
+ * accumulating error.
  */
 static void webview_apply(void *self, FloomNativeSlot slot,
                              const FloomNativeState *state) {
@@ -422,29 +388,26 @@ static void webview_apply(void *self, FloomNativeSlot slot,
     g_applied += 1;
 
     const double scale = host_scale();
-    const double x = (double)state->rect.x / scale;
-    const double y = (double)state->rect.y / scale;
-    const double w = (double)state->rect.width / scale;
-    const double h = (double)state->rect.height / scale;
-    g_last_x = x;
-    g_last_y = y;
-    g_last_w = w;
-    g_last_h = h;
+    g_last_x = (double)state->rect.x / scale;
+    g_last_y = (double)state->rect.y / scale;
+    g_last_w = (double)state->rect.width / scale;
+    g_last_h = (double)state->rect.height / scale;
 
     if (g_host_is_widget) {
         GtkWidget *parent = gtk_widget_get_parent(view->web);
         /* First apply parents the view: `put` once, `move` from then on. */
         if (parent == NULL && host_is_placeable()) {
             if (GTK_IS_FIXED(g_host_widget)) {
-                gtk_fixed_put(GTK_FIXED(g_host_widget), view->web, (gint)x, (gint)y);
+                gtk_fixed_put(GTK_FIXED(g_host_widget), view->web, (gint)g_last_x,
+                              (gint)g_last_y);
             } else {
-                gtk_layout_put(GTK_LAYOUT(g_host_widget), view->web, (gint)x, (gint)y);
+                gtk_layout_put(GTK_LAYOUT(g_host_widget), view->web, (gint)g_last_x,
+                               (gint)g_last_y);
             }
             parent = g_host_widget;
         } else if (parent == NULL && GTK_IS_CONTAINER(g_host_widget)) {
-            /* The host's widget is not placeable; geometry belongs to it. It
-             * still asked for the participant, so it gets added as a plain
-             * child at its own discretion. */
+            /* The host's widget is not placeable; it owns the geometry and
+             * this call can only put the view somewhere in it. */
             gtk_container_add(GTK_CONTAINER(g_host_widget), view->web);
             parent = g_host_widget;
         }
@@ -452,24 +415,23 @@ static void webview_apply(void *self, FloomNativeSlot slot,
             return;
         }
         if (GTK_IS_FIXED(parent)) {
-            gtk_fixed_move(GTK_FIXED(parent), view->web, (gint)x, (gint)y);
+            gtk_fixed_move(GTK_FIXED(parent), view->web, (gint)g_last_x, (gint)g_last_y);
         } else if (GTK_IS_LAYOUT(parent)) {
-            gtk_layout_move(GTK_LAYOUT(parent), view->web, (gint)x, (gint)y);
+            gtk_layout_move(GTK_LAYOUT(parent), view->web, (gint)g_last_x, (gint)g_last_y);
         }
-        /* GtkFixed / GtkLayout allocate children at their requisition, so the
-         * size request *is* the size allocation here. */
-        gtk_widget_set_size_request(view->web, (gint)w, (gint)h);
-        gtk_widget_set_opacity(view->web, state->visible ? 1.0 : 0.0);
+        /* GtkFixed and GtkLayout allocate children at their requisition, so
+         * the size request *is* the size allocation here. */
+        gtk_widget_set_size_request(view->web, (gint)g_last_w, (gint)g_last_h);
         if (state->visible) {
             gtk_widget_show(view->web);
         } else {
             gtk_widget_hide(view->web);
         }
     } else if (g_host_plug != NULL) {
-        /* The plug is the embedded top level; it is the geometry the host's X
-         * window sees. The web view fills it. */
-        gtk_window_resize(GTK_WINDOW(g_host_plug), (gint)w, (gint)h);
-        gtk_widget_set_size_request(view->web, (gint)w, (gint)h);
+        /* The plug is the embedded top level; it is the geometry the host's
+         * X window sees. The web view fills it. */
+        gtk_window_resize(GTK_WINDOW(g_host_plug), (gint)g_last_w, (gint)g_last_h);
+        gtk_widget_set_size_request(view->web, (gint)g_last_w, (gint)g_last_h);
         if (state->visible) {
             gtk_widget_show(view->web);
             gtk_widget_show(GTK_WIDGET(g_host_plug));
@@ -550,8 +512,8 @@ __attribute__((constructor)) static void webview_register(void) {
  *
  * Whether `url` is a URL a web view can be pointed at: WebKit's own loader
  * resolves a scheme-less string against a `file://` base and produces a
- * surprising page, so — as on macOS — a non-empty scheme is required.
- * That is the check that makes an error here mean something.
+ * surprising page, so — as on macOS — a non-empty scheme is required. That
+ * is the check that makes an error here mean something.
  */
 int floom_webview_load_url(FloomNativeSlot slot, const char *url,
                               char *out_error, uint32_t out_capacity) {
@@ -659,14 +621,14 @@ int floom_webview_refused_count(void) {
 /* How many participants are alive right now. */
 int floom_webview_live_count(void) {
     int n = 0;
-    for (FloomView *v = g_views; v != NULL; v = v->next) {
+    for (FloomView *view = g_views; view != NULL; view = view->next) {
         n += 1;
     }
     return n;
 }
 
 /* Whether the participant in `slot` is really in the host's widget (or plug).
- * Widget path checks the parent link; plug path checks the plug is top. */
+ * Widget path checks the parent link; plug path checks the plug is it. */
 int floom_webview_slot_is_attached(FloomNativeSlot slot) {
     FloomView *view = find_view(slot);
     if (view == NULL || view->web == NULL) {

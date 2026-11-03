@@ -304,7 +304,8 @@ for _names, _level in [
             # A plugin sits above the platform layer and below the widgets:
             # it may depend on the platform adapters and the native ABI, and
             # nothing may depend on it but an application.
-            "floom-plugin-nativeview",
+            "floom-plugin-webview",
+            "floom-plugin-camera",
             # The capability plugins. Each is one capability, opt-in by
             # dependency: an app that does not want the battery does not link
             # the battery.

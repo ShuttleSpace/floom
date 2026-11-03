@@ -118,17 +118,17 @@ FLOOM2_PACKAGES=(
 # them for a device target because that is the only place their `cfg` arms exist;
 # a host build skips exactly the code most likely to rot.
 #
-# `floom-plugin-nativeview` is deliberately absent from the mobile lists: it is
-# a macOS/Objective-C plugin whose whole body is AppKit, so there is no Android
-# or iOS arm for a device check to reach. Listing it there would fail on a
-# missing package rather than on missing code.
+# `floom-plugin-webview` carries one native half per platform (AppKit/WKWebView,
+# WKWebView on iOS, WebView2, WebKitGTK, plus the Android WebView through the
+# provider ABI), so it is listed everywhere a half exists.
 CAPABILITY_PLUGINS=(
   floom-plugin-battery
   floom-plugin-connectivity
   floom-plugin-device-info
   floom-plugin-local-auth
   floom-plugin-location
-  floom-plugin-nativeview
+  floom-plugin-webview
+  floom-plugin-camera
   floom-plugin-notifications
   floom-plugin-sensors
   floom-plugin-share
@@ -151,6 +151,8 @@ CAPABILITY_PLUGINS=(
 # has no tray, and an arm no check compiles is an arm free to rot.
 MOBILE_CAPABILITY_PLUGINS=(
   floom-plugin-battery
+  floom-plugin-camera
+  floom-plugin-webview
   floom-plugin-connectivity
   floom-plugin-device-info
   floom-plugin-local-auth
@@ -180,6 +182,7 @@ MOBILE_CAPABILITY_PLUGINS=(
 # two edition-2024 errors for as long as it did.
 WINDOWS_CAPABILITY_PLUGINS=(
   floom-plugin-paths
+  floom-plugin-webview
   floom-plugin-open-url
   floom-plugin-file-dialog
   floom-plugin-prefs

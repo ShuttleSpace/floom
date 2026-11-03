@@ -1,0 +1,62 @@
+[package]
+name = "floom-plugin-camera"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A Floom plugin: a native camera view, implemented per-platform"
+rust-version.workspace = true
+publish = false
+
+# A plugin owns a *capability* and the host owns the *transport*: this crate
+# depends on `floom-native-ffi` for the provider ABI and on `floom-platform`
+# for the plugin registry, and on nothing else. It does not depend on the widget
+# stack, the renderer or any OS framework — the native half is where each
+# platform's camera API lives.
+#
+# Every platform lives in its own directory (`android/ ios/ windows/ macos/
+# linux/ ohos/ web/ tui/`) at the crate root, alongside `src/` (the Rust FFI
+# bridge) and `common/` (the shared C-ABI header). `build.rs` compiles the C/
+# Objective-C/C++ native half for the active target into this crate; the Java
+# half (`android/`) and the JS half (`web/`) are built by their own toolchains.
+
+[dependencies]
+floom-native-ffi = { path = "../../../floom-native-ffi", version = "0.2.0" }
+floom-platform = { path = "../../../floom-platform", version = "0.2.0" }
+
+# Android-only: the JNI bridge to the Java half (FloomCameraView). The Rust half
+# owns the `NativeViewProvider` and drives the Java view through JNI.
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.22"
+floom-platform-mobile = { path = "../../../floom-platform-mobile" }
+
+# Web-only: a pure-Rust camera built from `web-sys` (getUserMedia into a <video>).
+# No C native half — the "native" capability is the browser's MediaDevices API,
+# reached directly from Rust.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+    "CssStyleDeclaration",
+    "Document",
+    "Element",
+    "HtmlElement",
+    "HtmlMediaElement",
+    "HtmlVideoElement",
+    "MediaDevices",
+    "MediaStream",
+    "MediaStreamConstraints",
+    "Navigator",
+    "NodeList",
+    "Node",
+    "Window",
+] }
+
+[features]
+# Terminal backends have no camera; the `tui` module reports the capability as
+# unavailable rather than claiming it.
+tui = []
+
+[build-dependencies]
+cc = "1"

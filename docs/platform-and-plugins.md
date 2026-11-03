@@ -201,13 +201,13 @@ find it.
 
 ### A worked example
 
-`crates/ecosystem/plugins/floom-plugin-nativeview` is a plugin whose capability
-is a **native view**, and its native half is **Objective-C** — the language
-AppKit is written in, because a plugin that contributes a view has to reach the
-framework it contributes to.
+`crates/ecosystem/plugins/floom-plugin-webview` is a plugin whose capability
+is a **native web view**. It has one native half per platform, because a plugin
+that contributes a view has to reach the framework it contributes to: Objective-C
+and AppKit on macOS, WKWebView on iOS, WebView2 on Windows and WebKitGTK on Linux.
 
 ```
-crates/ecosystem/plugins/floom-plugin-nativeview/
+crates/ecosystem/plugins/floom-plugin-webview/
 ├── build.rs                      compiles native/macos/floom_nativeview.m
 ├── native/
 │   ├── common/floom_nativeview.h         the plugin's own four-function ABI

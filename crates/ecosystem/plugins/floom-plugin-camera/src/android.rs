@@ -1,4 +1,4 @@
-//! Android half of the nativeview plugin — camera capability.
+//! Android half of the camera plugin — camera capability.
 //!
 //! Drives a `FloomCameraView` (TextureView + Camera2) through JNI. The view
 //! is a native participant in the Floom scene: Floom controls its geometry
@@ -50,9 +50,7 @@ impl CameraProvider {
         activity: jni::objects::JObject<'_>,
     ) -> Result<(), NativeError> {
         let class = env
-            .find_class(jni::jni_str!(
-                "com/example/floom/nativeview/FloomCameraView"
-            ))
+            .find_class(jni::jni_str!("dev/floom/plugin/camera/FloomCameraView"))
             .map_err(|e| {
                 NativeError::Provider(format!("find FloomCameraView class: {e}").into())
             })?;

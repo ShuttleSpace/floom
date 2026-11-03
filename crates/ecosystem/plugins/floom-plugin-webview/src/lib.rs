@@ -58,10 +58,16 @@
 
 #[cfg(target_os = "android")]
 mod android;
+#[cfg(target_os = "ios")]
+mod ios;
+#[cfg(target_os = "linux")]
+mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
 #[cfg(target_os = "ohos")]
 mod ohos;
+#[cfg(target_os = "windows")]
+mod windows;
 // `web` and `tui` have no native-view capability to contribute; they are
 // honest refusals that resolve the same unified names.
 #[cfg(feature = "tui")]
@@ -71,6 +77,10 @@ mod web;
 
 #[cfg(target_os = "android")]
 pub use android::*;
+#[cfg(target_os = "ios")]
+pub use ios::*;
+#[cfg(target_os = "linux")]
+pub use linux::*;
 #[cfg(target_os = "macos")]
 pub use macos::*;
 #[cfg(target_os = "ohos")]
@@ -79,6 +89,8 @@ pub use ohos::*;
 pub use tui::*;
 #[cfg(any(target_arch = "wasm32", target_os = "unknown"))]
 pub use web::*;
+#[cfg(target_os = "windows")]
+pub use windows::*;
 
 /// Registers this plugin with the process-wide table, using the active
 /// platform's `enable`. The name is stable across platforms; what `enable` does
@@ -86,6 +98,12 @@ pub use web::*;
 pub fn register() {
     #[cfg(target_os = "macos")]
     floom_platform::register_plugin("webview", macos::enable);
+    #[cfg(target_os = "linux")]
+    floom_platform::register_plugin("webview", linux::enable);
+    #[cfg(target_os = "windows")]
+    floom_platform::register_plugin("webview", windows::enable);
+    #[cfg(target_os = "ios")]
+    floom_platform::register_plugin("webview", ios::enable);
     #[cfg(target_os = "android")]
     floom_platform::register_plugin("webview", android::enable);
     #[cfg(target_os = "ohos")]
