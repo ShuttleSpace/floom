@@ -7,7 +7,7 @@
 //!
 //! ## What it does today
 //!
-//! - **Paint**: lays the document out with [`TextShaper`] at the widget's box
+//! - **Paint**: lays the document out with [`TextLayout`] at the widget's box
 //!   width and paints each line, the selection highlight, and the caret.
 //! - **Keyboard**: printable characters insert at the selection; `Backspace`
 //!   and `Delete` remove; `Enter` inserts a newline; `Mod+Z` / `Mod+Y` undo
@@ -22,7 +22,7 @@
 //!
 //! - Multi-caret, rectangular selection, and rich styles are out of scope.
 //!
-//! [`TextShaper`]: floom_text::TextShaper
+//! [`TextShaper`]: floom_text::TextLayout
 
 use std::any::Any;
 use std::sync::Mutex;
@@ -32,8 +32,11 @@ use floom_core::{
     CreateContext, ElementId, EventContext, FontWeight, LayoutRequest, PaintContext, PaintStyle,
     Point, Rect, SemanticsContext, SemanticsHint, SemanticsRole, UpdateContext, Widget, WidgetAny,
 };
-use floom_text::{LaidOutText, TextAlign, TextLayoutOptions, TextShaper};
-use floom_types::{Color, Event, FontFamily, ImeUpdate, Key, KeyPhase, Modifiers, PointerPhase};
+use floom_text::{CaretAffinity, TextLayout};
+use floom_types::{
+    Color, Event, FontFamily, ImeUpdate, Key, KeyPhase, Modifiers, PointerPhase, StyledText,
+    TextStyle, TextWrap,
+};
 use floom_widgets::primitives::Revision;
 
 const EDITOR_FONT_SIZE: f64 = 16.0;
@@ -57,10 +60,10 @@ pub struct EditorWidget {
     document: TextDocument,
     undo: UndoManager,
     // `paint` and `layout_request` are `&self`, but shaping needs a mutable
-    // `TextShaper` (it owns the Parley font/layout contexts). A `Mutex` (not a
+    // `TextLayout` (it owns the Parley font/layout contexts). A `Mutex` (not a
     // `RefCell`) gives interior mutability that is `Sync`, so the widget can be
     // mounted through the cross-thread `Fn` child builders the host uses.
-    shaper: Mutex<TextShaper>,
+    text_layout: Mutex<TextLayout>,
     font_size: f64,
     color: Color,
     revision: Revision,
@@ -100,7 +103,20 @@ impl EditorWidget {
         Self {
             document: TextDocument::new(),
             undo: UndoManager::new(),
-            shaper: Mutex::new(TextShaper::new()),
+            text_layout: Mutex::new(TextLayout::new(&StyledText {
+                text: String::new(),
+                base: TextStyle {
+                    size: EDITOR_FONT_SIZE as f32,
+                    weight: FontWeight::Normal,
+                    color: Color::BLACK,
+                },
+                spans: Vec::new(),
+                family: FontFamily::SansSerif,
+                wrap: TextWrap::Word,
+                tab_width: None,
+                max_width: None,
+                line_height: Some(EDITOR_LINE_PITCH as f32),
+            })),
             font_size: EDITOR_FONT_SIZE,
             color: Color::BLACK,
             revision: Revision::default(),
@@ -242,56 +258,48 @@ impl EditorWidget {
         }
     }
 
-    /// Shapes the document at the given box width and returns the laid-out
-    /// result. The width is the *content* width (box minus padding).
-    fn laid_out(&self, content_width: f64) -> LaidOutText {
-        self.shaper.lock().unwrap().shape(
-            &self.document.text(),
-            &TextLayoutOptions {
-                max_width: content_width,
-                font_size: self.font_size as f32,
-                align: TextAlign::Start,
+    /// Lays the document out with the editor-grade [`TextLayout`] and returns it.
+    ///
+    /// The same shaping that produced the pixels also answers the caret and
+    /// selection geometry, so the caret sits on the glyphs it is drawn over
+    /// rather than near them.
+    fn text_layout(&self, content_width: f64) -> TextLayout {
+        let styled = StyledText {
+            text: self.document.text(),
+            base: TextStyle {
+                size: self.font_size as f32,
                 weight: FontWeight::Normal,
-                family: FontFamily::SansSerif,
+                color: self.color,
             },
-        )
-    }
-
-    /// The line index that contains the given byte offset, or the last line.
-    fn line_for_offset(&self, laid: &LaidOutText, offset: usize) -> usize {
-        laid.lines
-            .iter()
-            .position(|l| offset < l.text_range.end)
-            .unwrap_or_else(|| laid.lines.len().saturating_sub(1))
+            spans: Vec::new(),
+            family: FontFamily::SansSerif,
+            wrap: TextWrap::Word,
+            tab_width: None,
+            max_width: Some(content_width as f32),
+            line_height: Some(EDITOR_LINE_PITCH as f32),
+        };
+        TextLayout::new(&styled)
     }
 
     /// The caret's box, in the editor's own coordinates.
     ///
     /// Shared by paint (to draw it) and `update` (to report the IME area), so
-    /// the OS composition popup anchors to the same glyph the user sees.
-    fn caret_rect(&self, bounds: Rect, laid: &LaidOutText) -> Rect {
-        let origin = Point::new(bounds.x0 + EDITOR_PADDING, bounds.y0 + EDITOR_PADDING);
-        let sel = self.document.selection();
-        let head = self.line_for_offset(laid, sel.end());
-        match laid.lines.get(head) {
-            Some(line) => {
-                let in_line = sel.end().saturating_sub(line.text_range.start);
-                let x = origin.x + (in_line as f64 * self.font_size * 0.6).min(line.width as f64);
-                let top = origin.y + head as f64 * EDITOR_LINE_PITCH + line.min_coord as f64;
-                Rect {
-                    x0: x,
-                    y0: top,
-                    x1: x + CARET_WIDTH,
-                    y1: top + (line.max_coord - line.min_coord) as f64,
-                }
-            }
-            None => Rect {
-                x0: origin.x,
-                y0: origin.y,
-                x1: origin.x + CARET_WIDTH,
-                y1: origin.y + EDITOR_LINE_PITCH,
-            },
-        }
+    /// the OS composition popup anchors to the same glyph the user sees. The
+    /// rectangle comes from [`TextLayout`] — the same shaping that painted the
+    /// text — so the caret is exactly as tall as the line's ink and vertically
+    /// aligned with it.
+    fn caret_rect(&self, bounds: Rect, content_width: f64) -> Option<Rect> {
+        let layout = self.text_layout(content_width);
+        let offset = self.document.selection().end();
+        let affinity = CaretAffinity::Downstream;
+        let point = layout.cursor_point(offset, affinity);
+        let metrics = layout.line_metrics_at(offset, affinity)?;
+        Some(Rect {
+            x0: bounds.x0 + EDITOR_PADDING + point.x,
+            x1: bounds.x0 + EDITOR_PADDING + point.x + CARET_WIDTH,
+            y0: bounds.y0 + EDITOR_PADDING + point.y - metrics.ascent as f64,
+            y1: bounds.y0 + EDITOR_PADDING + point.y + metrics.descent as f64,
+        })
     }
 
     /// Re-reports the IME caret area after a move, so the OS composition popup
@@ -304,8 +312,8 @@ impl EditorWidget {
         let area = if self.focused {
             let bounds = cx.bounds();
             if bounds.width() > 0.0 {
-                let laid = self.laid_out((bounds.width() - 2.0 * EDITOR_PADDING).max(0.0));
-                Some(self.caret_rect(bounds, &laid))
+                let content_width = (bounds.width() - 2.0 * EDITOR_PADDING).max(0.0);
+                self.caret_rect(bounds, content_width)
             } else {
                 None
             }
@@ -352,8 +360,8 @@ impl Widget for EditorWidget {
             );
         }
         // Measure at a wide column to learn the natural line count, then pitch.
-        let laid = self.laid_out(600.0);
-        let line_count = laid.lines.len().max(1) as f64;
+        let layout = self.text_layout(600.0);
+        let line_count = layout.lines().len().max(1) as f64;
         Some(
             LayoutRequest::new()
                 .height((line_count * EDITOR_LINE_PITCH + 2.0 * EDITOR_PADDING) as f32),
@@ -367,8 +375,8 @@ impl Widget for EditorWidget {
         }
 
         let content_width = (bounds.width() - 2.0 * EDITOR_PADDING).max(0.0);
-        let laid = self.laid_out(content_width);
-        if laid.lines.is_empty() {
+        let layout = self.text_layout(content_width);
+        if layout.lines().is_empty() {
             return;
         }
 
@@ -378,10 +386,9 @@ impl Widget for EditorWidget {
         let sel_end = sel.start().max(sel.end());
         let has_sel = sel_start != sel_end;
 
-        let mut y = origin.y;
-        for line in &laid.lines {
-            let line_top = y + line.min_coord as f64;
-            let line_bottom = y + line.max_coord as f64;
+        for line in layout.lines() {
+            let line_top = origin.y + line.min_coord as f64;
+            let line_bottom = origin.y + line.max_coord as f64;
 
             // Selection highlight behind this line's intersected range.
             if has_sel {
@@ -405,21 +412,21 @@ impl Widget for EditorWidget {
             // Paint the line's text.
             let line_str = &self.document.text()[line.text_range.clone()];
             cx.fill_text_in(
-                Point::new(origin.x, y + line.baseline as f64),
+                Point::new(origin.x, origin.y + line.baseline as f64),
                 line_str,
                 self.font_size as f32,
                 FontWeight::Normal,
                 self.color,
                 &FontFamily::SansSerif,
             );
-
-            y += EDITOR_LINE_PITCH;
         }
 
-        // Caret: a thin vertical bar at the selection head, plus a focus ring on
+        // Caret: the bar at the selection head, plus a focus ring on
         // the box so it is obvious whether typing will land here.
-        let caret = self.caret_rect(bounds, &laid);
-        if sel.is_caret() {
+        let caret = self.caret_rect(bounds, content_width);
+        if let Some(caret) = caret
+            && sel.is_caret()
+        {
             cx.fill_rect(caret, CARET_FILL);
         }
         if self.focused {
@@ -463,37 +470,39 @@ impl Widget for EditorWidget {
         // accent ink and underlined, so a composition is visible *before* it is
         // committed. A commit arrives as character keys and replaces it.
         if !self.preedit.is_empty() {
-            let baseline = caret.y1 - (caret.y1 - caret.y0) * 0.2;
-            cx.fill_text_in(
-                Point::new(caret.x0, baseline),
-                &self.preedit,
-                self.font_size as f32,
-                FontWeight::Normal,
-                COMPOSITION_FILL,
-                &FontFamily::SansSerif,
-            );
-            let width = self.preedit.chars().count() as f64 * self.font_size * 0.6;
-            cx.fill_rect(
-                Rect {
-                    x0: caret.x0,
-                    y0: caret.y1 - 1.0,
-                    x1: caret.x0 + width,
-                    y1: caret.y1,
-                },
-                COMPOSITION_FILL,
-            );
-            let head = self.preedit_caret.min(self.preedit.len());
-            let chars = self.preedit[..head].chars().count() as f64;
-            let x = caret.x0 + chars * self.font_size * 0.6;
-            cx.fill_rect(
-                Rect {
-                    x0: x,
-                    y0: caret.y0,
-                    x1: x + CARET_WIDTH,
-                    y1: caret.y1,
-                },
-                COMPOSITION_FILL,
-            );
+            if let Some(caret) = caret {
+                let baseline = caret.y1 - (caret.y1 - caret.y0) * 0.2;
+                cx.fill_text_in(
+                    Point::new(caret.x0, baseline),
+                    &self.preedit,
+                    self.font_size as f32,
+                    FontWeight::Normal,
+                    COMPOSITION_FILL,
+                    &FontFamily::SansSerif,
+                );
+                let width = self.preedit.chars().count() as f64 * self.font_size * 0.6;
+                cx.fill_rect(
+                    Rect {
+                        x0: caret.x0,
+                        y0: caret.y1 - 1.0,
+                        x1: caret.x0 + width,
+                        y1: caret.y1,
+                    },
+                    COMPOSITION_FILL,
+                );
+                let head = self.preedit_caret.min(self.preedit.len());
+                let chars = self.preedit[..head].chars().count() as f64;
+                let x = caret.x0 + chars * self.font_size * 0.6;
+                cx.fill_rect(
+                    Rect {
+                        x0: x,
+                        y0: caret.y0,
+                        x1: x + CARET_WIDTH,
+                        y1: caret.y1,
+                    },
+                    COMPOSITION_FILL,
+                );
+            }
         }
     }
 
@@ -588,8 +597,8 @@ impl Widget for EditorWidget {
                     // runner reads the host's area right after this dispatch.
                     let bounds = cx.bounds();
                     let area = if bounds.width() > 0.0 {
-                        let laid = self.laid_out((bounds.width() - 2.0 * EDITOR_PADDING).max(0.0));
-                        Some(self.caret_rect(bounds, &laid))
+                        let content_width = (bounds.width() - 2.0 * EDITOR_PADDING).max(0.0);
+                        self.caret_rect(bounds, content_width)
                     } else {
                         None
                     };
@@ -760,5 +769,44 @@ mod tests {
         let w = EditorWidget::from_text("a\nb\nc\nd\ne");
         let tall = w.layout_request().unwrap().height.unwrap().px().unwrap() as f64;
         assert!(tall > small, "more lines means more height");
+    }
+
+    /// The caret is the same text the pixels are drawn at — not a taller box
+    /// roughly around it. Regression for the first editor, whose caret came from
+    /// a fixed line pitch and the line box (including leading) and therefore sat
+    /// beside the glyphs rather than on them.
+    #[test]
+    fn caret_is_aligned_with_the_text_ink() {
+        let mut w = EditorWidget::from_text("hello");
+        let bounds = Rect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: 600.0,
+            y1: 200.0,
+        };
+        let content_width = bounds.x1 - bounds.x0 - 2.0 * EDITOR_PADDING;
+
+        let at_start = w.caret_rect(bounds, content_width).expect("caret exists");
+        w.insert_char('!'); // "hello!"
+        let after = w.caret_rect(bounds, content_width).expect("caret exists");
+
+        // A wider document pushes the caret right.
+        assert!(after.x0 > at_start.x0, "the caret advances with the text");
+
+        // The caret tracks the font's ink height (ascent + descent, ~ the
+        // font size), not the full line box, so it is not taller than the text.
+        let height = after.y1 - after.y0;
+        assert!(
+            height > 10.0 && height < 30.0,
+            "caret height tracks the ~16px font, was {height}"
+        );
+
+        // The caret straddles the glyph baseline, so it reads as on the text.
+        let centre = (after.y0 + after.y1) / 2.0;
+        let top = bounds.y0 + EDITOR_PADDING;
+        assert!(
+            centre > top && centre < top + EDITOR_LINE_PITCH,
+            "caret sits on the first line's text, centre at {centre}"
+        );
     }
 }
