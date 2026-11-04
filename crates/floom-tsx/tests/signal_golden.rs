@@ -10,10 +10,11 @@ use floom_tsx::compile;
 fn lower_translates_create_signal() {
     let source = r#"const [count, setCount] = createSignal(0);"#;
     let doc = compile(source).expect("lower");
-    assert!(doc
-        .bindings
-        .iter()
-        .any(|b| b.name == "count" && matches!(b.kind, floom_ui_ir::BindingKind::Value(_))));
+    assert!(
+        doc.bindings
+            .iter()
+            .any(|b| b.name == "count" && matches!(b.kind, floom_ui_ir::BindingKind::Value(_)))
+    );
 }
 
 #[test]

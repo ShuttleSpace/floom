@@ -6,7 +6,7 @@
 //! depends on `floom-dsl`). It lives here instead, which also exercises the
 //! whole path: TSX -> UiDocument -> Rust builder program.
 
-use floom_dsl::emit::{emit, EmitOptions};
+use floom_dsl::emit::{EmitOptions, emit};
 use floom_tsx::compile;
 
 #[test]
@@ -41,6 +41,12 @@ fn emit_reactive_prop_reads_signal_in_closure() {
 fn emit_static_document_has_no_signals() {
     let doc = compile("<Stack><Text>hi</Text></Stack>").expect("lower");
     let out = emit(&doc, &EmitOptions::default()).expect("emit").code;
-    assert!(!out.contains("SyncBaseSignal"), "static emit grew signals:\n{out}");
-    assert!(!out.contains("move ||"), "static emit grew move closures:\n{out}");
+    assert!(
+        !out.contains("SyncBaseSignal"),
+        "static emit grew signals:\n{out}"
+    );
+    assert!(
+        !out.contains("move ||"),
+        "static emit grew move closures:\n{out}"
+    );
 }

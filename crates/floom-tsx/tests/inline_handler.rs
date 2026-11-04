@@ -5,8 +5,8 @@
 //! and that a `createSignal` read in a prop lowers to a `Ref` binding. The runtime
 //! re-render is the closure-capture seam and is verified separately on a GPU box.
 
-use floom_ui_ir::{NodeKind, PropValue};
 use floom_tsx::compile;
+use floom_ui_ir::{NodeKind, PropValue};
 
 /// Find the first node of a kind, so a test can inspect its events/props.
 fn find<'a>(doc: &'a floom_ui_ir::UiDocument, kind: NodeKind) -> &'a floom_ui_ir::UiNode {
@@ -86,6 +86,46 @@ fn inline_handler_rejects_unsupported_expression() {
     assert!(
         compile(src).is_err(),
         "unsupported expression in inline handler should fail"
+    );
+}
+
+/// A computed attribute (`count() > 0 ? "on" : "off"`) is not a literal, a signal
+/// ref, or a bare signal call, so it lowers to `PropValue::Computed` carrying the
+/// Rust that reproduces it. This is the case that used to fail with "only literal
+/// values, signal refs, and signal calls are supported here" (the `app.tsx`
+/// Switch label regression). The emitter inlines it at the read site.
+#[test]
+fn computed_attribute_lowers_to_computed_value() {
+    let src = r#"
+        const [on, setOn] = createSignal(false);
+        <Stack>
+            <Switch label={ on() ? "enabled" : "disabled" } checked={on()} onToggle={() => setOn(!on())} />
+        </Stack>
+    "#;
+    let doc = compile(src).expect("lower");
+
+    let switch = find(&doc, NodeKind::Switch);
+    let label = switch
+        .props
+        .iter()
+        .find(|p| p.name == "label")
+        .expect("label prop");
+    assert!(
+        matches!(&label.value, PropValue::Computed(rust) if rust
+            == "if on.get() { \"enabled\".to_string() } else { \"disabled\".to_string() }"),
+        "computed ternary becomes an inlined Rust `if/else`, not a Ref"
+    );
+
+    // The `.get()`-backed signal reads remain Refs; only the computed label moved
+    // into `Computed`.
+    let checked = switch
+        .props
+        .iter()
+        .find(|p| p.name == "checked")
+        .expect("checked prop");
+    assert!(
+        matches!(checked.value, PropValue::Ref(ref name) if name == "on"),
+        "a plain signal read is still a Ref"
     );
 }
 

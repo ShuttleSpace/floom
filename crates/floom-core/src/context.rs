@@ -205,6 +205,22 @@ pub trait EventContext {
         let _ = id;
     }
 
+    /// Asks the host to capture the pointer for `id` until the next button
+    /// release.
+    ///
+    /// While captured, every pointer event — including moves and the final
+    /// `Up` — routes to `id` regardless of where the cursor actually is. That is
+    /// what lets a drag continue past the widget's edge and end cleanly even when
+    /// the button is released over empty space: without it, an off-widget release
+    /// is delivered to whatever sits under the cursor, so the dragging widget
+    /// never sees `Up` and stays stuck in its pressed state (the whole reason a
+    /// slider would then track the cursor on a bare hover).
+    ///
+    /// Defaults to a no-op for hosts without capture.
+    fn request_pointer_capture(&mut self, id: ElementId) {
+        let _ = id;
+    }
+
     /// Asks the host to scroll this widget's subtree by `offset`.
     ///
     /// The request is recorded and applied once `event` returns, because the

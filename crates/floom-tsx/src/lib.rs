@@ -18,7 +18,7 @@ pub mod error;
 pub mod lower;
 pub mod parser;
 
-pub use app::{generate, CompiledApp, Generated};
+pub use app::{CompiledApp, Generated, generate};
 pub use entry::{AppConfig, Requirement};
 pub use error::{Result, TsxError};
 

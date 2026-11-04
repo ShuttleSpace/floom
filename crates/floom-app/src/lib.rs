@@ -494,6 +494,10 @@ pub struct WidgetHost {
     /// open/close). Content-only changes go through `semantics_stale` instead,
     /// which upserts individual entries without touching the rest.
     semantics_dirty: bool,
+    /// Set on frames where a reactive effect asked for a root re-roll: every
+    /// node's children are rebuilt from their build closures this pass, so fresh
+    /// signal reads propagate. Cleared at the end of `reconcile_all`.
+    rebuild_reactive: bool,
     /// Mounted node indices whose widget reported dirty since the last frame
     /// and whose semantics entry therefore needs an incremental refresh.
     semantics_stale: Vec<usize>,
@@ -575,6 +579,10 @@ pub struct WidgetHost {
     /// Scratch for the sampler's output, so an animation frame does not
     /// allocate (see [`AnimationScheduler::tick_into`]).
     motion_samples: Vec<AnimSample>,
+    /// A widget holding the pointer until the next button release, if a drag
+    /// captured it (see [`EventContext::request_pointer_capture`]). While set,
+    /// pointer events route here instead of to whatever is under the cursor.
+    pointer_capture: Option<ElementId>,
     /// Scratch for the declared animations that finished this tick, so the
     /// completion callback can run after the sampler has let go of every
     /// borrow — calling a widget while `motion_samples` is still borrowed would
@@ -886,6 +894,7 @@ impl WidgetHost {
             pending_scene_removals: Vec::new(),
             semantics: SemanticsTree::new(),
             semantics_dirty: true,
+            rebuild_reactive: false,
             semantics_stale: Vec::new(),
             // Reused across layout passes so a re-layout does not allocate a
             // fresh `Vec<Option<Rect>>` per pass (grown to node count below).
@@ -909,6 +918,7 @@ impl WidgetHost {
             motion: AnimationScheduler::new(),
             node_anims: Vec::new(),
             motion_samples: Vec::new(),
+            pointer_capture: None,
             finished_declared: Vec::new(),
             native: None,
             participants: Vec::new(),
@@ -1604,11 +1614,27 @@ impl WidgetHost {
         for index in overlay_roots {
             self.reconcile_subtree(index);
         }
+        // A reactive rebuild is a one-frame whole-tree re-roll; once the walk has
+        // passed, drop the flag so ordinary reconciles stop re-rolling.
+        self.rebuild_reactive = false;
     }
 
     fn reconcile_subtree(&mut self, index: usize) {
         if self.nodes[index].dead {
             return;
+        }
+        // A reactive rebuild re-rolls the whole tree this frame; force the
+        // reconcile pass on every node so its build closures run again — except
+        // a widget that currently holds a pointer capture (mid-drag). Tearing it
+        // down would drop its transient state (a Slider's `pressed` flag) and the
+        // drag would stop tracking the pointer after the first move. Keep its
+        // subtree intact for this re-roll; the next non-capture rebuild picks it
+        // up once the drag ends.
+        if self.rebuild_reactive && self.pointer_capture == Some(self.nodes[index].id) {
+            return;
+        }
+        if self.rebuild_reactive {
+            self.nodes[index].children_dirty = true;
         }
         if self.nodes[index].children_dirty {
             self.reconcile(index);
@@ -1656,8 +1682,15 @@ impl WidgetHost {
 
         let mut new_children: Vec<usize> = Vec::with_capacity(declared.len());
         let mut new_keys: Vec<ChildKey> = Vec::with_capacity(declared.len());
+        let rebuild = self.rebuild_reactive;
         for child in &declared {
             let node_idx = if let Some(&idx) = existing.get(&child.key) {
+                // A reactive rebuild re-rolls every surviving child, except one
+                // holding a pointer capture: that widget is mid-drag and must keep
+                // its `pressed` state, or the drag stops after the first step.
+                if rebuild && self.pointer_capture != Some(self.nodes[idx].id) {
+                    self.nodes[idx].widget = child.build();
+                }
                 idx
             } else {
                 self.mount_child(parent_index, child)
@@ -2508,6 +2541,13 @@ impl WidgetHost {
         // elements that no longer exist simply match nothing.
         let repaint_requests: std::collections::HashSet<ElementId> =
             floom_core::take_repaint_requests().into_iter().collect();
+        // Rebuild requests that arrived outside the frame loop (a reactive
+        // effect whose signal just flipped) re-roll the whole tree this pass:
+        // every node's children are rebuilt from their build closures, so fresh
+        // signal reads propagate. `reconcile_all` clears the flag once it has
+        // walked the tree, so it is at most one rebuild per frame.
+        self.rebuild_reactive = floom_core::take_rebuild_root();
+
         // Content extents, for the widgets that asked to be told — see
         // `Widget::needs_content_size`. Measured here, before the update pass
         // borrows any node, because a widget cannot reach the host to ask. Every
@@ -3446,7 +3486,20 @@ impl WidgetHost {
             // Overlays win over the main tree, front-to-back; a modal overlay
             // also swallows clicks outside its content (the scrim). The router
             // only sees the main tree, so overlay hits are resolved here first.
-            Event::Pointer(pointer) => self.resolve_pointer(pointer.position),
+            Event::Pointer(pointer) => {
+                // A widget that captured the pointer keeps receiving events even
+                // once the cursor leaves its bounds — otherwise a drag that ends
+                // off-widget, or over another control, would never deliver the
+                // `Up` that ends it and the widget would stay stuck pressed.
+                if let Some(captured) = self.pointer_capture {
+                    Some(Hit {
+                        target: captured,
+                        native: None,
+                    })
+                } else {
+                    self.resolve_pointer(pointer.position)
+                }
+            }
             Event::Scroll(ScrollEvent { position, .. }) => self.resolve_pointer(position),
             // Keyboard and IME both go to the focused widget: a composition is
             // meaningless without a target text field.
@@ -3459,6 +3512,15 @@ impl WidgetHost {
                 native: None,
             }),
         };
+        // A button release (or a cancelled gesture) ends any active capture: the
+        // widget that asked for it has now received its `Up` through the capture,
+        // so routing returns to the cursor. Done here, before the `target` is
+        // resolved to a hit, so a release over empty space still drops the capture.
+        if let Event::Pointer(p) = &event
+            && matches!(p.phase, PointerPhase::Up | PointerPhase::Cancel)
+        {
+            self.pointer_capture = None;
+        }
         let Some(hit) = target else {
             return false;
         };
@@ -3480,6 +3542,7 @@ impl WidgetHost {
         let mut handled = false;
         let mut focus_requests: Vec<ElementId> = Vec::new();
         let mut scroll_requests: Vec<(ElementId, ScrollOffset)> = Vec::new();
+        let mut capture_requests: Vec<ElementId> = Vec::new();
         let mut overlay_commands: Vec<OverlayCommand> = Vec::new();
 
         // Measured per dispatch rather than cached from the update pass: the
@@ -3513,6 +3576,7 @@ impl WidgetHost {
                 &mut DispatchQueues {
                     focus_requests: &mut focus_requests,
                     scroll_requests: &mut scroll_requests,
+                    capture_requests: &mut capture_requests,
                     overlay_commands: &mut overlay_commands,
                 },
                 &content_sizes,
@@ -3524,6 +3588,12 @@ impl WidgetHost {
 
         for id in focus_requests {
             self.set_focus(id);
+        }
+        // A capture request takes effect after the event so the rest of this same
+        // drag (the moves and the `Up`) routes to the requesting widget. The last
+        // request wins; a drag that re-captures keeps the latest target.
+        if let Some(id) = capture_requests.last().copied() {
+            self.pointer_capture = Some(id);
         }
         for (id, offset) in scroll_requests {
             if let Some(index) = self.index_of(id)
@@ -3590,6 +3660,7 @@ impl WidgetHost {
             content_size: content_sizes.get(index).copied().flatten(),
             focus_requests: &mut *queues.focus_requests,
             scroll_requests: &mut *queues.scroll_requests,
+            capture_requests: &mut *queues.capture_requests,
             ime_caret: &mut self.ime_caret,
             overlays: OverlayDispatch {
                 commands: &mut *queues.overlay_commands,
@@ -5321,6 +5392,9 @@ struct DispatchQueues<'a> {
     focus_requests: &'a mut Vec<ElementId>,
     /// Scroll offsets a widget asked for, in the same deferred shape.
     scroll_requests: &'a mut Vec<(ElementId, ScrollOffset)>,
+    /// Widgets that asked to capture the pointer during this dispatch, drained
+    /// by the host after the event so the rest of the same drag routes to them.
+    capture_requests: &'a mut Vec<ElementId>,
     /// Overlay work queued by the event — opening mounts a subtree, which needs
     /// the whole host mutably, so it cannot happen inside the dispatch.
     overlay_commands: &'a mut Vec<OverlayCommand>,
@@ -5348,6 +5422,9 @@ struct NodeEventContext<'a> {
     /// is what keeps the offset off the tree structure — a widget that could
     /// reach its ancestors could scroll something it does not contain.
     scroll_requests: &'a mut Vec<(ElementId, ScrollOffset)>,
+    /// Pointer-capture requests this widget made, drained by the host after the
+    /// event. See [`EventContext::request_pointer_capture`].
+    capture_requests: &'a mut Vec<ElementId>,
     /// Where the focused composing text widget wants the IME popup anchored.
     ime_caret: &'a mut Option<Rect>,
     overlays: OverlayDispatch<'a>,
@@ -5385,6 +5462,10 @@ impl EventContext for NodeEventContext<'_> {
 
     fn request_focus(&mut self, id: ElementId) {
         self.focus_requests.push(id);
+    }
+
+    fn request_pointer_capture(&mut self, id: ElementId) {
+        self.capture_requests.push(id);
     }
 
     fn request_scroll(&mut self, offset: ScrollOffset) {

@@ -619,19 +619,23 @@ mod tests {
             "function App() { return <Stack />; }\nplatform.require(\"telepathy\", \"warn\");\nmount(App);",
         )
         .expect("parse");
-        assert!(crate::entry::resolve(&p1)
-            .expect_err("cap")
-            .message
-            .contains("telepathy"));
+        assert!(
+            crate::entry::resolve(&p1)
+                .expect_err("cap")
+                .message
+                .contains("telepathy")
+        );
 
         let p2 = crate::parser::parse(
             "function App() { return <Stack />; }\nplatform.require(\"ime\", \"maybe\");\nmount(App);",
         )
         .expect("parse");
-        assert!(crate::entry::resolve(&p2)
-            .expect_err("policy")
-            .message
-            .contains("policy"));
+        assert!(
+            crate::entry::resolve(&p2)
+                .expect_err("policy")
+                .message
+                .contains("policy")
+        );
     }
 
     #[test]

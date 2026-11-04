@@ -404,6 +404,12 @@ impl Widget for Slider {
                 self.state.hovered = true;
                 self.state.pressed = true;
                 cx.request_focus(id);
+                // Capture so the drag keeps routing here once the cursor leaves
+                // the track: without it, an off-widget release would be delivered
+                // to whatever sits under the cursor, the slider never sees its
+                // `Up`, and `pressed` stays stuck — after which a bare hover would
+                // move the value.
+                cx.request_pointer_capture(id);
                 let next = self.value_at(cx.bounds(), pointer.position.x);
                 self.set_value(next);
                 true

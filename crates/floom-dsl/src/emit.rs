@@ -441,7 +441,9 @@ impl<'a> Emitter<'a> {
             // (so a read and a write can both capture it), hence `Arc` and the
             // update trait in scope.
             out.push_str("use std::sync::Arc;\n");
-            out.push_str("use floom_signal::{SignalGet, SignalUpdate, SyncBaseSignal};\n\n");
+            out.push_str(
+                "use floom_signal::{Effect, SignalGet, SignalUpdate, SyncBaseSignal};\n\n",
+            );
         }
         for (name, body) in bodies {
             let _ = std::fmt::Write::write_fmt(
@@ -509,10 +511,7 @@ impl<'a> Emitter<'a> {
             .map(|event| {
                 (
                     event.event.name().to_string(),
-                    event
-                        .body
-                        .clone()
-                        .unwrap_or_else(|| event.handler.clone()),
+                    event.body.clone().unwrap_or_else(|| event.handler.clone()),
                 )
             })
             .collect();
@@ -630,9 +629,7 @@ impl<'a> Emitter<'a> {
                         Some(layout) => {
                             let _ = std::fmt::Write::write_fmt(
                                 &mut out,
-                                format_args!(
-                                    "        v = v.push_layout({layout}, {build});\n"
-                                ),
+                                format_args!("        v = v.push_layout({layout}, {build});\n"),
                             );
                         }
                         None => {
@@ -785,17 +782,23 @@ impl<'a> Emitter<'a> {
                 }
                 if let Some(handler) = self.event(node, "click") {
                     let closure = self.handler_closure("", &handler);
-                    let _ = std::fmt::Write::write_fmt(
-                        &mut out,
-                        format_args!(".on_click({closure})"),
-                    );
+                    let _ =
+                        std::fmt::Write::write_fmt(&mut out, format_args!(".on_click({closure})"));
                 }
                 out
             }
             NodeKind::Checkbox => {
                 let label = self.text(node, "label").unwrap_or_default();
                 let mut out = format!("Checkbox::new({})", lit(&label));
-                if let Some(checked) = self.boolean(node, "checked") {
+                let checked = if self.reactive {
+                    // A signal-backed `checked` reads it through `.get()`; fall
+                    // back to a literal for the static case.
+                    self.ref_prop(node, "checked")
+                        .or_else(|| self.boolean(node, "checked").map(|on| on.to_string()))
+                } else {
+                    self.boolean(node, "checked").map(|on| on.to_string())
+                };
+                if let Some(checked) = checked {
                     let _ =
                         std::fmt::Write::write_fmt(&mut out, format_args!(".checked({checked})"));
                 }
@@ -805,17 +808,21 @@ impl<'a> Emitter<'a> {
                 }
                 if let Some(handler) = self.event(node, "toggle") {
                     let closure = self.handler_closure("_v", &handler);
-                    let _ = std::fmt::Write::write_fmt(
-                        &mut out,
-                        format_args!(".on_toggle({closure})"),
-                    );
+                    let _ =
+                        std::fmt::Write::write_fmt(&mut out, format_args!(".on_toggle({closure})"));
                 }
                 out
             }
             NodeKind::Radio => {
                 let label = self.text(node, "label").unwrap_or_default();
                 let mut out = format!("Radio::new({})", lit(&label));
-                if let Some(selected) = self.boolean(node, "checked") {
+                let selected = if self.reactive {
+                    self.ref_prop(node, "checked")
+                        .or_else(|| self.boolean(node, "checked").map(|on| on.to_string()))
+                } else {
+                    self.boolean(node, "checked").map(|on| on.to_string())
+                };
+                if let Some(selected) = selected {
                     let _ =
                         std::fmt::Write::write_fmt(&mut out, format_args!(".selected({selected})"));
                 }
@@ -825,19 +832,20 @@ impl<'a> Emitter<'a> {
                 }
                 if let Some(handler) = self.event(node, "toggle") {
                     let closure = self.handler_closure("", &handler);
-                    let _ = std::fmt::Write::write_fmt(
-                        &mut out,
-                        format_args!(".on_select({closure})"),
-                    );
+                    let _ =
+                        std::fmt::Write::write_fmt(&mut out, format_args!(".on_select({closure})"));
                 }
                 out
             }
             NodeKind::Switch => {
-                let label = self.text(node, "label").unwrap_or_default();
-                let mut out = format!("Switch::new({})", lit(&label));
+                // `label_value` already returns a Rust-ready label: a quoted
+                // literal for static text, or an inlined read/computed expression
+                // when reactive — so it is dropped in verbatim, never re-quoted.
+                let label = self.label_value(node);
+                let mut out = format!("Switch::new({label})");
                 let checked = if self.reactive {
-                    if let Some(name) = self.ref_prop(node, "checked") {
-                        Some(format!("{name}.get()"))
+                    if let Some(read) = self.ref_prop(node, "checked") {
+                        Some(read)
                     } else {
                         self.boolean(node, "checked").map(|on| on.to_string())
                     }
@@ -845,10 +853,7 @@ impl<'a> Emitter<'a> {
                     self.boolean(node, "checked").map(|on| on.to_string())
                 };
                 if let Some(checked) = checked {
-                    let _ = std::fmt::Write::write_fmt(
-                        &mut out,
-                        format_args!(".on({checked})"),
-                    );
+                    let _ = std::fmt::Write::write_fmt(&mut out, format_args!(".on({checked})"));
                 }
                 if let Some(disabled) = self.boolean(node, "disabled") {
                     let _ =
@@ -856,19 +861,17 @@ impl<'a> Emitter<'a> {
                 }
                 if let Some(handler) = self.event(node, "toggle") {
                     let closure = self.handler_closure("_v", &handler);
-                    let _ = std::fmt::Write::write_fmt(
-                        &mut out,
-                        format_args!(".on_toggle({closure})"),
-                    );
+                    let _ =
+                        std::fmt::Write::write_fmt(&mut out, format_args!(".on_toggle({closure})"));
                 }
                 out
             }
             NodeKind::Slider => {
                 let value = if self.reactive {
-                    if let Some(name) = self.ref_num(node, "value") {
+                    if let Some(read) = self.ref_num(node, "value") {
                         // `Slider::new` takes `f64`; a signal declared as
                         // `Int`/`Number`/`f32` all reach it through `as f64`.
-                        format!("{name}.get() as f64")
+                        format!("({read}) as f64")
                     } else {
                         match self.num(node, "value") {
                             Some(value) => num_lit(value),
@@ -889,20 +892,15 @@ impl<'a> Emitter<'a> {
                     Some(value) => num_lit(value),
                     None => "1.0".to_string(),
                 };
-                let mut out = format!(
-                    "Slider::new({}, {}, {})",
-                    value, min, max
-                );
+                let mut out = format!("Slider::new({}, {}, {})", value, min, max);
                 if let Some(disabled) = self.boolean(node, "disabled") {
                     let _ =
                         std::fmt::Write::write_fmt(&mut out, format_args!(".disabled({disabled})"));
                 }
                 if let Some(handler) = self.event(node, "change") {
                     let closure = self.handler_closure("_v", &handler);
-                    let _ = std::fmt::Write::write_fmt(
-                        &mut out,
-                        format_args!(".on_change({closure})"),
-                    );
+                    let _ =
+                        std::fmt::Write::write_fmt(&mut out, format_args!(".on_change({closure})"));
                 }
                 out
             }
@@ -916,12 +914,8 @@ impl<'a> Emitter<'a> {
                 let max = self.num(node, "max").unwrap_or(100.0);
                 let span = if max > min { max - min } else { 1.0 };
                 let value = if self.reactive {
-                    if let Some(name) = self.ref_num(node, "value") {
-                        format!(
-                            "({name}.get() as f64 - {}) / {}",
-                            num_lit(min),
-                            num_lit(span)
-                        )
+                    if let Some(read) = self.ref_num(node, "value") {
+                        format!("({read} as f64 - {}) / {}", num_lit(min), num_lit(span))
                     } else {
                         match self.num(node, "value") {
                             Some(value) => num_lit(((value - min) / span).clamp(0.0, 1.0)),
@@ -1111,6 +1105,10 @@ impl<'a> Emitter<'a> {
     /// starts at `0` / `""` / `false` rather than the value in `createSignal(0)`.
     /// The trailing newline+indent is included so this splices directly before
     /// the root expression.
+    ///
+    /// Each signal also gets a rebuild effect: it reads the signal (registering
+    /// the dependency) and, whenever the read reports a change, asks the host to
+    /// re-roll the root composite's children — the closure-capture seam.
     fn signal_decls(&self, document: &UiDocument) -> String {
         if !self.reactive {
             return String::new();
@@ -1129,38 +1127,63 @@ impl<'a> Emitter<'a> {
                 };
                 let _ = std::fmt::Write::write_fmt(
                     &mut out,
-                    format_args!("let {} = Arc::new(SyncBaseSignal::new({}));\n    ", binding.name, init),
+                    format_args!(
+                        "    let {} = Arc::new(SyncBaseSignal::new({}));\n    ",
+                        binding.name, init
+                    ),
+                );
+                let _ = std::fmt::Write::write_fmt(
+                    &mut out,
+                    format_args!(
+                        "    Effect::new({{\n        let {name} = {name}.clone();\n        move |prev: Option<{ty}>| -> {ty} {{\n            if prev.is_some() {{\n                floom_core::request_rebuild_root();\n            }}\n            {name}.get()\n        }}\n    }});\n\n",
+                        ty = rust_type(ty),
+                        name = binding.name,
+                    ),
                 );
             }
         }
         out
     }
 
-    /// The signal name a property reads, if its value is a `Ref`.
+    /// The Rust expression that reads a property's value, if it is reactive:
+    /// a `Ref` becomes `name.get()`, a computed expression is inlined verbatim
+    /// (it already references its signals via `.get()`). Returns `None` for a
+    /// literal, where the caller falls back to its typed reader.
     fn ref_prop(&mut self, node: &UiNode, name: &str) -> Option<String> {
         match self.prop(node, name) {
-            Some(PropValue::Ref(reference)) => Some(reference.clone()),
+            Some(PropValue::Ref(reference)) => Some(format!("{reference}.get()")),
+            Some(PropValue::Computed(expr)) => Some(expr.clone()),
             _ => None,
         }
     }
 
-    /// The signal name a numeric property reads, if its value is a `Ref`.
+    /// The Rust expression that reads a numeric property's value, if it is
+    /// reactive. See [`Emitter::ref_prop`].
     fn ref_num(&mut self, node: &UiNode, name: &str) -> Option<String> {
         match self.prop(node, name) {
-            Some(PropValue::Ref(reference)) => Some(reference.clone()),
+            Some(PropValue::Ref(reference)) => Some(format!("{reference}.get()")),
+            Some(PropValue::Computed(expr)) => Some(expr.clone()),
             _ => None,
         }
+    }
+
+    /// The label argument for a `Text`/`Button`/`Switch`: a string literal, or a
+    /// reactive read/`Computed` expression when reactive.
+    fn label_value(&mut self, node: &UiNode) -> String {
+        if self.reactive {
+            match self.prop(node, "label") {
+                Some(PropValue::Ref(name)) => return format!("format!(\"{{}}\", {name}.get())"),
+                Some(PropValue::Computed(expr)) => return expr.clone(),
+                _ => {}
+            }
+        }
+        lit(&self.text(node, "label").unwrap_or_default())
     }
 
     /// The `Text`/`Button` label argument: a string literal, or a signal read
     /// when reactive.
     fn label_expr(&mut self, node: &UiNode) -> String {
-        if self.reactive {
-            if let Some(name) = self.ref_prop(node, "label") {
-                return format!("format!(\"{{}}\", {name}.get())");
-            }
-        }
-        lit(&self.text(node, "label").unwrap_or_default())
+        self.label_value(node)
     }
 
     /// The `push` build argument: a closure that builds the child. In reactive
@@ -1382,6 +1405,7 @@ fn render_value(value: &PropValue) -> String {
             format!("list:[{}]", inner.join(","))
         }
         PropValue::Ref(name) => format!("ref:{name}"),
+        PropValue::Computed(expr) => format!("computed:{expr}"),
     }
 }
 
@@ -1397,6 +1421,18 @@ fn default_lit(ty: ValueType) -> String {
         ValueType::Text | ValueType::Ident => "String::new()".to_string(),
         ValueType::Color => "floom_types::Color::BLACK".to_string(),
         ValueType::List => "Vec::new()".to_string(),
+    }
+}
+
+/// The Rust type a signal of `ty` holds.
+fn rust_type(ty: ValueType) -> &'static str {
+    match ty {
+        ValueType::Bool => "bool",
+        ValueType::Int => "i64",
+        ValueType::Number => "f64",
+        ValueType::Text | ValueType::Ident => "String",
+        ValueType::Color => "floom_types::Color",
+        ValueType::List => "Vec<floom_types::Color>",
     }
 }
 

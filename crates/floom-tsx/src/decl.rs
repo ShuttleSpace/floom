@@ -7,7 +7,7 @@
 //! `.nsh/types` for its components.
 
 use floom_ui_ir::{
-    all_prop_names, events_for, prop_spec, EventName, NodeKind, UiDocument, ValueType,
+    EventName, NodeKind, UiDocument, ValueType, all_prop_names, events_for, prop_spec,
 };
 
 /// Generate a `.d.ts` string describing every widget kind used by `doc`.

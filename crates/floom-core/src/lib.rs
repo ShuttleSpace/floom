@@ -8,6 +8,7 @@ mod element;
 mod native;
 mod overlay;
 mod paint_style;
+mod rebuild;
 mod repaint;
 mod scroll;
 mod semantics;
@@ -81,6 +82,7 @@ pub use floom_types::{
 pub use native::{NativeGrant, NativeRequest};
 pub use overlay::OverlayRequest;
 pub use paint_style::PaintStyle;
+pub use rebuild::{request_rebuild_root, take_rebuild_root};
 pub use repaint::{has_repaint_requests, request_repaint, take_repaint_requests};
 pub use scroll::{ScrollOffset, clamp_offset, max_offset};
 pub use semantics::{SemanticsHint, SemanticsRole, SemanticsState};

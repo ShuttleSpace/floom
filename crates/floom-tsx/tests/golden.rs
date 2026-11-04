@@ -91,8 +91,15 @@ fn lower_full_nodekind_coverage() {
         let d = compile(&source).unwrap_or_else(|e| panic!("lower {kind:?} ({child}) failed: {e}"));
         // Stack (root) + the covered child (Conditional adds its shown child too).
         let root = d.node(d.root.as_str()).expect("root exists");
-        assert_eq!(root.kind, NodeKind::Stack, "{kind:?} ({child}) root is Stack");
-        assert!(d.nodes.len() >= 2, "{kind:?} ({child}) produced too few nodes");
+        assert_eq!(
+            root.kind,
+            NodeKind::Stack,
+            "{kind:?} ({child}) root is Stack"
+        );
+        assert!(
+            d.nodes.len() >= 2,
+            "{kind:?} ({child}) produced too few nodes"
+        );
     }
 }
 

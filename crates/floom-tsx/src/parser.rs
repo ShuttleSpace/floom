@@ -5,10 +5,10 @@
 //! (it never ships in the application binary). Lowering — turning the JSX into a
 //! `floom_ui_ir::UiDocument` — lives in `lower.rs`.
 
-use swc_common::{FileName, SourceMap, Spanned, sync::Lrc};
 use swc_common::comments::SingleThreadedComments;
+use swc_common::{FileName, SourceMap, Spanned, sync::Lrc};
 use swc_ecma_ast::EsVersion;
-use swc_ecma_parser::{lexer::Lexer, EsSyntax, Parser, StringInput, Syntax};
+use swc_ecma_parser::{EsSyntax, Parser, StringInput, Syntax, lexer::Lexer};
 
 use crate::error::{Result, TsxError};
 
@@ -90,7 +90,10 @@ fn parse_inner(source: &str) -> Result<Parsed> {
         // note that the cause may be elsewhere when the flagged token is an
         // `import`.
         let base = format!("{:?}", best.kind());
-        let hint = if matches!(best.kind(), swc_ecma_parser::error::SyntaxError::InvalidImport) {
+        let hint = if matches!(
+            best.kind(),
+            swc_ecma_parser::error::SyntaxError::InvalidImport
+        ) {
             " — note: this may be swc's mis-recovery; check for an unclosed JSX tag, an unbalanced brace, or a malformed attribute elsewhere"
         } else {
             ""
@@ -111,12 +114,16 @@ fn parse_inner(source: &str) -> Result<Parsed> {
 fn extract_root(module: &swc_ecma_ast::Module) -> Option<RootJsx> {
     for item in &module.body {
         match item {
-            swc_ecma_ast::ModuleItem::ModuleDecl(swc_ecma_ast::ModuleDecl::ExportDefaultExpr(export)) => {
+            swc_ecma_ast::ModuleItem::ModuleDecl(swc_ecma_ast::ModuleDecl::ExportDefaultExpr(
+                export,
+            )) => {
                 if let Some(root) = expr_to_jsx(&export.expr) {
                     return Some(root);
                 }
             }
-            swc_ecma_ast::ModuleItem::ModuleDecl(swc_ecma_ast::ModuleDecl::ExportDefaultDecl(decl)) => {
+            swc_ecma_ast::ModuleItem::ModuleDecl(swc_ecma_ast::ModuleDecl::ExportDefaultDecl(
+                decl,
+            )) => {
                 if let swc_ecma_ast::DefaultDecl::Fn(fn_expr) = &decl.decl {
                     if let Some(root) = fn_return_jsx(&fn_expr.function) {
                         return Some(root);

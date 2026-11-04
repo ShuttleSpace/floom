@@ -24,7 +24,11 @@ fn explicit_prop_wins_over_class() {
     let source = r##"<Text class="text-primary" foreground="#123456" />"##;
     let doc = compile(source).expect("lower");
     let node = doc.node(doc.root.as_str()).expect("root");
-    let foregrounds: Vec<_> = node.props.iter().filter(|p| p.name == "foreground").collect();
+    let foregrounds: Vec<_> = node
+        .props
+        .iter()
+        .filter(|p| p.name == "foreground")
+        .collect();
     assert_eq!(foregrounds.len(), 1, "foreground should appear once");
     assert_eq!(
         foregrounds[0].value,

@@ -110,6 +110,12 @@ pub enum PropValue {
     List(Vec<PropValue>),
     /// `@name`: resolved against the document's [`Binding`] table.
     Ref(String),
+    /// A computed expression lowered from inline TSX (`a ? b : c`, `x * 2`, …),
+    /// carried as the Rust source that produces the value. Unlike [`PropValue::Ref`]
+    /// it owns no binding: the emitter inlines it at every read site, so a
+    /// per-frame closure recomputes it from the signals it names — the same
+    /// pull-based reactivity the framework already uses for signal reads.
+    Computed(String),
 }
 
 impl PropValue {
@@ -123,11 +129,13 @@ impl PropValue {
             Self::Ident(_) => "Ident",
             Self::List(_) => "List",
             Self::Ref(_) => "Ref",
+            Self::Computed(_) => "Computed",
         }
     }
 
-    /// The type tag of this value. A reference has no type of its own; the
-    /// caller resolves it against the binding table.
+    /// The type tag of this value. A reference or a computed expression has no
+    /// type of its own; the caller resolves the former against the binding
+    /// table and the latter is only ever inlined, never type-checked here.
     pub fn value_type(&self) -> Option<ValueType> {
         Some(match self {
             Self::Bool(_) => ValueType::Bool,
@@ -138,6 +146,7 @@ impl PropValue {
             Self::Ident(_) => ValueType::Ident,
             Self::List(_) => ValueType::List,
             Self::Ref(_) => return None,
+            Self::Computed(_) => return None,
         })
     }
 

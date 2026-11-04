@@ -242,9 +242,7 @@ impl<'a> Lower<'a> {
                             }
                             out.push(';');
                         }
-                        _ => {
-                            return Err(self.err(span, "unsupported statement in inline handler"))
-                        }
+                        _ => return Err(self.err(span, "unsupported statement in inline handler")),
                     }
                 }
                 out
@@ -274,19 +272,25 @@ impl<'a> Lower<'a> {
                 bin_op(bin.op),
                 self.translate_expr(&bin.right)?
             )),
-            ast::Expr::Unary(u) => {
-                Ok(format!("{}{}", unary_op(u.op), self.translate_expr(&u.arg)?))
-            }
+            ast::Expr::Unary(u) => Ok(format!(
+                "{}{}",
+                unary_op(u.op),
+                self.translate_expr(&u.arg)?
+            )),
             ast::Expr::Member(m) => {
                 let obj = self.translate_expr(&m.obj)?;
                 let prop = match &m.prop {
                     ast::MemberProp::Ident(i) => to_snake(i.sym.as_str()),
-                    _ => {
-                        return Err(self.err(m.span, "unsupported computed member access"))
-                    }
+                    _ => return Err(self.err(m.span, "unsupported computed member access")),
                 };
                 Ok(format!("{obj}.{prop}"))
             }
+            ast::Expr::Cond(cond) => Ok(format!(
+                "if {} {{ {} }} else {{ {} }}",
+                self.translate_expr(&cond.test)?,
+                self.translate_expr(&cond.cons)?,
+                self.translate_expr(&cond.alt)?
+            )),
             ast::Expr::Arrow(arrow) => self.translate_handler(arrow),
             _ => Err(self.err(expr.span(), "unsupported expression in inline handler")),
         }
@@ -395,9 +399,19 @@ impl<'a> Lower<'a> {
                 let spec_ty = floom_ui_ir::prop_spec(kind, name).map(|spec| spec.ty);
                 self.lit_value(lit, spec_ty)
             }
+            // A computed expression (`checked() ? "on" : "off"`, `count() * 2`, …):
+            // it owns no binding, so it becomes a `PropValue::Computed` carrying the
+            // Rust that reproduces it. The emitter inlines it at every read site,
+            // which recomputes it from the signals it names each frame — the same
+            // pull-based reactivity the framework already uses for `Ref` reads.
+            ast::Expr::Cond(_) | ast::Expr::Bin(_) | ast::Expr::Unary(_)
+            | ast::Expr::Member(_) | ast::Expr::Paren(_) => {
+                let rust = self.translate_expr(expr)?;
+                Ok(PropValue::Computed(rust))
+            }
             _ => Err(self.err(
                 span,
-                "only literal values, signal refs, and signal calls are supported here",
+                "only literal values, signal refs, signal calls, and computed expressions are supported here",
             )),
         }
     }
@@ -510,7 +524,7 @@ impl<'a> Lower<'a> {
                     _ => {
                         return Err(
                             self.err(cond.span, "the `?:` then-branch must be a JSX element")
-                        )
+                        );
                     }
                 };
                 let when = self.condition_ref(&cond.test, cond.span)?;
@@ -553,7 +567,7 @@ impl<'a> Lower<'a> {
                         _ => return Err(self.err(call.span, ".map body must return a JSX element")),
                     },
                     ast::BlockStmtOrExpr::BlockStmt(_) => {
-                        return Err(self.err(call.span, ".map body must be an expression"))
+                        return Err(self.err(call.span, ".map body must be an expression"));
                     }
                 }
             }
@@ -1035,9 +1049,9 @@ fn lit_type(expr: &ast::Expr) -> ValueType {
 /// the type's default instead of inventing a value.
 fn expr_lit_value(expr: &ast::Expr, ty: ValueType) -> Option<PropValue> {
     match (expr, ty) {
-        (ast::Expr::Lit(ast::Lit::Str(s)), ValueType::Text | ValueType::Ident) => {
-            Some(PropValue::Text(s.value.as_str().unwrap_or_default().to_string()))
-        }
+        (ast::Expr::Lit(ast::Lit::Str(s)), ValueType::Text | ValueType::Ident) => Some(
+            PropValue::Text(s.value.as_str().unwrap_or_default().to_string()),
+        ),
         (ast::Expr::Lit(ast::Lit::Bool(b)), ValueType::Bool) => Some(PropValue::Bool(b.value)),
         (ast::Expr::Lit(ast::Lit::Num(n)), ValueType::Int) => Some(PropValue::Int(n.value as i64)),
         (ast::Expr::Lit(ast::Lit::Num(n)), _) => Some(PropValue::Number(n.value)),
