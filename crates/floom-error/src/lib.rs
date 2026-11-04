@@ -227,6 +227,9 @@ impl ErrorBoundary {
     }
 }
 
+use std::cell::Cell;
+use std::rc::Rc;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -376,6 +379,3 @@ mod tests {
         assert!(text.contains("no such file"));
     }
 }
-
-use std::cell::Cell;
-use std::rc::Rc;

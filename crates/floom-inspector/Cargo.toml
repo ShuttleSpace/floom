@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Versioned inspection protocol for Floom 2.0 devtools: tree/style/layout/scene/performance snapshots (Phase 23.1)"
+description = "Versioned inspection protocol for Floom 2.0 devtools: tree/style/layout/scene/performance snapshots"
 
 [dependencies]
 # Protocol-only crate: serde-friendly DTOs and validation rules. It never links

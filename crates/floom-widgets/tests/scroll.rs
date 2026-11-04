@@ -12,15 +12,13 @@
 //! are covered in `floom-ui-composites/tests/scroll_surfaces.rs`, next to the
 //! widgets themselves.
 
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use floom_app as Host;
 use floom_core as Core;
-use floom_core::{Axis as CoreAxis, ScrollOffset, Size};
-use floom_layout as LY;
-use floom_widgets as W;
-use floom_widgets::{Scroll, ScrollAxes, Stack};
+use floom_core::{ScrollOffset, Size};
+use floom_widgets::{Scroll, ScrollAxes};
 /// The viewport every scroll test measures into.
 const VIEWPORT: (f64, f64) = (200.0, 200.0);
 
@@ -471,7 +469,6 @@ fn a_scroll_container_clips_its_content() {
 /// consumes them, which is a different claim — `Scroll::event` is the first
 /// consumer of `EventContext::content_size`, and a widget that never runs is a
 /// widget whose arithmetic is never exercised in situ.
-
 fn real_scroll_host(viewport: (f64, f64)) -> (floom_app::WidgetHost, Rc<RefCell<Vec<ProbeEvent>>>) {
     let log = Rc::new(RefCell::new(Vec::new()));
     let mut host = floom_app::WidgetHost::new();
@@ -564,6 +561,7 @@ fn the_real_scroll_widget_refuses_when_there_is_nothing_to_scroll() {
 /// whether it swallows the gesture or declines it. What differs is what happens
 /// next — whether the gesture reaches whatever is underneath. So the assertion
 /// needs something underneath to receive it.
+#[allow(dead_code)]
 struct Downstream {
     wheels: std::sync::Arc<std::sync::atomic::AtomicUsize>,
 }

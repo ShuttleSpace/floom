@@ -314,11 +314,10 @@ fn a_popup_fades_in_and_then_stops_damaging_the_scene() {
                 _ => None,
             })
             .min();
-        if let Some(alpha) = alpha {
-            if alpha > 0 && alpha < 255 {
+        if let Some(alpha) = alpha
+            && alpha > 0 && alpha < 255 {
                 seen_partial_alpha = true;
             }
-        }
         app.frame();
     }
 
@@ -361,11 +360,10 @@ fn an_image_in_a_fading_overlay_fades_with_it() {
             SceneNode::Image { image, alpha, .. } if *image == img => Some(*alpha),
             _ => None,
         });
-        if let Some(alpha) = alpha {
-            if alpha > 0 && alpha < 255 {
+        if let Some(alpha) = alpha
+            && alpha > 0 && alpha < 255 {
                 seen_partial = Some(alpha);
             }
-        }
         app.frame();
     }
 

@@ -40,11 +40,10 @@ fn structure(document: &UiDocument) -> HashMap<NodeKey, NodeState> {
         })
         .collect();
     for node in &document.nodes {
-        if let Some(state) = out.get_mut(&node.key) {
-            if let Some(slot) = node.slots.first() {
+        if let Some(state) = out.get_mut(&node.key)
+            && let Some(slot) = node.slots.first() {
                 state.children = slot.children.clone();
             }
-        }
         for slot in &node.slots {
             for (index, child) in slot.children.iter().enumerate() {
                 if let Some(state) = out.get_mut(child) {
@@ -182,7 +181,7 @@ pub fn diff(old: &UiDocument, new: &UiDocument) -> UiPatch {
         pending = next_round;
         if !progressed {
             // A cycle the IR validator would refuse; never loop forever here.
-            order.extend(pending.drain(..));
+            order.append(&mut pending);
         }
     }
     for key in &order {

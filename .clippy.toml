@@ -1,0 +1,8 @@
+# Clippy configuration for Floom.
+#
+# Kept minimal and aligned with the workspace MSRV (`rust-version = "1.91"` in
+# the root `Cargo.toml`). No style or nursery lint groups are enabled here;
+# `--deny warnings` is enforced on the CI command line, so anything added to
+# this file must keep that command green. Raise `msrv` in lockstep with
+# `rust-version`.
+msrv = "1.91"

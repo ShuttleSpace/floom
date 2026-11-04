@@ -96,7 +96,7 @@ fn interface_for(kind: NodeKind) -> String {
 fn kind_name(kind: NodeKind) -> String {
     // `prop_spec`/`name` spellings are snake_case; TSX uses PascalCase.
     match kind {
-        NodeKind::Native(n) => format!("Native{}", format!("{n:?}")),
+        NodeKind::Native(n) => format!("Native{n:?}"),
         other => other
             .name()
             .split('_')

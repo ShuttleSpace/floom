@@ -89,7 +89,7 @@ fn the_track_and_the_arc_are_in_their_own_colours() {
 /// The arc's ends are rounded, matching SVG's `stroke-linecap="round"`.
 #[test]
 fn the_arc_has_rounded_ends() {
-    let mut p = CircularProgress::determinate(0.5);
+    let p = CircularProgress::determinate(0.5);
     let center = Point::new(24.0, 24.0);
     let _ = p.arc_path(center);
     // The cap is set on the stroke the widget builds, so assert through the

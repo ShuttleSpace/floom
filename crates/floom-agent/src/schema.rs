@@ -83,10 +83,8 @@ pub fn component_schema() -> ComponentSchema {
             WidgetInfo {
                 name: kind.to_string(),
                 container: kind.is_container(),
-                slots: kind
-                    .is_container()
-                    .then(|| vec!["children".to_string()])
-                    .unwrap_or_default(),
+                slots: if kind
+                    .is_container() { vec!["children".to_string()] } else { Default::default() },
                 properties,
                 events: events_for(*kind).map(|e| e.to_string()).collect(),
                 tokens,

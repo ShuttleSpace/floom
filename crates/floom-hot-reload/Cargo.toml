@@ -1,5 +1,6 @@
 [package]
 name = "floom-hot-reload"
+description = "Hot-reload of widget, style and IR changes for Floom 2.0 applications"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -28,7 +28,6 @@ use floom_scene::{Rect, Scene, SceneNode};
 use floom_types::{Brush, Color, Size, SurfaceId, WindowId};
 
 const INK: Color = Color::rgb(220, 40, 40);
-const BACKDROP: Color = Color::rgb(20, 30, 40);
 
 /// A scene with one opaque rect covering the whole canvas.
 ///
@@ -81,15 +80,6 @@ fn is_ink(p: &WebPresenter, x: u32, y: u32) -> bool {
     buf[idx].abs_diff(INK.r) < 12 && buf[idx + 1].abs_diff(INK.g) < 12
 }
 
-fn is_backdrop(p: &WebPresenter, x: u32, y: u32) -> bool {
-    let px = p.width() as usize;
-    let idx = (y as usize) * px * 4 + x as usize * 4;
-    let buf = p.pixels();
-    if idx + 3 >= buf.len() {
-        return false;
-    }
-    buf[idx].abs_diff(BACKDROP.r) < 12 && buf[idx + 1].abs_diff(BACKDROP.g) < 12
-}
 
 // ---------------------------------------------------------------------------
 // attachment and extent

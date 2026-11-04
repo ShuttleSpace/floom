@@ -71,7 +71,7 @@ fn text_frame_produces_a_shaped_glyph_resource() {
     // not the old per-character advance estimate.
     assert!(node_size.width > 0.0, "laid-out width is positive");
     assert!(
-        node_size.height >= f64::from(24.0),
+        node_size.height >= 24.0,
         "laid-out height covers the font size, got {}",
         node_size.height
     );

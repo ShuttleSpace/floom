@@ -1,1 +1,0 @@
-{"nodes": [{"id": "pkg_floom_widget_cupertino_icon_paths", "label": "floom-widget-cupertino-icon-paths", "file_type": "code", "type": "package", "ecosystem": "cargo", "source_file": "crates/ecosystem/floom-ui/crates/cupertino/cupertino-icon-paths/Cargo.toml", "source_location": "L1", "version": "0.1.0"}], "edges": []}

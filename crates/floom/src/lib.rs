@@ -690,6 +690,11 @@ pub mod prelude {
 /// replaced it, so the name outlived its meaning and now mislabels the only
 /// reactive implementation in the tree. It is `floom-signal`.
 pub mod reactive {
+    // Re-exports the full reactive surface, including functions floom-signal has
+    // since deprecated in favour of the `RwSignal`/`Effect`/`Context`/`Scope`
+    // constructors. Kept for backward compatibility; do not surface more
+    // deprecated items than necessary.
+    #[allow(deprecated)]
     pub use floom_signal::{
         Context, Effect, Memo, ReadSignal, RwSignal, Scope, SignalGet, SignalUpdate, SignalWith,
         Trigger, WriteSignal, batch, create_derived_rw_signal, create_effect,

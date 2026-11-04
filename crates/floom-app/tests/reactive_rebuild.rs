@@ -166,7 +166,7 @@ fn captured_widget_survives_reactive_rebuild() {
         bounds.y0 + bounds.height() / 2.0,
     );
     host.dispatch(Event::Pointer(
-        floom_types::PointerEvent::primary_down(centre).into(),
+        floom_types::PointerEvent::primary_down(centre),
     ));
     assert!(
         host.widget::<DragProbe>(probe).expect("probe").pressed,
@@ -184,7 +184,7 @@ fn captured_widget_survives_reactive_rebuild() {
 
     // Releasing clears capture and the flag, even though the tree is rebuilt.
     host.dispatch(Event::Pointer(
-        floom_types::PointerEvent::primary_up(centre).into(),
+        floom_types::PointerEvent::primary_up(centre),
     ));
     assert!(
         !host.widget::<DragProbe>(probe).expect("probe").pressed,

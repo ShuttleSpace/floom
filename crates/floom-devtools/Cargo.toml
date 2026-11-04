@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Headless inspector for Floom 2.0: element-tree navigation, style/layout inspection, source mapping, semantics viewer and the why-did-this-update report (Phase 23.2)"
+description = "Headless inspector for Floom 2.0: element-tree navigation, style/layout inspection, source mapping, semantics viewer and the why-did-this-update report"
 
 [dependencies]
 # The inspector reads the retained tree the reload crate owns, and serves the

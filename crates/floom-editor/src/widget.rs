@@ -25,7 +25,6 @@
 //! [`TextShaper`]: floom_text::TextLayout
 
 use std::any::Any;
-use std::sync::Mutex;
 
 use crate::{Selection, TextDocument, Transaction, UndoManager};
 use floom_core::{
@@ -59,11 +58,6 @@ const COMPOSITION_FILL: Color = Color::rgb(0x2B, 0x6C, 0xB0);
 pub struct EditorWidget {
     document: TextDocument,
     undo: UndoManager,
-    // `paint` and `layout_request` are `&self`, but shaping needs a mutable
-    // `TextLayout` (it owns the Parley font/layout contexts). A `Mutex` (not a
-    // `RefCell`) gives interior mutability that is `Sync`, so the widget can be
-    // mounted through the cross-thread `Fn` child builders the host uses.
-    text_layout: Mutex<TextLayout>,
     font_size: f64,
     color: Color,
     revision: Revision,
@@ -103,20 +97,6 @@ impl EditorWidget {
         Self {
             document: TextDocument::new(),
             undo: UndoManager::new(),
-            text_layout: Mutex::new(TextLayout::new(&StyledText {
-                text: String::new(),
-                base: TextStyle {
-                    size: EDITOR_FONT_SIZE as f32,
-                    weight: FontWeight::Normal,
-                    color: Color::BLACK,
-                },
-                spans: Vec::new(),
-                family: FontFamily::SansSerif,
-                wrap: TextWrap::Word,
-                tab_width: None,
-                max_width: None,
-                line_height: Some(EDITOR_LINE_PITCH as f32),
-            })),
             font_size: EDITOR_FONT_SIZE,
             color: Color::BLACK,
             revision: Revision::default(),
@@ -219,7 +199,7 @@ impl EditorWidget {
         self.commit(Transaction::replace(
             sel.start(),
             sel.end(),
-            &ch.to_string(),
+            ch.to_string(),
         ));
     }
 
@@ -469,8 +449,8 @@ impl Widget for EditorWidget {
         // IME composition: the in-progress text is drawn at the caret in the
         // accent ink and underlined, so a composition is visible *before* it is
         // committed. A commit arrives as character keys and replaces it.
-        if !self.preedit.is_empty() {
-            if let Some(caret) = caret {
+        if !self.preedit.is_empty()
+            && let Some(caret) = caret {
                 let baseline = caret.y1 - (caret.y1 - caret.y0) * 0.2;
                 cx.fill_text_in(
                     Point::new(caret.x0, baseline),
@@ -503,7 +483,6 @@ impl Widget for EditorWidget {
                     COMPOSITION_FILL,
                 );
             }
-        }
     }
 
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
@@ -548,13 +527,12 @@ impl Widget for EditorWidget {
                 // Text input. A character key while a composition is open is
                 // the OS finalizing it: the committed text replaces the
                 // preedit, so the preedit is dropped first.
-                if key.is_text_input() {
-                    if let Key::Char(ch) = key.key {
+                if key.is_text_input()
+                    && let Key::Char(ch) = key.key {
                         self.cancel_preedit();
                         self.insert_char(ch);
                         return true;
                     }
-                }
 
                 match key.key {
                     Key::Named(floom_types::NamedKey::Enter) => {

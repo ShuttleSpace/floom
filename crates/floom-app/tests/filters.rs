@@ -191,11 +191,10 @@ fn a_backdrop_blur_reaches_the_scene_before_the_card_that_asked_for_it() {
     for (i, (_, node)) in host.scene().iter().enumerate() {
         match node {
             SceneNode::BackdropFilter { rect, filter } => backdrop = Some((i, *rect, *filter)),
-            SceneNode::Rect { .. } => {
-                if first_rect.is_none() {
+            SceneNode::Rect { .. }
+                if first_rect.is_none() => {
                     first_rect = Some(i);
                 }
-            }
             _ => {}
         }
     }

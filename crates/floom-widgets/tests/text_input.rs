@@ -14,7 +14,7 @@ use floom_core::{ElementId, Event, Key, KeyPhase, NamedKey, Widget, WidgetAny};
 use floom_types::{Point, PointerEvent, Rect};
 
 use floom_widgets::testkit::{
-    AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, TestEventContext,
+    AllocatingCreateContext, RecordingUpdateContext, TestEventContext,
     paint_snapshot,
 };
 use floom_widgets::{TextInput, TextInputStyle, clamp_to_char_boundary};

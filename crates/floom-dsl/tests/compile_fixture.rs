@@ -11,7 +11,7 @@
 //! token must turn the check red, otherwise a fixture that compiles an empty
 //! file would pass forever.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const SAMPLE: &str = r#"
@@ -71,7 +71,7 @@ fn scratch_crate(name: &str, lib_rs: &str) -> PathBuf {
 }
 
 /// Run `cargo check` over the scratch crate with a dedicated target dir.
-fn cargo_check(crate_dir: &PathBuf) -> Result<String, String> {
+fn cargo_check(crate_dir: &Path) -> Result<String, String> {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     let target_dir = workspace_root().join("target/dsl-fixture/target");
     let output = Command::new(&cargo)

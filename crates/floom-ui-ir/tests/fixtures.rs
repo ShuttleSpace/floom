@@ -298,9 +298,7 @@ fn a_cycle_between_nodes_is_refused() {
 
 #[test]
 fn a_duplicate_slot_name_is_refused() {
-    let json = minimal_with(&format!(
-        r#"{{"key":"r","kind":"Stack","props":[],"slots":[{{"name":"default","children":[]}},{{"name":"default","children":[]}}],"events":[]}}"#
-    ));
+    let json = minimal_with(r#"{"key":"r","kind":"Stack","props":[],"slots":[{"name":"default","children":[]},{"name":"default","children":[]}],"events":[]}"#);
     let err = rejection(&json);
     assert!(
         matches!(err, IrError::DuplicateSlot { ref slot, .. } if slot == "default"),
@@ -385,9 +383,7 @@ fn a_value_of_the_wrong_type_is_refused() {
 #[test]
 fn an_identifier_outside_its_domain_is_refused() {
     // `axis` is an identifier, but only one of two of them.
-    let json = minimal_with(&format!(
-        r#"{{"key":"r","kind":"Stack","props":[{{"name":"axis","value":{{"Ident":"diagonal"}}}}],"slots":[],"events":[]}}"#
-    ));
+    let json = minimal_with(r#"{"key":"r","kind":"Stack","props":[{"name":"axis","value":{"Ident":"diagonal"}}],"slots":[],"events":[]}"#);
     let err = rejection(&json);
     assert_eq!(
         err,

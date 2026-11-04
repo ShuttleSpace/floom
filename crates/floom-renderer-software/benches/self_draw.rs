@@ -36,7 +36,7 @@ fn chart_scene(segments: usize) -> Scene {
         let y1 = ((i * 104729) % 600) as f64;
         let mut path = Path::new();
         path.move_to(Point::new(x0, y0)).line_to(Point::new(x1, y1));
-        scene.insert(SceneNode::stroked_path(Arc::new(path), stroke.clone()));
+        scene.insert(SceneNode::stroked_path(Arc::new(path), stroke));
     }
     scene.finish_update();
     scene

@@ -1887,37 +1887,34 @@ pub fn ohos_package_json(name: &str) -> String {
 
 /// `ohos/build-profile.json5` — the DevEco build configuration.
 pub fn ohos_build_profile(_name: &str) -> String {
-    format!(
-        r#"{{
-  "app": {{
+    r#"{
+  "app": {
     "signingConfigs": [],
     "products": [
-      {{
+      {
         "name": "default",
         "signingConfig": "default",
         "compatibleSdkVersion": "5.0.0(12)",
         "runtimeOS": "HarmonyOS"
-      }}
+      }
     ],
-    "buildModeSet": [{{ "name": "debug" }}, {{ "name": "release" }}]
-  }},
+    "buildModeSet": [{ "name": "debug" }, { "name": "release" }]
+  },
   "modules": [
-    {{
+    {
       "name": "entry",
       "srcPath": "./entry",
-      "targets": [{{ "name": "default", "applyToProducts": ["default"] }}]
-    }}
+      "targets": [{ "name": "default", "applyToProducts": ["default"] }]
+    }
   ]
-}}
-"#,
-    )
+}
+"#.to_string()
 }
 
 /// `ohos/entry/src/main/module.json5` — the HAP module manifest.
 pub fn ohos_module_json(_name: &str) -> String {
-    format!(
-        r#"{{
-  "module": {{
+    r#"{
+  "module": {
     "name": "entry",
     "type": "entry",
     "description": "A Floom application.",
@@ -1927,7 +1924,7 @@ pub fn ohos_module_json(_name: &str) -> String {
     "installationFree": false,
     "pages": "$profile:main_pages",
     "abilities": [
-      {{
+      {
         "name": "EntryAbility",
         "srcEntry": "./ets/entryability/EntryAbility.ets",
         "description": "Hosts the Floom widget tree.",
@@ -1937,17 +1934,16 @@ pub fn ohos_module_json(_name: &str) -> String {
         "startWindowBackground": "$color:start_window_background",
         "exported": true,
         "skills": [
-          {{
+          {
             "entities": ["entity.system.home"],
             "actions": ["action.system.home"]
-          }}
+          }
         ]
-      }}
+      }
     ]
-  }}
-}}
-"#
-    )
+  }
+}
+"#.to_string()
 }
 
 /// `ohos/entry/src/main/ets/entryability/EntryAbility.ets`.

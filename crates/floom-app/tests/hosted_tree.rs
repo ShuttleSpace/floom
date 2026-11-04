@@ -96,7 +96,7 @@ fn describing_the_hosts_data_answers_structural_questions() {
         .find(|e| e.id == child)
         .expect("the child is in the element list");
     assert_eq!(grandchild.parent, Some(root_id));
-    assert_eq!(child_key.as_str().starts_with("node-"), true);
+    assert!(child_key.as_str().starts_with("node-"));
 }
 
 #[test]

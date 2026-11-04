@@ -166,8 +166,8 @@ impl Resolver {
             }
         }
         // A bare filename relative to the crate or directory named earlier.
-        if !token.contains('/') {
-            if let Some(base) = &self.dir {
+        if !token.contains('/')
+            && let Some(base) = &self.dir {
                 for sub in ["", "src", "tests", "benches"] {
                     let candidate = if sub.is_empty() {
                         base.join(token)
@@ -179,7 +179,6 @@ impl Resolver {
                     }
                 }
             }
-        }
         None
     }
 }

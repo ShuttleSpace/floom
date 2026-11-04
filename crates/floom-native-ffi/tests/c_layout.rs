@@ -54,11 +54,10 @@ fn scratch() -> PathBuf {
 
 /// Find a C compiler, or `None`.
 fn find_compiler() -> Option<String> {
-    if let Ok(explicit) = std::env::var("CC") {
-        if !explicit.is_empty() && which(&explicit) {
+    if let Ok(explicit) = std::env::var("CC")
+        && !explicit.is_empty() && which(&explicit) {
             return Some(explicit);
         }
-    }
     COMPILERS
         .iter()
         .find(|name| which(name))
@@ -80,7 +79,7 @@ fn probe(compiler: &str) -> HashMap<String, String> {
     let dir = scratch();
     let binary = dir.join("layout_probe");
     let status = Command::new(compiler)
-        .arg(&fixture())
+        .arg(fixture())
         .arg("-I")
         .arg(header().parent().expect("the header has a parent"))
         .arg("-std=c11")

@@ -1,1 +1,0 @@
-{"nodes": [{"id": "pkg_floom_plugin_notifications", "label": "floom-plugin-notifications", "file_type": "code", "type": "package", "ecosystem": "cargo", "source_file": "crates/floom-plugin-notifications/Cargo.toml", "source_location": "L1"}], "edges": []}

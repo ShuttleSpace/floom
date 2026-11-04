@@ -533,7 +533,7 @@ fn moving_the_offset_marks_the_element_dirty_once() {
     let mut bar = LinearProgress::new(0.0)
         .indeterminate_mode(Indeterminate::SlidingSegment)
         .style(style());
-    let mut cx = RecordingUpdateContext::default();
+    let cx = RecordingUpdateContext::default();
     bar.set_fill_offset_pct(10.0);
     bar.set_fill_offset_pct(10.0);
     let dirties = cx.dirty_count();

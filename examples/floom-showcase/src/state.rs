@@ -58,3 +58,9 @@ impl AppState {
         self.editor.lock().unwrap().clone()
     }
 }
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self::new()
+    }
+}

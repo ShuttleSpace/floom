@@ -476,9 +476,7 @@ impl DataGrid {
         };
         // Refuse before consuming the session: a rejected commit has to leave
         // the editor open with the user's text intact.
-        if self.edit.as_ref()?.to_value(kind).is_none() {
-            return None;
-        }
+        self.edit.as_ref()?.to_value(kind)?;
         let session = self.edit.take()?;
         self.pending_repaint = true;
         let edit = session.finish(kind)?;

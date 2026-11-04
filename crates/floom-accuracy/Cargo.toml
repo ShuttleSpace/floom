@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "AI/design accuracy loop: a reference screen gallery, a render-and-compare evaluation harness, and an agent repair benchmark (Phase 27)"
+description = "AI/design accuracy loop: a reference screen gallery, a render-and-compare evaluation harness, and an agent repair benchmark"
 
 [dependencies]
 # The gallery screens are real widget trees, not mock-ups: the loop is only

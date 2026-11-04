@@ -67,11 +67,10 @@ impl<'a> Lower<'a> {
         // Resolve `class="text-primary"` tokens into style props after the
         // explicit attributes, so an explicit `foreground=` wins over a token.
         for token in class_tokens {
-            if let Some((prop_name, value)) = resolve_class(&token) {
-                if !props.iter().any(|p| p.name == prop_name) {
+            if let Some((prop_name, value)) = resolve_class(&token)
+                && !props.iter().any(|p| p.name == prop_name) {
                     props.push(Prop::new(prop_name, value));
                 }
-            }
         }
 
         let children = self.children(&el.children)?;
@@ -79,8 +78,8 @@ impl<'a> Lower<'a> {
         // `<Text>hello</Text>` is one Text widget with `label`, not a Text that
         // contains a child Text. Fold a sole text run into the `label` prop.
         let mut sole_text: Option<String> = None;
-        if kind == NodeKind::Text && children.len() == 1 {
-            if let Some(only) = self.nodes.iter().find(|n| n.key == children[0]) {
+        if kind == NodeKind::Text && children.len() == 1
+            && let Some(only) = self.nodes.iter().find(|n| n.key == children[0]) {
                 sole_text =
                     only.props
                         .iter()
@@ -90,7 +89,6 @@ impl<'a> Lower<'a> {
                             _ => None,
                         });
             }
-        }
 
         let mut node = UiNode::new(key.clone(), kind).with_props(props);
         if !events.is_empty() {
@@ -449,8 +447,8 @@ impl<'a> Lower<'a> {
         name: &str,
         call: &ast::CallExpr,
     ) -> Result<PropValue> {
-        if let ast::Callee::Expr(e) = &call.callee {
-            if let ast::Expr::Ident(id) = e.as_ref() {
+        if let ast::Callee::Expr(e) = &call.callee
+            && let ast::Expr::Ident(id) = e.as_ref() {
                 let callee = id.sym.as_str().to_string();
                 if callee == "createSignal" || callee == "createMemo" {
                     return Err(self.err(
@@ -466,7 +464,6 @@ impl<'a> Lower<'a> {
                     return Ok(PropValue::Ref(callee));
                 }
             }
-        }
         Err(self.err(call.span, "unsupported call in attribute"))
     }
 
@@ -681,6 +678,7 @@ pub fn lower_with_root(parsed: &Parsed, root_jsx: &Option<RootJsx>) -> Result<Ui
 }
 
 /// The signal bookkeeping collected from a module.
+#[derive(Default)]
 struct ModuleSignals {
     /// All bindings (signal/context declarations) the module exposes.
     bindings: Vec<Binding>,
@@ -690,15 +688,6 @@ struct ModuleSignals {
     setters: HashMap<String, String>,
 }
 
-impl Default for ModuleSignals {
-    fn default() -> Self {
-        Self {
-            bindings: Vec::new(),
-            signals: HashSet::new(),
-            setters: HashMap::new(),
-        }
-    }
-}
 
 /// Recognize signal/context declarations anywhere in a module and turn them into
 /// `Binding`s plus the signal/setter maps the inline handler translator needs.
@@ -722,10 +711,7 @@ fn collect_module_signals(module: &ast::Module) -> ModuleSignals {
 
 /// Recurse into a module item.
 fn collect_module_item(item: &ast::ModuleItem, out: &mut ModuleSignals) {
-    match item {
-        ast::ModuleItem::Stmt(stmt) => collect_stmt(stmt, out),
-        _ => {}
-    }
+    if let ast::ModuleItem::Stmt(stmt) = item { collect_stmt(stmt, out) }
 }
 
 /// Recurse into a statement, descending into block/function bodies where signals
@@ -831,14 +817,14 @@ fn expr_stmt_signal(expr: &ast::Expr) -> Option<Binding> {
         // Recognized but emits no binding: its body runs as an effect.
         "createEffect" => None,
         "provideContext" => {
-            let name = match call.args.first() {
-                Some(a) => match a.expr.as_ref() {
-                    ast::Expr::Lit(ast::Lit::Str(s)) => {
-                        s.value.as_str().unwrap_or_default().to_string()
-                    }
-                    _ => return None,
-                },
-                None => return None,
+            let name = {
+                let a = call.args.first()?;
+                match a.expr.as_ref() {
+                ast::Expr::Lit(ast::Lit::Str(s)) => {
+                    s.value.as_str().unwrap_or_default().to_string()
+                }
+                _ => return None,
+            }
             };
             let ty = call
                 .args
@@ -853,21 +839,19 @@ fn expr_stmt_signal(expr: &ast::Expr) -> Option<Binding> {
 
 /// The callee name of a call expression, if it is a bare identifier.
 fn call_name(call: &ast::CallExpr) -> Option<String> {
-    if let ast::Callee::Expr(e) = &call.callee {
-        if let ast::Expr::Ident(id) = e.as_ref() {
+    if let ast::Callee::Expr(e) = &call.callee
+        && let ast::Expr::Ident(id) = e.as_ref() {
             return Some(id.sym.as_str().to_string());
         }
-    }
     None
 }
 
 /// The identifier bound by `[a, b]` destructuring, or `None`.
 fn array_first_name(pat: &ast::Pat) -> Option<String> {
-    if let ast::Pat::Array(arr) = pat {
-        if let Some(Some(ast::Pat::Ident(id))) = arr.elems.first() {
+    if let ast::Pat::Array(arr) = pat
+        && let Some(Some(ast::Pat::Ident(id))) = arr.elems.first() {
             return Some(id.id.sym.as_str().to_string());
         }
-    }
     None
 }
 
@@ -947,11 +931,10 @@ fn to_snake(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 2);
     for c in s.chars() {
         if c.is_uppercase() {
-            if let Some(prev) = out.chars().last() {
-                if prev.is_lowercase() || prev.is_ascii_digit() {
+            if let Some(prev) = out.chars().last()
+                && (prev.is_lowercase() || prev.is_ascii_digit()) {
                     out.push('_');
                 }
-            }
             out.push(c.to_ascii_lowercase());
         } else {
             out.push(c);

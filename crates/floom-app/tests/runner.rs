@@ -398,6 +398,7 @@ mod services {
 
     /// Disposal writes into a shared flag; `Rc`/`RefCell` are fine here
     /// because service disposal runs on the UI thread by design.
+    #[allow(dead_code)]
     struct DisposalLog(Rc<RefCell<Vec<&'static str>>>);
 
     #[test]

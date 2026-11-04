@@ -100,7 +100,7 @@ fn z_still_orders_two_native_regions() {
             eid(id),
             HitRegion {
                 bounds,
-                native: Some(NativeViewId::new(id as u32, 1)),
+                native: Some(NativeViewId::new(id, 1)),
                 z,
             },
         );

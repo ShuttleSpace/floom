@@ -98,10 +98,9 @@ impl FrameDigest {
                 // A fully transparent block has no colour to report; forcing it
                 // to zero keeps two empty regions equal instead of comparing
                 // whatever stale values the renderer left behind.
-                let rgb = if sa == 0 {
-                    [0, 0, 0]
-                } else {
-                    [(sr / sa) as u8, (sg / sa) as u8, (sb / sa) as u8]
+                let rgb = match (sr.checked_div(sa), sg.checked_div(sa), sb.checked_div(sa)) {
+                    (Some(sr), Some(sg), Some(sb)) => [sr as u8, sg as u8, sb as u8],
+                    _ => [0, 0, 0],
                 };
                 cells.push([rgb[0], rgb[1], rgb[2], a]);
             }
@@ -405,7 +404,7 @@ pub fn parse_sequence(text: &str) -> Option<Vec<(String, FrameDigest)>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{PixelProbe, PixelSnapshot, ReferencePixels, single_rect_scene};
+    use crate::{PixelSnapshot, ReferencePixels, single_rect_scene};
     use floom_types::{Color, Size};
 
     fn solid(w: u32, h: u32, color: Color) -> PixelSnapshot {

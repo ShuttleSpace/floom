@@ -42,17 +42,19 @@ pub struct Thresholds {
 }
 
 impl Thresholds {
-    pub fn default() -> Self {
-        Self {
-            max_iterations: 8,
-            max_regressions: 0,
-        }
-    }
-
     pub fn accepts(&self, run: &BenchmarkRun) -> bool {
         run.converged
             && run.iterations <= self.max_iterations
             && run.regressions <= self.max_regressions
+    }
+}
+
+impl Default for Thresholds {
+    fn default() -> Self {
+        Self {
+            max_iterations: 8,
+            max_regressions: 0,
+        }
     }
 }
 
@@ -217,11 +219,10 @@ impl RepairPolicy for DiffDrivenPolicy {
         // A floor failure with a numeric repair maps too: the touch-target
         // floor names the height the action must reach.
         for floor in &report.floors {
-            if floor.check.contains("touch target") {
-                if let Ok(height) = floor.floor.parse::<f64>() {
+            if floor.check.contains("touch target")
+                && let Ok(height) = floor.floor.parse::<f64>() {
                     edits.push(TokenEdit::ControlHeight(height as f32));
                 }
-            }
         }
         edits
     }

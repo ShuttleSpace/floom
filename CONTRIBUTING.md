@@ -9,16 +9,17 @@ under `crates/`, flattened — one directory per crate, named after the package:
 
 ```
 crates/
-  floom/                 the main `floom` library crate
+  floom/                 the public facade crate (its tests live in crates/floom/tests/)
   floom-<name>/          one directory per crate (core, runtime, render, ...)
   vendor/                forked upstream trees (separate workspaces)
-  ecosystem/             satellite projects: floom-ui, floom-editor, flameo
-benches/  docs/  examples/  tests/  scripts/  notices/
+  ecosystem/             satellite projects: floom-ui, floom-editor, plugins
+docs/  examples/  scripts/  notices/  tests/
 ```
 
-`benches/` and `tests/` belong to the `floom` package but intentionally stay at
-the repository top level, so `crates/floom/Cargo.toml` declares them with
-explicit `path = "../../benches/..."` / `"../../tests/..."` targets.
+The `floom` facade keeps its integration tests inside the crate
+(`crates/floom/tests/`), so they are picked up by normal Cargo discovery. The
+top-level `tests/` directory holds CLI test fixtures, not the library's test
+suite.
 
 `crates/vendor/` and `crates/ecosystem/` are listed in the workspace `exclude`:
 each is its own nested workspace, so `cargo test --workspace` stays focused on
@@ -34,6 +35,38 @@ own and Cargo matches them against an external source:
   renaming either would silently stop the patch from applying.
 - The legacy `floem-vger` renderer backend is the published `floem-vger` crate on
   crates.io, referenced with `package = "floem-vger"`.
+
+## Verifying your changes
+
+Before opening a PR, run the checks CI will run. A pinned toolchain is provided
+by `rust-toolchain.toml`, so `rustup` will fetch and select it automatically.
+
+```bash
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- --deny warnings
+cargo test --workspace
+```
+
+Platform- and feature-gated code is easy to miss, so when you touch a backend
+behind a `cfg` or a feature flag, compile that target explicitly (for example
+`cargo check --features desktop` or the Android/iOS `--target`), because the host
+build cannot see it.
+
+## Commit messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org): a type, an
+optional scope, and a concise summary.
+
+```
+feat(widgets): add a virtualized grid widget
+fix(renderer-vello): honour the clip rect on text runs
+docs: describe the embedder API
+refactor!: drop the legacy view adapter
+```
+
+Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`.
+Mark breaking changes with `!` after the type (or a `BREAKING CHANGE:` footer).
+Keep each commit focused on one logical change.
 
 The best way to start contributing to Floom is to learn how it works by looking at the examples. If you think there are more examples that can be added, feel free to send in a PR!
 

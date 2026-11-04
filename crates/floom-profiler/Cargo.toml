@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Stage profiler for Floom 2.0: frame timeline, allocation counters, cache statistics (Phase 23.3)"
+description = "Stage profiler for Floom 2.0: frame timeline, allocation counters, cache statistics"
 
 [dependencies]
 # The timeline's wire format IS the protocol's performance snapshot — one

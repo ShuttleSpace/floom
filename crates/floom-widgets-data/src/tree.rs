@@ -112,7 +112,7 @@ impl VecTree {
     }
 
     pub fn find(&self, id: TreeNodeId) -> Option<&TreeNode> {
-        fn walk<'a>(nodes: &'a [TreeNode], id: TreeNodeId) -> Option<&'a TreeNode> {
+        fn walk(nodes: &[TreeNode], id: TreeNodeId) -> Option<&TreeNode> {
             for node in nodes {
                 if node.id == id {
                     return Some(node);

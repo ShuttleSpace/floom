@@ -38,7 +38,7 @@ use floom_app::{NodeId, WidgetHost};
 use floom_core::{Child, ChildKey, LayoutRequest, Length};
 use floom_layout::LayoutStyle;
 use floom_snapshot::{
-    FrameDigest, GoldenFrames, PixelProbe, PixelSnapshot, ReferencePixels, snapshots_dir,
+    FrameDigest, GoldenFrames, PixelSnapshot, ReferencePixels, snapshots_dir,
 };
 use floom_types::{Brush, Color, PresenceTransition, Size};
 use floom_widgets::{Conditional, Container, Crossfade, SharedTransitionLayout, WidgetAny};
@@ -411,7 +411,7 @@ fn a_shared_element_flight_is_golden_frame_by_frame() {
     // the source card (INK) is replaced by the destination card (HOT), which is
     // what makes this a shared element rather than a card that walked somewhere.
     let last_cells = &g.frames()[g.frames().len() - 1].1.cells;
-    let dest_cell = last_cells[4 * 12 + 0];
+    let dest_cell = last_cells[4 * 12];
     assert!(
         dest_cell[0] > 0x80 && dest_cell[2] < 0x60,
         "the landed frame must show the hot destination (r high, b low), not \

@@ -9,7 +9,7 @@ use floom_tsx::compile;
 use floom_ui_ir::{NodeKind, PropValue};
 
 /// Find the first node of a kind, so a test can inspect its events/props.
-fn find<'a>(doc: &'a floom_ui_ir::UiDocument, kind: NodeKind) -> &'a floom_ui_ir::UiNode {
+fn find(doc: &floom_ui_ir::UiDocument, kind: NodeKind) -> &floom_ui_ir::UiNode {
     doc.nodes
         .iter()
         .find(|n| n.kind == kind)

@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 
 use floom_app::{HostedNode, WidgetHost};
-use floom_core::{Axis, Child, ChildKey, LayoutRequest, Widget};
+use floom_core::{Axis, Child, ChildKey, LayoutRequest};
 use floom_hot_reload::describe;
 use floom_layout::LayoutStyle;
 use floom_types::{Point, Size};
@@ -75,18 +75,7 @@ fn the_panel_composes_the_demos_rows_over_the_engines() {
     // `run_desktop_with_devtools` builds.
     let cell = Arc::new(Mutex::new(host.tree_nodes()));
     let readout_cell = cell.clone();
-    let rows = (|state: &floom_devtools::panel::DevtoolsState| {
-        let mut rows = vec![
-            floom_devtools::panel::ReadoutRow::heading("demo"),
-            floom_devtools::panel::ReadoutRow::new("clicks", "0"),
-            floom_devtools::panel::ReadoutRow::new("tab", format!("{:?}", state.tab())),
-        ];
-        let nodes = readout_cell.lock().map(|n| n.clone()).unwrap_or_default();
-        let live = describe(&nodes);
-        let inspector = floom_devtools::Inspector::new(&live);
-        rows.extend(floom_devtools::panel::elements_readout(&inspector, state));
-        rows
-    })(&floom_devtools::panel::DevtoolsState::new());
+    let rows = demo_readout(&readout_cell, &floom_devtools::panel::DevtoolsState::new());
 
     // The demo's heading is first, then its rows, then the engine's tree.
     assert_eq!(rows[0].label, "demo");
@@ -174,4 +163,20 @@ fn press(at: Point) -> floom_types::PointerEvent {
         modifiers: floom_types::Modifiers::NONE,
         click_count: 1,
     }
+}
+
+fn demo_readout(
+    readout_cell: &Arc<Mutex<Vec<HostedNode>>>,
+    state: &floom_devtools::panel::DevtoolsState,
+) -> Vec<floom_devtools::panel::ReadoutRow> {
+    let mut rows = vec![
+        floom_devtools::panel::ReadoutRow::heading("demo"),
+        floom_devtools::panel::ReadoutRow::new("clicks", "0"),
+        floom_devtools::panel::ReadoutRow::new("tab", format!("{:?}", state.tab())),
+    ];
+    let nodes = readout_cell.lock().map(|n| n.clone()).unwrap_or_default();
+    let live = describe(&nodes);
+    let inspector = floom_devtools::Inspector::new(&live);
+    rows.extend(floom_devtools::panel::elements_readout(&inspector, state));
+    rows
 }

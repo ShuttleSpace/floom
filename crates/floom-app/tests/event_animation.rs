@@ -29,7 +29,7 @@ use floom_core::{
     UpdateContext, Widget, WidgetAny,
 };
 use floom_testkit::TestApp;
-use floom_types::{AnimationSpec, Easing, PointerEvent, PointerPhase, Rect};
+use floom_types::{AnimationSpec, PointerPhase, Rect};
 
 /// The two phases a press-driven control moves through.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

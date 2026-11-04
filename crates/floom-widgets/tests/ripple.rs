@@ -10,7 +10,7 @@
 use floom_core::{Color, LayoutRequest, PointerPhase, Rect, Size, Widget};
 use floom_types::{ClipShape, PointerEvent};
 use floom_widgets::testkit::{
-    AllocatingCreateContext, SceneRecorder, TestEventContext, paint_snapshot,
+    AllocatingCreateContext, SceneRecorder, TestEventContext,
 };
 use floom_widgets::{Ripple, Text};
 

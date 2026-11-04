@@ -252,6 +252,10 @@ impl Default for DevtoolsState {
 /// rows" with `==`, and a tuple does that without a second type to learn.
 type MountedRowsKey = (bool, DevtoolsTab, Option<String>, BTreeSet<String>);
 
+/// Builds the readout rows from the inspector's snapshots. Boxed as a trait
+/// object because the panel outlives any one frame's borrow of the live tree.
+type ReadoutBuilder = Arc<dyn Fn(&DevtoolsState) -> Vec<ReadoutRow> + Send + Sync + 'static>;
+
 /// The visible panel, mounted as an overlay above the app's own tree.
 ///
 /// The panel is inert while [`DevtoolsState::visible`] is false: it mounts no
@@ -264,7 +268,7 @@ pub struct DevtoolsPanel {
     /// A closure rather than an `Inspector` because the panel outlives any one
     /// frame's borrow of the live tree: the host owns the tree, the panel owns
     /// itself, and a shared cell is the only thing both can name.
-    readout: Arc<dyn Fn(&DevtoolsState) -> Vec<ReadoutRow> + Send + Sync + 'static>,
+    readout: ReadoutBuilder,
     /// Called with the panel's own bounds whenever it opens or resizes, so the
     /// app can position a "devtools is open" indicator of its own.
     on_change: Option<Arc<dyn Fn(bool) + Send + Sync + 'static>>,
@@ -655,16 +659,13 @@ impl Widget for DevtoolsPanel {
 
     fn event(&mut self, cx: &mut dyn EventContext, _id: ElementId) -> bool {
         // Escape closes the panel, the way a devtools drawer does.
-        if let floom_core::Event::Key(event) = cx.event() {
-            if event.phase == KeyPhase::Down
+        if let floom_core::Event::Key(event) = cx.event()
+            && event.phase == KeyPhase::Down
                 && event.key == Key::Named(floom_core::NamedKey::Escape)
-            {
-                if let Ok(mut state) = self.state.lock() {
+                && let Ok(mut state) = self.state.lock() {
                     state.hide();
                     return true;
                 }
-            }
-        }
         false
     }
 }

@@ -218,7 +218,7 @@ impl LiveTree {
                 let Some(id) = self.id_of(key) else {
                     return Err(format!("`{}` is not mounted", key.as_str()));
                 };
-                self.layouts_mut().insert(id.raw(), layout.clone());
+                self.layouts_mut().insert(id.raw(), *layout);
                 dirty.propagate_layout(&self.arena, id);
                 Ok(())
             }

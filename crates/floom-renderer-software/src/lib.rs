@@ -1484,7 +1484,7 @@ impl Renderer for SoftwareRenderer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use floom_renderer::{FrameInfo, RendererCapabilities, render_once};
+    use floom_renderer::{FrameInfo, render_once};
     use floom_scene::{Point, SceneNode, Size};
     use floom_types::Color;
 
@@ -1769,11 +1769,10 @@ mod tests {
         let mut inked = 0;
         for y in 0..height {
             for x in 0..width {
-                if let Some(px) = sw.pixel_rgba(2 + x, 2 + y) {
-                    if px[0] > 100 {
+                if let Some(px) = sw.pixel_rgba(2 + x, 2 + y)
+                    && px[0] > 100 {
                         inked += 1;
                     }
-                }
             }
         }
         assert!(inked > 0, "text left no ink inside its bounds");
@@ -1828,11 +1827,10 @@ mod tests {
         let mut rightmost = 0i64;
         for y in 0..laid.size.height.ceil() as u32 {
             for x in 0..width {
-                if let Some(px) = sw.pixel_rgba(2 + x, 2 + y) {
-                    if px[0] > 100 {
+                if let Some(px) = sw.pixel_rgba(2 + x, 2 + y)
+                    && px[0] > 100 {
                         rightmost = rightmost.max(i64::from(x));
                     }
-                }
             }
         }
         assert!(

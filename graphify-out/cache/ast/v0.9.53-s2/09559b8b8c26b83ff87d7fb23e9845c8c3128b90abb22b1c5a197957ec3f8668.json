@@ -1,1 +1,0 @@
-{"nodes": [{"id": "pkg_floom_plugin_device_info", "label": "floom-plugin-device-info", "file_type": "code", "type": "package", "ecosystem": "cargo", "source_file": "crates/floom-plugin-device-info/Cargo.toml", "source_location": "L1"}], "edges": []}

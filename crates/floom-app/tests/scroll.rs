@@ -438,9 +438,8 @@ fn the_offset_can_be_read_back() {
 
 // --- the request path ------------------------------------------------------
 
-/// A widget that scrolls itself by `delta` on every wheel event.
+/// A widget that scrolls itself by the wheel delta on every wheel event.
 struct WheelScroller {
-    delta: f64,
     offset: Rc<std::cell::Cell<ScrollOffset>>,
 }
 
@@ -541,7 +540,6 @@ fn a_wheel_event_scrolls_the_subtree_end_to_end() {
             ..LayoutStyle::default()
         },
         WheelScroller {
-            delta: 0.0,
             offset: offset.clone(),
         },
     );
@@ -579,7 +577,6 @@ fn the_host_applies_exactly_what_the_widget_asks_for() {
             ..LayoutStyle::default()
         },
         WheelScroller {
-            delta: 0.0,
             offset: offset.clone(),
         },
     );

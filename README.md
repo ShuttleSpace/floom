@@ -46,12 +46,12 @@ Inspired by [Xilem](https://github.com/linebender/xilem), [Leptos](https://githu
 
 - **Cross-platform**: Floom supports Windows, macOS and Linux with rendering using [wgpu](https://github.com/gfx-rs/wgpu) via [vger](https://github.com/audulus/vger-rs) or [vello](https://github.com/linebender/xilem), or via AnyRender's GPU-backed [Skia](https://github.com/dioxuslabs/anyrender) renderer. In case a GPU is unavailable, a CPU renderer powered by [tiny-skia](https://github.com/RazrFalcon/tiny-skia) will be used.
 - **Fine-grained reactivity**: The entire library is built around reactive primitives inspired by [leptos_reactive](https://crates.io/crates/leptos_reactive). The reactive "signals" allow you to keep your UI up-to-date with minimal effort, all while maintaining very high performance.
-- **Performance**: The view tree is constructed only once, safeguarding you from accidentally creating a bottleneck in a view generation function that slows down your entire application. Floom also provides tools to help you write efficient UI code, such as a [virtual list](https://github.com/lapce/floom/tree/main/examples/virtual_list).
+- **Performance**: The view tree is constructed only once, safeguarding you from accidentally creating a bottleneck in a view generation function that slows down your entire application. Floom also provides tools to help you write efficient UI code, such as a [virtual list](crates/floom-virtual/src/lib.rs).
 - **Flexbox & Grid layout**: Using [Taffy](https://crates.io/crates/taffy), the library provides the Flexbox and Grid layout systems, which can be applied to any View node.
 - **Customizable widgets**: Widgets are highly customizable. You can customize both the appearance and behavior of widgets using the styling API, which supports theming with classes. You can also install third-party themes.
 - **Transitions and Animations**: Floom supports both transitions and animations. Transitions, like css transitions, can animate any property that can be interpolated and can be applied alongside other styles, including in classes.
     Floom also supports full keyframe animations that build on the ergonomics of the style system. In both transitions and animations, Floom supports easing with spring functions.
-- **Element inspector**: Inspired by your browser's developer tools, Floom provides a [diagnostic tool](docs/img/inspector.png) to debug your layout.
+- **Element inspector**: Inspired by your browser's developer tools, Floom provides a [diagnostic tool](docs/img/inspector.jpg) to debug your layout.
 - **Global themes**: Support for light and dark themes, built in design system to easly delare your own
 - **Localization**: Floom supports localizations via [Fluent](https://github.com/projectfluent/fluent-rs) crate with support for fallbacks, easy switching languages on runtime or even overriding active language for chosen part of you app
 
@@ -61,7 +61,7 @@ Design-system widgets live in the separate **floom-ui** project. The rich text/c
 
 Backend authors can experiment with the public but unstable [`floom::embedder`](docs/embedder.md) API for integrating Floom with platform backends other than the default winit desktop path. Ordinary applications should continue to use `floom::launch(...)`.
 
-To sample Floom's capabilities, check out the repo and run the [widget gallery](examples/widget-gallery/src/main.rs) example with cargo.
+To sample Floom's capabilities, check out the repo and run the [showcase](examples/floom-showcase/src/main.rs) example with `cargo run -p floom-showcase`. Its `/components` page mounts every Tier-0 widget; the images below are its widget gallery and inspector views.
 
 
 <img src="docs/img/widget-gallery-dark.jpg" width="900"/>

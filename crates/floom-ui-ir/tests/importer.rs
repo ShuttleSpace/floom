@@ -9,7 +9,7 @@
 //! worse than no document at all.
 
 use floom_ui_ir::{
-    DesignAxis, DesignContract, DesignFile, DesignNode, DesignRole, NodeKind, PropValue, Rgba,
+    DesignAxis, DesignContract, DesignFile, DesignNode, NodeKind, PropValue, Rgba,
     compare, import,
 };
 

@@ -130,11 +130,10 @@ fn resolve_floom_path(explicit: Option<&str>, app: &Path) -> Result<PathBuf, Str
     if let Some(path) = explicit {
         return check_floom_dir(Path::new(path));
     }
-    if let Ok(path) = std::env::var("FLOOM_PATH") {
-        if !path.is_empty() {
+    if let Ok(path) = std::env::var("FLOOM_PATH")
+        && !path.is_empty() {
             return check_floom_dir(Path::new(&path));
         }
-    }
     // Running `floom run` from inside a Floom checkout is the common case while
     // the toolchain is pre-release; find it by walking up from the app.
     if let Some(root) = workspace_root(app.parent().unwrap_or(Path::new("."))) {
@@ -173,11 +172,10 @@ fn workspace_root(start: &Path) -> Option<PathBuf> {
     let mut dir = start.canonicalize().ok()?;
     loop {
         let manifest = dir.join("Cargo.toml");
-        if let Ok(text) = fs::read_to_string(&manifest) {
-            if text.lines().any(|l| l.trim() == "[workspace]") {
+        if let Ok(text) = fs::read_to_string(&manifest)
+            && text.lines().any(|l| l.trim() == "[workspace]") {
                 return Some(dir);
             }
-        }
         if !dir.pop() {
             return None;
         }
@@ -274,11 +272,10 @@ fn write_project(
 }
 
 fn write_if_changed(path: &Path, content: &str) -> Result<(), String> {
-    if let Ok(existing) = fs::read_to_string(path) {
-        if existing == content {
+    if let Ok(existing) = fs::read_to_string(path)
+        && existing == content {
             return Ok(());
         }
-    }
     fs::write(path, content).map_err(|e| format!("cannot write {}: {e}", path.display()))
 }
 

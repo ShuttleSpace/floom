@@ -160,11 +160,11 @@ mod tests {
     fn a_constant_field_survives_a_blur() {
         let (w, h) = (16usize, 16usize);
         let mut bytes = vec![0u8; w * h * 4];
-        for px in bytes.chunks_exact_mut(4) {
+        for px in bytes.as_chunks_mut::<4>().0 {
             px.copy_from_slice(&[80, 120, 200, 255]);
         }
         blur_rgba(&mut bytes, w, h, &Filter::blur(4.0), 1.0);
-        for px in bytes.chunks_exact(4) {
+        for px in bytes.as_chunks::<4>().0 {
             assert_eq!(px[3], 255, "opaque stays opaque");
             assert!(
                 px[0].abs_diff(80) <= 1 && px[2].abs_diff(200) <= 1,
@@ -212,7 +212,7 @@ mod tests {
     fn an_identity_filter_leaves_the_buffer_byte_identical() {
         let (w, h) = (8usize, 8usize);
         let mut original = vec![0u8; w * h * 4];
-        for (i, px) in original.chunks_exact_mut(4).enumerate() {
+        for (i, px) in original.as_chunks_mut::<4>().0.iter_mut().enumerate() {
             px.copy_from_slice(&[(i % 251) as u8, (i % 253) as u8, (i % 247) as u8, 255]);
         }
         let mut bytes = original.clone();

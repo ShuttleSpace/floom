@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Agent protocol over a running Floom 2.0 app: versioned inspection/control commands, a localhost-only transport with a dev token, and an AI-friendly component schema (Phase 25)"
+description = "Agent protocol over a running Floom 2.0 app: versioned inspection/control commands, a localhost-only transport with a dev token, and an AI-friendly component schema"
 
 [dependencies]
 # The wire vocabulary is the inspector's: a request carries a

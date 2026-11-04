@@ -43,28 +43,6 @@ fn first_token(cell: &str) -> String {
     rest[..end].trim().to_string()
 }
 
-/// Every backtick-quoted token between `marker` and the end of that sentence.
-///
-/// The list wraps across lines, so "up to the next newline" would find only the
-/// first item; the sentence ends at the first closing backtick followed by a
-/// period.
-fn tokens_after(md: &str, marker: &str) -> Vec<String> {
-    let start = md
-        .find(marker)
-        .unwrap_or_else(|| panic!("missing marker {marker:?} in the document"));
-    let tail = &md[start..];
-    let end = tail
-        .find("`.")
-        .map(|index| index + 2)
-        .unwrap_or_else(|| tail.find('\n').unwrap_or(tail.len()));
-    tail[..end]
-        .split('`')
-        .skip(1)
-        .step_by(2)
-        .map(str::trim)
-        .map(str::to_string)
-        .collect()
-}
 
 // ---------------------------------------------------------------------------
 // EXAMPLES.md <-> examples/ <-> scripts/run-golden-examples.sh
@@ -308,7 +286,7 @@ fn the_size_table_names_examples_that_exist() {
         }
         let name = first_token(&cells[1]);
         assert!(
-            on_disk.iter().any(|d| *d == name),
+            on_disk.contains(&name),
             "the size table names `{name}`, which is not an example"
         );
         assert!(

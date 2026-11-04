@@ -90,11 +90,10 @@ fn sweep(
         for col in 1..30 {
             let x = W * f64::from(col) / 30.0;
             let at = Point::new(x, y);
-            if let Some(cursor) = hover(platform, runner, window, at) {
-                if !seen.iter().any(|(c, _)| *c == cursor) {
+            if let Some(cursor) = hover(platform, runner, window, at)
+                && !seen.iter().any(|(c, _)| *c == cursor) {
                     seen.push((cursor, at));
                 }
-            }
         }
     }
     seen
@@ -271,8 +270,6 @@ fn each_control_claims_the_shape_its_kind_implies() {
     fn cursor_of<W2: WidgetAny + 'static>(widget: W2) -> CursorStyle {
         widget.cursor()
     }
-    use floom_core::Widget;
-
     assert_eq!(
         cursor_of(Button::new("b")),
         CursorStyle::Pointer,

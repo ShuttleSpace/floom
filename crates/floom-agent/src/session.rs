@@ -14,7 +14,7 @@
 
 use floom_core::{SemanticsHint, SemanticsState};
 use floom_inspector::SceneLines;
-use floom_snapshot::{PixelProbe, PixelSnapshot, ReferencePixels};
+use floom_snapshot::{PixelSnapshot, ReferencePixels};
 use floom_testkit::TestApp;
 use floom_types::Point;
 
@@ -58,11 +58,10 @@ impl<'a> AgentSession<'a> {
 
     fn dispatch(&mut self, request: &AgentRequest) -> Result<Payload, AgentError> {
         crate::protocol::check_version(request.version)?;
-        if let Some(expected) = &self.token {
-            if request.token.as_deref() != Some(expected.as_str()) {
+        if let Some(expected) = &self.token
+            && request.token.as_deref() != Some(expected.as_str()) {
                 return Err(AgentError::AuthRequired);
             }
-        }
         match &request.command {
             Command::Tree => Ok(Payload::Tree(self.tree())),
             Command::Semantics => Ok(Payload::Semantics(self.semantics())),

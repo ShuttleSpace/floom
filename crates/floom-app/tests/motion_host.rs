@@ -1279,7 +1279,7 @@ fn a_crossfade_keeps_both_children_mounted_while_it_swaps() {
         "a crossfade keeps both children mounted through the swap"
     );
     assert!(
-        both.iter().any(|&a| a == 255) && both.iter().any(|&a| a == 0),
+        both.contains(&255) && both.contains(&0),
         "the leaving side is still shown and the arriving side is still hidden \
          at the start of the swap: {both:?}"
     );
@@ -1353,7 +1353,7 @@ fn an_animated_content_keeps_both_sides_live_while_it_switches() {
         "an animated content keeps both contents mounted through the switch"
     );
     assert!(
-        both.iter().any(|&a| a == 255) && both.iter().any(|&a| a == 0),
+        both.contains(&255) && both.contains(&0),
         "the leaving side is still shown and the arriving side is still hidden \
          at the start of the switch: {both:?}"
     );
@@ -1477,7 +1477,7 @@ fn an_animated_content_replays_enter_when_a_value_returns() {
         "the returning value and the leaving value are both mounted"
     );
     assert!(
-        both.iter().any(|&a| a == 0),
+        both.contains(&0),
         "the returning value replays its enter from invisible: {both:?}"
     );
 

@@ -30,8 +30,9 @@ fn resource_error_on_failure() {
 #[test]
 fn cancelled_loader_does_not_commit() {
     /// Executor that records tasks without running them until flushed.
+    type TaskQueue = Rc<Cell<Vec<Box<dyn FnOnce()>>>>;
     struct DeferredExecutor {
-        queue: Rc<Cell<Vec<Box<dyn FnOnce()>>>>,
+        queue: TaskQueue,
     }
 
     impl floom_task::TaskExecutor for DeferredExecutor {

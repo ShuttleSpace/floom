@@ -508,7 +508,7 @@ mod tests {
     use std::cell::Cell;
     use std::rc::Rc;
 
-    use crate::{SignalGet, SignalTrack, SignalUpdate, SignalWrite};
+    use crate::{SignalGet, SignalTrack, SignalUpdate};
 
     use super::*;
 
@@ -580,7 +580,6 @@ mod tests {
         let signal = create_global_rw_signal(0);
         let count = Rc::new(Cell::new(0));
         create_global_effect({
-            let signal = signal;
             let count = count.clone();
             move |_| {
                 signal.track();

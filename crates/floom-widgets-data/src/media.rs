@@ -430,7 +430,7 @@ impl MediaControls {
                 let next = self.state.volume - VOLUME_STEP;
                 self.state.set_volume(next)
             }
-            _ => return false,
+            _ => false,
         }
     }
 

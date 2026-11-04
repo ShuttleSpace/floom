@@ -57,7 +57,7 @@ use floom_types::{
 
 use winit::application::ApplicationHandler;
 use winit::event::{Ime as WinitIme, StartCause, WindowEvent};
-use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
+use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 use winit::window::{
     ImeCapabilities, ImeEnableRequest, ImeRequest, ImeRequestData, Window as WinitWindow,

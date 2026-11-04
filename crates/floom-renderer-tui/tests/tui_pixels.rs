@@ -87,7 +87,7 @@ fn grid_text(g: &TuiGrid) -> String {
                 out.push('|');
             }
             let Some(cell) = g.cell(col, row) else {
-                out.push_str("?");
+                out.push('?');
                 continue;
             };
             out.push_str(&cell_text(cell));

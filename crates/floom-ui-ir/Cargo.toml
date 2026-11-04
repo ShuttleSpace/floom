@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Versioned, serializable UI intermediate representation for Floom 2.0 tooling (Phase 22.1)"
+description = "Versioned, serializable UI intermediate representation for Floom 2.0 tooling"
 
 [dependencies]
 # L0 vocabulary only: `Color` is the runtime colour type the IR's serializable

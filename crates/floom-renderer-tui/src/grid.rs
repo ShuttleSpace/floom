@@ -568,11 +568,10 @@ mod tests {
         let mut written: Vec<(usize, usize, char)> = Vec::new();
         for row in 0..g.rows() {
             for col in 0..g.cols() {
-                if let Some(cell) = g.cell(col, row) {
-                    if cell.ch != ' ' {
+                if let Some(cell) = g.cell(col, row)
+                    && cell.ch != ' ' {
                         written.push((col, row, cell.ch));
                     }
-                }
             }
         }
         assert_eq!(written.len(), 2, "both glyphs were painted: {written:?}");

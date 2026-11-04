@@ -66,7 +66,7 @@ fn render(text: &str) -> SoftwareRenderer {
     // A backend that skipped the registry would draw nothing at all — which
     // is exactly what this test is here to notice.
     sw.begin_frame(&floom_renderer::FrameInfo::software(SIZE.0, SIZE.1, 1));
-    sw.render_scene_with_resources(&scene, &scene.damage(), &registry);
+    sw.render_scene_with_resources(&scene, scene.damage(), &registry);
     sw.end_frame();
     sw
 }

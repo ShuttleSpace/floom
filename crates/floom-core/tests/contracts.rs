@@ -209,6 +209,7 @@ fn color_rect_widget_lifecycle() {
 
 /// Minimal child widget.
 struct Row {
+    #[allow(dead_code)]
     label: String,
 }
 

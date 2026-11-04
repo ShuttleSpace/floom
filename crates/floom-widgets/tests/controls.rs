@@ -5,8 +5,7 @@ use std::rc::Rc;
 
 use floom_accessibility::SemanticsState;
 use floom_core::{
-    Axis, Child, ChildKey, ElementId, Key, KeyPhase, LayoutRequest, NamedKey, OverlayHandle,
-    OverlayKind, Point, Rect, Size, Widget, WidgetAny,
+    Axis, Child, ChildKey, ElementId, Key, KeyPhase, LayoutRequest, NamedKey, Point, Rect, Size, Widget, WidgetAny,
 };
 use floom_scene::SceneNode;
 use floom_types::{Brush, Color, KeyEvent, Length, Modifiers, PointerEvent, PointerPhase};
@@ -14,8 +13,8 @@ use floom_widgets::Stack;
 use floom_widgets::controls::{Button, Pressable, Progress, Switch, SwitchPalette};
 use floom_widgets::primitives::Text;
 use floom_widgets::testkit::{
-    AllocatingCreateContext, OverlayCall, RecordingUpdateContext, SceneRecorder, TestEventContext,
-    dispatch, paint_snapshot, semantics_snapshot,
+    AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, TestEventContext,
+    dispatch, paint_snapshot,
 };
 
 const ROW: Rect = Rect {
@@ -62,7 +61,7 @@ fn button_click_sequence_invokes_callback_once() {
     ));
     assert_eq!(clicks.get(), 1);
 
-    assert!(button.interaction().pressed == false);
+    assert!(!button.interaction().pressed);
     assert!(button.interaction().hovered);
 }
 
@@ -361,7 +360,7 @@ fn a_knob_larger_than_the_track_is_capped() {
     );
 }
 
-//// **The control for the palette tests.** A default switch paints exactly the
+/// **The control for the palette tests.** A default switch paints exactly the
 /// colours it painted before `SwitchPalette` existed. Every default value in
 /// `SwitchPalette::default` is load-bearing for that claim, and a "close
 /// enough" default would silently restyle every existing caller.

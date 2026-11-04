@@ -1,1 +1,0 @@
-{"nodes": [{"id": "pkg_floom_plugin_local_auth", "label": "floom-plugin-local-auth", "file_type": "code", "type": "package", "ecosystem": "cargo", "source_file": "crates/floom-plugin-local-auth/Cargo.toml", "source_location": "L1"}], "edges": []}

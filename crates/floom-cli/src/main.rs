@@ -875,7 +875,7 @@ mod tests {
             "the extern block must be behind the flag"
         );
         assert!(
-            lib_rs.contains("cc::Build::new()") == false,
+            !lib_rs.contains("cc::Build::new()"),
             "the Rust half must not compile anything; build.rs does that"
         );
         assert!(

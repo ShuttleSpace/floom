@@ -16,7 +16,7 @@ use std::any::Any;
 use std::cell::Cell;
 use std::rc::Rc;
 
-use floom_animation::{AnimKind, CompositorProp, Easing, Tween};
+use floom_animation::{AnimKind, CompositorProp, Tween};
 use floom_core::{
     CreateContext, ElementId, Length, NativeGrant, NativeRequest, UpdateContext, Widget, WidgetAny,
 };

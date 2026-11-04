@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Declarative UI DSL: parser, lowering to the UI IR, and builder codegen (Phase 22.2)"
+description = "Declarative UI DSL: parser, lowering to the UI IR, and builder codegen"
 
 [dependencies]
 # The IR owns the vocabulary (kinds, properties, events, bindings). This crate

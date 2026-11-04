@@ -1,1 +1,0 @@
-{"nodes": [{"id": "pkg_floom_ime", "label": "floom-ime", "file_type": "code", "type": "package", "ecosystem": "cargo", "source_file": "crates/floom-ime/Cargo.toml", "source_location": "L1"}], "edges": []}

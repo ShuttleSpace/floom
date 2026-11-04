@@ -1,12 +1,12 @@
-/target
+# Any crate workspace's build output, including nested satellites under crates/.
+target/
 # `floom run <app.tsx>` generates its throwaway crate here.
 .floom/
-/Cargo.lock
 /.lapce
 /.idea
 /.zed
 /.worktrees
-/.workbuddy
+.workbuddy/
 .DS_Store
 rustc-ice*
 *.orig
@@ -28,3 +28,6 @@ __pycache__/
 /tests/tmp/
 /tests/doc/
 /tests/dsl-fixture/
+
+# graphify knowledge-graph output — generated on demand, not source.
+/graphify-out/

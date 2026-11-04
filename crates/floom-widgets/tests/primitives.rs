@@ -300,31 +300,6 @@ fn container_shadow_is_cast_behind_its_own_fill() {
         "the ask precedes the shape it belongs to"
     );
 
-    /// The `spread` a container declares has to survive into the recorded ask —
-    /// it is part of the request the backend answers, not something the widget may
-    /// quietly drop.
-    #[test]
-    fn container_shadow_carries_its_spread_into_the_ask() {
-        let shadow = Shadow {
-            color: Color::rgba(0, 0, 0, 128),
-            blur: 4.0,
-            offset_x: 0.0,
-            offset_y: 3.0,
-            spread: 2.5,
-        };
-        let widget = Container::new().shadow(shadow);
-        let (id, _create) = allocate(&widget);
-
-        let mut recorder = SceneRecorder::new(BOX);
-        widget.paint(&mut recorder, id);
-        recorder.finish();
-
-        let snapshot = recorder.snapshot();
-        assert!(
-            snapshot.contains("spread=2.5"),
-            "the declared spread must reach the paint op, got:\n{snapshot}"
-        );
-    }
     // And the two are one request each in the retained scene, not one merged
     // node a reader could mistake for the fill carrying the shadow silently.
     let carries: Vec<bool> = recorder
@@ -342,6 +317,32 @@ fn container_shadow_is_cast_behind_its_own_fill() {
         .collect();
     assert_eq!(carries, vec![true, false]);
     assert_eq!(widget.drop_shadow(), Some(shadow));
+}
+
+/// The `spread` a container declares has to survive into the recorded ask —
+/// it is part of the request the backend answers, not something the widget may
+/// quietly drop.
+#[test]
+fn container_shadow_carries_its_spread_into_the_ask() {
+    let shadow = Shadow {
+        color: Color::rgba(0, 0, 0, 128),
+        blur: 4.0,
+        offset_x: 0.0,
+        offset_y: 3.0,
+        spread: 2.5,
+    };
+    let widget = Container::new().shadow(shadow);
+    let (id, _create) = allocate(&widget);
+
+    let mut recorder = SceneRecorder::new(BOX);
+    widget.paint(&mut recorder, id);
+    recorder.finish();
+
+    let snapshot = recorder.snapshot();
+    assert!(
+        snapshot.contains("spread=2.5"),
+        "the declared spread must reach the paint op, got:\n{snapshot}"
+    );
 }
 
 /// The fast path a solid fill takes is observable: exactly the ops it emitted
@@ -491,7 +492,7 @@ fn start_and_centre_agree_when_there_is_no_room_to_centre() {
 #[test]
 fn changing_the_alignment_marks_the_element_dirty_once() {
     let mut widget = Divider::new();
-    let mut cx = RecordingUpdateContext::default();
+    let cx = RecordingUpdateContext::default();
 
     widget = widget.alignment(RuleAlignment::Start);
     assert_eq!(cx.dirty_count(), 0, "the control: nothing has been synced");

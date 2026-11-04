@@ -4,7 +4,6 @@
 //! workspace cannot reach a crate in the satellite `floom-ui` workspace. The
 //! switch is what stayed, so the switch is what the file is about now.
 
-use floom_platform::KeyCode;
 use floom_testkit::TestApp;
 use floom_types::Size;
 use floom_widgets::Switch;

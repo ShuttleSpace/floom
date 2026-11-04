@@ -12,7 +12,7 @@ use floom_scene::SceneNode;
 use floom_types::{Rect, Size};
 use floom_widgets::{Container, Text};
 
-fn text_bounds(host: &WidgetHost, node: floom_app::NodeId) -> Rect {
+fn text_bounds(host: &WidgetHost, _node: floom_app::NodeId) -> Rect {
     host.scene()
         .iter()
         .find_map(|(_id, scene_node)| match scene_node {

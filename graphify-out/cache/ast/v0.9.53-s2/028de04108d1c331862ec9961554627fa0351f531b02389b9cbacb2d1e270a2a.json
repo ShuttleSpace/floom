@@ -1,1 +1,0 @@
-{"nodes": [{"id": "pkg_floom_plugin_battery", "label": "floom-plugin-battery", "file_type": "code", "type": "package", "ecosystem": "cargo", "source_file": "crates/floom-plugin-battery/Cargo.toml", "source_location": "L1"}], "edges": []}

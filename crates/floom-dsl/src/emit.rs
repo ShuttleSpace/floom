@@ -1523,12 +1523,11 @@ fn mentions_ident(haystack: &str, needle: &str) -> bool {
         }
         // Skip a char literal; `'a'`, `'\n'`. A lifetime is not a literal, so
         // only skip when a closing quote is within reach.
-        if c == '\'' {
-            if let Some(close) = chars[i + 1..].iter().position(|&ch| ch == '\'') {
+        if c == '\''
+            && let Some(close) = chars[i + 1..].iter().position(|&ch| ch == '\'') {
                 i += close + 2;
                 continue;
             }
-        }
         if c == '_' || c.is_alphabetic() {
             let start = i;
             while i < chars.len() && ident(chars[i]) {

@@ -208,8 +208,7 @@ tasks.register<Delete>("clean") {
 
 /// `android/gradle.properties`.
 pub fn android_gradle_properties() -> String {
-    format!(
-        r#"org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=2G
+    r#"org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=2G
 org.gradle.parallel=true
 org.gradle.caching=true
 
@@ -220,8 +219,7 @@ android.nonTransitiveRClass=true
 # its own built-in rules.
 android.builtInKotlin=false
 kotlin.code.style=official
-"#
-    )
+"#.to_string()
 }
 
 /// `android/gradle/wrapper/gradle-wrapper.properties`.
@@ -256,16 +254,14 @@ pub fn android_local_properties(sdk_dir: &str) -> String {
 /// failure that looks like a project misconfiguration, and "no SDK found" is a
 /// sentence the person reading it can act on.
 pub fn detect_android_sdk() -> Option<String> {
-    if let Ok(dir) = std::env::var("ANDROID_HOME") {
-        if !dir.is_empty() {
+    if let Ok(dir) = std::env::var("ANDROID_HOME")
+        && !dir.is_empty() {
             return Some(dir);
         }
-    }
-    if let Ok(dir) = std::env::var("ANDROID_SDK_ROOT") {
-        if !dir.is_empty() {
+    if let Ok(dir) = std::env::var("ANDROID_SDK_ROOT")
+        && !dir.is_empty() {
             return Some(dir);
         }
-    }
     let mac = std::env::var("HOME")
         .ok()
         .map(|h| format!("{h}/Library/Android/sdk"));
@@ -1698,12 +1694,9 @@ mod tests {
     fn local_properties_is_written_with_a_discovered_sdk_or_not_at_all() {
         // The function returns None rather than guessing; the caller decides
         // whether to write a note instead of a path.
-        match detect_android_sdk() {
-            Some(p) => {
-                let props = android_local_properties(&p);
-                assert!(props.contains(&format!("sdk.dir={p}")));
-            }
-            None => {}
+        if let Some(p) = detect_android_sdk() {
+            let props = android_local_properties(&p);
+            assert!(props.contains(&format!("sdk.dir={p}")));
         }
     }
 }

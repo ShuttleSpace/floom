@@ -362,12 +362,11 @@ fn main() {
 fn find_label(runner: &AppRunner<VelloGpuPresenter>) -> Option<NodeId> {
     let host = runner.host();
     for index in 0..host.node_count() {
-        if let Some(node) = host.node_at(index) {
-            if let Some(text) = host.widget::<Text>(node) {
-                if text.content().starts_with("clicked") {
-                    return Some(node);
-                }
-            }
+        if let Some(node) = host.node_at(index)
+            && let Some(text) = host.widget::<Text>(node)
+            && text.content().starts_with("clicked")
+        {
+            return Some(node);
         }
     }
     None
@@ -376,10 +375,10 @@ fn find_label(runner: &AppRunner<VelloGpuPresenter>) -> Option<NodeId> {
 fn find_text_field(runner: &AppRunner<VelloGpuPresenter>) -> Option<NodeId> {
     let host = runner.host();
     for index in 0..host.node_count() {
-        if let Some(node) = host.node_at(index) {
-            if host.widget::<TextInput>(node).is_some() {
-                return Some(node);
-            }
+        if let Some(node) = host.node_at(index)
+            && host.widget::<TextInput>(node).is_some()
+        {
+            return Some(node);
         }
     }
     None
@@ -413,10 +412,10 @@ fn describe_focus(runner: &AppRunner<VelloGpuPresenter>, id: ElementId) -> Strin
 fn find_button(runner: &AppRunner<VelloGpuPresenter>) -> Option<NodeId> {
     let host = runner.host();
     for index in 0..host.node_count() {
-        if let Some(node) = host.node_at(index) {
-            if host.widget::<Button>(node).is_some() {
-                return Some(node);
-            }
+        if let Some(node) = host.node_at(index)
+            && host.widget::<Button>(node).is_some()
+        {
+            return Some(node);
         }
     }
     None

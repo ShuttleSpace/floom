@@ -3,7 +3,7 @@ name = "floom-signal"
 version.workspace = true
 edition.workspace = true
 repository = "https://github.com/lapce/floom"
-description = "A native Rust UI library with fine-grained reactivity"
+description = "Fine-grained reactivity primitives: signals, effects, memos and derived state for Floom 2.0"
 license.workspace = true
 
 [dependencies]

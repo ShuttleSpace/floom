@@ -241,7 +241,7 @@ impl ProbeApp {
     /// Each of those has a different observable consequence, and the log has to
     /// say which one happened: only the first hides the live view.
     fn fire_transitions(&mut self) {
-        if self.auto_every > 0 && self.frames % self.auto_every == 0 {
+        if self.auto_every > 0 && self.frames.is_multiple_of(self.auto_every) {
             self.transitions.fetch_add(1, Ordering::SeqCst);
         }
         let wanted = self.transitions.load(Ordering::SeqCst);
@@ -591,12 +591,11 @@ fn find_surfaces(runner: &AppRunner<VelloGpuPresenter>) -> Option<Surfaces> {
 fn find_status(runner: &AppRunner<VelloGpuPresenter>) -> Option<NodeId> {
     let host = runner.host();
     for index in 0..host.node_count() {
-        if let Some(node) = host.node_at(index) {
-            if let Some(text) = host.widget::<Text>(node) {
-                if text.content().starts_with("status:") {
-                    return Some(node);
-                }
-            }
+        if let Some(node) = host.node_at(index)
+            && let Some(text) = host.widget::<Text>(node)
+            && text.content().starts_with("status:")
+        {
+            return Some(node);
         }
     }
     None

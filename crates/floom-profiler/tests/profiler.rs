@@ -18,7 +18,7 @@ impl ScriptedClock {
         Self(std::rc::Rc::new(std::cell::RefCell::new(readings.to_vec())))
     }
 
-    fn into_clock(&self) -> impl Fn() -> u64 + 'static {
+    fn as_clock(&self) -> impl Fn() -> u64 + 'static {
         let script = self.0.clone();
         move || {
             let mut script = script.borrow_mut();
@@ -36,7 +36,7 @@ fn stages_are_attributed_with_exact_durations() {
     // read 0: frame start; read 1: layout span start; read 2: layout span end
     // (= paint start); read 3: paint end; read 4: frame end.
     let clock = ScriptedClock::new(&[0, 10, 1_500, 2_400, 3_000]);
-    let profiler = Profiler::with_clock(8_000, clock.into_clock());
+    let profiler = Profiler::with_clock(8_000, clock.as_clock());
     profiler.begin_frame();
     {
         let _layout = profiler.stage(Stage::Layout);
@@ -62,7 +62,7 @@ fn a_nested_span_is_included_in_its_parent() {
     // includes it. The spans are recorded inner-first (closed first), and the
     // frame total is the outer span's wall clock, not the sum.
     let clock = ScriptedClock::new(&[0, 10, 100, 200, 300, 400]);
-    let profiler = Profiler::with_clock(10_000, clock.into_clock());
+    let profiler = Profiler::with_clock(10_000, clock.as_clock());
     profiler.begin_frame();
     {
         let _layout = profiler.stage(Stage::Layout);
@@ -84,7 +84,7 @@ fn a_nested_span_is_included_in_its_parent() {
 #[test]
 fn the_budget_verdict_flags_an_over_budget_frame() {
     let clock = ScriptedClock::new(&[0, 500, 16_700]);
-    let profiler = Profiler::with_clock(16_666, clock.into_clock());
+    let profiler = Profiler::with_clock(16_666, clock.as_clock());
     profiler.begin_frame();
     drop(profiler.stage(Stage::Paint));
     let frame = profiler.end_frame().expect("a frame");
@@ -93,7 +93,7 @@ fn the_budget_verdict_flags_an_over_budget_frame() {
 
     // And a frame inside the budget is not flagged.
     let clock = ScriptedClock::new(&[0, 500, 16_600]);
-    let profiler = Profiler::with_clock(16_666, clock.into_clock());
+    let profiler = Profiler::with_clock(16_666, clock.as_clock());
     profiler.begin_frame();
     drop(profiler.stage(Stage::Paint));
     let frame = profiler.end_frame().expect("a frame");
@@ -103,7 +103,7 @@ fn the_budget_verdict_flags_an_over_budget_frame() {
 #[test]
 fn the_timeline_accumulates_frames_in_order() {
     let clock = ScriptedClock::new(&[0, 0, 100, 200, 300]);
-    let profiler = Profiler::with_clock(16_666, clock.into_clock());
+    let profiler = Profiler::with_clock(16_666, clock.as_clock());
     profiler.begin_frame();
     profiler.end_frame();
     profiler.begin_frame();
@@ -118,7 +118,7 @@ fn the_timeline_accumulates_frames_in_order() {
 fn the_timeline_serializes_to_the_protocol_snapshot() {
     // Determinism: the same frames must serialize to the same bytes, twice.
     let clock = ScriptedClock::new(&[0, 10, 1_000, 200, 300]);
-    let profiler = Profiler::with_clock(16_666, clock.into_clock());
+    let profiler = Profiler::with_clock(16_666, clock.as_clock());
     profiler.begin_frame();
     drop(profiler.stage(Stage::Input));
     drop(profiler.stage(Stage::Layout));
@@ -140,7 +140,7 @@ fn the_timeline_serializes_to_the_protocol_snapshot() {
 #[test]
 fn allocation_counters_do_their_own_arithmetic() {
     let clock = ScriptedClock::new(&[0]);
-    let profiler = Profiler::with_clock(16_666, clock.into_clock());
+    let profiler = Profiler::with_clock(16_666, clock.as_clock());
     profiler.record_alloc(128);
     profiler.record_alloc(64);
     profiler.record_dealloc(64);

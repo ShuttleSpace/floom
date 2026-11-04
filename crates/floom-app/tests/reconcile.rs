@@ -16,17 +16,16 @@
 //!
 //! [`FrameStats::painted`]: floom_app::FrameStats::painted
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
-use floom_core::{Axis, Child, ChildKey, LayoutRequest, Point, Size};
+use floom_core::{Axis, Child, ChildKey, LayoutRequest, Size};
 use floom_testkit::TestApp;
-use floom_widgets::{Button, Conditional, Grid, List, Stack, Text};
+use floom_widgets::{Conditional, Grid, List, Stack, Text};
 
 /// The viewport every test mounts into.
 const VIEWPORT: Size = Size::new(240.0, 320.0);
 
 /// Stable FNV-1a key for the string items used by the list/grid tests.
+#[allow(clippy::ptr_arg)]
 fn key_of(s: &String) -> u64 {
     let mut h = 0xcbf2_9ce4_8422_2325u64;
     for byte in s.bytes() {
@@ -37,6 +36,7 @@ fn key_of(s: &String) -> u64 {
 }
 
 /// A column holding one child of the given size.
+#[allow(dead_code)]
 fn sized_column(
     width: f32,
     height: f32,

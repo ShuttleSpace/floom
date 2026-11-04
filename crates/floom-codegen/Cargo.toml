@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Typed schema + native glue code generation for Floom 2.0 native components (Phase 18)"
+description = "Typed schema + native glue code generation for Floom 2.0 native components"
 
 [dependencies]
 # L0 vocabulary: the runtime native-composition words (NativeViewKind,

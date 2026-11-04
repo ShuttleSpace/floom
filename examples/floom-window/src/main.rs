@@ -299,7 +299,7 @@ impl WindowApp {
         // rasterisation of ~19k pixels instead of the full 614k, with three
         // of four node fragments reused — partial rasterisation and
         // incremental encoding doing their job.
-        if self.frames % 300 == 0 {
+        if self.frames.is_multiple_of(300) {
             let stats = self.runner.presenter().stats();
             eprintln!(
                 "frame {}: rasters {} (partial {}), skips {}, fragments reused {} encoded {}",
@@ -429,12 +429,11 @@ fn main() {
 fn find_label(runner: &AppRunner<VelloGpuPresenter>) -> Option<NodeId> {
     let host = runner.host();
     for index in 0..host.node_count() {
-        if let Some(node) = host.node_at(index) {
-            if let Some(text) = host.widget::<Text>(node) {
-                if text.content().starts_with("clicked") {
-                    return Some(node);
-                }
-            }
+        if let Some(node) = host.node_at(index)
+            && let Some(text) = host.widget::<Text>(node)
+            && text.content().starts_with("clicked")
+        {
+            return Some(node);
         }
     }
     None

@@ -124,11 +124,10 @@ fn extract_root(module: &swc_ecma_ast::Module) -> Option<RootJsx> {
             swc_ecma_ast::ModuleItem::ModuleDecl(swc_ecma_ast::ModuleDecl::ExportDefaultDecl(
                 decl,
             )) => {
-                if let swc_ecma_ast::DefaultDecl::Fn(fn_expr) = &decl.decl {
-                    if let Some(root) = fn_return_jsx(&fn_expr.function) {
+                if let swc_ecma_ast::DefaultDecl::Fn(fn_expr) = &decl.decl
+                    && let Some(root) = fn_return_jsx(&fn_expr.function) {
                         return Some(root);
                     }
-                }
             }
             swc_ecma_ast::ModuleItem::Stmt(stmt) => {
                 if let Some(root) = stmt_to_jsx(stmt) {
@@ -145,11 +144,10 @@ fn extract_root(module: &swc_ecma_ast::Module) -> Option<RootJsx> {
 fn fn_return_jsx(function: &swc_ecma_ast::Function) -> Option<RootJsx> {
     let body = function.body.as_ref()?;
     for stmt in &body.stmts {
-        if let swc_ecma_ast::Stmt::Return(ret) = stmt {
-            if let Some(arg) = &ret.arg {
+        if let swc_ecma_ast::Stmt::Return(ret) = stmt
+            && let Some(arg) = &ret.arg {
                 return expr_to_jsx(arg);
             }
-        }
     }
     None
 }
@@ -160,11 +158,10 @@ fn stmt_to_jsx(stmt: &swc_ecma_ast::Stmt) -> Option<RootJsx> {
         swc_ecma_ast::Stmt::Expr(expr_stmt) => expr_to_jsx(&expr_stmt.expr),
         swc_ecma_ast::Stmt::Decl(swc_ecma_ast::Decl::Var(var)) => {
             for decl in &var.decls {
-                if let Some(init) = &decl.init {
-                    if let Some(root) = expr_to_jsx(init) {
+                if let Some(init) = &decl.init
+                    && let Some(root) = expr_to_jsx(init) {
                         return Some(root);
                     }
-                }
             }
             None
         }

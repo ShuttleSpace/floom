@@ -1,0 +1,9 @@
+[toolchain]
+# Pinned to the stable toolchain the project is developed and CI-tested on.
+# The crate MSRV (minimum supported version) is declared separately via
+# `rust-version = "1.91"` in the workspace `Cargo.toml`, and should be verified
+# in CI with a dedicated job rather than by pinning the dev toolchain to it.
+# Bump this when the workspace `rust-version` is raised.
+channel = "1.99.1"
+profile = "minimal"
+components = ["rustfmt", "clippy"]

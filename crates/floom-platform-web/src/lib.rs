@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn resize_queues_window_resized() {
         let mut p = WebPlatform::new("floom-canvas");
-        let win = p.create_window(WindowConfig::default());
+        let _win = p.create_window(WindowConfig::default());
         p.resize_to(Size::new(640.0, 480.0));
         let mut events = Vec::new();
         p.poll_events(&mut events);

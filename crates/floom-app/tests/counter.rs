@@ -83,11 +83,10 @@ impl Counter {
         // Nodes are mounted in order; buttons were pushed after the label.
         for index in 0..self.host.node_count() {
             let node = self.host.node_at(index).unwrap();
-            if let Some(button) = self.host.widget::<Button>(node) {
-                if button.label() == label {
+            if let Some(button) = self.host.widget::<Button>(node)
+                && button.label() == label {
                     return node;
                 }
-            }
         }
         panic!("no button labelled {label:?}");
     }

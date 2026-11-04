@@ -8,7 +8,7 @@
 //! accident: the padding has to be *inside* the box (the `md-card` bug), and the
 //! decoration has to be drawn by the same code a bare `Container` uses.
 
-use floom_core::{ChildKey, LayoutRequest, Length, Widget, WidgetAny};
+use floom_core::{ChildKey, LayoutRequest, Length, Widget};
 use floom_types::{Color, Insets, Shadow};
 use floom_widgets::primitives::Text;
 use floom_widgets::testkit::{

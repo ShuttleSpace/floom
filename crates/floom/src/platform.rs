@@ -157,6 +157,7 @@ pub fn current() -> &'static dyn PlatformBackend {
         not(target_arch = "wasm32"),
         not(target_os = "android")
     ))]
+    #[allow(unreachable_code)]
     {
         return &tui::TuiBackend;
     }

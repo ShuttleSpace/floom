@@ -263,8 +263,10 @@ fn a_min_width_holds_a_narrow_box_open_as_a_child() {
 fn a_mount_style_that_pins_the_dimension_wins_over_the_floor() {
     let mut host = WidgetHost::new();
     host.set_size(Size::new(400.0, 200.0));
-    let mut pinned = LayoutStyle::default();
-    pinned.width = Some(floom_types::Length::Px(30.0));
+    let pinned = LayoutStyle {
+        width: Some(floom_types::Length::Px(30.0)),
+        ..Default::default()
+    };
     host.mount_root(
         pinned,
         Surface::new()
