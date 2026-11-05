@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Incrementally evolve the existing Floom repository into the architecture specified by `docs/superpowers/specs/2026-09-02-floom-2-complete-architecture.md`, preserving compatibility while adding a high-performance retained runtime, multi-platform platform/renderer boundaries, native composition, a Flutter-class widget system, and AI/tooling infrastructure.
+**Goal:** Incrementally evolve the existing Floom repository into the architecture specified by `docs/archive/superpowers/specs/2026-09-02-floom-2-complete-architecture.md`, preserving compatibility while adding a high-performance retained runtime, multi-platform platform/renderer boundaries, native composition, a Flutter-class widget system, and AI/tooling infrastructure.
 
 **Architecture:** Introduce small stable boundaries first: core types → retained runtime → scene → renderer ABI → platform ABI → compatibility adapter. Build higher-level framework features only after those boundaries are measurable and testable. Keep old Floom `View` APIs working behind an adapter during migration; migrate concrete widgets/platforms incrementally.
 
 **Tech Stack:** Rust workspace, existing Floom reactive/runtime foundations, Taffy adapter for layout, Parley-compatible text layer where already used by Floom, WGPU/Vello, Skia, software renderer, existing platform integrations, platform-native WebView/media APIs, Cargo features, snapshot testing, tracing/perf instrumentation, optional MCP/agent tooling.
 
-**Spec:** `docs/superpowers/specs/2026-09-02-floom-2-complete-architecture.md`
+**Spec:** `docs/archive/superpowers/specs/2026-09-02-floom-2-complete-architecture.md`
 
 ## Global Constraints
 
@@ -30,7 +30,7 @@
 ## Task 0.1: Inventory current Floom workspace
 
 **Files:**
-- Create: `docs/superpowers/baselines/2026-09-02-current-workspace.md`
+- Create: `docs/archive/superpowers/baselines/2026-09-02-current-workspace.md`
 - Inspect: workspace `Cargo.toml` and all current member manifests
 
 **Interfaces:**
@@ -512,7 +512,7 @@ struct PlatformCapabilities { ... }
 # Phase 8 — Legacy View Adapter
 
 > **SKIPPED for this fork (Policy A).**  
-> Decision: `docs/superpowers/decisions/2026-09-04-no-legacy-view-adapter.md`.  
+> Decision: `docs/archive/superpowers/decisions/2026-09-04-no-legacy-view-adapter.md`.  
 > Do not implement `LegacyViewAdapter`. When the new Element runtime lands, replace or delete the old `View` / `ViewId` public surface instead of dual-running.
 
 ---
@@ -737,7 +737,7 @@ struct PlatformCapabilities { ... }
 
 > Note: the primitives record through `floom_core::PaintContext`, which was
 > extended in this task (it had no colour and no text/image op at all). See
-> `docs/superpowers/decisions/2026-09-12-widget-paint-context-extension.md`.
+> `docs/archive/superpowers/decisions/2026-09-12-widget-paint-context-extension.md`.
 > Snapshots are inline textual snapshots in `crates/widgets/floom-widgets/tests`,
 > produced by `floom_widgets::testkit` — no external snapshot crate is used.
 
@@ -759,7 +759,7 @@ struct PlatformCapabilities { ... }
 >   (`PointerEvent` / `ScrollEvent` / `KeyEvent` / `Modifiers` / `Event`) and
 >   `EventContext` gained `event()`, `bounds()` and `request_focus()`. Without
 >   these no control can observe a click or convert a pointer position into a
->   value. See `docs/superpowers/decisions/2026-09-12-widget-paint-context-extension.md`.
+>   value. See `docs/archive/superpowers/decisions/2026-09-12-widget-paint-context-extension.md`.
 > - `Select` renders its option list *inside* its own bounds; escaping the
 >   parent's clip needs the `floom-overlay` integration (Phase 16 area).
 > - `TextField` handles editing keys directly. IME composition still needs the
@@ -1605,7 +1605,7 @@ would go red if the claim stopped being true.
 - [x] Renderer ABI verified by Vello + software. — `crates/render/floom-renderer/tests/contract.rs` + `render_handoff.rs`; 21 vello + 19 software inline tests; `scene_render` bench.
 - [x] Platform ABI verified by fake backend + desktop backend. — `crates/platform/floom-platform/src/fake.rs` + `crates/platform/floom-platform/tests/contracts.rs`; `floom-platform-desktop` (33 inline + 6 integration, incl. `lifecycle.rs`, `winit_capabilities.rs`, `accessibility.rs`); plus real-window cases G1-1 / G1-5.
 - [x] Legacy adapter — **WAIVED (Policy A):** no legacy adapter; demos must target the new runtime before P0 claim.
-- [x] Baseline benchmarks and dependency checks pass. — 2178 tests / 0 failed / 72 ignored, architecture gate PASS, and **no budgeted bench exceeds its threshold** under `scripts/check-perf-budgets.sh` (best-of-3 Criterion medians against `docs/superpowers/benchmarks/floom-2-budget-baseline.json`; see the acceptance run below for why best-of-3 replaced the single run the 2026-09-18 pass used).
+- [x] Baseline benchmarks and dependency checks pass. — 2178 tests / 0 failed / 72 ignored, architecture gate PASS, and **no budgeted bench exceeds its threshold** under `scripts/check-perf-budgets.sh` (best-of-3 Criterion medians against `docs/archive/superpowers/benchmarks/floom-2-budget-baseline.json`; see the acceptance run below for why best-of-3 replaced the single run the 2026-09-18 pass used).
 
 ## P1 Acceptance
 
@@ -1640,7 +1640,7 @@ tier is available to anyone with the time.
 - [x] Docs/examples complete. — `docs/2.0/EXAMPLES.md` (9 golden examples, each with its captured real output, run by `scripts/run-golden-examples.sh`), `docs/2.0/ARCHITECTURE.md`, `docs/2.0/RELEASE-POLICY.md`; `crates/app/floom/tests/docs_parity.rs` asserts the three pages agree with the tree, so they cannot rot silently.
 - [x] Third-party plugin authoring path documented. — `docs/2.0/ARCHITECTURE.md` §"Add a renderer or platform backend" and §"Add a native plugin", and two executable references: `examples/floom-native-plugin` writes a real `NativeViewProvider` end to end, and `crates/platform/floom-platform/tests/contracts.rs` is the conformance suite a new backend must pass.
 - [ ] Compatibility/release policy active. **PARTIAL — written and self-checking, not yet exercised end to end.** `docs/2.0/RELEASE-POLICY.md` landed in Phase 30; `crates/app/floom/tests/docs_parity.rs` keeps it honest (every test/bench target it names exists; every example it lists exists and runs). Missing for "active": no release has been cut and measured against the policy, and `docs/gates/*.md` — the platform gates — are still entirely unrun. What 2.0 needs is its own conformance run, which Phase 19 owns.
-- [ ] Performance budgets enforced in CI. **PARTIAL — the budget exists and fails, the CI job does not.** `docs/superpowers/benchmarks/floom-2-budget-baseline.json` finally carries calibration numbers (best-of-3 Criterion medians for the five hot benches), and `scripts/check-perf-budgets.sh` measures and fails over the 10% threshold — verified able to fail, exit 1. Not wired into CI on purpose: the baseline is one host's numbers (macOS arm64, the only tested target) and a runner-specific failure is worse than no gate. Widening the support matrix in `docs/2.0/RELEASE-POLICY.md` is the prerequisite.
+- [ ] Performance budgets enforced in CI. **PARTIAL — the budget exists and fails, the CI job does not.** `docs/archive/superpowers/benchmarks/floom-2-budget-baseline.json` finally carries calibration numbers (best-of-3 Criterion medians for the five hot benches), and `scripts/check-perf-budgets.sh` measures and fails over the 10% threshold — verified able to fail, exit 1. Not wired into CI on purpose: the baseline is one host's numbers (macOS arm64, the only tested target) and a runner-specific failure is worse than no gate. Widening the support matrix in `docs/2.0/RELEASE-POLICY.md` is the prerequisite.
 
 ---
 
@@ -1810,7 +1810,7 @@ Phase 27 defect (no resource registry ⇒ two different strings hash identically
 Falsified before trusting it: changing one character of the `Text` fixture turns
 exactly one test red.
 
-**P4, performance budgets.** `docs/superpowers/benchmarks/floom-2-budget-baseline.json`
+**P4, performance budgets.** `docs/archive/superpowers/benchmarks/floom-2-budget-baseline.json`
 now carries real calibration numbers and `scripts/check-perf-budgets.sh` enforces
 them. Building it produced the most useful measurement of the pass:
 `visible_range/10000` read **444.3 / 404.8 / 408.4 ns** across three consecutive
@@ -1881,7 +1881,7 @@ the phases are the plan and this is the record of where the plan was wrong.
 - [x] §6's dependency directions enforced by `scripts/check-architecture-deps.sh`
 
 **Phase 16 — native composition** (plan:
-`docs/superpowers/plans/2026-09-15-phase-16-native-composition-plan.md`)
+`docs/archive/superpowers/plans/2026-09-15-phase-16-native-composition-plan.md`)
 - [x] 16.1 ABI, fake provider, controller, slot pool (`d25bf07`)
 - [x] 16.2 host-side composition, steps 1–6 (`dab2547`, `6773950`, `6d0b4a6`)
 - [x] 16.2 step 7 translation layer (`6829445`)
