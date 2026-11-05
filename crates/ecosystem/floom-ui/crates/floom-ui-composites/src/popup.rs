@@ -83,7 +83,7 @@ pub fn popup_placement_rect(placement: PopupPlacement, anchor: Rect) -> Rect {
 ///
 /// [`Dialog`] is the modal sibling: it carries a titled card and owns the
 /// keyboard. `Popup` is the lighter primitive for menus, tooltips and inline
-/// pickers — a togglable layer whose content fills the control's box, with no
+/// pickers — a toggleable layer whose content fills the control's box, with no
 /// scrim of its own. It is non-modal, so a click that lands beside it reaches
 /// whatever is underneath, and the host dismisses it on that click. Like every
 /// overlay composite it contributes nothing while hidden.

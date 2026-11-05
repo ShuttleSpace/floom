@@ -367,7 +367,7 @@ fn a_margin_insets_the_child_inside_its_parent() {
 /// 40px box reduced to 8px, which is what treating a margin as padding-inverted
 /// would produce.
 #[test]
-fn a_margin_does_not_shrink_the_childs_box() {
+fn a_margin_does_not_shrink_the_children_box() {
     let mut eng = LayoutEngine::new();
     let child = eng.new_leaf(LayoutStyle {
         width: Some(Length::Px(40.0)),
@@ -704,7 +704,7 @@ fn space_between_pushes_the_children_apart() {
 /// future taffy stops rounding, the comment above is what points at the code
 /// that can then be deleted.
 #[test]
-fn a_measure_leafs_box_is_rounded_to_whole_pixels() {
+fn a_measure_leaves_box_is_rounded_to_whole_pixels() {
     let mut eng = LayoutEngine::new();
     let leaf = eng.new_leaf_with_measure(
         LayoutStyle::default(),

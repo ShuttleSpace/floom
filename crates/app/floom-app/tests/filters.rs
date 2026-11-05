@@ -98,7 +98,7 @@ fn filter_brackets(host: &WidgetHost) -> Vec<Filter> {
 }
 
 #[test]
-fn a_blurred_card_brackets_its_own_paint_and_its_childs() {
+fn a_blurred_card_brackets_its_own_paint_and_its_children() {
     // The bracket has to sit *outside* both rects: the filter sees the
     // composite of the card and its child, so a push minted between them
     // would blur one and not the other.

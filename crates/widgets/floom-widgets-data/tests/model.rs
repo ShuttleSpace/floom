@@ -373,7 +373,7 @@ fn edit_session_parses_through_the_column_kind() {
     assert_eq!(
         s.to_value(ColumnKind::Number),
         None,
-        "unparseable input is refused"
+        "unparsable input is refused"
     );
     assert_eq!(
         s.finish(ColumnKind::Number),

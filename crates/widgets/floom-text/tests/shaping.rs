@@ -300,7 +300,7 @@ fn the_cache_does_not_answer_one_weight_with_another_weights_runs() {
 /// one face and paint another. The control — the same request twice is a hit —
 /// keeps "everything misses now" from passing as the fix.
 #[test]
-fn the_cache_does_not_answer_one_family_with_another_familys_runs() {
+fn the_cache_does_not_answer_one_family_with_another_families_runs() {
     use floom_types::FontFamily;
     let options = |family: FontFamily| TextLayoutOptions {
         max_width: f64::INFINITY,

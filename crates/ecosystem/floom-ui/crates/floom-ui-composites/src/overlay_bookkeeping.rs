@@ -144,7 +144,7 @@ impl OverlayHost {
     /// dropdown that should hang **below** its field falls back to covering it, on a
     /// host with no overlay support. The alternative — offsetting within the parent —
     /// is not expressible in [`LayoutRequest`], which offers [`LayoutRequest::
-    /// absolute_fill`] and nothing for "below my own bottom edge". A hostless embeder
+    /// absolute_fill`] and nothing for "below my own bottom edge". A hostless embedder
     /// gets a dropdown on top of its field, which is wrong but visible; the thing it
     /// must not do is show nothing.
     pub fn fallback_children(&self, content: Option<Child>, key: ChildKey) -> Vec<Child> {

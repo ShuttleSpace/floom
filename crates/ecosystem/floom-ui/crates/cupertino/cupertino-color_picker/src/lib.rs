@@ -124,7 +124,7 @@ impl CupertinoColorPicker {
     ///
     /// `Send + Sync` is required, not incidental: 2.0 rebuilds a widget inside
     /// a slot closure the host may hand between threads, so the callback has
-    /// to be both clonable and thread-safe to be rebuilt into the tree.
+    /// to be both cloneable and thread-safe to be rebuilt into the tree.
     pub fn on_change(mut self, callback: impl Fn(Color) + Send + Sync + 'static) -> Self {
         self.on_change = Some(Arc::new(callback));
         self

@@ -377,7 +377,7 @@ mod tests {
         let value: Option<i32> = get(&store, "ui/counter").unwrap();
         assert_eq!(value, Some(41));
 
-        // Unparseable content reads as None, not an error.
+        // Unparsable content reads as None, not an error.
         set_string(&mut store, "ui/other", "not-a-number").unwrap();
         let value: Option<i32> = get(&store, "ui/other").unwrap();
         assert_eq!(value, None);

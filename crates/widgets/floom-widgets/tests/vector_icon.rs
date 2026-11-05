@@ -168,7 +168,7 @@ fn a_zero_size_wants_no_layout() {
 }
 
 #[test]
-fn unparseable_data_paints_nothing_instead_of_panicking() {
+fn unparsable_data_paints_nothing_instead_of_panicking() {
     let widget = VectorIcon::from_path_data("not a path", VIEW_BOX);
     let (id, _create) = allocate(&widget);
     assert!(widget.path().is_empty());

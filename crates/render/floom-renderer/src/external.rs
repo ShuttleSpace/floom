@@ -309,7 +309,7 @@ mod tests {
     }
 
     /// Only equality means "unchanged". A producer that restarts its counter —
-    /// a decoder that seeked, a device that reconnected — is reporting different
+    /// a decoder that sought, a device that reconnected — is reporting different
     /// contents with a smaller number, and treating that as stale would freeze
     /// the picture.
     #[test]

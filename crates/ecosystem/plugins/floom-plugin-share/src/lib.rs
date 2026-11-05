@@ -64,7 +64,7 @@ pub fn share_files(paths: &[&str]) -> Result<(), String> {
 }
 
 /// The desktop half that is not written yet, named precisely: an arm that
-/// says "unsupported" without saying what would unsupport it is a dead end.
+/// says "unsupported" without saying what would make it unsupported is a dead end.
 #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
 fn unsupported() -> String {
     if cfg!(target_os = "windows") {

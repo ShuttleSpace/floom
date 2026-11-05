@@ -58,7 +58,7 @@ fn a_default_transport_is_paused_at_the_start_at_full_volume() {
     assert!(!s.muted);
     assert_eq!(s.rate, 1.0);
     assert!(!s.looping);
-    assert!(!s.is_seekable(), "an unknown duration cannot be seeked");
+    assert!(!s.is_seekable(), "an unknown duration cannot be sought");
     assert_eq!(s.progress(), 0.0);
 }
 

@@ -526,7 +526,7 @@ fn typing_into_the_editor_inserts_and_backspaces() {
 }
 
 #[test]
-fn an_unparseable_value_is_refused_and_the_editor_stays_open() {
+fn an_unparsable_value_is_refused_and_the_editor_stays_open() {
     let mut grid = grid_with(50);
     let id = allocate(&grid);
     key(&mut grid, id, named(NamedKey::ArrowDown), Modifiers::NONE);

@@ -39,7 +39,7 @@ pub struct CupertinoButton {
     theme: RwSignal<MultiTheme>,
     /// Shared with the built widget. `Arc` rather than `Box` because 2.0's
     /// `Child` builder closure must be `Send + Sync + 'static`, so the callback
-    /// has to be both clonable and thread-safe to be rebuilt into the tree.
+    /// has to be both cloneable and thread-safe to be rebuilt into the tree.
     on_click: Option<Arc<dyn Fn() + Send + Sync>>,
 }
 
