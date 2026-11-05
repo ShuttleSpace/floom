@@ -13,12 +13,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The 2.0 track lives in its own crate tree (foundation/ runtime/ scene/ render/
-  # platform/ text/ layout/ native/ framework/ widgets/ app/ tooling/) and is
-  # scoped separately on purpose: a regression in the legacy v1 crates must not
-  # red the signal for work that never touches them, and vice versa. Every check
-  # below names those packages explicitly -- see FLOOM2_PACKAGES -- so the job
-  # neither depends on the workspace default members nor inherits v1's setup.
+  # One unified workspace: core/ system/ frontend/ widgets/ native/ platform/
+  # render/ devtools/ app/. Every check below names those packages explicitly --
+  # see FLOOM2_PACKAGES -- so the job neither depends on the workspace default
+  # members nor pulls in the nested vendor/ and ecosystem/ workspaces.
   floom-2.0:
     name: Floom 2.0 on ${{ matrix.os }}
     if: github.event.pull_request.draft == false
@@ -30,9 +28,11 @@ jobs:
           - ubuntu-latest
     runs-on: ${{ matrix.os }}
     env:
-      # Every 2.0 crate, as one shell word each, so all three cargo steps below
-      # receive the whole track without naming it again. Adding a 2.0 crate means
-      # adding it here and nowhere else.
+      # Every core-workspace crate, as one shell word each, so all three cargo
+      # steps below receive the whole set without naming it again. Grouped by the
+      # layer directory the crate lives in. Adding a crate means adding it here
+      # and nowhere else. Examples (`examples/*`) are excluded: they are built by
+      # the `build` job.
       #
       # Spelled `--package=NAME` rather than the shorter `-p NAME` on purpose:
       # cargo-fmt takes `--package` as a variadic option and folds a following
@@ -45,23 +45,15 @@ jobs:
       # what GitHub runs `run:` with on both macOS and Ubuntu. Quoting it would
       # pass the entire list as a single package argument.
       FLOOM2_PACKAGES: >-
-        --package=floom-types --package=floom-core
-        --package=floom-runtime-core --package=floom-scheduler
-        --package=floom-scene
-        --package=floom-renderer --package=floom-renderer-vello --package=floom-renderer-software --package=floom-renderer-skia-abi --package=floom-renderer-tui --package=floom-renderer-web
-        --package=floom-platform --package=floom-platform-desktop --package=floom-platform-android
-        --package=floom-platform-ios --package=floom-platform-harmony --package=floom-platform-web
-        --package=floom-platform-embedded --package=floom-platform-mobile
-        --package=floom-text --package=floom-editor --package=floom-ime
-        --package=floom-layout --package=floom-style --package=floom-virtual
+        --package=floom-types --package=floom-core --package=floom-signal --package=floom-style --package=floom-layout --package=floom-scene --package=floom-runtime-core --package=floom-accessibility
+        --package=floom-accuracy --package=floom-animation
+        --package=floom-dsl --package=floom-tsx
+        --package=floom-text --package=floom-editor-core --package=floom-editor --package=floom-virtual --package=floom-widgets --package=floom-widgets-data
         --package=floom-native --package=floom-native-ffi
-        --package=floom-accessibility --package=floom-focus --package=floom-gesture
-        --package=floom-animation --package=floom-overlay --package=floom-store --package=floom-task
-        --package=floom-forms --package=floom-navigation --package=floom-persistence --package=floom-services
-        --package=floom-error
-        --package=floom-widgets
-        --package=floom-app
-        --package=floom-testkit
+        --package=floom-platform --package=floom-platform-desktop --package=floom-platform-mobile --package=floom-platform-android --package=floom-platform-tui --package=floom-platform-web --package=floom-ui-events-winit
+        --package=floom-renderer --package=floom-renderer-software --package=floom-renderer-vello --package=floom-renderer-tui --package=floom-renderer-web
+        --package=floom-devtools --package=floom-hot-reload --package=floom-inspector --package=floom-snapshot --package=floom-testkit
+        --package=floom-app --package=floom-cli --package=floom
     steps:
       - name: Free disk space on Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
@@ -114,7 +106,7 @@ jobs:
         run: >
           cargo run
           --manifest-path crates/ecosystem/plugins/Cargo.toml
-          -p floom-plugin-nativeview --example native_view
+          -p floom-plugin-webview --example native_view
 
   # The capability plugins are their own workspace (`crates/ecosystem/plugins`),
   # so the job above builds none of them: a plugin is not a member of the root,
@@ -234,25 +226,25 @@ jobs:
         run: >
           cargo check
           --manifest-path crates/ecosystem/plugins/Cargo.toml
+          --package=floom-plugin-background-work
           --package=floom-plugin-battery
+          --package=floom-plugin-camera
           --package=floom-plugin-connectivity
           --package=floom-plugin-device-info
           --package=floom-plugin-local-auth
           --package=floom-plugin-location
+          --package=floom-plugin-network-info
           --package=floom-plugin-notifications
+          --package=floom-plugin-open-url
+          --package=floom-plugin-package-info
+          --package=floom-plugin-paths
+          --package=floom-plugin-prefs
+          --package=floom-plugin-secure-storage
           --package=floom-plugin-sensors
           --package=floom-plugin-share
           --package=floom-plugin-vibration
-          --package=floom-plugin-package-info
-          --package=floom-plugin-paths
-          --package=floom-plugin-open-url
-          --package=floom-plugin-file-dialog
-          --package=floom-plugin-prefs
           --package=floom-plugin-wakelock
-          --package=floom-plugin-network-info
-          --package=floom-plugin-background-work
-          --package=floom-plugin-mdns
-          --package=floom-plugin-secure-storage
+          --package=floom-plugin-webview
           --target aarch64-linux-android
 
   # The same gap, on the other mobile target. Every plugin's `ios.rs` sits behind
@@ -299,24 +291,17 @@ jobs:
           cargo check
           --manifest-path crates/ecosystem/plugins/Cargo.toml
           --package=floom-plugin-battery
+          --package=floom-plugin-camera
           --package=floom-plugin-connectivity
           --package=floom-plugin-device-info
           --package=floom-plugin-local-auth
           --package=floom-plugin-location
-          --package=floom-plugin-notifications
+          --package=floom-plugin-open-url
           --package=floom-plugin-sensors
           --package=floom-plugin-share
           --package=floom-plugin-vibration
-          --package=floom-plugin-package-info
-          --package=floom-plugin-paths
-          --package=floom-plugin-open-url
-          --package=floom-plugin-file-dialog
-          --package=floom-plugin-prefs
           --package=floom-plugin-wakelock
-          --package=floom-plugin-network-info
-          --package=floom-plugin-background-work
-          --package=floom-plugin-mdns
-          --package=floom-plugin-secure-storage
+          --package=floom-plugin-webview
           --target aarch64-apple-ios
 
   # `examples/floom-probe` is the one crate whose only binary sits behind
