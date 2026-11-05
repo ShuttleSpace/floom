@@ -1,5 +1,6 @@
 [package]
 name = "floom-tsx-showcase"
+license = "MIT"
 version.workspace = true
 edition.workspace = true
 publish = false
