@@ -54,7 +54,7 @@ Inspired by [Xilem](https://github.com/linebender/xilem), [Leptos](https://githu
 - **Transitions and Animations**: Floom supports both transitions and animations. Transitions, like css transitions, can animate any property that can be interpolated and can be applied alongside other styles, including in classes.
     Floom also supports full keyframe animations that build on the ergonomics of the style system. In both transitions and animations, Floom supports easing with spring functions.
 - **Element inspector**: Inspired by your browser's developer tools, Floom provides a [diagnostic tool](docs/img/inspector.jpg) to debug your layout.
-- **Global themes**: Support for light and dark themes, built in design system to easly delare your own
+- **Global themes**: Support for light and dark themes, built in design system to easily declare your own
 - **Localization**: Floom supports localizations via [Fluent](https://github.com/projectfluent/fluent-rs) crate with support for fallbacks, easy switching languages on runtime or even overriding active language for chosen part of you app
 
 ## Ecosystem
