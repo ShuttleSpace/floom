@@ -169,7 +169,6 @@ dependencies = [
  "floom-accessibility",
  "floom-animation",
  "floom-core",
- "floom-error",
  "floom-focus",
  "floom-layout",
  "floom-native",
@@ -227,10 +226,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "floom-error"
-version = "0.2.0"
-
-[[package]]
 name = "floom-fluent"
 version = "0.2.0"
 dependencies = [
@@ -264,10 +259,6 @@ dependencies = [
  "floom-theme",
  "floom-types",
 ]
-
-[[package]]
-name = "floom-ime"
-version = "0.2.0"
 
 [[package]]
 name = "floom-layout"
@@ -442,7 +433,6 @@ dependencies = [
  "floom-app",
  "floom-core",
  "floom-forms",
- "floom-ime",
  "floom-layout",
  "floom-native",
  "floom-navigation",

@@ -18,7 +18,7 @@ publish = false
 # plumbing, so it lives in the platform layer and a plugin reaches
 # for it. A plugin reaching *down* to the platform is the allowed
 # direction; the platform reaching up to a plugin is not.
-floom-platform-mobile = { path = "../../../floom-platform-mobile", version = "0.2.0" }
+floom-platform-mobile = { path = "../../../platform/floom-platform-mobile", version = "0.2.0" }
 
 # The iOS half reaches `UIKit` and `AudioToolbox` through objc2.
 [target.'cfg(target_os = "ios")'.dependencies]

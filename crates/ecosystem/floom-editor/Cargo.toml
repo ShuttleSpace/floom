@@ -11,24 +11,22 @@ version = "0.1.0"
 # The public facade, for the examples' `run_desktop` entry point. The satellite
 # reaches the framework crates directly (below) rather than through it, the way
 # the `floom-ui` satellite does.
-floom = { path = "../../floom", default-features = false, features = ["desktop", "renderer-gpu"] }
+floom = { path = "../../app/floom", default-features = false, features = ["desktop", "renderer-gpu"] }
 
 # The framework crates the ported editor is built on.
-floom-core = { path = "../../floom-core" }
-floom-ime = { path = "../../floom-ime" }
-floom-signal = { path = "../../floom-signal" }
-floom-task = { path = "../../floom-task" }
-floom-text = { path = "../../floom-text" }
-floom-types = { path = "../../floom-types" }
-floom-widgets = { path = "../../floom-widgets" }
+floom-core = { path = "../../core/floom-core" }
+floom-signal = { path = "../../core/floom-signal" }
+floom-text = { path = "../../widgets/floom-text" }
+floom-types = { path = "../../core/floom-types" }
+floom-widgets = { path = "../../widgets/floom-widgets" }
 
 # The app shell and the harnesses the tests drive.
-floom-app = { path = "../../floom-app" }
-floom-layout = { path = "../../floom-layout" }
-floom-platform = { path = "../../floom-platform" }
-floom-renderer-software = { path = "../../floom-renderer-software" }
-floom-scene = { path = "../../floom-scene" }
-floom-testkit = { path = "../../floom-testkit" }
+floom-app = { path = "../../app/floom-app" }
+floom-layout = { path = "../../core/floom-layout" }
+floom-platform = { path = "../../platform/floom-platform" }
+floom-renderer-software = { path = "../../render/floom-renderer-software" }
+floom-scene = { path = "../../core/floom-scene" }
+floom-testkit = { path = "../../devtools/floom-testkit" }
 
 # `floom` is reached by path, and a `[patch]` only applies to the workspace that
 # declares it — floom's own patches do not reach this nested workspace. So the

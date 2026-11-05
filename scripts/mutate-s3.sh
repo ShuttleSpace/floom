@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the S3 (subtree transforms) slice.
 # For each mutation: back up, mutate (scripts/mutate.py), run the targeted
 # test, record whether it FAILED, restore, and verify the restore byte-exact.
@@ -34,12 +36,12 @@ mutate_one() {
   cmp -s /tmp/mut_backup.rs "$file" || echo "RESTORE_FAILED  $label" >> "$RESULTS"
 }
 
-GEOM=crates/floom-types/src/geometry.rs
-PATHS=crates/floom-types/src/path.rs
-SWLIB=crates/floom-renderer-software/src/lib.rs
-APPLIB=crates/floom-app/src/lib.rs
+GEOM=crates/core/floom-types/src/geometry.rs
+PATHS=crates/core/floom-types/src/path.rs
+SWLIB=crates/render/floom-renderer-software/src/lib.rs
+APPLIB=crates/app/floom-app/src/lib.rs
 SKIA=crates/floom-renderer-skia-abi/src/lib.rs
-VELLO=crates/floom-renderer-vello/src/lib.rs
+VELLO=crates/render/floom-renderer-vello/src/lib.rs
 
 # 1. scale_around drops its pivot (scales about the origin instead)
 mutate_one "$GEOM" \

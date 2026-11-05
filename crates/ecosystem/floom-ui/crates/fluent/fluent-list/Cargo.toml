@@ -16,17 +16,17 @@ floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["fluent"] }
 # The theme binding, which is `RwSignal<MultiTheme>` exactly as in the other
 # ported kits.
-floom-signal = { path = "../../../../../floom-signal" }
+floom-signal = { path = "../../../../../core/floom-signal" }
 # The engine's colour type, which `ListStyle` speaks.
-floom-types = { path = "../../../../../floom-types" }
+floom-types = { path = "../../../../../core/floom-types" }
 # The engine's row component and the container the kit composes it in. The
 # engine's own `List<T>` is deliberately not used: it is a diff mechanism with
 # an empty `paint`, and a list kit wants a styled row.
 floom-ui-composites = { path = "../../floom-ui-composites" }
 # The engine's layout vocabulary (`Axis`, `LayoutRequest`, `Stack`, `Container`,
 # `Spacer`) is part of the public `view()` output, not just tests.
-floom-core = { path = "../../../../../floom-core" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-core = { path = "../../../../../core/floom-core" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }
 
 [dev-dependencies]
 # The paint assertions read back a recorded scene, which needs the testkit the

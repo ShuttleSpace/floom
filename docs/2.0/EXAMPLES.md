@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Golden examples (Floom 2.0)
 
 `examples/floom-showcase` is the one application: built-in widgets, signals,
@@ -23,7 +25,7 @@ The device-, display- and target-gated rows need OS providers, a display or
 hardware this machine does not have. Everything else is exercised on every
 change: `bash scripts/run-golden-examples.sh` *runs* each headless example
 (compiling them proves nothing — their assertions are the point), and
-`crates/floom/tests/docs_parity.rs` asserts that this table, the `examples/`
+`crates/app/floom/tests/docs_parity.rs` asserts that this table, the `examples/`
 directory and that script's list all agree, so a new example cannot land
 undocumented and a documented status cannot quietly become false.
 
@@ -122,7 +124,7 @@ floom-macos: text field text="你好世界" preedit="" composing=false
 ```
 
 The clipboard line is the load-bearing one: on macOS `Clipboard` is
-`NSPasteboard` (see `crates/floom-platform-desktop/src/clipboard.rs`), so the
+`NSPasteboard` (see `crates/platform/floom-platform-desktop/src/clipboard.rs`), so the
 same string is then readable from a different process entirely — which is what
 separates a clipboard from a `String` field. The `logical=` lines are there so a
 click can be *aimed*: they are content-relative, so the window's frame and the
@@ -168,6 +170,6 @@ code-first table would be read as more advertised examples.
 | harmony | the HarmonyOS build | targeted the removed stack |
 | web, embedded | wasm32 / no-std builds | targeted the removed stack |
 
-Each of these is a target Floom still has (`floom-platform-ios`,
-`floom-platform-web`, `floom-platform-embedded`, `floom-native` for the embedded
+Each of these is a target Floom still has (`floom-platform` with the `ios` /
+`embedded` features, `floom-platform-web`, `floom-native` for the embedded
 views). What is missing is a real example per target, not a backend.

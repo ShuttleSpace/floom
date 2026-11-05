@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # OpenHarmony (HarmonyOS) backend
 
 Experimental support for running floom on OpenHarmony / HarmonyOS, added as an
@@ -48,7 +50,7 @@ Flow:
 3. floom's `Application` (which implements `floem-winit-core`'s
    `ApplicationHandler`) is that handler — wired in the app shell via
    `export_ohos_winit_app!(ohos_factory)` (see `examples/ohos/src/lib.rs`).
-   `floom_app_factory()` in `crates/floom/src/app/mod.rs` is a convenience stub that returns
+   `floom_app_factory()` in `crates/app/floom-app/src` is a convenience stub that returns
    an `Application` with **no** window; real apps must supply their own factory
    that also calls `.window(...)`.
 4. The renderer draws through wgpu's `VK_OHOS_surface` (wgpu ≥ 0.30, Vulkan
@@ -121,7 +123,7 @@ cargo check -p ohos --target aarch64-unknown-linux-ohos   # Finished, 0 error
 (7 benign warnings come from the floom lib — desktop `translate.rs` dead-code
 and `private_interfaces` — and are unrelated to OHOS.)
 
-## Capability matrix (`crates/floom/src/embedder/ohos.rs`)
+## Capability matrix (`crates/platform/floom-platform/src/harmony`)
 
 | Capability | Status | Notes |
 |---|---|---|
@@ -130,11 +132,11 @@ and `private_interfaces` — and are unrelated to OHOS.)
 | `cursor` / `timers` / `context_menu` / `system_theme` / `display_info` / `safe_area` | ✅ | |
 | `window_title` | ❌ | OHOS apps are full-screen |
 | `drag_drop` | ❌ | |
-| `clipboard` | ✅ implemented | N-API bridge (`crates/floom/src/platform/ohos_clipboard.rs`) + ArkTS pasteboard (`@kit.BasicServicesKit`) |
-| `file_dialog` | ✅ implemented | N-API bridge (`crates/floom/src/platform/ohos_file.rs`) + `on_file_picked` + ArkTS `@kit.CoreFileKit` picker |
-| `open_external` | ✅ implemented | N-API bridge (`crates/floom/src/platform/ohos_external.rs`) + ArkTS `startAbility` |
-| `receive_files` | ✅ implemented | N-API bridge (`crates/floom/src/platform/ohos_receive.rs`) + `on_shared_files` + ArkTS `EntryAbility` share intent |
-| `accessibility` | ✅ **done** | `capability.accessibility` is claimed `true` and the **native C** screen-reader path is now fully wired. #113 proved the ArkTS `AccessibilityProvider` design (#111) used a non-existent API; #121 added `crates/floom/src/accessibility/backend_ohos_native.rs` (binds `ArkUI_AccessibilityProvider`, serves Floom's `AccessTree` via a11y-service callbacks). **#122 (Route A)** registers that provider on the window's `OH_NativeXComponent*` via `OH_NativeXComponent_GetNativeAccessibilityProvider` (API 13) at window-creation time — no custom ArkUI node / tree mount needed (the winit fork already holds the `OH_NativeXComponent*`). ArkTS `setAccessibilityTree` remains a debug feed. **On-device screen-reader reachability is UNVERIFIED** (HAP link + device validation pending). |
+| `clipboard` | ✅ implemented | N-API bridge (`crates/platform/floom-platform/src`) + ArkTS pasteboard (`@kit.BasicServicesKit`) |
+| `file_dialog` | ✅ implemented | N-API bridge (`crates/platform/floom-platform/src`) + `on_file_picked` + ArkTS `@kit.CoreFileKit` picker |
+| `open_external` | ✅ implemented | N-API bridge (`crates/platform/floom-platform/src`) + ArkTS `startAbility` |
+| `receive_files` | ✅ implemented | N-API bridge (`crates/platform/floom-platform/src`) + `on_shared_files` + ArkTS `EntryAbility` share intent |
+| `accessibility` | ✅ **done** | `capability.accessibility` is claimed `true` and the **native C** screen-reader path is now fully wired. #113 proved the ArkTS `AccessibilityProvider` design (#111) used a non-existent API; #121 added `crates/core/floom-accessibility/src` (binds `ArkUI_AccessibilityProvider`, serves Floom's `AccessTree` via a11y-service callbacks). **#122 (Route A)** registers that provider on the window's `OH_NativeXComponent*` via `OH_NativeXComponent_GetNativeAccessibilityProvider` (API 13) at window-creation time — no custom ArkUI node / tree mount needed (the winit fork already holds the `OH_NativeXComponent*`). ArkTS `setAccessibilityTree` remains a debug feed. **On-device screen-reader reachability is UNVERIFIED** (HAP link + device validation pending). |
 
 `OhosServices::read_clipboard` / `write_clipboard` delegate to
 `crate::platform::Clipboard`, which dispatches to the N-API bridge on OHOS
@@ -143,7 +145,7 @@ bridges (`file_dialog` / `open_external` / `receive_files`) follow the same
 template. The accessibility bridge is the odd one out: instead of a
 `PlatformServices` method it implements the a11y `AccessibilityBackend` trait
 and pushes the neutral tree to ArkTS — see "Accessibility bridge" below and
-`crates/floom/src/accessibility/backend_ohos.rs`.
+`crates/core/floom-accessibility/src`.
 
 ## Packaging prerequisites
 
@@ -171,16 +173,16 @@ cargo check -p floom --target aarch64-unknown-linux-ohos
 
 - `crates/vendor/floom-winit-ohos/patch/` — retarget patch + drift analysis.
 - `crates/vendor/harmony-app-rs/` — macOS cross-platform patch for `cargo-ohos-app`.
-- `crates/floom/src/embedder/ohos.rs`, `crates/floom/src/embedder/mod.rs`, `crates/floom/src/app/mod.rs`
+- `crates/platform/floom-platform/src/harmony`, `crates/platform/floom-platform/src`, `crates/app/floom-app/src`
   (`new_ohos` / `floom_app_factory` / `export_ohos_winit_app!`).
-- `crates/floom/src/platform/ohos_bridge.rs` — shared N-API registration
+- `crates/platform/floom-platform/src` — shared N-API registration
   (`register_platform_bridge` + `call_bridge` helper).
-- `crates/floom/src/platform/ohos_clipboard.rs` — N-API clipboard bridge (template for the
+- `crates/platform/floom-platform/src` — N-API clipboard bridge (template for the
   other platform bridges).
-- `crates/floom/src/platform/ohos_external.rs` — N-API `open_url` bridge.
-- `crates/floom/src/platform/ohos_file.rs` — N-API file picker bridge (`open_file` /
+- `crates/platform/floom-platform/src` — N-API `open_url` bridge.
+- `crates/platform/floom-platform/src` — N-API file picker bridge (`open_file` /
   `save_as` + `on_file_picked`).
-- `crates/floom/src/platform/ohos_receive.rs` — N-API receive-files bridge
+- `crates/platform/floom-platform/src` — N-API receive-files bridge
   (`set_shared_files_handler` + `on_shared_files`).
 
 ## N-API platform bridge (unified)
@@ -189,7 +191,7 @@ OpenHarmony exposes OS services (pasteboard, file picker, browser, share) only
 through ArkTS. The Rust side reaches them by exporting N-API functions that
 ArkTS calls to **register** a capability object, then calling **back** into that
 object on demand. All four bridges share one registration entry point — see
-`crates/floom/src/platform/ohos_bridge.rs`:
+`crates/platform/floom-platform/src`:
 
 - `#[napi] register_platform_bridge(env, bridge)` — ArkTS calls this once at
   startup with a single object that wraps every capability. Rust stores it as a
@@ -269,7 +271,7 @@ The Rust side: `ohos_bridge.rs` exports `register_platform_bridge` and the
 async ones, expose the `on_file_picked` / `on_shared_files` N-API entry points
 that ArkTS calls back into).
 
-### IME (soft-keyboard) bridge — `crates/floom/src/platform/ohos_ime.rs`
+### IME (soft-keyboard) bridge — `crates/platform/floom-platform/src`
 
 OHOS has no winit IME, exactly like iOS, so floom drives the soft keyboard
 through the shared N-API bridge. The flow is bidirectional:
@@ -372,7 +374,7 @@ hideKeyboard(): void {
   *worker* thread (`floom-winit-ohos`'s `runtime_new` bootstraps the loop on the
   calling — JS — thread, then moves it into `thread::spawn`), and every bridge
   call (clipboard, file picker, external URL, IME, a11y) originates there.
-  `crates/floom/src/platform/ohos_bridge.rs` therefore creates a thread-safe function at
+  `crates/platform/floom-platform/src` therefore creates a thread-safe function at
   registration time; `call_bridge` either runs inline (already on the JS thread)
   or posts the closure and waits on a `Condvar` for the JS thread's result,
   degrading to `None` after a 5 s timeout. The a11y debug feed confirms the
@@ -433,14 +435,14 @@ hideKeyboard(): void {
 > been replaced by a type-correct reference seam (`roleToComponentType`,
 > `actionToNative`, `nativeActionToFloom`, `performFloomAction`, plus no-op
 > `registerFloomA11yProvider` / `refreshFloomA11y`). The real work is task
-> **#121**: rework `crates/floom/src/accessibility/backend_ohos.rs` to call the native C
+> **#121**: rework `crates/core/floom-accessibility/src` to call the native C
 > `ArkUI_AccessibilityProvider` directly (Rust `extern "C"` wrapper), replacing
 > the `setAccessibilityTree` → ArkTS push.
 
 ### Status (2026-08-13, #121 implemented)
 
 The native C provider wrapper is **implemented** in
-`crates/floom/src/accessibility/backend_ohos_native.rs` (`#![cfg(target_env = "ohos")]`,
+`crates/core/floom-accessibility/src` (`#![cfg(target_env = "ohos")]`,
 links `libace_ndk.z`):
 
 - `extern "C"` bindings to every `OH_ArkUI_AccessibilityElementInfoSet*` /
@@ -488,19 +490,19 @@ surface the app draws into, so the accessibility service traverses it directly �
 
 Wiring (all `#[cfg(target_env = "ohos")]`):
 
-- `crates/floom/src/app/handle.rs` — at window creation, reads
+- `crates/app/floom-app/src` — at window creation, reads
   `tgui_winit_ohos::WindowExtOhos::xcomponent_ptr()` off the winit `Window` and
   threads it into `WindowHandle::new` as an `xcomponent` parameter (mirrors the
   iOS `ui_view` plumbing).
-- `crates/floom/src/window/handle.rs` — after attaching the `OhosAccessibilityBackend`, calls
+- `crates/app/floom-app/src` — after attaching the `OhosAccessibilityBackend`, calls
   `crate::accessibility::backend_ohos::attach_xcomponent_provider(xcomponent)`
   (null-safe no-op if the pointer is not yet available).
-- `crates/floom/src/accessibility/backend_ohos.rs` — `attach_xcomponent_provider` (safe
+- `crates/core/floom-accessibility/src` — `attach_xcomponent_provider` (safe
   wrapper) → `backend_ohos_native::register_native_provider_for_xcomponent`,
   which casts to `*mut OH_NativeXComponent`, calls
   `OH_NativeXComponent_GetNativeAccessibilityProvider`, and on success calls
   `register_native_provider` (the same callback registration as #121).
-- `crates/floom/src/accessibility/backend_ohos_native.rs` — opaque `enum OH_NativeXComponent {}`,
+- `crates/core/floom-accessibility/src` — opaque `enum OH_NativeXComponent {}`,
   the `OH_NativeXComponent_GetNativeAccessibilityProvider` `extern "C"` binding
   (in the existing `#[link(name = "ace_ndk.z")]` block), and
   `register_native_provider_for_xcomponent`.
@@ -544,9 +546,9 @@ runtime).** `fontique` (via `parley`) discovers system fonts through
 `fontconfig` on Linux. OpenHarmony has **no** `fontconfig`, so on an OHOS
 target the `Collection` is empty and text renders with zero glyphs.
 
-`crates/floom/src/platform/ohos_font.rs` (`#![cfg(target_env = "ohos")]`) injects bundled
+`crates/platform/floom-platform/src` (`#![cfg(target_env = "ohos")]`) injects bundled
 fonts into the global `FONT_CONTEXT` collection right after it is created
-(`crates/floom/src/text/layout.rs` `LazyLock`):
+(`crates/widgets/floom-text/src/layout.rs` `LazyLock`):
 
 - `register_bundled_fonts(&mut Collection)` reads each path in
   `BUNDLED_FONT_PATHS`, wraps the bytes in a `Blob` (`Arc<Vec<u8>>`, which

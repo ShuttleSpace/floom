@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Build any workspace crate for Android and package it into an APK.
 #
 # Generalized from the per-example `examples/*/scripts/build-apk.sh`. Those

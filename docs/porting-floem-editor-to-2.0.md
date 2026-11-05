@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Porting the floom-editor satellite to Floom 2.0
 
 The port of `crates/ecosystem/floom-editor` — the v1-era editor satellite —
@@ -15,7 +17,7 @@ Two crates in a nested workspace:
 ## Where the port landed
 
 `floom-editor-core` **moved into the root workspace** as
-`crates/floom-editor-core`. It has zero references to the `floom` crate — it is
+`crates/widgets/floom-editor-core`. It has zero references to the `floom` crate — it is
 pure logic over `lapce-xi-rope` — so it needed no code changes at all, only a
 manifest. It joins the root workspace's member list and is checked by
 `scripts/check-architecture-deps.sh` like every other crate. Its 77 unit tests
@@ -43,7 +45,7 @@ what the editor needs:
 | tab expansion with byte mapping | absent |
 
 So `floom-text` grew an editor-grade layout API, in a new module
-`crates/floom-text/src/editor_layout.rs`.
+`crates/widgets/floom-text/src/editor_layout.rs`.
 
 ### The vocabulary (L0)
 

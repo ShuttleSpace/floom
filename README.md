@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 <div align="center">
 <img width=120 height=120 src="https://lap.dev/images/floom.svg"></img>
 
@@ -6,7 +8,7 @@
 
 A native Rust UI library with fine-grained reactivity and great ergonomics
 
-[![crates.io](https://img.shields.io/crates/v/floom.svg)](https://crates.io/crates/floom)
+[![crates.io](https://img.shields.io/crates/v/floom.svg)](https://crates.io/crates/app/floom)
 [![docs.rs](https://docs.rs/floom/badge.svg)](https://docs.rs/floom)
 [![Discord](https://img.shields.io/discord/946858761413328946?color=%237289DA&label=discord)](https://discord.gg/RB6cRYerXX)
 
@@ -46,7 +48,7 @@ Inspired by [Xilem](https://github.com/linebender/xilem), [Leptos](https://githu
 
 - **Cross-platform**: Floom supports Windows, macOS and Linux with rendering using [wgpu](https://github.com/gfx-rs/wgpu) via [vger](https://github.com/audulus/vger-rs) or [vello](https://github.com/linebender/xilem), or via AnyRender's GPU-backed [Skia](https://github.com/dioxuslabs/anyrender) renderer. In case a GPU is unavailable, a CPU renderer powered by [tiny-skia](https://github.com/RazrFalcon/tiny-skia) will be used.
 - **Fine-grained reactivity**: The entire library is built around reactive primitives inspired by [leptos_reactive](https://crates.io/crates/leptos_reactive). The reactive "signals" allow you to keep your UI up-to-date with minimal effort, all while maintaining very high performance.
-- **Performance**: The view tree is constructed only once, safeguarding you from accidentally creating a bottleneck in a view generation function that slows down your entire application. Floom also provides tools to help you write efficient UI code, such as a [virtual list](crates/floom-virtual/src/lib.rs).
+- **Performance**: The view tree is constructed only once, safeguarding you from accidentally creating a bottleneck in a view generation function that slows down your entire application. Floom also provides tools to help you write efficient UI code, such as a [virtual list](crates/widgets/floom-virtual/src/lib.rs).
 - **Flexbox & Grid layout**: Using [Taffy](https://crates.io/crates/taffy), the library provides the Flexbox and Grid layout systems, which can be applied to any View node.
 - **Customizable widgets**: Widgets are highly customizable. You can customize both the appearance and behavior of widgets using the styling API, which supports theming with classes. You can also install third-party themes.
 - **Transitions and Animations**: Floom supports both transitions and animations. Transitions, like css transitions, can animate any property that can be interpolated and can be applied alongside other styles, including in classes.

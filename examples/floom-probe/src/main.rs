@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! Floom 2.0 **device probe**: one window holding every control the on-screen
 //! cases in `.superpowers/sdd/device-verification-2026-09-15.md` need.
 //!

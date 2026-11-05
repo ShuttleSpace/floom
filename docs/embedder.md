@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Experimental Embedder API
 
 `floom::embedder` is an experimental API for integrating Floom with platform
@@ -38,7 +40,7 @@ understand the protocol — never a specific windowing toolkit.
 ## Current Implementations
 
 - **winit desktop backend**: the default path used by `floom::launch(...)`.
-  Translation lives in `crates/floom/src/app/winit_embedder.rs`.
+  Translation lives in `crates/app/floom-app/src`.
 - **headless backend**: a testing proof of concept (`HeadlessEmbedder`) with no
   real platform window or paint surface. It drives the real Floom runtime from
   neutral events so input, focus, IME, and layout can be unit tested without a

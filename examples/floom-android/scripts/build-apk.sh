@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Build the Floom 2.0 Android example and package it into an APK.
 #
 # Thin wrapper: the aapt2 -> bundle -> zipalign -> apksigner pipeline lives in

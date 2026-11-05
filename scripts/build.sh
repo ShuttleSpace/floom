@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # One command to build a workspace crate for a target platform.
 #
 # This is the single entry point the "one command per platform" convention is

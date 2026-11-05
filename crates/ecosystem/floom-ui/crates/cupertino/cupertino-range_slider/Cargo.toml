@@ -13,15 +13,15 @@ edition = "2021"
 # "cupertino", feature = "fluent"))]` -- so enabling the wrong one compiles
 # just as well. They are presence flags, not data selectors.
 floom-core-theme = { workspace = true }
-floom-signal = { path = "../../../../../floom-signal" }
-floom-core = { path = "../../../../../floom-core" }
-floom-types = { path = "../../../../../floom-types" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-signal = { path = "../../../../../core/floom-signal" }
+floom-core = { path = "../../../../../core/floom-core" }
+floom-types = { path = "../../../../../core/floom-types" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }
 # The engine's RangeSlider: a track with two thumbs.
 floom-ui-composites = { path = "../../floom-ui-composites" }
 
 [dev-dependencies]
 floom-core-theme = { workspace = true, features = ["cupertino"] }
-floom-core = { path = "../../../../../floom-core" }
-floom-types = { path = "../../../../../floom-types" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-core = { path = "../../../../../core/floom-core" }
+floom-types = { path = "../../../../../core/floom-types" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }

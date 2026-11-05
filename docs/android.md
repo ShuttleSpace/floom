@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Android Backend (Phase 1 — Skeleton)
 
 > **Status:** Skeleton + **GPU surface wired + clipboard JNI bridge + context-menu trigger + external-URL opening + SAF file dialogs + receiving shared files (ACTION_SEND / SEND_MULTIPLE / VIEW) wired**.
@@ -36,7 +38,7 @@ experimental [`embedder`](../src/embedder) protocol from
   winit path — no custom input translation is needed.
 - `floom::Application::new_android(app)` builds the event loop with
   `EventLoopBuilderExtAndroid::with_android_app(app)` and reuses the exact same
-  `.window(...).run()` flow as desktop (`crates/floom/src/app/mod.rs`).
+  `.window(...).run()` flow as desktop (`crates/app/floom-app/src`).
 - **GPU surface is created from the Android native window automatically.** The
   lapce winit fork's Android `Window` implements `raw_window_handle::HasWindowHandle`
   by returning the `ndk` `NativeWindow` handle (`AndroidNdkWindowHandle`). Floom's
@@ -48,10 +50,10 @@ experimental [`embedder`](../src/embedder) protocol from
   recreates the native window on every pause/resume and rotation. Floom now
   marks each window's surface `lost` in `destroy_surfaces` and **rebuilds** the
   wgpu surface against the fresh native window in `can_create_surfaces`
-  (`WindowHandle::recreate_gpu_surface`, `crates/floom/src/window/handle.rs` /
-  `crates/floom/src/app/handle.rs`). Painting is skipped while the surface is lost, so the
+  (`WindowHandle::recreate_gpu_surface`, `crates/app/floom-app/src` /
+  `crates/app/floom-app/src`). Painting is skipped while the surface is lost, so the
   stale surface is never presented.
-- `crates/floom/src/embedder/android.rs` provides the embedder adapter-trait skeleton:
+- `crates/platform/floom-platform-android/src/android.rs` provides the embedder adapter-trait skeleton:
   - `android_capabilities()` — the Android [`BackendCapabilities`] preset.
   - `AndroidServices` — `PlatformServices` impl.
   - `AndroidEmbedderWindow` / `AndroidSurfaceHandle` — window + surface
@@ -59,7 +61,7 @@ experimental [`embedder`](../src/embedder) protocol from
 - **System clipboard is reachable via JNI.** `Application::new_android` extracts
   the `JavaVM*` and the `Activity` JNI global reference from the `AndroidApp`
   (`vm_as_ptr()` / `activity_as_ptr()`) and hands them to
-  `Clipboard::init_android`. `crates/floom/src/platform/clipboard.rs` then bridges
+  `Clipboard::init_android`. `crates/platform/floom-platform-desktop/src/clipboard.rs` then bridges
   `Clipboard::get_contents` / `set_contents` to Android's
   `android.content.ClipboardManager` through the `jni` crate
   (`getPrimaryClip` / `setPrimaryClip` with `ClipData.newPlainText`). No
@@ -73,7 +75,7 @@ experimental [`embedder`](../src/embedder) protocol from
   The existing `context_menu_view` renderer (already compiled for Android)
   draws the menu; clicks dispatch through `AppUpdateEvent::MenuAction`.
 - **Touch long-press opens the context menu.** Touch devices have no secondary
-  button, so `crates/floom/src/event/long_press.rs` (`LongPressState`, owned by
+  button, so `crates/core/floom-types/src` (`LongPressState`, owned by
   `WindowState`) watches touch primary presses in `dispatch.rs` and, after a
   500 ms stationary hold (`action::exec_after` timer, cancelled on move/up/cancel
   beyond a 10 px threshold), opens the context menu of the view under the press
@@ -84,12 +86,12 @@ experimental [`embedder`](../src/embedder) protocol from
   subsequent tap outside the menu, or an item click, closes it. Mouse/pen
   secondary presses still use the original `Secondary`-button path.
 - **External URLs open via a JNI `ACTION_VIEW` intent.** `floom::platform::open_url`
-  is implemented for Android in `crates/floom/src/platform/android_external.rs`: it builds an
+  is implemented for Android in `crates/platform/floom-platform-android/src/android.rs`: it builds an
   `Intent.ACTION_VIEW` with a `Uri` parsed from the URL and calls
   `Activity.startActivity`. `android_capabilities().open_external` is now `true`.
   (On desktop, core does not open URLs itself — apps use the `open` crate
   directly — so `open_external` stays `false` there.)
-- **File dialogs use the Storage Access Framework (SAF).** `crates/floom/src/platform/android_file.rs`
+- **File dialogs use the Storage Access Framework (SAF).** `crates/platform/floom-platform-android/src/android.rs`
   provides `open_file` / `save_as` that launch `ACTION_OPEN_DOCUMENT`,
   `ACTION_OPEN_DOCUMENT_TREE`, or `ACTION_CREATE_DOCUMENT` via
   `Activity.startActivityForResult`, and a public
@@ -122,7 +124,7 @@ Access Framework picker, both already handled via the `open_external` /
 `file_dialog` capabilities (not `DragDropEvent`).
 
 **2. In-app drag-and-drop — fully works on Android, no backend code needed.**
-This is Floom's `Event::Drag` / `DragTracker` system (`crates/floom/src/event/drag_state.rs`),
+This is Floom's `Event::Drag` / `DragTracker` system (`crates/core/floom-types/src`),
 used for reordering list items, moving views, custom drag interactions, etc. It is
 driven entirely by `PointerEvent`s (Down/Move/Up) plus Floom's **internal** pointer
 capture (`WindowState::set_pointer_capture`, tracked in
@@ -182,7 +184,7 @@ uses a dedicated, Android-shaped API rather than pretending to be file DnD.
 
 1. **Launch intent** (the app was *started* by a share). Floom reads
    `Activity.getIntent()` in `Application::new_android` (via
-   `crates/floom/src/platform/android_intent.rs::read_launch_intent`) and delivers immediately.
+   `crates/platform/floom-platform-android/src/android.rs::read_launch_intent`) and delivers immediately.
    **This works with the default `android.app.NativeActivity`** — no Java subclass
    required. If the handler isn't registered yet, the parsed files are queued and
    flushed the moment `set_shared_files_handler` is called.
@@ -304,9 +306,9 @@ android_logger = "0.14"
 Source-level isolation uses `#[cfg(target_os = "android")]` extensively:
 
 - `rfd`/`copypasta`/`muda` native-menu machinery is gated out; Android reuses
-  the **wasm stub** menu types (`crates/floom/src/platform/menu_types.rs`) and the in-UI
+  the **wasm stub** menu types (`crates/platform/floom-platform/src`) and the in-UI
   context-menu renderer.
-- `crates/floom/src/platform/clipboard.rs` bridges the system clipboard via JNI on Android
+- `crates/platform/floom-platform-desktop/src/clipboard.rs` bridges the system clipboard via JNI on Android
   (`Clipboard::init_android`); the legacy `copypasta` path stays desktop-only.
 - `file_action` (open/save dialogs) and `window_menu` are gated out.
 
@@ -339,7 +341,7 @@ scripts/build-apk.sh -t arm64-v8a          # -> target/android/*.apk
 > `native-activity` loads the library named by `android.app.lib_name`, so the
 > Android entry point must be a `cdylib`. `examples/android/Cargo.toml` now
 > declares `[lib] crate-type = ["cdylib"]` and `android_main` + the JNI
-> bridges live in `crates/floom/src/lib.rs`.
+> bridges live in `crates/app/floom/src/lib.rs`.
 >
 > `scripts/build-apk.sh` does the packaging with SDK build-tools only
 > (`aapt2 link` → bundle `lib/` uncompressed → `zipalign -P 16` →
@@ -375,7 +377,7 @@ scripts/build-apk.sh -t arm64-v8a          # -> target/android/*.apk
    in-UI `context_menu` signal; `action::show_context_menu` /
    `UpdateMessage::ShowContextMenu` are no longer gated out on Android, and the
    secondary-pointer `handle_menu_events` trigger runs on Android. **Touch
-   long-press → menu is now implemented** (`crates/floom/src/event/long_press.rs` +
+   long-press → menu is now implemented** (`crates/core/floom-types/src` +
    `LongPressState` in `WindowState` + Android `event()` dismiss handling), so
    touch devices can open context menus without a secondary button.
 4. **File dialogs / external URLs — done (code-complete, unverified on device).**
@@ -409,7 +411,7 @@ scripts/build-apk.sh -t arm64-v8a          # -> target/android/*.apk
 > aarch64-linux-android` reported `main function not found`, because with
 > `android-activity`'s `native-activity` feature the `main` symbol is supplied
 > by native-activity's C glue **at link time**. The crate is now a `cdylib`
-> lib target (`crates/floom/src/lib.rs`) plus a host-only placeholder bin (`src/main.rs`),
+> lib target (`crates/app/floom/src/lib.rs`) plus a host-only placeholder bin (`src/main.rs`),
 > so `cargo check -p floom-android-example --target aarch64-linux-android`
 > exercises `android_main` and the JNI bridges without needing the link step.
 
@@ -419,7 +421,7 @@ Showing the keyboard is half the job; the other half is getting what the user
 types out of it. That half cannot come from winit: **`winit-android` never emits
 `WindowEvent::Ime`** (the backend has no implementation of it — see
 `crates/vendor/floem-winit/winit-android`), so the two `WindowEvent::Ime` arms in
-`crates/floom-platform-android/src/android.rs` were dead code. Anything that
+`crates/platform/floom-platform-android/src/android.rs` were dead code. Anything that
 waits for them waits forever.
 
 The anchor view is where the text actually is. It is a real `EditText`, so the
@@ -535,9 +537,9 @@ branch: Enter now reaches floom as `Key::Named(NamedKey::Enter)` and Space as
       `action::show_context_menu` / `UpdateMessage::ShowContextMenu` un-gated +
       `handle_menu_events` secondary-button trigger runs on Android.
 - [x] Android external-URL opening wired: `platform::open_url` → JNI `ACTION_VIEW`
-      intent (`crates/floom/src/platform/android_external.rs`); `open_external` capability true.
+      intent (`crates/platform/floom-platform-android/src/android.rs`); `open_external` capability true.
 - [x] Android file dialogs wired: `platform::{open_file,save_as}` → SAF intents
-      via `startActivityForResult` (`crates/floom/src/platform/android_file.rs`); public
+      via `startActivityForResult` (`crates/platform/floom-platform-android/src/android.rs`); public
       `dispatch_activity_result` entry + example `FloomNativeActivity.java` native
       bridge for result delivery; `file_dialog` capability true.
 - [x] Android receiving shared files wired: `set_shared_files_handler` +

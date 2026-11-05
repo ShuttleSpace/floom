@@ -1,0 +1,30 @@
+[package]
+name = "floom-devtools"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Headless inspector for Floom 2.0: element-tree navigation, style/layout inspection, source mapping, semantics viewer and the why-did-this-update report"
+
+[dependencies]
+# The inspector reads the retained tree the reload crate owns, and serves the
+# wire format the protocol defines.
+floom-hot-reload = { path = "../floom-hot-reload", version = "0.2.0" }
+floom-dsl = { path = "../../frontend/floom-dsl", version = "0.2.0" }
+floom-inspector = { path = "../floom-inspector", version = "0.2.0" }
+# The console readout lists what the error boundary caught (merged into core).
+floom-runtime-core = { path = "../../core/floom-runtime-core", version = "0.2.0" }
+floom-core = { path = "../../core/floom-core", version = "0.2.0" }
+floom-style = { path = "../../core/floom-style", version = "0.2.0" }
+floom-accessibility = { path = "../../core/floom-accessibility", version = "0.2.0" }
+floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+# The panel is a widget: it draws itself with the engine's primitives
+# rather than asking the host for a second window.
+floom-widgets = { path = "../../widgets/floom-widgets", version = "0.2.0" }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+# Tests author documents in the DSL.
+floom-dsl = { path = "../../frontend/floom-dsl", version = "0.2.0" }
+floom-signal = { path = "../../core/floom-signal", version = "0.2.0" }

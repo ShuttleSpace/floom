@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the S2 (self-drawing) slice.
 # For each mutation: back up, mutate (scripts/mutate.py), run the targeted
 # test, record whether it FAILED, restore, and verify the restore byte-exact.
@@ -34,11 +36,11 @@ mutate_one() {
   cmp -s /tmp/mut_backup.rs "$file" || echo "RESTORE_FAILED  $label" >> "$RESULTS"
 }
 
-TYPES=crates/floom-types/src/path.rs
-RASTER=crates/floom-renderer-software/src/raster.rs
-SWLIB=crates/floom-renderer-software/src/lib.rs
-APPLIB=crates/floom-app/src/lib.rs
-CANVAS=crates/floom-widgets/src/canvas.rs
+TYPES=crates/core/floom-types/src/path.rs
+RASTER=crates/render/floom-renderer-software/src/raster.rs
+SWLIB=crates/render/floom-renderer-software/src/lib.rs
+APPLIB=crates/app/floom-app/src/lib.rs
+CANVAS=crates/widgets/floom-widgets/src/canvas.rs
 SKIA=crates/floom-renderer-skia-abi/src/lib.rs
 
 # 1. stroke outline: drop contour orientation normalisation

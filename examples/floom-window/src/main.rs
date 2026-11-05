@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! Floom 2.0 in a **real OS window**: winit event loop in, GPU pixels out.
 //!
 //! This is the first floom-2 binary that opens an actual window. The whole

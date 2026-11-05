@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 """Rewrite the crate-name half of every `use` line in a file from a manifest.
 
 The transport this script is written in drops one `o` from `floom` often enough

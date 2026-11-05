@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! Small reusable building blocks: labels, cards, buttons, signal-backed text.
 //!
 //! Depends only on `crate::routes` (for `go_button`) and external crates.

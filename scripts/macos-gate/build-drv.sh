@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Build the macOS gate driver (`drv`).
 #
 # `docs/gates/macos.md` records what a spot-check observes, and a spot-check

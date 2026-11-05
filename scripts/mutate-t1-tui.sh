@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the T1 slice (the terminal backend: scene -> character
 # grid -> ANSI). Same discipline as the other campaigns: back up, mutate
 # (scripts/mutate.py), run the targeted test, record whether it went red,
@@ -41,8 +43,8 @@ mutate_one() {
 
 UNIT="cargo test -q -p floom-renderer-tui --lib"
 E2E="cargo test -q -p floom-app --test tui_backend"
-GRID=crates/floom-renderer-tui/src/grid.rs
-ANSI=crates/floom-renderer-tui/src/ansi.rs
+GRID=crates/render/floom-renderer-tui/src/grid.rs
+ANSI=crates/render/floom-renderer-tui/src/ansi.rs
 
 # 1. Every column is off by one. If nothing pins where a glyph lands, the whole
 #    grid could shift a cell and still look plausible.

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 """What does porting the excluded floem-ui kits actually cost?
 
 Answers one question: for each excluded kit, does a widget already exist to

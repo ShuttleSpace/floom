@@ -358,7 +358,7 @@ floom-widget-md-icon = { path = "crates/material/md-icon" }
 floom-widget-cupertino-icon = { path = "crates/cupertino/cupertino-icon" }
 floom-widget-fluent-icon = { path = "crates/fluent/fluent-icon" }
 
-# Stage D removed the `floom = { path = "../../floom" }` entry above and every
+# Stage D removed the `floom = { path = "../../app/floom" }` entry above and every
 # `floom = { workspace = true }` in this workspace's member manifests. Nothing here
 # links the v1 monolith any more; the `floom-elements` re-export layer went with
 # it, so each kit crate names `floom-core-theme` and `floom-widget-runtime`

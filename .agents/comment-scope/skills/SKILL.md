@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 ---
 name: comment-scope
 description: 写代码注释时的取舍标准。区分「该写进注释的」与「该删掉的」——只保留紧贴代码行的用法、歧义、踩坑与反直觉约束；复述代码、散文式头部说明、业务背景、实现历史、决策理由不写进代码，迁到 docs/api 引用。Triggers on: 写注释, 加注释, 注释太多, 注释风格, comment, doc comment, 代码注释, comment out, 注释规范, 删注释, 清理注释。

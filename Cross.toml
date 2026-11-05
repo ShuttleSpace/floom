@@ -1,0 +1,22 @@
+# Cross-compilation configuration — https://github.com/cross-rs/cross
+#
+# Floom targets macOS / Windows / Linux / Android / iOS / Harmony / Web /
+# Embedded (see docs/2.0/RELEASE-POLICY.md). Cross is used to produce the
+# Linux builds from a macOS/Windows dev host; the other targets are built with
+# their platform toolchains directly (Xcode, NDK, wasm-pack, …).
+
+[build]
+# Build binaries in release and run tests through QEMU for the listed targets
+# when `cross test` is invoked without an explicit --target.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+]
+
+# x86_64 Linux — the CI / server baseline.
+[target.x86_64-unknown-linux-gnu]
+# aarch64 Linux — common ARM64 server / CI target.
+[target.aarch64-unknown-linux-gnu]
+# Static MUSL builds for portable, glibc-free Linux binaries.
+[target.x86_64-unknown-linux-musl]
+[target.aarch64-unknown-linux-musl]

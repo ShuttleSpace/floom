@@ -14,8 +14,8 @@ publish = false
 # depend on the widget stack, the renderer or any OS framework — the native
 # half is where AppKit lives.
 [dependencies]
-floom-native-ffi = { path = "../../../floom-native-ffi", version = "0.2.0" }
-floom-platform = { path = "../../../floom-platform", version = "0.2.0" }
+floom-native-ffi = { path = "../../../native/floom-native-ffi", version = "0.2.0" }
+floom-platform = { path = "../../../platform/floom-platform", version = "0.2.0" }
 
 [build-dependencies]
 cc = "1"

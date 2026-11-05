@@ -1,8 +1,10 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Release policy (Floom 2.0)
 
 This is the gate a release has to pass, and the promise it makes once it has.
 Every claim here that can be checked mechanically is checked:
-`crates/floom/tests/docs_parity.rs` asserts that the test targets and benchmark
+`crates/app/floom/tests/docs_parity.rs` asserts that the test targets and benchmark
 targets named below actually exist, and that the golden-example list matches
 `docs/2.0/EXAMPLES.md`.
 
@@ -30,14 +32,14 @@ to be inferred:
 
 | surface | guarantee | enforced by |
 | --- | --- | --- |
-| `floom::prelude` — the names a beginner gets from one glob | locked: a removal or rename is breaking | `crates/floom/tests/prelude_surface.rs` (inventory of 46 names) |
-| `floom` feature-bundle names (`desktop`, `mobile`, `web`, `embedded`, `renderer-gpu`, `renderer-software`, `devtools`) | locked | `crates/floom/tests/feature_graph.rs` |
+| `floom::prelude` — the names a beginner gets from one glob | locked: a removal or rename is breaking | `crates/app/floom/tests/prelude_surface.rs` (inventory of 46 names) |
+| `floom` feature-bundle names (`desktop`, `mobile`, `web`, `embedded`, `renderer-gpu`, `renderer-software`, `devtools`) | locked | `crates/app/floom/tests/feature_graph.rs` |
 | `floom-core::Widget` / `WidgetAny` | locked | the whole workspace compiles against them |
 | `floom-renderer::Renderer`, `floom-platform::{Platform, Window, Surface, Clipboard, Ime}`, `floom-native::{NativeViewProvider, NativeViewController}` | locked — these are the plugin ABIs | the ABI contract suites below |
 | `floom-app::WidgetHost` | locked | prelude + host API tests |
-| `floom-widgets` public widget API | locked | `crates/floom-widgets` tests |
+| `floom-widgets` public widget API | locked | `crates/widgets/floom-widgets` tests |
 | `floom::advanced`, L5 framework crates, design systems | stable: may change in a minor release with a changelog entry | — |
-| L8 tooling (`floom-testkit` … `floom-agent`) | **no** compatibility guarantee — dev-time only, never shipped in an app binary | the `default` feature graph test |
+| L8 tooling (`floom-testkit` … `floom-accuracy`) | **no** compatibility guarantee — dev-time only, never shipped in an app binary | the `default` feature graph test |
 ## Supported targets and tested OS ranges
 
 "Tested" means the criteria at the bottom of this page were run on that target
@@ -51,10 +53,10 @@ nothing more.
 | `x86_64-pc-windows-msvc` | `floom-platform-desktop` | **device-gated**: windowing goes through winit, but native-view composition on Win32 is Phase 16.2 and incomplete. No Windows machine in CI. |
 | `x86_64-unknown-linux-gnu` | `floom-platform-desktop` | **device-gated**: same gap, X11. No Linux machine in CI. |
 | `aarch64-linux-android` | `floom-platform-android` | **device-gated** (Phase 17) |
-| `aarch64-apple-ios` | `floom-platform-ios` | **device-gated** (Phase 17) |
-| OpenHarmony | `floom-platform-harmony` | **device-gated** (Phase 19) |
+| `aarch64-apple-ios` | `floom-platform` (`ios` feature) | **device-gated** (Phase 17) |
+| OpenHarmony | `floom-platform` (`harmony` feature) | **device-gated** (Phase 19) |
 | `wasm32-unknown-unknown` | `floom-platform-web` | **target-gated** (Phase 19) |
-| no-std / bare metal | `floom-platform-embedded` | **target-gated** (Phase 19) |
+| no-std / bare metal | `floom-platform` (`embedded` feature) | **target-gated** (Phase 19) |
 
 The headless core (`floom` with no feature bundle) has no OS dependency at
 all: the whole workspace test suite runs without a display, and that is what
@@ -67,22 +69,22 @@ otherwise "conformance" degenerates into "the tests the author wrote".
 
 Renderer ABI (`floom-renderer`):
 
-- `crates/floom-renderer/tests/contract.rs`
-- `crates/floom-renderer/tests/render_handoff.rs`
+- `crates/render/floom-renderer/tests/contract.rs`
+- `crates/render/floom-renderer/tests/render_handoff.rs`
 
 Platform ABI (`floom-platform`):
 
-- `crates/floom-platform/tests/contracts.rs`
-- `crates/floom-platform-desktop/tests/lifecycle.rs`
-- `crates/floom-platform-desktop/tests/accessibility.rs`
-- `crates/floom-platform-desktop/tests/winit_capabilities.rs`
+- `crates/platform/floom-platform/tests/contracts.rs`
+- `crates/platform/floom-platform-desktop/tests/lifecycle.rs`
+- `crates/platform/floom-platform-desktop/tests/accessibility.rs`
+- `crates/platform/floom-platform-desktop/tests/winit_capabilities.rs`
 
 Facade and compatibility:
 
-- `crates/floom/tests/prelude_surface.rs` — the beginner surface is pinned by name
-- `crates/floom/tests/feature_graph.rs` — the default build links no windowing,
+- `crates/app/floom/tests/prelude_surface.rs` — the beginner surface is pinned by name
+- `crates/app/floom/tests/feature_graph.rs` — the default build links no windowing,
   renderer, GPU or tooling crate; each bundle adds exactly its own
-- `crates/floom/tests/docs_parity.rs` — the docs pages agree with the tree
+- `crates/app/floom/tests/docs_parity.rs` — the docs pages agree with the tree
 
 ## Performance, size and scale gates
 
@@ -101,7 +103,7 @@ reason is a question, not a merge.
 Apple M4 Pro). There is no workspace-root bench crate: each suite lives with the
 crate it measures, and this list is the set. A target named here that does not
 exist fails `the_bench_targets_named_by_the_policy_exist` in
-`crates/floom/tests/docs_parity.rs`.
+`crates/app/floom/tests/docs_parity.rs`.
 
 | crate | target | what it measures |
 | --- | --- | --- |
@@ -112,7 +114,7 @@ exist fails `the_bench_targets_named_by_the_policy_exist` in
 | `floom-renderer-software` | `self_draw` | CPU rasterisation |
 | `floom-renderer-vello` | `scene_render` | GPU scene render |
 | `floom-native` | `rows` | native view slot reuse |
-| `floom-store` | `selector` | reactive selector evaluation |
+| `floom-signal` | `selector` | reactive selector evaluation |
 | `floom-animation` | `frame_rates` | animation clock |
 | `floom-accessibility` | `tree` | semantics tree build |
 | `floom-widgets-data` | `virtual_rows` | virtualised data rows |

@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # 平台插件：按使用率重排优先级（记录）
 
 2026-10-27。这份记录只回答一件事：`docs/plugin-catalog.md` 排出的 A/B/C 批次，

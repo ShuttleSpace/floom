@@ -22,28 +22,22 @@ edition = "2021"
 # that depended on this would close the loop.
 
 [dependencies]
-floom-core = { path = "../../../../floom-core" }
+floom-core = { path = "../../../../core/floom-core" }
 # The widgets name accessibility roles directly, so this is not dev-only.
-floom-accessibility = { path = "../../../../floom-accessibility" }
-floom-types = { path = "../../../../floom-types" }
-floom-scene = { path = "../../../../floom-scene" }
-floom-widgets = { path = "../../../../floom-widgets" }
-floom-navigation = { path = "../../../../floom-navigation" }
-floom-signal = { path = "../../../../floom-signal" }
-floom-text = { path = "../../../../floom-text" }
-# TextField owns the IME composition state machine; the crate is below the widgets.
-floom-ime = { path = "../../../../floom-ime" }
-floom-overlay = { path = "../../../../floom-overlay" }
+floom-accessibility = { path = "../../../../core/floom-accessibility" }
+floom-types = { path = "../../../../core/floom-types" }
+floom-scene = { path = "../../../../core/floom-scene" }
+floom-widgets = { path = "../../../../widgets/floom-widgets" }
+floom-signal = { path = "../../../../core/floom-signal" }
+floom-text = { path = "../../../../widgets/floom-text" }
 
 [dev-dependencies]
-# The select/form binding test needs the form model, which lives below the widgets.
-floom-forms = { path = "../../../../floom-forms" }
 # The popup test drives real platform events through TestApp.
-floom-platform = { path = "../../../../floom-platform" }
-floom-testkit = { path = "../../../../floom-testkit" }
-floom-app = { path = "../../../../floom-app" }
-floom-layout = { path = "../../../../floom-layout" }
+floom-platform = { path = "../../../../platform/floom-platform" }
+floom-testkit = { path = "../../../../devtools/floom-testkit" }
+floom-app = { path = "../../../../app/floom-app" }
+floom-layout = { path = "../../../../core/floom-layout" }
 # The IME/routing tests drive a real AppRunner to a SoftwarePresenter.
-floom-renderer-software = { path = "../../../../floom-renderer-software" }
+floom-renderer-software = { path = "../../../../render/floom-renderer-software" }
 # The native-composition tests need a fake provider to hand focus to.
-floom-native = { path = "../../../../floom-native" }
+floom-native = { path = "../../../../native/floom-native" }

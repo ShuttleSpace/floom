@@ -1,0 +1,11 @@
+# REUSE compliance configuration — https://reuse.software/
+# The project is MIT-licensed (see Cargo.toml `license` and LICENSES/MIT.txt).
+# Run `reuse lint` after installing the reuse tool to verify every file carries
+# an SPDX expression. Files without a per-file header fall back to the global
+# license below, so the source tree is compliant even before headers are added.
+
+version = 1
+
+[global]
+license = "MIT"
+copyright = "The Floem Authors"

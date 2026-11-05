@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Build a workspace crate for iOS and assemble an installable `.app` bundle.
 #
 # `cargo xcode` (cargo-xcode) only generates a project whose product type is a

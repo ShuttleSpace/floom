@@ -14,14 +14,14 @@ edition = "2021"
 # wrong one.
 floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["fluent"] }
-floom-signal = { path = "../../../../../floom-signal" }
-floom-core = { path = "../../../../../floom-core" }
-floom-types = { path = "../../../../../floom-types" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-signal = { path = "../../../../../core/floom-signal" }
+floom-core = { path = "../../../../../core/floom-core" }
+floom-types = { path = "../../../../../core/floom-types" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }
 # The engine's Dialog moved up a layer with the composites; the overlay adapts
 # its scrim-and-content card to that, not to the widget crate it left.
 floom-ui-composites = { path = "../../floom-ui-composites" }
 
 [dev-dependencies]
 floom-core-theme = { workspace = true }
-floom-types = { path = "../../../../../floom-types" }
+floom-types = { path = "../../../../../core/floom-types" }

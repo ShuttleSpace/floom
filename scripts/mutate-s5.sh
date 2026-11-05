@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the S5 slice (B5 presence transitions).
 # For each mutation: back up, mutate (scripts/mutate.py), run the targeted
 # test, record whether it FAILED, restore, and verify the restore byte-exact.
@@ -37,8 +39,8 @@ mutate_one() {
   touch "$file"
 }
 
-COMPOSE=crates/floom-widgets/src/compose.rs
-MOTION=crates/floom-types/src/motion.rs
+COMPOSE=crates/widgets/floom-widgets/src/compose.rs
+MOTION=crates/core/floom-types/src/motion.rs
 
 # 1. the exit arm stops keeping the child mounted — the departure is invisible
 mutate_one "$COMPOSE" \

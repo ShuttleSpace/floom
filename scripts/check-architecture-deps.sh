@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Architecture dependency boundary checks for Floom 2.0.
 #
 # Forbidden edges (once both crates exist in the workspace graph):
@@ -144,9 +146,13 @@ PLATFORM_HINTS = {
     # The platform *adapters* -- the crates that translate one OS into the
     # `floom-platform` traits. They are the crates a capability must never
     # live in, and the ones a capability plugin must never depend on upward.
+    # `floom-platform-ios`, `-harmony` and `-embedded` were OS-free stand-ins and
+    # are folded into `floom-platform` behind features; a real backend for any
+    # of them must move back out (the `floom-platform` FUTURE rule below holds
+    # the ABI crate itself to no OS/GPU dependency).
     "floom-platform", "floom-platform-desktop", "floom-platform-android",
-    "floom-platform-ios", "floom-platform-harmony", "floom-platform-web",
-    "floom-platform-embedded", "floom-platform-tui", "floom-platform-mobile",
+    "floom-platform-web",
+    "floom-platform-tui", "floom-platform-mobile",
 }
 GPU_HINTS = {
     "wgpu", "vello", "vger", "floem-vger", "skia-safe", "metal", "ash",
@@ -160,12 +166,12 @@ RENDERER_PACKAGES = {
     # 2.0 renderer ABI + backends, under `render/`. `floom-renderer` is the
     # abstract ABI (the one widgets are allowed to name); the rest are concrete.
     "floom-renderer", "floom-renderer-vello", "floom-renderer-software",
-    # `floom-renderer-skia-abi` is the *recording* side of the Skia ABI, not a
-    # backend: it turns a scene into Skia-shaped commands and counts what a
-    # submit path would have to honour. It is not a renderer, and it is
-    # registered here so that the rule "a renderer must not depend on widget
-    # crates" applies to it too.
-    "floom-renderer-skia-abi", "floom-renderer-tui",
+    # `floom-renderer-skia-abi` (the *recording* side of the Skia ABI — a scene
+    # turned into Skia-shaped commands, counting what a submit path would honour)
+    # is now folded into `floom-renderer` as the `skia_abi` module. It is not a
+    # backend, and the "renderer must not depend on widget crates" rule applies
+    # to it there.
+    "floom-renderer-tui",
 }
 WIDGET_HINTS = {"floom-widgets", "floom-widgets-data", "floom-widgets-media"}
 # Legacy underscore spelling still referenced by pre-2.0 crates.
@@ -276,7 +282,7 @@ for _names, _level in [
     # the runtime core that bridges it, not at L0 with where it used to live: it
     # is not v1 code, and `floom-runtime-core` depends on it to turn signal
     # writes into dirty flags.
-    (["floom-runtime-core", "floom-scheduler", "floom-signal"], 2),
+    (["floom-runtime-core", "floom-signal"], 2),
     (
         [
             "floom-layout", "floom-style", "floom-text", "floom-scene",
@@ -287,10 +293,10 @@ for _names, _level in [
     (
         [
             "floom-renderer", "floom-renderer-software", "floom-renderer-vello",
-            "floom-renderer-skia-abi", "floom-renderer-tui", "floom-renderer-web",
+            "floom-renderer-tui", "floom-renderer-web",
             "floom-platform", "floom-platform-desktop", "floom-platform-android",
-            "floom-platform-ios", "floom-platform-harmony", "floom-platform-web",
-            "floom-platform-embedded", "floom-platform-tui", "floom-platform-mobile",
+            "floom-platform-web",
+            "floom-platform-tui", "floom-platform-mobile",
             "floom-native",
             "floom-native-ffi",
             # winit event-loop adapter; no internal floom deps, consumed by the
@@ -329,9 +335,8 @@ for _names, _level in [
             "floom-plugin-mdns",
             "floom-plugin-secure-storage",
             "floom-plugin-tray",
-            "floom-animation", "floom-focus", "floom-gesture", "floom-overlay", "floom-store", "floom-task", "floom-forms",
-            "floom-navigation", "floom-persistence", "floom-services",
-            "floom-error", "floom-ime", "floom-editor",
+            "floom-animation", "floom-focus",
+            "floom-editor",
             # `floom-editor-core` is the editor's *model* -- a rope buffer, a
             # cursor, a selection, modes, registers, movement and word motions.
             # It reaches for nothing inside the workspace, so it sits with the
@@ -349,10 +354,13 @@ for _names, _level in [
     (["floom-app"], 7),
     # Tooling/compiler tier: these may depend on anything below them and are not
     # shipped as part of an application binary. `floom-testkit` is the runtime
-    # test harness; `floom-snapshot` is the golden-image engine (Phase 24.2);
-    # `floom-codegen` is the native-glue compiler (Phase 18); `floom-ui-ir` is
-    # the versioned UI intermediate representation (Phase 22.1).
-    (["floom-testkit", "floom-snapshot", "floom-codegen", "floom-ui-ir", "floom-dsl", "floom-hot-reload", "floom-inspector", "floom-devtools", "floom-profiler", "floom-agent", "floom-accuracy"], 8),
+    # test harness; `floom-snapshot` is the golden-image engine (Phase 24.2).
+    # `floom-ui-ir` (the versioned UI IR, Phase 22.1) and `floom-codegen` (the
+    # native-glue compiler, Phase 18) are folded into `floom-dsl` — `floom-dsl`
+    # is now the DSL/IR/codegen hub, and `floom-tsx` lowers into its `ui_ir`.
+    # The Phase-25 agent protocol is folded into `floom-accuracy` as its `agent`
+    # module, so `floom-accuracy` is the L8 entry (no separate `floom-agent`).
+    (["floom-testkit", "floom-snapshot", "floom-dsl", "floom-hot-reload", "floom-inspector", "floom-devtools", "floom-accuracy", "floom-tsx"], 8),
     # L9: the public facade (`floom::prelude`). It aggregates the whole stack —
     # including the L8 devtools bundle behind a feature — so it sits above
     # everything it re-exports. Unlike the L8 tooling tier it IS shipped as part
@@ -368,7 +376,16 @@ for _names, _level in [
 
 # Upward edges that exist, are understood, and are not to be "fixed" blindly.
 # Each entry needs a reason; an entry without one is a bug waiting to happen.
-UPWARD_ALLOW: dict[tuple[str, str], str] = {}
+UPWARD_ALLOW: dict[tuple[str, str], str] = {
+    # `floom-editor` is L5 model + its own widget. The widget side needs
+    # `floom_widgets::primitives::Revision` / `SemanticsHint` / `testkit` and
+    # lives one layer above the widgets as a consequence: the editor model
+    # itself reaches only L1..L3, so the upward edge is the widget wrapper
+    # leaning on the widget layer it renders with.
+    (norm("floom-editor"), norm("floom-widgets")): (
+        "editor's widget wrapper uses floom_widgets::primitives/testkit"
+    ),
+}
 LAYERS = {norm(k): v for k, v in LAYERS.items()}
 UPWARD_ALLOW = {(norm(a), norm(b)): why for (a, b), why in UPWARD_ALLOW.items()}
 
@@ -400,10 +417,10 @@ for crate, level in sorted(LAYERS.items()):
 # genuine upward edge can still be reported "OK" by simply not being listed.
 # (This is the same class of defect as the `norm()` miss that once let three
 # rules skip: a check that cannot fire.) Scope the guard to the 2.0 library
-# crates, which now all sit directly under `crates/` since the domain
-# directories were dissolved. Out of scope: `examples/`, the separate
-# workspaces under `crates/vendor/` + `crates/ecosystem/`, the legacy v1 crates
-# (`crates/floom-legacy-*`, not layered), and the monolithic `crates/floom`
+# crates, which live under `crates/<layer>/<crate>` after the P2 layering
+# restructure. Out of scope: `examples/`, the separate workspaces under
+# `crates/vendor/` + `crates/ecosystem/`, the legacy v1 crates
+# (`crates/floom-legacy-*`, not layered), and the facade `crates/app/floom`
 # (handled by LEGACY_ALLOW below).
 LIB_DIR = "crates/"
 LIB_DIR_SKIP_PREFIXES = (
@@ -411,7 +428,7 @@ LIB_DIR_SKIP_PREFIXES = (
     "crates/ecosystem/",
     "crates/floom-legacy-",
 )
-LIB_DIR_SKIP_EXACT = {"crates/floom/"}
+LIB_DIR_SKIP_EXACT = {"crates/app/floom/"}
 workspace_root = Path(meta["workspace_root"])
 unregistered = []
 for _pid in workspace_members:

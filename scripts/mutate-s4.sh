@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the S4 slice (brushes A3, shadows A4, implicit
 # transitions B4, motion tokens B6).
 # For each mutation: back up, mutate (scripts/mutate.py), run the targeted
@@ -38,13 +40,13 @@ mutate_one() {
   touch "$file"
 }
 
-BRUSH=crates/floom-types/src/brush.rs
-MOTION=crates/floom-types/src/motion.rs
-SWLIB=crates/floom-renderer-software/src/lib.rs
-APPLIB=crates/floom-app/src/lib.rs
-PRIMS=crates/floom-widgets/src/primitives.rs
-CTRLS=crates/floom-widgets/src/controls.rs
-VELLO=crates/floom-renderer-vello/src/lib.rs
+BRUSH=crates/core/floom-types/src/brush.rs
+MOTION=crates/core/floom-types/src/motion.rs
+SWLIB=crates/render/floom-renderer-software/src/lib.rs
+APPLIB=crates/app/floom-app/src/lib.rs
+PRIMS=crates/widgets/floom-widgets/src/primitives.rs
+CTRLS=crates/widgets/floom-widgets/src/controls.rs
+VELLO=crates/render/floom-renderer-vello/src/lib.rs
 MATERIAL=crates/floom-material/src/scale.rs
 
 # 1. a linear gradient samples its first stop everywhere (the ramp collapses)

@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Floom 2.0 architecture
 
 Floom 2.0 is a layered workspace: **dependencies point downward only**, and
@@ -6,7 +8,7 @@ depend on its own level and below; an upward edge fails the gate unless it is
 allowlisted with a written reason.
 
 This document is the human-readable mirror of that gate. The layer table below
-is parsed by `crates/floom/tests/docs_parity.rs`, which fails if the two drift
+is parsed by `crates/app/floom/tests/docs_parity.rs`, which fails if the two drift
 apart — so this page cannot quietly become wrong.
 
 Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples) and
@@ -18,21 +20,20 @@ Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples) and
 | --- | --- | --- |
 | `floom-types` | L0 | engine-neutral value types: geometry, ids, events vocabulary |
 | `floom-core` | L1 | the element/widget contract: `Widget`, `WidgetAny`, contexts, semantics vocabulary |
-| `floom-runtime-core`, `floom-scheduler`, `floom-signal` | L2 | element arena, dirty propagation, task ordering, and the reactive runtime that drives them |
+| `floom-runtime-core`, `floom-signal` | L2 | element arena, dirty propagation, task ordering, and the reactive runtime that drives them |
 | `floom-layout`, `floom-style`, `floom-text`, `floom-scene`, `floom-virtual`, `floom-accessibility` | L3 | layout engine, style resolution, text shaping, the retained scene, virtualization geometry, the semantics schema |
-| `floom-renderer`, `floom-renderer-software`, `floom-renderer-vello`, `floom-renderer-tui`, `floom-renderer-web` | L4 | the renderer ABI plus concrete backends (including one whose target is a character grid rather than pixels, and one that blits a raster buffer to a `<canvas>`) |
-| `floom-renderer-skia-abi` | L4 | the **recording** side of the Skia ABI: a scene becomes Skia-shaped commands, and the counters say what a real submit path would have to honour. Not a renderer — it draws no pixels |
-| `floom-platform`, `floom-platform-desktop`, `floom-platform-android`, `floom-platform-ios`, `floom-platform-harmony`, `floom-platform-web`, `floom-platform-embedded`, `floom-platform-tui`, `floom-ui-events-winit` | L4 | the windowing ABI plus concrete backends (including one whose target is a character grid) |
+| `floom-renderer`, `floom-renderer-software`, `floom-renderer-vello`, `floom-renderer-tui`, `floom-renderer-web` | L4 | the renderer ABI plus concrete backends (including one whose target is a character grid rather than pixels, and one that blits a raster buffer to a `<canvas>`). The Skia **recording** side of the ABI — a scene turned into Skia-shaped commands, counting what a real submit path would honour — lives in the `floom-renderer::skia_abi` module |
+| `floom-platform`, `floom-platform-desktop`, `floom-platform-android`, `floom-platform-web`, `floom-platform-tui`, `floom-ui-events-winit` | L4 | the windowing ABI plus concrete backends (including one whose target is a character grid). The OS-free iOS / HarmonyOS / embedded stand-ins are feature-gated modules on `floom-platform` (`ios` / `harmony` / `embedded`) |
 | `floom-native` | L4 | native view composition: capability negotiation, slots, pooling |
 | `floom-native-ffi` | L4 | the C ABI for native composition providers: a Swift, Java, C++ or ArkTS provider, driven by Rust |
 | `floom-plugin-webview` | L5 | a plugin whose capability is a native web view, with one native half per platform (Objective-C/AppKit, WKWebView, WebView2, WebKitGTK) |
 | `floom-plugin-camera`, `floom-plugin-battery`, `floom-plugin-connectivity`, `floom-plugin-device-info`, `floom-plugin-local-auth`, `floom-plugin-location`, `floom-plugin-notifications`, `floom-plugin-sensors`, `floom-plugin-share`, `floom-plugin-vibration`, `floom-plugin-package-info`, `floom-plugin-paths`, `floom-plugin-open-url`, `floom-plugin-file-dialog`, `floom-plugin-prefs`, `floom-plugin-wakelock`, `floom-plugin-network-info`, `floom-plugin-background-work`, `floom-plugin-mdns`, `floom-plugin-secure-storage`, `floom-plugin-tray` | L5 | the capability plugins: one capability each, opt-in by dependency. They live in `crates/ecosystem/plugins/`, their own workspace: the SDK ships none of them and does not build them |
 | `floom-platform-mobile` | L4 | mobile OS capabilities (camera, location, sensors, vibration) behind one ABI, with `jni` / `objc2` backends |
-| `floom-animation`, `floom-focus`, `floom-gesture`, `floom-overlay`, `floom-store`, `floom-task`, `floom-forms`, `floom-navigation`, `floom-persistence`, `floom-services`, `floom-error`, `floom-ime`, `floom-editor`, `floom-editor-core` | L5 | framework services, widget-free by design |
+| `floom-animation`, `floom-focus`, `floom-editor`, `floom-editor-core` | L5 | framework services, widget-free by design |
 | _(design systems)_ | — | `floom-theme`, `floom-design`, `floom-material`, `floom-cupertino`, `floom-fluent`, `floom-harmony` live in the `floom-ui` workspace, which the root workspace `exclude`s. They emit `floom-style` property values rather than paint calls, and their own dependency graph is checked by that workspace's build, not by `scripts/check-architecture-deps.sh`. |
 | `floom-widgets`, `floom-widgets-data` | L6 | widgets: Tier-0 primitives, controls, composites, data widgets |
 | `floom-app` | L7 | the headless app shell: `WidgetHost`, `AppRunner`, input routing, semantics publication |
-| `floom-testkit`, `floom-snapshot`, `floom-codegen`, `floom-ui-ir`, `floom-dsl`, `floom-hot-reload`, `floom-inspector`, `floom-devtools`, `floom-profiler`, `floom-agent`, `floom-accuracy` | L8 | tooling and compilers — **not** shipped in an application binary |
+| `floom-testkit`, `floom-snapshot`, `floom-dsl`, `floom-hot-reload`, `floom-inspector`, `floom-devtools`, `floom-accuracy`, `floom-tsx` | L8 | tooling and compilers — **not** shipped in an application binary. (`floom-codegen`, the native-glue compiler, and `floom-ui-ir`, the versioned UI IR, are folded into `floom-dsl` as its `codegen` and `ui_ir` modules; the Phase-25 agent protocol is folded into `floom-accuracy` as its `agent` module) |
 | `floom`, `floom-cli` | L9 | the public facade and the scaffolder that targets it: `floom::prelude`, feature bundles. It aggregates the tooling tier too, which is why it sits above L8 even though it *is* shipped. |
 
 Two crates sit outside the ladder on purpose:
@@ -56,8 +57,8 @@ Two crates sit outside the ladder on purpose:
         ┌───────────────────────────────┼──────────────────────────────┐
         │                               │                              │
    L8  tooling ─ floom-testkit, floom-snapshot, floom-inspector,       │
-                 floom-devtools, floom-profiler, floom-codegen,        │
-                 floom-ui-ir, floom-dsl, floom-hot-reload, floom-agent │
+                 floom-devtools, floom-dsl (+ui_ir +codegen),          │
+                 floom-hot-reload, floom-accuracy (+agent)             │
                                         │                              │
    L7  app shell ─────────────── floom-app ────────────────────────────┘
                                         │
@@ -108,14 +109,14 @@ replaceable without touching the parts with the most logic:
 ### Add a widget
 
 1. Implement `floom_core::Widget` (+ `WidgetAny` for anything that lives in a
-   type-erased tree) in `crates/floom-widgets`, or in a sibling crate if it is
+   type-erased tree) in `crates/widgets/floom-widgets`, or in a sibling crate if it is
    a data/media widget.
 2. Keep it renderer- and platform-neutral: the gate fails a widget crate that
    names a concrete backend or an OS crate. Paint through `PaintContext`;
    declare semantics through `SemanticsHint`.
 3. Re-export it from the crate root, and — if it belongs in the beginner
    surface — add it to `floom::prelude` *and* to the inventory test
-   (`crates/floom/tests/prelude_surface.rs`).
+   (`crates/app/floom/tests/prelude_surface.rs`).
 4. Test it with the shared harness (`floom-widgets::testkit`:
    `AllocatingCreateContext`, `RecordingUpdateContext`, `SceneRecorder`,
    `dispatch`) — do not hand-roll recorders.
@@ -150,7 +151,7 @@ native half implementing it and the Rust half calling it. `floom create
 
 **A capability that is a native view** — a camera preview, a web view, a
 video — additionally implements the provider ABI:
-`crates/floom-native-ffi/include/floom_native_provider.h`. It is a versioned
+`crates/native/floom-native-ffi/include/floom_native_provider.h`. It is a versioned
 struct of function pointers rather than four named symbols, because a provider
 is an instance per window and carries a `self` pointer. `floom-native-ffi`'s
 `CProvider` presents such a provider as an ordinary Rust `NativeViewProvider`,

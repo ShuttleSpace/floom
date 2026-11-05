@@ -7,14 +7,14 @@ publish = false
 description = "One application over the engine, signals, the ported kits, and the editor"
 
 [dependencies]
-floom = { path = "../../crates/floom", version = "0.2.0", features = [
+floom = { path = "../../crates/app/floom", version = "0.2.0", features = [
     "desktop",
     "renderer-gpu",
     "devtools",
 ] }
-floom-navigation = { path = "../../crates/floom-navigation", version = "0.2.0" }
-floom-signal = { path = "../../crates/floom-signal", version = "0.2.0" }
-floom-editor = { path = "../../crates/floom-editor", version = "0.2.0" }
+floom-widgets = { path = "../../crates/widgets/floom-widgets", version = "0.2.0" }
+floom-signal = { path = "../../crates/core/floom-signal", version = "0.2.0" }
+floom-editor = { path = "../../crates/widgets/floom-editor", version = "0.2.0" }
 
 # Only the ported kits are imported. `crates/ecosystem/floom-ui` is a satellite
 # workspace with 300+ members; pulling the workspace in whole would build kits
@@ -25,4 +25,4 @@ floom-widget-md-checkbox = { path = "../../crates/ecosystem/floom-ui/crates/mate
 floom-core-theme = { path = "../../crates/ecosystem/floom-ui/crates/floom-core-theme", features = ["material"] }
 
 [dev-dependencies]
-floom-testkit = { path = "../../crates/floom-testkit", version = "0.2.0" }
+floom-testkit = { path = "../../crates/devtools/floom-testkit", version = "0.2.0" }

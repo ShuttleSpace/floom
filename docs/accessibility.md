@@ -1,6 +1,8 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Floom Accessibility (Phase 4)
 
-> Status: **Phase 4 Step 5 — HarmonyOS (OpenHarmony) 屏读桥 (2026-08-12)**。Step 0–4 已完成（中性协议 + 视图接线 + 桌面 accesskit 桥 + iOS VoiceOver 桥 + Android TalkBack 桥）；**HarmonyOS 现已接 N-API 屏读桥**（`crates/floom/src/accessibility/backend_ohos.rs`，与桌面/iOS/Android 共享同一 `PendingAction` 通道，经 N-API 把中性树序列化推到 ArkTS、再注册到 OHOS Accessibility Kit）。
+> Status: **Phase 4 Step 5 — HarmonyOS (OpenHarmony) 屏读桥 (2026-08-12)**。Step 0–4 已完成（中性协议 + 视图接线 + 桌面 accesskit 桥 + iOS VoiceOver 桥 + Android TalkBack 桥）；**HarmonyOS 现已接 N-API 屏读桥**（`crates/core/floom-accessibility/src`，与桌面/iOS/Android 共享同一 `PendingAction` 通道，经 N-API 把中性树序列化推到 ArkTS、再注册到 OHOS Accessibility Kit）。
 > Capability `BackendCapabilities::accessibility`：桌面 target（macos/linux/windows）`true`；iOS `true`；Android `true`；**HarmonyOS 现已 `true`**（`ohos_capabilities()` cfg 翻开）。四端（桌面三 + iOS + Android + OHOS）屏读桥齐备。
 >
 > **Step 5 验证状态（trust-but-verify）**：a11y 后端 napi 表面经**隔离 probe crate** 针对真实 `aarch64-unknown-linux-ohos` target + napi 2.16.17 编译 **0 error**（见 §4.7）。整 crate `cargo check --target aarch64-unknown-linux-ohos` 受 **Phase 3 依赖/sysroot 缺口** gate（`tgui-winit-ohos` retarget 已通过 `[patch.crates-io]` → `../tgui-winit-ohos-fork` 应用，非 gate；真正卡点 = `accesskit_unix`/`muda(gtk)` 的 glib-sys【本步已修】、随后 `yeslogic-fontconfig-sys` 的 fontconfig pkg-config【OHOS 无 sysroot】、wgpu vulkan 链接器），独立于 Step 5；本步已顺带修掉一个真实 OHOS 编译 blocker（glib-sys）。
@@ -9,7 +11,7 @@
 
 给 floom 加工业级无障碍能力：让屏幕阅读器（VoiceOver / TalkBack / NVDA·ORCA / Narrator）能感知并操作 floom 应用。
 
-Phase 4 的设计**刻意镜像 embedder 子系统**（`crates/floom/src/embedder/`）：先建一个**平台无关的中性协议**（`AccessNode` / `AccessTree` / `AccessTreeUpdate` + Rust 适配 trait `AccessibilityBackend`），后续再按平台接桥。本协议不依赖任何具体平台或窗口库（纯 `std` + `bitflags` + `kurbo`），因此编译于所有 target 无差异。
+Phase 4 的设计**刻意镜像 embedder 子系统**（`crates/platform/floom-platform/src`）：先建一个**平台无关的中性协议**（`AccessNode` / `AccessTree` / `AccessTreeUpdate` + Rust 适配 trait `AccessibilityBackend`），后续再按平台接桥。本协议不依赖任何具体平台或窗口库（纯 `std` + `bitflags` + `kurbo`），因此编译于所有 target 无差异。
 
 调研结论（2026-08-11）：floom 此前**无任何无障碍实现**——只有 `BackendCapabilities::accessibility: bool` 占位 flag（默认 false）。winit fork 也未暴露无障碍 API（grep 命中全是 changelog 历史），故无障碍树必须自建，再各自桥接：
 - macOS / iOS: `NSAccessibility`（`NSAccessibilityElement`）
@@ -19,7 +21,7 @@ Phase 4 的设计**刻意镜像 embedder 子系统**（`crates/floom/src/embedde
 
 ## 2. 协议设计
 
-### 2.1 数据模型（`crates/floom/src/accessibility/node.rs`, `role.rs`, `state.rs`）
+### 2.1 数据模型（`crates/core/floom-accessibility/src`, `role.rs`, `state.rs`）
 
 - `AccessNodeId(u64)` — 协议级稳定节点 id（跨 `AccessTreeUpdate` 不变，便于增量 patch 原生树）。
 - `AccessRole`（`#[non_exhaustive]`）— 平台无关角色：Button / CheckBox / RadioButton / Switch / Slider / TextField / Heading / List / ListItem / Tab / Menu / Image / Alert / … 覆盖 WAI-ARIA + 各平台原生角色词汇。
@@ -27,13 +29,13 @@ Phase 4 的设计**刻意镜像 embedder 子系统**（`crates/floom/src/embedde
 - `AccessAction`（`#[non_exhaustive]`）— 屏幕阅读器可请求的动词：Focus / Default(激活) / Increment / Decrement / ShowContextMenu / ScrollIntoView / Expand / Collapse / Select / SetValue。
 - `AccessNode` — 单节点：`id` / `role` / `label` / `value` / `description` / `states` / `actions` / `bounds: Option<Rect>`(逻辑像素) / `children: Vec<AccessNodeId>`。提供 builder（`with_label` / `with_value` / `with_states` / `with_actions` / `with_bounds` / `with_children`）+ `supports(action)`。
 
-### 2.2 树与增量更新（`crates/floom/src/accessibility/tree.rs`）
+### 2.2 树与增量更新（`crates/core/floom-accessibility/src`）
 
 - `AccessTree` — `HashMap<AccessNodeId, AccessNode>` + `root` + `focus`。方法：`get` / `contains` / `iter` / `len` / `focused` / `apply(update)` / `node_at_point(point)`。
 - `AccessTreeUpdate` — 可 diff 的增量：`root: Option` / `nodes: Vec`(upsert) / `removed: Vec` / `focus: Option`；`is_empty()`。`AccessTree::apply` 在删除时同步清理父节点的悬挂 child 引用，并清除指向被删节点的 `root` / `focus`。
 - `node_at_point` — 命中测试返回**最内层**（面积最小）的包含节点，用于触摸探索 / 按坐标聚焦。
 
-### 2.3 后端适配 trait（`crates/floom/src/accessibility/backend.rs`）
+### 2.3 后端适配 trait（`crates/core/floom-accessibility/src`）
 
 `AccessibilityBackend`（镜像 `EmbedderWindow` / `PlatformServices`）：
 - `update_tree(&mut self, AccessTreeUpdate)` — core 推送树 diff；默认 no-op。
@@ -43,7 +45,7 @@ Phase 4 的设计**刻意镜像 embedder 子系统**（`crates/floom/src/embedde
 
 `MockAccessibility` — 内存后端（测试 / headless 用）：保存 `AccessTree`、记录每次 `perform_action`（`performed_actions()` / `clear_actions()`），`perform_action` 仅接受节点声明支持的 action。
 
-## 3. Capability（`crates/floom/src/embedder/capabilities.rs`）
+## 3. Capability（`crates/platform/floom-platform/src/capabilities.rs`）
 
 - `BackendCapabilities::accessibility: bool` — 此前纯摆设（同 `safe_area` 在 Step 9 之前）。
 - **新增 `with_accessibility()` builder**：后端接好 `crate::accessibility` 桥后调用置 `true`。当前 `winit_default()` / `headless()` 仍 `false`（无真实屏读桥）。
@@ -51,7 +53,7 @@ Phase 4 的设计**刻意镜像 embedder 子系统**（`crates/floom/src/embedde
 ## 4. 模块布局
 
 ```
-crates/floom/src/accessibility/
+crates/core/floom-accessibility/src
   mod.rs        — 模块文档 + re-export
   role.rs       — AccessRole
   state.rs      — AccessState (bitflags) + AccessAction
@@ -61,21 +63,21 @@ crates/floom/src/accessibility/
   attrs.rs      — AccessibilityAttrs (每视图声明属性：role/label/value/description/actions/hidden)
   bridge.rs     — core 遍历 ViewStorage + ViewState + LayoutChanged + focus 产出 AccessTreeUpdate (含 2 测试)
 ```
-`crates/floom/src/lib.rs` 注册 `pub mod accessibility;`（line 180，紧邻 `action`）。
+`crates/app/floom/src/lib.rs` 注册 `pub mod accessibility;`（line 180，紧邻 `action`）。
 
 ## 4.1 Step 1 — 视图属性接线 + core 发射（2026-08-11）
 
 把 Step 0 协议接到真实 UI：**声明侧** + **产出侧**。
 
-### 声明侧（`crates/floom/src/view/state.rs` + `crates/floom/src/view/id.rs`）
+### 声明侧（`crates/core/floom-core/src` + `crates/core/floom-core/src`）
 - `ViewState` 新增 `pub(crate) accessibility: Option<AccessibilityAttrs>`（默认 `None`，表示用默认：仍暴露为 `AccessRole::Unknown`）。
 - `ViewId` 新增 builder（镜像 `set_cursor`）：`accessibility_role` / `accessibility_label` / `accessibility_value` / `accessibility_description` / `accessibility_actions` / `accessibility_skip(hidden)`。内部 `state().borrow_mut().accessibility.get_or_insert_with(Default::default)`。
 
-### 存储侧（`crates/floom/src/window/state.rs`）
+### 存储侧（`crates/app/floom-app/src`）
 - `WindowState` 新增 `pub(crate) accessibility: AccessTree`（权威中性树）与 `pub(crate) accessibility_backend: Option<Rc<RefCell<dyn AccessibilityBackend>>>`（平台桥，未接时为 `None`）。
 - 新增 `set_accessibility_backend(...)` setter（Step 2 由平台后端调用）。
 
-### 产出侧（`crates/floom/src/accessibility/bridge.rs` + `crates/floom/src/window/handle.rs`）
+### 产出侧（`crates/core/floom-accessibility/src` + `crates/app/floom-app/src`）
 - `build_access_tree_update(storage, root_view_id, focused_view) -> AccessTreeUpdate`：从 `ViewStorage::children` 自窗口根遍历；读每视图 `ViewState.accessibility`（role/label/value/description/actions）+ `ViewState.layout.box_window()`（窗口坐标 `Rect` 作 `bounds`）+ focus（`ElementId::owning_id()` 比对）；`AccessNodeId` 取 `ViewId.data().as_ffi()`（稳定 u64）。
 - **隐藏再父化**：`AccessibilityAttrs::hidden` 的视图从树中删除，其 children 重挂到最近的非隐藏祖先（镜像 ARIA `role="presentation"`/`none`）。
 - 发射点：在 `WindowHandle::process_update_no_paint` 末尾（layout commit 之后、`UpdatePhaseEvent::Complete` 路由之前）调用新增的 `update_accessibility_tree()`：构建 update → `window_state.accessibility.apply(update)` → 若 `accessibility_backend` 为 `Some` 则 `backend.update_tree(update)` 转发给平台桥。
@@ -100,7 +102,7 @@ crates/floom/src/accessibility/
 - 三平台统一经 accesskit 覆盖：macOS→NSAccessibility、Linux→AT-SPI2、Windows→UIA。
 - floom 用 `winit` 的 **lapce fork**（`floem-winit`），故 `accesskit_winit`（依赖上游 `winit`）**不可直接用** → 直接驱动 per-OS `Adapter`，绕开 winit 集成层。
 
-#### 平台无关映射层 `crates/floom/src/accessibility/translate.rs`（新建，单测）
+#### 平台无关映射层 `crates/core/floom-accessibility/src`（新建，单测）
 
 唯一把中性 `AccessNode`/`AccessTree` 翻译成 accesskit 类型的地方，可在 macOS 本机单测：
 
@@ -112,7 +114,7 @@ crates/floom/src/accessibility/
 
 #### macOS `accesskit_macos`（已接，host 验证）
 
-- `crates/floom/src/accessibility/backend_nsaccessibility.rs`：`MacOSAccessibilityBackend` 包装 `accesskit_macos::Adapter`。
+- `crates/core/floom-accessibility/src`：`MacOSAccessibilityBackend` 包装 `accesskit_macos::Adapter`。
   - `new(ns_view: *mut c_void)`：null 返回 `None`；否则 `unsafe { Adapter::new(ns_view, true, MacOSActionHandler { tx }) }`（主线程，裸 `NSView` 指针；NSView 子类化与 `NSAccessibility` 全部由 accesskit_macos 接管）。
   - `update_tree(update)`：`tree.apply` 同步中性缓存 → `adapter.update_if_active(|| build_tree_update(&tree))` → `events.raise()`（`QueuedEvents`）。
   - `focused_node` / `node_at_point` 委托中性 `AccessTree` 缓存（无需重查原生树）。
@@ -120,7 +122,7 @@ crates/floom/src/accessibility/
 
 #### Linux `accesskit_unix`（已接，cfg 编译验证）
 
-- `crates/floom/src/accessibility/backend_atspi.rs`：`LinuxAccessibilityBackend` 包装 `accesskit_unix::Adapter`。
+- `crates/core/floom-accessibility/src`：`LinuxAccessibilityBackend` 包装 `accesskit_unix::Adapter`。
   - `Adapter::new(activation, action, deactivation)` — **不收 zbus Connection**（适配器自拥 session bus）。
   - `SharedTree = Arc<Mutex<AccessTree>>`：`LinuxActivationHandler::request_initial_tree()` 在屏读器首次连入时返回 `build_tree_update(&tree)`；`LinuxDeactivationHandler::deactivate() {}` no-op。
   - `update_tree`：`tree.lock().apply(update)` + `adapter.update_if_active(|| build_tree_update(&tree))`。
@@ -128,7 +130,7 @@ crates/floom/src/accessibility/
 
 #### Windows `accesskit_windows`（已接，cfg 编译验证）
 
-- `crates/floom/src/accessibility/backend_uia.rs`：`WindowsAccessibilityBackend` 包装 `accesskit_windows::Adapter`。
+- `crates/core/floom-accessibility/src`：`WindowsAccessibilityBackend` 包装 `accesskit_windows::Adapter`。
   - `new(hwnd: *mut c_void)`：null 返回 `None`；否则 `let hwnd = HWND(hwnd as *mut _); Adapter::new(hwnd, true, WindowsActionHandler { tx })`（`HWND` 是 accesskit_windows 的 newtype 包装 `*mut _`）。
   - **`WM_GETOBJECT` 转发（已实现）**：`Adapter::handle_wm_getobject` 必须由窗口过程手动转发（accesskit_windows 无内置子类）。`new` 中对 HWND **子类化**：`SetWindowLongPtrW(GWLP_USERDATA, Arc::into_raw(data))` 存 `SubclassData`，再 `SetWindowLongPtrW(GWLP_WNDPROC, subclass_proc)` 替换窗口过程。`subclass_proc` 拦截 `WM_GETOBJECT` → `adapter.handle_wm_getobject(WPARAM, LPARAM, &mut activation_handler)` → `result.into()` 转 `LRESULT` 返回；其余消息 `CallWindowProcW` 链回原过程；`WM_NCDESTROY` 时还原 `GWLP_WNDPROC` 并 `Arc::from_raw` 释放。`Adapter` 与 `WindowsActivationHandler` 经 `Arc<Mutex<>>` 在 backend 与 WndProc 间共享；初始树用独立的 `cached_tree` Mutex 提供，避免与 `update_if_active` 的锁序死锁。
   - action 回传同 macOS。
@@ -165,7 +167,7 @@ crates/floom/src/accessibility/
 
 屏读器请求的动作（经 `poll_actions` 回传的 `PendingAction`）现在**真正驱动 core 视图**，而不只是被捕获后丢弃。
 
-- 落点：`WindowState::handle_accessibility_action(PendingAction)`（`crates/floom/src/window/state.rs`）。
+- 落点：`WindowState::handle_accessibility_action(PendingAction)`（`crates/app/floom-app/src`）。
 - 节点→视图还原：`AccessNodeId(u64)` 即 floom 给视图 `ViewId` 的 `KeyData.as_ffi()`；`ViewId::from(KeyData::from_ffi(node.0))` 还原 `ViewId`，无需在中性树里携带 Rust 闭包。
 - 动作映射（真实路由，跨平台）：
   - `Focus` → `view_id.request_focus()`（键盘焦点，真实生效）。
@@ -179,14 +181,14 @@ crates/floom/src/accessibility/
 `Increment`/`Decrement`/`Expand`/`Collapse`/`SetValue`/`ScrollIntoView` 在 floom 无通用事件，故走**每视图回调**：
 
 - `AccessibilityAttrs` 新增 `on_action: Option<Arc<dyn Fn(AccessAction, Option<String>) + 'static>>`（`AccessibilityActionHandler` 类型别名）；因含闭包，`AccessibilityAttrs` 改为手动实现 `Clone`/`Debug`。
-- `ViewId::accessibility_action(handler)`（`crates/floom/src/view/id.rs`）：向视图注册回调，典型用法是 slider/spinbutton 处理 `Increment`/`Decrement`/`SetValue`、disclosure 处理 `Expand`/`Collapse`。
+- `ViewId::accessibility_action(handler)`（`crates/core/floom-core/src`）：向视图注册回调，典型用法是 slider/spinbutton 处理 `Increment`/`Decrement`/`SetValue`、disclosure 处理 `Expand`/`Collapse`。
 - `handle_accessibility_action` 中这些分支：`view_id.state().borrow().accessibility.on_action.clone()` 取出 `Arc` 后释放 `RefCell` 借用，再 `handler(action, payload)` 调用（`SetValue` 的 payload 即新值字符串）。视图的响应式信号在闭包内更新，无需 core 改动。无回调则静默忽略（不 panic、不破坏状态）。
 
 #### 4.3.2 焦点状态回传 macOS / Windows (2026-08-11)
 
 - `AccessibilityBackend` trait 新增默认 `update_focus_state(bool)`（默认 no-op，Linux AT-SPI 走 `TreeUpdate.focus` 无需）。
 - macOS 后端：`adapter.update_view_focus_state(focused)` + `events.raise()`；Windows 后端：`adapter.update_window_focus_state(focused)` + `events.raise()`。
-- 接线：`WindowHandle::focused(focused)`（`crates/floom/src/window/handle.rs`，处理 `WindowEvent::Focused`）在派发 `FocusGained`/`FocusLost` 后调用 `backend.update_focus_state(focused)`，让 VoiceOver / Narrator 与 floom 窗口焦点同步。
+- 接线：`WindowHandle::focused(focused)`（`crates/app/floom-app/src`，处理 `WindowEvent::Focused`）在派发 `FocusGained`/`FocusLost` 后调用 `backend.update_focus_state(focused)`，让 VoiceOver / Narrator 与 floom 窗口焦点同步。
 
 #### 4.3.3 Windows `WM_GETOBJECT` 转发 (2026-08-11)
 
@@ -194,7 +196,7 @@ Narrator 要连上 UIA，必须把 `WM_GETOBJECT` 转给 `accesskit_windows::Ada
 
 ### 4.4 Step 3 — iOS VoiceOver 桥 (2026-08-12)
 
-iOS **无 accesskit 后端**（`accesskit` 仅覆盖 macos/linux/windows），故直接走 iOS 原生 `UIAccessibility` 协议：子类化 `UIAccessibilityElement`，把中性树镜像到窗口 `UIView`（作根无障碍容器）之下，并把 VoiceOver 动作（activate / increment / decrement / scroll）经与桌面**相同的 `PendingAction` 通道**回传 core。代码全部位于新文件 `crates/floom/src/accessibility/backend_ios.rs`（`#[cfg(target_os = "ios")]` 门控）。
+iOS **无 accesskit 后端**（`accesskit` 仅覆盖 macos/linux/windows），故直接走 iOS 原生 `UIAccessibility` 协议：子类化 `UIAccessibilityElement`，把中性树镜像到窗口 `UIView`（作根无障碍容器）之下，并把 VoiceOver 动作（activate / increment / decrement / scroll）经与桌面**相同的 `PendingAction` 通道**回传 core。代码全部位于新文件 `crates/core/floom-accessibility/src`（`#[cfg(target_os = "ios")]` 门控）。
 
 #### 为什么不用 accesskit / 不用 `NSAccessibility` 协议 trait
 
@@ -238,8 +240,8 @@ iOS **无 accesskit 后端**（`accesskit` 仅覆盖 macos/linux/windows），�
 
 Android **无 accesskit 后端**（`accesskit` 仅覆盖 macos/linux/windows），且 Android 暴露无障碍的 [`AccessibilityNodeProvider`] **必须是 Java `View` 层级中的 Java 对象**——无法纯 Rust 实现。因此本步采用「**Rust 注入一个透明 Java `View` + JNI 入口**」双文件方案：
 
-- `crates/floom/src/accessibility/backend_android.rs`（`#[cfg(target_os = "android")]` 门控）—— 中性树 ↔ `AccessibilityNodeInfo` 翻译 + JNI 入口（C-ABI，`#[unsafe(no_mangle)]`）。
-- `crates/floom/src/platform/android/FloomAccessibilityView.java`（包名 `dev.floom.android`，**load-bearing**，须与 JNI 符号一致）—— 透明 `View`，`getAccessibilityNodeProvider()` 返回内部 `FloomProvider extends AccessibilityNodeProvider`，把 `createAccessibilityNodeInfo` / `findAccessibilityNodeInfosByText` / `performAction` 回调 forward 到 Rust 的 JNI 入口。
+- `crates/core/floom-accessibility/src`（`#[cfg(target_os = "android")]` 门控）—— 中性树 ↔ `AccessibilityNodeInfo` 翻译 + JNI 入口（C-ABI，`#[unsafe(no_mangle)]`）。
+- `crates/platform/floom-platform-android/src/android.rs`（包名 `dev.floom.android`，**load-bearing**，须与 JNI 符号一致）—— 透明 `View`，`getAccessibilityNodeProvider()` 返回内部 `FloomProvider extends AccessibilityNodeProvider`，把 `createAccessibilityNodeInfo` / `findAccessibilityNodeInfosByText` / `performAction` 回调 forward 到 Rust 的 JNI 入口。
 
 #### 为什么是「注入 Java View」而不是纯 Rust
 
@@ -290,13 +292,13 @@ Android 上 floom 只有**一个窗口**，故用模块级单例：它同时被 
 
 ### 4.6 Step 4 验证与文档
 
-`cargo check -p floom --target aarch64-linux-android` **0 error**（修复 jni 0.21 生命周期三连：E0106 elided → `JNIEnv<'a>` + 返回 `JObject<'a>` 同源；E0621 → 不绑 `this`；E0499 → 不绑 `&mut` 引用寿命）；host `cargo check -p floom` **0 error**（门控不影响）。`backend_android.rs` 本文件 0 新 warning；`crates/floom/src/platform/clipboard.rs:266` 的 `E0133`（`AndroidJni::init` 未包 unsafe）为 Phase 1 既有 warning，非 Step 4 引入。未做真机 TalkBack 联调（交叉编译仅验证编译与桥接结构）。
+`cargo check -p floom --target aarch64-linux-android` **0 error**（修复 jni 0.21 生命周期三连：E0106 elided → `JNIEnv<'a>` + 返回 `JObject<'a>` 同源；E0621 → 不绑 `this`；E0499 → 不绑 `&mut` 引用寿命）；host `cargo check -p floom` **0 error**（门控不影响）。`backend_android.rs` 本文件 0 新 warning；`crates/platform/floom-platform-desktop/src/clipboard.rs:266` 的 `E0133`（`AndroidJni::init` 未包 unsafe）为 Phase 1 既有 warning，非 Step 4 引入。未做真机 TalkBack 联调（交叉编译仅验证编译与桥接结构）。
 
 ### 4.7 Step 5 — HarmonyOS (OpenHarmony) 屏读桥 (2026-08-12)
 
 HarmonyOS **无 accesskit 后端**（`accesskit` 仅覆盖 macos/linux/windows），且 OHOS 屏读经 **Accessibility Kit**（ArkTS API）暴露，须走 **N-API**（Rust ↔ ArkTS FFI）。故本步采用与桌面/iOS/Android **同一中性协议 + 同一 `PendingAction` 通道**，仅把"树推送"与"动作回调"换成语义等价的 N-API 实现：
 
-- `crates/floom/src/accessibility/backend_ohos.rs`（`#[cfg(target_env = "ohos")]` 门控）—— 中性树 ↔ JS 对象序列化 + N-API 入口（`#[napi]`）。
+- `crates/core/floom-accessibility/src`（`#[cfg(target_env = "ohos")]` 门控）—— 中性树 ↔ JS 对象序列化 + N-API 入口（`#[napi]`）。
 - ArkTS 侧（Phase 3 应用壳）注册 `register_platform_bridge({ setAccessibilityTree, on_accessibility_action })`；Rust 经 `crate::platform::ohos_bridge::call_bridge` 回调 `setAccessibilityTree`，把整棵树交给 ArkTS 注册进 OHOS Accessibility Kit。
 
 #### 为什么是 N-API 而非 accesskit
@@ -367,7 +369,7 @@ OHOS 后端 `backend_ohos.rs` 以 `#[cfg(target_env = "ohos")]` 门控（**非**
 - **Step 2 — 桌面后端**：✅ macOS / Linux / Windows 三桌面平台均已接**真实 accesskit 后端**（VoiceOver / ORCA / Narrator），经 accesskit 中性传输层统一桥接；`translate.rs` 单一映射层 + 3 单测；`capabilities.accessibility` 桌面 target 已 `true`；`set_accessibility_backend` 已接线。**真实 action 派发已落地**：`Focus`→`request_focus`、`Default`→定向 `Click`、`ShowContextMenu`→定向 `SecondaryClick`（经 `ViewId::route_event`）；**语义动作 hook**（`AccessibilityAttrs.on_action` + `ViewId::accessibility_action`，覆盖 Increment/Decrement/Expand/Collapse/SetValue/ScrollIntoView）；**macOS/Windows 焦点状态回传**（`update_focus_state` → `update_view_focus_state`/`update_window_focus_state`，在 `WindowHandle::focused` 接线）；**Windows `WM_GETOBJECT` 转发**（HWND 子类化，Narrator 可连）。三项缺口全部闭合。
 - **[x] Step 3 — iOS 桥 (2026-08-12)**：`UIAccessibility` 桥（VoiceOver）。子类 `UIAccessibilityElement` 把中性树镜像到窗口 `UIView`；动作（activate/increment/decrement/scroll）经与桌面相同的 `PendingAction` 通道回传 core；`capability.accessibility` iOS 翻 `true`；`native_backend_for_window(ui_view)` + `WindowHandle::new(ui_view)` 接线。`cargo check --target x86_64-apple-ios` 0 error。Android 留 Step 4。
 - **[x] Step 4 — Android 桥 (2026-08-12)**：`AccessibilityNodeProvider` / `AccessibilityNodeInfo`（TalkBack）。Rust 注入透明 Java `View`（`FloomAccessibilityView.java`，包 `dev.floom.android`）+ `backend_android.rs` 4 个 JNI 入口把中性树翻译成 `AccessibilityNodeInfo`、并把 TalkBack 动作经与桌面/iOS 相同的 `PendingAction` 通道回传 core；单例 `ANDROID_A11Y` 单窗口共享 tree + action channel；拓扑变化才 `TYPE_WINDOW_CONTENT_CHANGED`；`capability.accessibility` Android 翻 `true`。`cargo check --target aarch64-linux-android` 0 error。OHOS 屏读桥见 Step 5。
-- **[x] Step 5 — HarmonyOS 桥 (2026-08-12)**：N-API 屏读桥（**无 accesskit 后端**，OHOS 屏读经 Accessibility Kit/ArkTS，Rust 经 N-API 把中性树序列化推到 ArkTS 注册）。新增 `crates/floom/src/accessibility/backend_ohos.rs`（`#[cfg(target_env = "ohos")]`）：`ACTION_TX: OnceLock<Mutex<mpsc::Sender<PendingAction>>>` 单窗口单例 + `OhosAccessibilityBackend { tree, action_rx }`；`update_tree` → `push()` → `call_bridge`(`setAccessibilityTree`) 序列化整树（root/focus/nodes[]，每节点 id/role/label/value/description/states(bits→i64)/actions[]/bounds{x0,y0,x1,y1}/children[]）；`#[napi] on_accessibility_action(node_id: i64, action: String, payload: Option<String>)` 经单例通道把 OHOS 动作回传 core（与桌面/iOS/Android **同一 `PendingAction` → `handle_accessibility_action` → `route_event`** 路径）。接线：`mod.rs::native_backend_for_window()` + `window/handle.rs::WindowHandle::new`(`#[cfg(target_env="ohos")]` 接 backend) + `embedder/ohos.rs::ohos_capabilities().accessibility=true`。**关键 cfg 修正**：OHOS 是 `target_os="linux"` + `target_env="ohos"`，故全部 14 处 `cfg(target_os="ohos")` → `cfg(target_env="ohos")`，并把 `backend_atspi`/`accesskit_unix`/`muda(gtk)` 桌面块加 `not(target_env="ohos")` 排除（否则 OHOS 误编译 AT-SPI/glib 栈、整 crate check 死在 glib-sys）；napi 2.x 陷阱：`#[napi]` 在 `napi-derive`（须 `use napi_derive::napi`）、`u64` 无 `FromNapiValue`（id 用 `i64`）、`create_int64` 收 `i64`（5 处 `as i64`）、`JsFunction::call(None, &[x.into_unknown()])`。**验证**：隔离 probe crate 针对真实 `aarch64-unknown-linux-ohos` target + napi 2.16.17 **0 error**；整 crate OHOS `cargo check` 受 Phase 3 依赖/sysroot 缺口 gate（fontconfig/wgpu-vulkan 的 OHOS sysroot/链接器缺口；`tgui-winit-ohos` retarget 已通过 `[patch.crates-io]` 应用，非 gate），独立于本步，但本步已修掉一个真实 OHOS 编译 blocker（glib-sys，已验证整 crate check 推进到 fontconfig）。未做真机/模拟器屏读联调（交叉编译仅验证编译与桥接结构）。
+- **[x] Step 5 — HarmonyOS 桥 (2026-08-12)**：N-API 屏读桥（**无 accesskit 后端**，OHOS 屏读经 Accessibility Kit/ArkTS，Rust 经 N-API 把中性树序列化推到 ArkTS 注册）。新增 `crates/core/floom-accessibility/src`（`#[cfg(target_env = "ohos")]`）：`ACTION_TX: OnceLock<Mutex<mpsc::Sender<PendingAction>>>` 单窗口单例 + `OhosAccessibilityBackend { tree, action_rx }`；`update_tree` → `push()` → `call_bridge`(`setAccessibilityTree`) 序列化整树（root/focus/nodes[]，每节点 id/role/label/value/description/states(bits→i64)/actions[]/bounds{x0,y0,x1,y1}/children[]）；`#[napi] on_accessibility_action(node_id: i64, action: String, payload: Option<String>)` 经单例通道把 OHOS 动作回传 core（与桌面/iOS/Android **同一 `PendingAction` → `handle_accessibility_action` → `route_event`** 路径）。接线：`mod.rs::native_backend_for_window()` + `window/handle.rs::WindowHandle::new`(`#[cfg(target_env="ohos")]` 接 backend) + `embedder/ohos.rs::ohos_capabilities().accessibility=true`。**关键 cfg 修正**：OHOS 是 `target_os="linux"` + `target_env="ohos"`，故全部 14 处 `cfg(target_os="ohos")` → `cfg(target_env="ohos")`，并把 `backend_atspi`/`accesskit_unix`/`muda(gtk)` 桌面块加 `not(target_env="ohos")` 排除（否则 OHOS 误编译 AT-SPI/glib 栈、整 crate check 死在 glib-sys）；napi 2.x 陷阱：`#[napi]` 在 `napi-derive`（须 `use napi_derive::napi`）、`u64` 无 `FromNapiValue`（id 用 `i64`）、`create_int64` 收 `i64`（5 处 `as i64`）、`JsFunction::call(None, &[x.into_unknown()])`。**验证**：隔离 probe crate 针对真实 `aarch64-unknown-linux-ohos` target + napi 2.16.17 **0 error**；整 crate OHOS `cargo check` 受 Phase 3 依赖/sysroot 缺口 gate（fontconfig/wgpu-vulkan 的 OHOS sysroot/链接器缺口；`tgui-winit-ohos` retarget 已通过 `[patch.crates-io]` 应用，非 gate），独立于本步，但本步已修掉一个真实 OHOS 编译 blocker（glib-sys，已验证整 crate check 推进到 fontconfig）。未做真机/模拟器屏读联调（交叉编译仅验证编译与桥接结构）。
 - 后续细化：overlay 并入 a11y 树；a11y 树 dirty 节流（避免每帧全量重建）；`DISABLED`/`SELECTED`/`EXPANDED` 等状态从真实视图状态提取（如 `disabled` style、`checked` 等）；`value` 自动从文本视图内容合成（少样板）。
 
 ## 7. Changelog
@@ -377,16 +379,16 @@ OHOS 后端 `backend_ohos.rs` 以 `#[cfg(target_env = "ohos")]` 门控（**非**
   - 非阻塞缺口：`capability.accessibility` 仍 false（无真实屏读桥）；core 尚未接线视图属性（Step 1）。
 
 - **[x] Step 1 (2026-08-11)** — 视图属性接线 + core 产出 `AccessTreeUpdate`。
-  - 声明侧：`ViewState.accessibility: Option<AccessibilityAttrs>`（`crates/floom/src/view/state.rs`）；`ViewId` 新增 builder `accessibility_role`/`accessibility_label`/`accessibility_value`/`accessibility_description`/`accessibility_actions`/`accessibility_skip`（`crates/floom/src/view/id.rs`，镜像 `set_cursor`）。
-  - 存储侧：`WindowState.accessibility: AccessTree` + `accessibility_backend: Option<Rc<RefCell<dyn AccessibilityBackend>>>` + `set_accessibility_backend`（`crates/floom/src/window/state.rs`）。
-  - 产出侧：`crates/floom/src/accessibility/bridge.rs` 的 `build_access_tree_update(storage, root, focused)` 自 `ViewStorage::children` 遍历 → 读 `ViewState.accessibility` + `LayoutChanged::box_window()`(窗口坐标 `Rect`) + focus（`ElementId::owning_id()`）；`AccessNodeId = ViewId.data().as_ffi()`（稳定 u64）。`hidden` 视图从树删除、children 重挂最近非隐藏祖先（再父化已修：re-parented children 正确挂入父 `children`）。
-  - 发射点：`WindowHandle::process_update_no_paint` 末尾调 `update_accessibility_tree()` → `window_state.accessibility.apply(update)` + 转发 `backend.update_tree(update)`（`crates/floom/src/window/handle.rs`）。
+  - 声明侧：`ViewState.accessibility: Option<AccessibilityAttrs>`（`crates/core/floom-core/src`）；`ViewId` 新增 builder `accessibility_role`/`accessibility_label`/`accessibility_value`/`accessibility_description`/`accessibility_actions`/`accessibility_skip`（`crates/core/floom-core/src`，镜像 `set_cursor`）。
+  - 存储侧：`WindowState.accessibility: AccessTree` + `accessibility_backend: Option<Rc<RefCell<dyn AccessibilityBackend>>>` + `set_accessibility_backend`（`crates/app/floom-app/src`）。
+  - 产出侧：`crates/core/floom-accessibility/src` 的 `build_access_tree_update(storage, root, focused)` 自 `ViewStorage::children` 遍历 → 读 `ViewState.accessibility` + `LayoutChanged::box_window()`(窗口坐标 `Rect`) + focus（`ElementId::owning_id()`）；`AccessNodeId = ViewId.data().as_ffi()`（稳定 u64）。`hidden` 视图从树删除、children 重挂最近非隐藏祖先（再父化已修：re-parented children 正确挂入父 `children`）。
+  - 发射点：`WindowHandle::process_update_no_paint` 末尾调 `update_accessibility_tree()` → `window_state.accessibility.apply(update)` + 转发 `backend.update_tree(update)`（`crates/app/floom-app/src`）。
   - 验证：host `cargo check` 0 error；`cargo test -p floom --lib accessibility` **12 passed**（含 bridge 2 测试：树构建含角色/标签/几何 + 隐藏再父化 + focus）。无 `#[cfg]` 门控，交叉 target 由构造保证。
   - 非阻塞缺口：`capability.accessibility` 仍 false（无真实屏读桥）；每帧全量重建无 dirty 节流；overlay 未并入 a11y 树；`DISABLED`/`SELECTED`/`EXPANDED` 等状态与 `value` 自动合成留 Step 2+。
 
 - **[x] Step 2 (2026-08-11)** — 桌面后端桥（accesskit 转向）：macOS/Linux/Windows 三桌面平台全部接**真实 accesskit 后端**（VoiceOver / ORCA / Narrator），绕开手搓原生 API 死路。
   - 架构转向（用户确认「accesskit 适配器」）：调研发现 `atspi`/`uiautomation` 是客户端库、无法"提供"无障碍；改用 `accesskit` 0.24 作中性传输层，三平台 adapter（`accesskit_macos` 0.26 / `accesskit_unix` 0.22 / `accesskit_windows` 0.34）均依赖 `accesskit ^0.24.1`；floom 用 lapce winit fork → 直接驱动 per-OS `Adapter`，不用 `accesskit_winit`。
-  - 映射层 `crates/floom/src/accessibility/translate.rs`（新建，单测）：`role_to_accesskit` / `action_to_accesskit` / `build_accesskit_node` / `build_tree_update`；`Select`→`None`、`CHECKED`→`set_toggled(Toggled::True)`、焦点→`TreeUpdate.focus`；含 3 单测。
+  - 映射层 `crates/core/floom-accessibility/src`（新建，单测）：`role_to_accesskit` / `action_to_accesskit` / `build_accesskit_node` / `build_tree_update`；`Select`→`None`、`CHECKED`→`set_toggled(Toggled::True)`、焦点→`TreeUpdate.focus`；含 3 单测。
   - macOS `backend_nsaccessibility.rs`：`MacOSAccessibilityBackend` 包装 `accesskit_macos::Adapter`；`new(ns_view)` 裸 NSView 指针、`update_tree`→`update_if_active`→`QueuedEvents::raise()`；`MacOSActionHandler: ActionHandler` 反向映射经 `mpsc` 回传。
   - Linux `backend_atspi.rs`：`LinuxAccessibilityBackend` 包装 `accesskit_unix::Adapter`；`Adapter::new(activation, action, deactivation)` 自拥 session bus；`SharedTree = Arc<Mutex<AccessTree>>`、`ActivationHandler::request_initial_tree` 懒提供初始树。
   - Windows `backend_uia.rs`：`WindowsAccessibilityBackend` 包装 `accesskit_windows::Adapter`；`new(hwnd)` 经 `HWND(hwnd as *mut _)` 构造；**`WM_GETOBJECT` 转发已接**：对 HWND 子类化（`SetWindowLongPtrW` 存 `Arc<SubclassData>` 于 `GWLP_USERDATA`、换 `GWLP_WNDPROC` 为 `subclass_proc`），`subclass_proc` 转发 `WM_GETOBJECT` 并链回原过程、`WM_NCDESTROY` 还原释放；`Adapter`/`ActivationHandler` 经 `Arc<Mutex<>>` 共享、初始树走独立 `cached_tree` Mutex 避死锁。`windows-sys`（仅 windows target）提供裸 Win32 调用。
@@ -398,7 +400,7 @@ OHOS 后端 `backend_ohos.rs` 以 `#[cfg(target_env = "ohos")]` 门控（**非**
   - **Windows `WM_GETOBJECT` 转发（Step 2 收尾，2026-08-11）**：见上 `backend_uia.rs`；`cargo check --target x86_64-pc-windows-gnu` 0 error。
   - 关键坑（已修）：`ActionRequest` 用 `target_node` 非 `target`；焦点树级 `TreeUpdate.focus`；`accesskit_macos::Adapter::new` 收 `*mut c_void`（objc2 0.5/0.6 共存）；`HWND` 是 newtype 须 `HWND(... as *mut _)`；`accesskit_unix` 不传 zbus Connection；per-OS adapter 是独立 crate（Cargo.toml 勿重复 target key）。
 
-- **[x] Step 3 (2026-08-12)** — iOS VoiceOver 桥（**无 accesskit 后端**，直接子类化 `UIAccessibilityElement`，新增 `crates/floom/src/accessibility/backend_ios.rs`，`#[cfg(target_os = "ios")]`）。
+- **[x] Step 3 (2026-08-12)** — iOS VoiceOver 桥（**无 accesskit 后端**，直接子类化 `UIAccessibilityElement`，新增 `crates/core/floom-accessibility/src`，`#[cfg(target_os = "ios")]`）。
   - 动机：iOS 无 accesskit adapter（`accesskit` 仅覆盖 macos/linux/windows）；`UIAccessibility` 在 `objc2-ui-kit` 中以 category traits（`NSObjectUIAccessibility`/`NSObjectUIAccessibilityContainer`）暴露、无独立协议 struct，且只 impl 在 `UIAccessibilityElement` 精确类 → 子类属性 setter 一律 `msg_send!` 绕过 trait + mtm。
   - 子类 `FloomA11yElement`：`#[unsafe(super(UIAccessibilityElement))]` + `#[thread_kind = MainThreadOnly]` + ivars `A11yIvars { node_id, actions: u32(位掩码), tx: *const mpsc::Sender<PendingAction>(裸指针，Sender 非 Encode) }`；`define_class!` 固有 `impl` 块（写 `impl T {`，不带 `unsafe`）override `accessibilityActivate`→`Default`/`accessibilityIncrement`→`Increment`/`accessibilityDecrement`→`Decrement`/`accessibilityScroll:`→`ScrollIntoView`，按 `actions` 位掩码经裸指针 `send_action` 发 `PendingAction`。
   - `IosAccessibilityBackend`：持有 `Retained<UIView>`(根容器) + `HashMap<AccessNodeId, Retained<FloomA11yElement>>` 增量同步 + `AccessTree` 中性缓存 + `mpsc` 通道；`update_tree` 仅主线程触 OC，按 `old/new ids` 差集创建/删除 element、逐节点 `update_element` 刷新（逻辑像素经 `UIAccessibilityConvertFrameToScreenCoordinates` 转屏幕坐标），**仅拓扑变化才 `rebuild_containers` + `UIAccessibilityPostNotification(UIAccessibilityLayoutChangedNotification)`**；`poll_actions` 全 drain。
@@ -406,17 +408,17 @@ OHOS 后端 `backend_ohos.rs` 以 `#[cfg(target_env = "ohos")]` 门控（**非**
   - 验证：`cargo check -p floom --target x86_64-apple-ios` **0 error、本文件 0 新 warning**（修复 `unsafe impl` 路径/固有 impl 块/`MainThreadOnly` import/`Retained::as_ptr`/`extern static` mtm 等 6 类编译坑）；host `cargo check` 0 error（门控不影响）。
   - 缺口（与桌面一致）：`Expand`/`Collapse`/`SetValue`/`ShowContextMenu`/`Select`/`Focus` 在 iOS 无对应 UIAccessibility 动作，经 per-view `on_action` 回调；未做真实设备 VoiceOver 联调（模拟器 `cargo check` 仅验证编译与桥接结构）。
 
-- **[x] Step 4 (2026-08-12)** — Android TalkBack 桥（**无 accesskit 后端**，`AccessibilityNodeProvider` 必须是 Java `View` 层级对象 → Rust 注入透明 Java `View` + JNI 入口，新增 `crates/floom/src/accessibility/backend_android.rs`（`#[cfg(target_os = "android")]`）与 `crates/floom/src/platform/android/FloomAccessibilityView.java`（包 `dev.floom.android`，load-bearing 须与 JNI 符号一致））。
+- **[x] Step 4 (2026-08-12)** — Android TalkBack 桥（**无 accesskit 后端**，`AccessibilityNodeProvider` 必须是 Java `View` 层级对象 → Rust 注入透明 Java `View` + JNI 入口，新增 `crates/core/floom-accessibility/src`（`#[cfg(target_os = "android")]`）与 `crates/platform/floom-platform-android/src/android.rs`（包 `dev.floom.android`，load-bearing 须与 JNI 符号一致））。
   - 动机：Android 无 accesskit adapter、且 provider 必须是 Java 对象（JVM 反射）→ 双文件方案。Java `View` 透明（`setWillNotDraw(true)`）、不消费触摸（`setClickable`/`setFocusable` false）、`IMPORTANT_FOR_ACCESSIBILITY_NO`；`getAccessibilityNodeProvider()` 返回 `FloomProvider extends AccessibilityNodeProvider`，回调 forward 到 4 个 native 入口。
   - 单例 `ANDROID_A11Y: static Mutex<Option<AndroidA11yInner>>`（Android 单窗口）：同时被 `AccessibilityBackend` impl 与 JNI 入口（无 `self`）共享 tree + `mpsc` action channel；`ActionConsts` 惰性缓存 `AccessibilityNodeInfo.ACTION_*` int 常量。`AndroidAccessibilityBackend` 零尺寸标记委托单例。
   - JNI 入口（edition 2024 → `#[unsafe(no_mangle)]`）：`nativeRegisterView`（`new_global_ref` 存 `GlobalRef`，`Clone+Send+Sync`）/`nativeCreateNodeInfo`（host `HOST_VIEW_ID=-1` 走 `build_host_info`，否则 `create_node_info_locked` 重建 node 后 `into_raw()`）/`nativePerformAction`（Android action int 反查 `AccessAction` 经 `tx.send`；`ACTION_SET_TEXT` payload 从 Bundle `android.view.accessibility.extra.DATA_TEXT` 读）/`nativeFindNodesByText`（按 label/value/description 大小写不敏感匹配，返回 `ArrayList`）。各入口 `JNIEnv::from_raw` + 错误转 null/false，绝不跨 JNI 边界 panic。
   - 翻译 `create_node_info_locked`：`obtain(View, vid)` → text(label>value)/contentDescription/className(`class_name_for(role)`)/states(setEnabled/setSelected/setCheckable+setChecked)/几何(逻辑px 经 `getLocationOnScreen`+`density` 转屏幕px)/parent(`HOST_VIEW_ID` 或 parent map)/children/addChild/actions(add_action：`Default`→CLICK+setClickable、`Focus`→FOCUS+setFocusable、ScrollIntoView→scroll_fwd+bwd+setScrollable、SetValue→SET_TEXT、ShowContextMenu→LONG_CLICK 等)。每帧全量 `tree.apply`，**仅拓扑变化**才 `notify_changed()`（`view.requestA11yRefresh()` → `post(TYPE_WINDOW_CONTENT_CHANGED)`）；per-node info 按需重建，属性变化无需显式通知。
   - 接线：`mod.rs::native_backend_for_window()`（建单例 channel + `inject_a11y_view()` 注入 Java View）+ `window/handle.rs::WindowHandle::new`（`#[cfg(target_os="android")]` 接 backend）+ `embedder/android.rs::android_capabilities().accessibility=true`；`#![cfg(target_os="android")]` 门控，iOS/桌面/HarmonyOS 不编译。
-  - 验证：`cargo check -p floom --target aarch64-linux-android` **0 error**（修复 jni 0.21 生命周期三连：E0106 elided → `JNIEnv<'a>` + 返回 `JObject<'a>` 同源；E0621 → 不绑 `this`；E0499 → 不绑 `&mut` 引用寿命；`ActionConsts::load` 可变闭包 E0596）；host `cargo check -p floom` 0 error。`backend_android.rs` 本文件 0 新 warning；`crates/floom/src/platform/clipboard.rs:266` 的 `E0133`（`AndroidJni::init` 未包 unsafe）为 Phase 1 既有 warning，非本步引入。
+  - 验证：`cargo check -p floom --target aarch64-linux-android` **0 error**（修复 jni 0.21 生命周期三连：E0106 elided → `JNIEnv<'a>` + 返回 `JObject<'a>` 同源；E0621 → 不绑 `this`；E0499 → 不绑 `&mut` 引用寿命；`ActionConsts::load` 可变闭包 E0596）；host `cargo check -p floom` 0 error。`backend_android.rs` 本文件 0 新 warning；`crates/platform/floom-platform-desktop/src/clipboard.rs:266` 的 `E0133`（`AndroidJni::init` 未包 unsafe）为 Phase 1 既有 warning，非本步引入。
   - 关键坑（jni 0.21.1 + edition 2024）：`JNIEnv<'a>` 与返回 `JObject<'a>` 必须同源（编译器直接建议 `env: &mut JNIEnv<'a>`）；`call_method`/`get_field`/`get_static_field`/`new_string`/`get_string` 收 `&mut self`、`new_int_array`/`get_int_array_region` 收 `&self`；`#[unsafe(no_mangle)]`（edition 2024）；`GlobalRef` 经 `as_obj()` 取 `&JObject`；`get_string` 收 `&JString`；`HOST_VIEW_ID=-1` 为 Android provider 约定。
   - 缺口（与桌面/iOS 一致）：未做真机 TalkBack 联调（交叉编译仅验证编译与桥接结构）；`Expand`/`Collapse`/`SetValue`/`ShowContextMenu`/`Select`/`Focus` 经 per-view `on_action` 回调（TalkBack 无对应原生动作）。
 
-- **[x] Step 5 (2026-08-12)** — HarmonyOS (OpenHarmony) N-API 屏读桥（**无 accesskit 后端**，OHOS 屏读经 Accessibility Kit/ArkTS，Rust 经 N-API 把中性树序列化推到 ArkTS 注册；新增 `crates/floom/src/accessibility/backend_ohos.rs`，`#[cfg(target_env = "ohos")]`）。
+- **[x] Step 5 (2026-08-12)** — HarmonyOS (OpenHarmony) N-API 屏读桥（**无 accesskit 后端**，OHOS 屏读经 Accessibility Kit/ArkTS，Rust 经 N-API 把中性树序列化推到 ArkTS 注册；新增 `crates/core/floom-accessibility/src`，`#[cfg(target_env = "ohos")]`）。
   - 动机：OHOS 内核 `target_os = "linux"` 但屏读栈是 ArkTS Accessibility Kit（非 AT-SPI2、非 accesskit 协议）；`accesskit_unix` adapter 在 OHOS 不可用（glib/D-Bus 不存在）→ 不依赖 accesskit 传输层，直接把中性树序列化推到 ArkTS。与 Android（Java View + JNI）同源思路：原生平台不提供 Rust 可实现的"提供方"接口，故 floom vend 一个 N-API 桥。
   - 单例 `ACTION_TX: OnceLock<Mutex<mpsc::Sender<PendingAction>>>`（OHOS 单窗口，与 Android `ANDROID_A11Y` 同源）+ `OhosAccessibilityBackend { tree: AccessTree, action_rx: mpsc::Receiver<PendingAction> }`；`poll_actions` 全 drain。
   - 树推送：`update_tree(update)` → `tree.apply` → `push()` → `serialize_tree`（root/focus/nodes[]，每节点 id/role/label/value/description/states(bits→i64)/actions[]/bounds{x0,y0,x1,y1}/children[]）→ `call_bridge(|env, obj| { let f: JsFunction = obj.get_named_property("setAccessibilityTree")?; f.call(None, &[obj.into_unknown()]) })` 交 ArkTS 注册进 OHOS Accessibility Kit。**仅拓扑变化才发**（属性变化由 ArkTS 按需重读）。

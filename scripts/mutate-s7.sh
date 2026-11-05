@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the S7 slice (A4's back half: general filters).
 # For each mutation: back up, mutate (scripts/mutate.py), run the targeted
 # test, record whether it FAILED, restore, and verify the restore byte-exact.
@@ -37,9 +39,9 @@ mutate_one() {
   touch "$file"
 }
 
-SOFTWARE=crates/floom-renderer-software/src/lib.rs
-HOST=crates/floom-app/src/lib.rs
-CONTAINER=crates/floom-widgets/src/primitives.rs
+SOFTWARE=crates/render/floom-renderer-software/src/lib.rs
+HOST=crates/app/floom-app/src/lib.rs
+CONTAINER=crates/widgets/floom-widgets/src/primitives.rs
 SW_TESTS="cargo test -q -p floom-renderer-software --test filters"
 HOST_TESTS="cargo test -q -p floom-app --test filters"
 

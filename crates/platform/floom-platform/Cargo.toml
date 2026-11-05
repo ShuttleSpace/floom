@@ -1,0 +1,28 @@
+[package]
+name = "floom-platform"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Platform ABI for Floom 2.0 (OS-neutral contracts)"
+rust-version.workspace = true
+
+[dependencies]
+floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+bitflags = "2.9"
+# Handle descriptors only — no windowing or GPU library. See `src/surface.rs`.
+raw-window-handle = { workspace = true }
+# Only the stand-in backends (`ios`/`embedded`/`harmony`) need the semantics
+# schema; the default OS-neutral ABI does not, so it stays optional.
+floom-accessibility = { path = "../../core/floom-accessibility", version = "0.2.0", optional = true }
+
+[features]
+default = []
+# OS-free stand-in backends folded in from the former `floom-platform-ios`,
+# `floom-platform-embedded` and `floom-platform-harmony` crates. Each turns on
+# exactly the accessibility adapter it bridges to.
+ios = ["dep:floom-accessibility"]
+embedded = ["dep:floom-accessibility"]
+harmony = ["dep:floom-accessibility"]
+
+[dev-dependencies]

@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Platform layer and plugins
 
 Decides what belongs in `floom-platform*` (the platform layer) and what must be
@@ -26,8 +28,8 @@ Two costs drove this split.
 
 ## The core surface
 
-`crates/floom-platform` defines the contract, and it is deliberately three
-traits (`crates/floom-platform/src/lib.rs`):
+`crates/platform/floom-platform` defines the contract, and it is deliberately three
+traits (`crates/platform/floom-platform/src/lib.rs`):
 
 | Trait | Why it is core |
 |---|---|
@@ -173,7 +175,7 @@ on the host operating system.
 Some capabilities are not a query but a **view**: a camera preview, a web
 view, a video. Those are *native participants* — views the framework does not
 paint — and they have a second contract, the **provider ABI**
-(`crates/floom-native-ffi/include/floom_native_provider.h`).
+(`crates/native/floom-native-ffi/include/floom_native_provider.h`).
 
 The two contracts answer different questions:
 
@@ -297,7 +299,7 @@ the first thing to need the provider ABI.
 
 ## Relationship to `floom/src/platform`
 
-The v1 monolith carries its own bridges in `crates/floom/src/platform/`
+The v1 monolith carries its own bridges in `crates/platform/floom-platform/src`
 (clipboard, file pickers, a11y, JNI/ObjC/OHOS shims). That duplicates the
 `floom-platform-*` adapters. When the v1 monolith is retired these are deleted;
 nothing should be migrated from them into a plugin — the `floom-platform-*`

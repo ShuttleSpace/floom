@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Floom 1.0 platform gates (tier B)
 
 Status values: `pass` | `fail` | `n/a`.

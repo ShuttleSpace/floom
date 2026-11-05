@@ -1,9 +1,11 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Floom 2.0 Android Example
 
 A minimal Floom 2.0 counter app that runs on Android. It is the floom
 analogue of `examples/android` (the v1 entry point): same `AppRunner` +
 `VelloGpuPresenter` stack as `floom-window`, but driven by the Android
-(winit) event loop through `crates/floom-platform-android`'s
+(winit) event loop through `crates/platform/floom-platform-android`'s
 `AndroidRunner` / `set_android_app` / `run` seam.
 
 > Status: **real entry point wired**. The app compiles for
@@ -75,7 +77,7 @@ Gradle/AGP required.
 The entry point must be a `cdylib` (not a bin): `native-activity` loads the
 library named by the manifest's `android.app.lib_name` meta-data
 (`floom_android_example`). The `android_main` symbol is exported from
-`crates/floom/src/lib.rs`; `src/main.rs` is just a host placeholder.
+`crates/app/floom/src/lib.rs`; `src/main.rs` is just a host placeholder.
 
 The `real` feature is likewise **mandatory, not optional**: the whole `android`
 module — and with it the exported `android_main` — is gated on

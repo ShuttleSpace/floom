@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the A6 slice (shared elements, MOTION-GAP B5/A6).
 #
 # The shared-element net is only worth having if it actually *bites*: if the
@@ -44,7 +46,7 @@ mutate_one() {
   touch "$file"
 }
 
-WIDGET=crates/floom-widgets/src/compose.rs
+WIDGET=crates/widgets/floom-widgets/src/compose.rs
 SCENE="cargo test -q -p floom-app --test motion_host"
 GOLDEN="cargo test -q -p floom-snapshot --test golden_frames a_shared_element_flight_is_golden_frame_by_frame"
 

@@ -1,0 +1,18 @@
+[package]
+name = "floom-signal"
+version.workspace = true
+edition.workspace = true
+repository = "https://github.com/lapce/floom"
+description = "Fine-grained reactivity primitives: signals, effects, memos and derived state for Floom 2.0"
+license.workspace = true
+
+[dependencies]
+smallvec = "1.10.0"
+parking_lot = { workspace = true }
+
+[dev-dependencies]
+criterion = { version = "0.8.1", features = ["html_reports"] }
+
+[[bench]]
+name = "selector"
+harness = false

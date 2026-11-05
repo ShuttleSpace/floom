@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # The devtools panel
 
 The devtools are one line in, a keystroke away — the same deal Electron's
@@ -85,7 +87,7 @@ floom::run_desktop_with_devtools("my app", Size::new(480.0, 320.0), |host| {
 ## Where the panel lives
 
 `floom-devtools` — the same crate as the headless
-[`Inspector`](../crates/floom-devtools/src/lib.rs). The inspector answers
+[`Inspector`](../crates/devtools/floom-devtools/src/lib.rs). The inspector answers
 questions about a retained tree; the panel is the visible half of the same
 crate, a real widget built from engine primitives rather than a second window.
 
@@ -144,7 +146,7 @@ so a demo that inherited a dark window would make every contrast bug in the app
 look like a devtools bug; white keeps the two separable at a glance.
 
 The demo needs a GPU window, so CI cannot run it. What CI *does* run is
-`crates/floom-app/tests/devtools_demo.rs`, which mounts the same app into a real
+`crates/app/floom-app/tests/devtools_demo.rs`, which mounts the same app into a real
 host and checks the whole chain headlessly: the tree is describable, the panel
 composes the app's rows over the engine's, refreshing the cell picks up new
 nodes, and a picking click selects without pressing. If that passes, the demo's

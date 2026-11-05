@@ -10,5 +10,5 @@ path = "src/main.rs"
 
 [dependencies]
 floom.workspace = true
-floom-editor = { path = "../../floom-editor" }
+floom-editor = { path = "../../../../widgets/floom-editor" }
 floom-types.workspace = true

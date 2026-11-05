@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! The shell: a retained widget tree whose keyed child is rebuilt on route change.
 //!
 //! The shell owns the `Router<AppRoute>`. The router is widget-free, so when
@@ -331,7 +332,7 @@ fn status_bar(route: AppRoute, depth: usize, state: Arc<AppState>) -> Child {
 /// The shell widget: owns the router and rebuilds its keyed child on route
 /// change.
 pub struct ShowcaseShell {
-    router: floom_navigation::Router<AppRoute>,
+    router: floom_widgets::navigation::Router<AppRoute>,
     pub rendered: AppRoute,
     pub pending: Arc<Mutex<Option<NavIntent>>>,
     state: Arc<AppState>,
@@ -345,7 +346,7 @@ impl ShowcaseShell {
     pub fn new_at(state: Arc<AppState>, route: AppRoute) -> Self {
         state.route.set(route.id() as u8);
         Self {
-            router: floom_navigation::Router::new(route).with_limit(50),
+            router: floom_widgets::navigation::Router::new(route).with_limit(50),
             rendered: route,
             pending: Arc::new(Mutex::new(None)),
             state,

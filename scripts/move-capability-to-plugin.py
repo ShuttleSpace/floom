@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 """Move a capability out of the mobile platform adapter and into a plugin crate.
 
 The doctrine (`docs/platform-and-plugins.md`) says a platform adapter is an
@@ -16,7 +18,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-MOBILE = ROOT / "crates/floom-platform-mobile"
+MOBILE = ROOT / "crates/platform/floom-platform-mobile"
 PACKAGES = MOBILE / "src/packages"
 
 # package directory -> plugin crate name

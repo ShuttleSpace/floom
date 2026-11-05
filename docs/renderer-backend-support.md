@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Renderer backend support matrix
 
 What each renderer backend actually answers, and what it silently does not.
@@ -59,7 +61,7 @@ It has no shader runtime, so a `Shader` node is skipped and counted
 (`shaders_skipped`). A WGSL program needs a GPU runtime, and the software
 rasteriser is not one.
 
-Its pixel-level tests (`crates/floom-renderer-software/tests/`) are the
+Its pixel-level tests (`crates/render/floom-renderer-software/tests/`) are the
 discipline the other backends copy.
 
 ### `floom-renderer-vello` — the GPU path, and its one remaining gap
@@ -164,7 +166,7 @@ that vocabulary.
 3. **Count what you could not do.** Add a `*_skipped` counter and surface it,
    rather than overwriting a default no-op body.
 4. **Test against the software backend.** It answers per pixel and is the
-   reference; `crates/floom-renderer-software/tests/` holds the discipline to
+   reference; `crates/render/floom-renderer-software/tests/` holds the discipline to
    copy.
 
 ## The gaps that remain

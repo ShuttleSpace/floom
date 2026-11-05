@@ -1,0 +1,22 @@
+[package]
+name = "floom-dsl"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Declarative UI DSL: parser, lowering to the UI IR, and builder codegen"
+
+[dependencies]
+# `floom-ui-ir` (folded in as the `ui_ir` module) owns the vocabulary: kinds,
+# properties, events, bindings. This crate deliberately does not restate it — it
+# lowers into the IR and then asks the IR to validate, so there is exactly one
+# property table in the workspace.
+# `floom-codegen` (folded in as the `codegen` module) needs only the value
+# types; it is the one DSL piece with no IR dependency.
+floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+# The schema and IR are (de)serializable for ABI-versioned persistence/tests.
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+[dev-dependencies]

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 """In-place edits to a Rust file that must not depend on a hand-typed crate name.
 
 The transport this script is written in drops one `o` from `floom` often enough

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Performance budget gate (Phase 31 / P4).
 #
 # The P0 acceptance line "baseline benchmarks pass" and the P4 line "performance

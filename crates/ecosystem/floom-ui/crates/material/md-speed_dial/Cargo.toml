@@ -7,15 +7,15 @@ edition = "2021"
 # Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
 floom-widget-runtime = { workspace = true, features = ["material"] }
 floom-core-theme = { workspace = true }
-floom-signal = { path = "../../../../../floom-signal" }
-floom-core = { path = "../../../../../floom-core" }
-floom-types = { path = "../../../../../floom-types" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-signal = { path = "../../../../../core/floom-signal" }
+floom-core = { path = "../../../../../core/floom-core" }
+floom-types = { path = "../../../../../core/floom-types" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }
 # The button's and the actions' icons come from this kit's own icon table.
 floom-widget-md-icon = { workspace = true }
 
 [dev-dependencies]
 floom-core-theme = { workspace = true, features = ["material"] }
-floom-core = { path = "../../../../../floom-core" }
-floom-types = { path = "../../../../../floom-types" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-core = { path = "../../../../../core/floom-core" }
+floom-types = { path = "../../../../../core/floom-types" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }

@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Security Policy
 
 ## Reporting a vulnerability
@@ -21,7 +23,8 @@ availability of an application built with Floom, in particular:
 
 - unsound or `unsafe` code in the rendering, platform, or native-composition
   layers (`floom-native-ffi`, `floom-platform-*`, `floom-renderer-*`);
-- the local development transports in `floom-agent` and `floom-devtools`, which
+- the local development transports in `floom-accuracy`'s `agent` module and
+  `floom-devtools`, which
   listen on localhost with a dev token — reports about their exposure or token
   handling are especially valuable;
 - dependency-supply-chain issues.

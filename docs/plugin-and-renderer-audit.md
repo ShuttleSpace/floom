@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # 插件化架构与渲染后端审计规划
 
 审计日期：2026-10-22。范围：需求 1（SDK 只内置最基本平台能力，其余走原生语言插件 + FFI）与需求 2（渲染后端缺口对齐）。
@@ -22,15 +24,15 @@
 
 | 机制 | 位置 | 状态 |
 |---|---|---|
-| 插件注册表 | `crates/floom-platform/src/plugins.rs` | ✅ 完整，8 个测试。函数指针注册（非字符串查找）、幂等 enable、失败不重试 |
-| 原生视图 ABI | `crates/floom-native/src/abi.rs` | ✅ 完整，`NativeViewProvider` 9 方法 + 能力协商 + 21 个测试 |
-| 合成控制器 | `crates/floom-native/src/controller.rs` | ✅ 生命周期不变量由控制器强制，后端无法私自破坏 |
-| 槽位池 | `crates/floom-native/src/pool.rs` | ✅ generation 复位的回收语义 |
-| CLI 插件脚手架 | `crates/floom-cli/src/main.rs:295` `create_plugin` | ✅ 生成 `Cargo.toml` + `build.rs` + `src/lib.rs` + `floom.h` + 各平台原生半边 + `example/` + README |
-| C ABI 头模板 | `crates/floom-cli/src/templates.rs:504` `plugin_header_rs` | ✅ 4 个符号：`version` / `enable` / `disable` / `capability`，带 ABI version 宏 |
-| Java 插件半边 | `crates/floom-cli/src/native_project.rs::android_plugin_java` | ✅ JNI 静态方法半边（`{Name}Plugin` 静态方法），由 `src/android.rs` 经 JNI 调用；契约方向已统一为"原生实现、Rust 调用"（G3） |
-| Swift 插件半边 | `crates/floom-cli/src/native_project.rs:981` | ⚠️ 有代码，但没有导出 C ABI 符号（见 G4） |
-| 桌面 CMake 半边 | `crates/floom-cli/src/native_project.rs:1050` | ✅ GTK / AppKit / Win32 三套 |
+| 插件注册表 | `crates/platform/floom-platform/src/plugins.rs` | ✅ 完整，8 个测试。函数指针注册（非字符串查找）、幂等 enable、失败不重试 |
+| 原生视图 ABI | `crates/native/floom-native/src/abi.rs` | ✅ 完整，`NativeViewProvider` 9 方法 + 能力协商 + 21 个测试 |
+| 合成控制器 | `crates/native/floom-native/src/controller.rs` | ✅ 生命周期不变量由控制器强制，后端无法私自破坏 |
+| 槽位池 | `crates/native/floom-native/src/pool.rs` | ✅ generation 复位的回收语义 |
+| CLI 插件脚手架 | `crates/app/floom-cli/src/main.rs:295` `create_plugin` | ✅ 生成 `Cargo.toml` + `build.rs` + `src/lib.rs` + `floom.h` + 各平台原生半边 + `example/` + README |
+| C ABI 头模板 | `crates/app/floom-cli/src/templates.rs:504` `plugin_header_rs` | ✅ 4 个符号：`version` / `enable` / `disable` / `capability`，带 ABI version 宏 |
+| Java 插件半边 | `crates/app/floom-cli/src/native_project.rs::android_plugin_java` | ✅ JNI 静态方法半边（`{Name}Plugin` 静态方法），由 `src/android.rs` 经 JNI 调用；契约方向已统一为"原生实现、Rust 调用"（G3） |
+| Swift 插件半边 | `crates/app/floom-cli/src/native_project.rs:981` | ⚠️ 有代码，但没有导出 C ABI 符号（见 G4） |
+| 桌面 CMake 半边 | `crates/app/floom-cli/src/native_project.rs:1050` | ✅ GTK / AppKit / Win32 三套 |
 | 可运行示例 | `examples/floom-native-plugin/src/main.rs` | ✅ 协商 + 生命周期 + 池化三段断言 |
 
 **结论：机制是够用的，缺的是接线与验证。**
@@ -63,7 +65,7 @@
 - **示例 manifest 的注释缩进错乱**：模板里那几行漏了续行转义，生成的 TOML 注释第一行没缩进、其余行有 9 空格。
 - **插件的桌面半边被生成为应用 CMake**（`add_executable` + `main.c`）：插件应是库；且桌面半边已由 `build.rs` 用 `cc` 编译，再来一个 CMake 会造成重复符号。已改为只写 `native/desktop/README.md` 说明这件事。
 
-### 新增的固化验证（`crates/floom-cli/src/main.rs` 的 `mod tests`，28 项）
+### 新增的固化验证（`crates/app/floom-cli/src/main.rs` 的 `mod tests`，28 项）
 
 | 测试 | 守住什么 |
 |---|---|
@@ -98,7 +100,7 @@
 
 ## 2.1 审计基准
 
-场景词汇表 = `crates/floom-scene/src/node.rs` 的 `enum SceneNode`（12 个变体）：
+场景词汇表 = `crates/core/floom-scene/src/node.rs` 的 `enum SceneNode`（12 个变体）：
 `GroupPush/GroupPop`、`Rect{bounds,fill,radius,shadow}`、`Path{path,fill,stroke}`、
 `ClipPush/ClipPop`、`FilterPush/FilterPop`、`BackdropFilter{rect,filter}`、
 `Shader{bounds,shader}`、`Image{bounds,image,alpha}`、`Text{origin,size,glyphs,color}`。
@@ -187,7 +189,7 @@
 >   在 GPU presenter 上改为 `true`。
 > - 背景滤镜仍计数跳过，理由见下（但论证里"结构性不可能"的部分需要修正）。
 
-`crates/floom-renderer-vello/src/gpu.rs`：
+`crates/render/floom-renderer-vello/src/gpu.rs`：
 
 - 阴影：**已修复（B4）** —— `Rect` 的阴影经 `draw_blurred_rounded_rect` 真画出来
   （offset 折进 rect、spread 同时增大 rect 与圆角、blur 折成 σ），`shadows_drawn` 计数。
@@ -225,7 +227,7 @@ software 能做到只因为它自己拥有像素缓冲。
 >
 > 这个"缺口"不会再被当成待办，因为它已经不是缺口了。
 
-`crates/floom-renderer-software/src/lib.rs:1161-1163`：`shaders_skipped += 1`。
+`crates/render/floom-renderer-software/src/lib.rs:1161-1163`：`shaders_skipped += 1`。
 已计数，符合原则。WGSL 只在 vello 上跑（`gpu.rs` 的 `shaders_drawn`）。
 
 ### R4 · tui 覆盖面最窄，且有 3 处静默忽略 🟡 → ✅ 已修（B3）
@@ -234,7 +236,7 @@ software 能做到只因为它自己拥有像素缓冲。
 > 计数一次（一个同时有圆角和阴影的矩形计两次，`grid.rs:48`），不再被 `..`
 > 吞掉；测试从 21 个补到 23 个。原段的判断——"做不到也要计数"——正是修法。
 
-`crates/floom-renderer-tui/src/grid.rs:216-289`：
+`crates/render/floom-renderer-tui/src/grid.rs:216-289`：
 
 - 静默忽略 `Rect.shadow` —— `SceneNode::Rect { bounds, fill, .. }`（`grid.rs:220`），
   `..` 把 `radius` 和 `shadow` 一起吞掉，**不计数**。
@@ -257,7 +259,7 @@ software 能做到只因为它自己拥有像素缓冲。
 > `AppRunner::renderer_capabilities()` 透给宿主。B6 的 `DegradationReport`
 > 再在它之上把"意外降级"减出来。
 
-`crates/floom-renderer/src/lib.rs:55-81` 的 `Renderer` trait 只有
+`crates/render/floom-renderer/src/lib.rs:55-81` 的 `Renderer` trait 只有
 `begin_frame` / `render_scene` / `render_scene_with_resources` / `end_frame` / `trim_caches`。
 
 **没有"我支持什么"的查询接口**。每个后端各自暴露自己的 stats
@@ -282,7 +284,7 @@ software 能做到只因为它自己拥有像素缓冲。
   `PaintContext` 实现，不是 ABI 的一部分。
 
 文档里"floom-renderer-web 丢阴影且无计数"这一条**已经不成立**：
-2.0 的 `WebPresenter` 内部就是 `SoftwareRenderer`（`crates/floom-renderer-web/src/lib.rs:74,120`），
+2.0 的 `WebPresenter` 内部就是 `SoftwareRenderer`（`crates/render/floom-renderer-web/src/lib.rs:74,120`），
 阴影经软件光栅化后 `put_image_data` 上屏，覆盖率与 software 完全一致。
 
 **文档会误导后续实现者**，必须重写为本节的矩阵。
@@ -330,7 +332,7 @@ macOS 门禁记录过一次真实教训（`docs/gates/macos.md:126-128`）：
 | **A2** | 实现 `build.rs`：按目标平台编译并链接原生半边 | A1 | 🔴 | ✅ **完成（桌面）** | `nm` 能看到 `floom_<name>_enable` 符号；桌面走 `cc`。**Android/iOS 的构建接线仍待设备验证** |
 | **A3** | Rust 半边绑定 C ABI | A1 | 🔴 | ✅ **完成** | `version()` / `enable()` / `disable()` / `capability()` 真实走 `extern "C"`，由生成工程的测试断言 |
 | **A4** | 修路径不一致（G8） | — | 🟡 | ✅ **完成** | 头文件统一到 `native/common/floom_<name>.h`；`build.rs` 监视路径、C 源 `#include` 三者一致 |
-| **A5** | 给 `NativeViewProvider` 加 C ABI 外壳 | A1 | 🔴 | ✅ **完成** | 新增 `crates/floom-native-ffi`：`FloomNativeProviderV1` C 结构体 + 函数指针表 + `CProvider` 适配层。C 侧量自己的 `sizeof`/`offsetof` 与 Rust 镜像逐项比对；Rust 侧用同形状函数指针表跑通控制器全生命周期 |
+| **A5** | 给 `NativeViewProvider` 加 C ABI 外壳 | A1 | 🔴 | ✅ **完成** | 新增 `crates/native/floom-native-ffi`：`FloomNativeProviderV1` C 结构体 + 函数指针表 + `CProvider` 适配层。C 侧量自己的 `sizeof`/`offsetof` 与 Rust 镜像逐项比对；Rust 侧用同形状函数指针表跑通控制器全生命周期 |
 | **A10** | 插件支持 web / harmony / tui | A1–A3 | 🟠 | ✅ **完成（构建层）** | 六个平台的原生半边齐备；web(wasm32) 与 ohos 交叉编译通过；设备/浏览器运行未验证 |
 | **A6** | 落地第一个真实插件 | A1–A5 | 🔴 | ✅ **完成（macOS）** | `crates/floom-plugin-nativeview`：原生半边是 Objective-C，真实 `NSView` 进真实 `NSWindow`，由框架控制器经 C ABI 驱动。**2026-10-28 更新**：已覆盖 webview —— `create` 按 kind 建真 `WKWebView`，其它 kind 点名拒绝；视图按 slot 管理；`load_url` 走插件自己的 ABI。JS←Rust 桥已通（macOS）；camera 移到独立插件 `floom-plugin-camera`（Android `FloomCameraView` + JNI），真机待验证。 |
 | **A6b** | 插件的 provider 如何到达宿主 | A5 | 🟠 | ✅ **完成（2026-10-27）** | 宿主用 `WidgetHost::register_native_provider(provider, kinds)` 申报**确切**能画的 kind，`floom_native::registry::NativeProviderRegistry` 按 kind 路由。一个 kind 只能有一个 provider（重复认领是注册期 `Err`），没人认领的 kind 在 bind 时 `Err(NoProvider(kind))` 拒绝 —— **不设接受一切的兜底默认**，因为 desktop 桥的默认工厂对任何 kind 都造一个不画东西的 `NSView`，改之前 `Custom("camera")` 会"成功"拿到空白矩形。生命周期仍按 provider 各一个控制器；焦点改为注册表级独占。遗留：桥的 kind 申报还靠调用方传 `kinds`，不是由 `NativeViewHost` 实现推导 |

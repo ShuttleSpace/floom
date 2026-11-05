@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Run the Golden Examples (docs/2.0/EXAMPLES.md) and fail on any regression.
 #
 # `cargo build --workspace` only *compiles* the examples; their assertions are
 # the whole point of a golden example, and nothing would run them. This script
 # does. It is named by docs/2.0/RELEASE-POLICY.md as a release gate, and
-# crates/floom/tests/docs_parity.rs asserts that the list below is exactly the
+# crates/app/floom/tests/docs_parity.rs asserts that the list below is exactly the
 # set of headless examples the index advertises — so neither can drift.
 #
 # Usage:  bash scripts/run-golden-examples.sh
@@ -18,7 +20,7 @@ set -euo pipefail
 # Keep the list alphabetical and in sync with docs/2.0/EXAMPLES.md.
 EXAMPLES=(
   # Matches the headless column of docs/2.0/EXAMPLES.md exactly.
-  # `crates/floom/tests/docs_parity.rs` asserts the two lists are equal, so a
+  # `crates/app/floom/tests/docs_parity.rs` asserts the two lists are equal, so a
   # rename on either side fails here rather than at run time.
   floom-native-plugin
   floom-showcase

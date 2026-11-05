@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! Floom 2.0 on Android — the same stack as `floom-window`, but driven by the
 //! Android (winit) event loop instead of the desktop one.
 //!
@@ -8,7 +9,7 @@
 //! [`AndroidRunner`] callbacks that pump the app from winit's push loop.
 //!
 //! This is the floom analogue of `examples/android` (the v1 entry point) and
-//! closes the last gap in `crates/floom-platform-android`: turning the
+//! closes the last gap in `crates/platform/floom-platform-android`: turning the
 //! compiling L4 backend + `AppRunner` into something an Android process can
 //! actually launch and render.
 //!

@@ -6,7 +6,7 @@ use floom_core::{
     Child, ChildKey, CreateContext, ElementId, LayoutRequest, PaintContext, SemanticsContext,
     UpdateContext, Widget, WidgetAny,
 };
-use floom_navigation::{Navigator, Page};
+use floom_widgets::navigation::{Navigator, Page};
 
 /// Shared navigation state: the [`Navigator`] plus a dirty flag the app-side
 /// handle raises after every mutation.

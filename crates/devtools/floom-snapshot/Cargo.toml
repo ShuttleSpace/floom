@@ -1,0 +1,30 @@
+[package]
+name = "floom-snapshot"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Deterministic scene / semantics / pixel snapshots for Floom 2.0 visual-regression tests"
+rust-version.workspace = true
+
+# No external deps: the deterministic hash is a hand-rolled FNV-1a (stable
+# across platforms and Rust versions, unlike DefaultHasher), and golden files
+# are plain text.
+
+[dependencies]
+floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-scene = { path = "../../core/floom-scene", version = "0.2.0" }
+floom-accessibility = { path = "../../core/floom-accessibility", version = "0.2.0" }
+floom-renderer = { path = "../../render/floom-renderer", version = "0.2.0" }
+floom-renderer-software = { path = "../../render/floom-renderer-software", version = "0.2.0" }
+
+[dev-dependencies]
+# The engine itself builds scenes by hand; these are only for the integration
+# suite that points it at *real* mounted widgets (P1 acceptance: "snapshot
+# tests cover core widgets"). All three are lower layers, so no upward edge.
+floom-app = { path = "../../app/floom-app", version = "0.2.0" }
+floom-core = { path = "../../core/floom-core", version = "0.2.0" }
+# The animation vocabulary the per-frame goldens drive a host with.
+floom-animation = { path = "../../system/floom-animation", version = "0.2.0" }
+floom-layout = { path = "../../core/floom-layout", version = "0.2.0" }
+floom-widgets = { path = "../../widgets/floom-widgets", version = "0.2.0" }

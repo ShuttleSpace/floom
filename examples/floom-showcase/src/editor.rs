@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! The shared editor widget that outlives a single page mount.
 //!
 //! Delegates every `Widget` method to an `EditorWidget` owned by `AppState`,

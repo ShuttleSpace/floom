@@ -1,8 +1,9 @@
+// SPDX-License-Identifier: MIT
 //! Application routes and navigation intents.
 //!
 //! Self-contained: no dependency on any other showcase module.
 
-use floom_navigation::Route;
+use floom_widgets::navigation::Route;
 
 /// Every navigable destination in the showcase.
 ///

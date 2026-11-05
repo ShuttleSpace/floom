@@ -15,12 +15,12 @@ floom-ui-composites = { path = "../../floom-ui-composites" }
 # so nothing but reading the manifest can catch a kit asking for the wrong one.
 floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["fluent"] }
-floom-signal = { path = "../../../../../floom-signal" }
-floom-core = { path = "../../../../../floom-core" }
-floom-types = { path = "../../../../../floom-types" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-signal = { path = "../../../../../core/floom-signal" }
+floom-core = { path = "../../../../../core/floom-core" }
+floom-types = { path = "../../../../../core/floom-types" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }
 floom-widget-fluent-icon = { path = "../fluent-icon" }
 
 [dev-dependencies]
 floom-core-theme = { workspace = true }
-floom-types = { path = "../../../../../floom-types" }
+floom-types = { path = "../../../../../core/floom-types" }

@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Floom ecosystem
 
 Official satellites (not part of the floom 1.0 core promise).
@@ -21,7 +23,7 @@ by running cargo from its own directory.
 > dependency on `floom` would resolve `floem-winit-core` / `dpi` from git while
 > the rest of the graph uses the vendored copies — two instances of one type.
 >
-> Two packages are named `floom-editor`: the 2.0 crate at `crates/floom-editor`
+> Two packages are named `floom-editor`: the 2.0 crate at `crates/widgets/floom-editor`
 > and the satellite at `crates/ecosystem/floom-editor/floom-editor`. They never share a
 > resolve graph as *members* (the satellite is excluded), but
 > `examples/{custom_keymap,widget-gallery}` pull the satellite in by path, so

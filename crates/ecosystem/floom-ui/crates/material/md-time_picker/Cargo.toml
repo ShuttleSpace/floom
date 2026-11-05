@@ -10,13 +10,13 @@ floom-core-theme = { workspace = true }
 # The panel is a host overlay: `OverlayHost` is the engine's bookkeeping for
 # one, and it is shared by the three design systems.
 floom-ui-composites = { path = "../../floom-ui-composites" }
-floom-signal = { path = "../../../../../floom-signal" }
-floom-core = { path = "../../../../../floom-core" }
-floom-types = { path = "../../../../../floom-types" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-signal = { path = "../../../../../core/floom-signal" }
+floom-core = { path = "../../../../../core/floom-core" }
+floom-types = { path = "../../../../../core/floom-types" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }
 
 [dev-dependencies]
 floom-core-theme = { workspace = true, features = ["material"] }
-floom-core = { path = "../../../../../floom-core" }
-floom-types = { path = "../../../../../floom-types" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-core = { path = "../../../../../core/floom-core" }
+floom-types = { path = "../../../../../core/floom-types" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }

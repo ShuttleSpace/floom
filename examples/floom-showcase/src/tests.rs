@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! Acceptance tests for the showcase shell: navigation, editor focus, devtools
 //! interaction.
 //!

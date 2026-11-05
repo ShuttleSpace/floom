@@ -1,0 +1,25 @@
+[package]
+name = "floom-platform-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Terminal (character-grid) platform backend for Floom 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floom-platform = { path = "../floom-platform" }
+floom-types = { path = "../../core/floom-types" }
+
+# Terminal size detection on unix needs an ioctl; libc provides TIOCGWINSZ.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+# Example + fixture only; these are dev-dependencies so the L4 platform crate
+# never ships a dependency on the L7 app crate (which would be a forbidden
+# upward edge).
+[dev-dependencies]
+floom-app = { path = "../../app/floom-app" }
+floom-renderer-tui = { path = "../../render/floom-renderer-tui" }
+floom-widgets = { path = "../../widgets/floom-widgets" }
+floom-layout = { path = "../../core/floom-layout" }

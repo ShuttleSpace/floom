@@ -85,10 +85,10 @@
 ## Task 1.1: Introduce `floom-types`
 
 **Files:**
-- Create: `crates/floom-types/Cargo.toml`
-- Create: `crates/floom-types/src/lib.rs`
+- Create: `crates/core/floom-types/Cargo.toml`
+- Create: `crates/core/floom-types/src/lib.rs`
 - Modify: workspace `Cargo.toml`
-- Test: `crates/floom-types/src/lib.rs`
+- Test: `crates/core/floom-types/src/lib.rs`
 
 **Interfaces:**
 - Consumes: no Floom runtime dependencies
@@ -103,9 +103,9 @@
 ## Task 1.2: Introduce `ElementId` with generation safety
 
 **Files:**
-- Modify: `crates/floom-types/src/lib.rs`
-- Create: `crates/floom-runtime-core/src/id.rs`
-- Test: `crates/floom-runtime-core/src/id_tests.rs`
+- Modify: `crates/core/floom-types/src/lib.rs`
+- Create: `crates/core/floom-runtime-core/src/id.rs`
+- Test: `crates/core/floom-runtime-core/src/id_tests.rs`
 
 **Interfaces:**
 - Consumes: existing `slotmap`/ID approach where applicable
@@ -120,11 +120,11 @@
 ## Task 1.3: Define core Widget/Element contracts
 
 **Files:**
-- Create: `crates/floom-core/Cargo.toml`
-- Create: `crates/floom-core/src/widget.rs`
-- Create: `crates/floom-core/src/element.rs`
-- Create: `crates/floom-core/src/context.rs`
-- Test: `crates/floom-core/tests/contracts.rs`
+- Create: `crates/core/floom-core/Cargo.toml`
+- Create: `crates/core/floom-core/src/widget.rs`
+- Create: `crates/core/floom-core/src/element.rs`
+- Create: `crates/core/floom-core/src/context.rs`
+- Test: `crates/core/floom-core/tests/contracts.rs`
 
 **Interfaces:**
 - Produces: minimal `Widget`, `Element`, `CreateContext`, `UpdateContext`, `EventContext`, `PaintContext`, `SemanticsContext` contracts.
@@ -142,9 +142,9 @@
 ## Task 2.1: Create `ElementArena`
 
 **Files:**
-- Create: `crates/floom-runtime-core/Cargo.toml`
-- Create: `crates/floom-runtime-core/src/arena.rs`
-- Test: `crates/floom-runtime-core/src/arena_tests.rs`
+- Create: `crates/core/floom-runtime-core/Cargo.toml`
+- Create: `crates/core/floom-runtime-core/src/arena.rs`
+- Test: `crates/core/floom-runtime-core/src/arena_tests.rs`
 
 **Interfaces:**
 - Consumes: `ElementId`
@@ -168,8 +168,8 @@ impl ElementArena {
 ## Task 2.2: Implement `DirtyFlags` and invalidation propagation
 
 **Files:**
-- Create: `crates/floom-runtime-core/src/dirty.rs`
-- Test: `crates/floom-runtime-core/src/dirty_tests.rs`
+- Create: `crates/core/floom-runtime-core/src/dirty.rs`
+- Test: `crates/core/floom-runtime-core/src/dirty_tests.rs`
 
 **Interfaces:**
 - Produces:
@@ -188,8 +188,8 @@ pub fn propagate_layout(id: ElementId);
 ## Task 2.3: Build the persistent element tree
 
 **Files:**
-- Create: `crates/floom-runtime-core/src/tree.rs`
-- Test: `crates/floom-runtime-core/src/tree_tests.rs`
+- Create: `crates/core/floom-runtime-core/src/tree.rs`
+- Test: `crates/core/floom-runtime-core/src/tree_tests.rs`
 
 **Interfaces:**
 - Produces:
@@ -214,8 +214,8 @@ pub fn move_child(parent: ElementId, id: ElementId, index: usize);
 
 **Files:**
 - Modify: current reactive crate internals only where necessary
-- Create: `crates/floom-runtime-core/src/reactive_bridge.rs`
-- Test: `crates/floom-runtime-core/src/reactive_bridge_tests.rs`
+- Create: `crates/core/floom-runtime-core/src/reactive_bridge.rs`
+- Test: `crates/core/floom-runtime-core/src/reactive_bridge_tests.rs`
 
 **Interfaces:**
 - Consumes: existing Floom Signal/Memo/Effect/Scope mechanisms.
@@ -279,9 +279,9 @@ pub fn ui_spawn(...);
 ## Task 4.1: Implement priority scheduler
 
 **Files:**
-- Create: `crates/floom-scheduler/Cargo.toml`
-- Create: `crates/floom-scheduler/src/lib.rs`
-- Test: `crates/floom-scheduler/tests/order.rs`
+- Create: `crates/core/floom-runtime-core/Cargo.toml`
+- Create: `crates/core/floom-runtime-core/src/lib.rs`
+- Test: `crates/core/floom-runtime-core/src/scheduler.rs`
 
 **Interfaces:**
 ```rust
@@ -326,10 +326,10 @@ impl Runtime {
 ## Task 5.1: Create `floom-scene`
 
 **Files:**
-- Create: `crates/floom-scene/Cargo.toml`
-- Create: `crates/floom-scene/src/lib.rs`
-- Create: `crates/floom-scene/src/node.rs`
-- Test: `crates/floom-scene/tests/scene.rs`
+- Create: `crates/core/floom-scene/Cargo.toml`
+- Create: `crates/core/floom-scene/src/lib.rs`
+- Create: `crates/core/floom-scene/src/node.rs`
+- Test: `crates/core/floom-scene/tests/scene.rs`
 
 **Interfaces:**
 ```rust
@@ -352,8 +352,8 @@ impl Scene {
 ## Task 5.2: Implement resource registry
 
 **Files:**
-- Create: `crates/floom-scene/src/resources.rs`
-- Test: `crates/floom-scene/tests/resources.rs`
+- Create: `crates/core/floom-scene/src/resources.rs`
+- Test: `crates/core/floom-scene/tests/resources.rs`
 
 **Interfaces:**
 ```rust
@@ -403,7 +403,7 @@ struct DamageRegion;
 - Consumes: `Scene`, `RenderTarget`, `DamageRegion`.
 - Produces: Vello/WGPU frame submission.
 
-- [x] **Step 1: Wrap current Vello drawing path behind the new ABI.** (recording adapter under `crates/floom-renderer-vello`; GPU submit remains in legacy `floom_vello_renderer` until paint migration)
+- [x] **Step 1: Wrap current Vello drawing path behind the new ABI.** (recording adapter under `crates/render/floom-renderer-vello`; GPU submit remains in legacy `floom_vello_renderer` until paint migration)
 - [x] **Step 2: Add rect/image/text fast-path tests.**
 - [x] **Step 3: Add resource cache instrumentation.**
 - [x] **Step 4: Benchmark full-frame and partial-damage paths.**
@@ -416,7 +416,7 @@ struct DamageRegion;
 - Modify: existing tiny/software renderer crate
 - Test: backend compatibility matrix
 
-- [x] **Step 1: Implement renderer ABI adapters.** (`crates/floom-renderer-skia`, `crates/floom-renderer-software`)
+- [x] **Step 1: Implement renderer ABI adapters.** (`crates/floom-renderer-skia`, `crates/render/floom-renderer-software`)
 - [x] **Step 2: Run identical Scene snapshots through both backends.**
 - [x] **Step 3: Add software-headless snapshot tests.**
 - [x] **Step 4: Commit.**
@@ -440,9 +440,9 @@ struct DamageRegion;
 ## Task 7.1: Define platform core
 
 **Files:**
-- Create: `crates/floom-platform/Cargo.toml`
-- Create: `crates/floom-platform/src/lib.rs`
-- Test: `crates/floom-platform/tests/contracts.rs`
+- Create: `crates/platform/floom-platform/Cargo.toml`
+- Create: `crates/platform/floom-platform/src/lib.rs`
+- Test: `crates/platform/floom-platform/tests/contracts.rs`
 
 **Interfaces:**
 ```rust
@@ -461,7 +461,7 @@ struct PlatformCapabilities { ... }
 ## Task 7.2: Migrate desktop backend
 
 **Files:**
-- Create/modify: `crates/floom-platform-desktop`
+- Create/modify: `crates/platform/floom-platform-desktop`
 - Modify: existing Winit integration where present
 - Test: desktop window/event tests
 
@@ -474,9 +474,9 @@ struct PlatformCapabilities { ... }
 ## Task 7.3: Create independent Android, iOS, and Harmony platform crates
 
 **Files:**
-- Create: `crates/floom-platform-android`
-- Create: `crates/floom-platform-ios`
-- Create: `crates/floom-platform-harmony`
+- Create: `crates/platform/floom-platform-android`
+- Create: `crates/platform/floom-platform/src/ios`
+- Create: `crates/platform/floom-platform/src/harmony`
 - Test: per-platform lifecycle/input/display contract tests
 
 - [x] **Step 1: Implement lifecycle surface contracts.**
@@ -488,7 +488,7 @@ struct PlatformCapabilities { ... }
 ## Task 7.4: Implement Web platform
 
 **Files:**
-- Create: `crates/floom-platform-web`
+- Create: `crates/platform/floom-platform-web`
 - Test: WASM/browser smoke tests
 
 - [x] **Step 1: Implement event/frame clock/display abstraction.**
@@ -499,7 +499,7 @@ struct PlatformCapabilities { ... }
 ## Task 7.5: Implement Embedded platform baseline
 
 **Files:**
-- Create: `crates/floom-platform-embedded`
+- Create: `crates/platform/floom-platform/src/embedded`
 - Test: headless DRM/framebuffer simulation
 
 - [x] **Step 1: Define minimal surface/input/frame-clock contract.**
@@ -522,8 +522,8 @@ struct PlatformCapabilities { ... }
 ## Task 9.1: Define text layout API
 
 **Files:**
-- Create: `crates/floom-text/Cargo.toml`
-- Create: `crates/floom-text/src/lib.rs`
+- Create: `crates/widgets/floom-text/Cargo.toml`
+- Create: `crates/widgets/floom-text/src/lib.rs`
 - Test: shaping/wrapping/selection tests
 
 - [x] **Step 1: Write Unicode, bidi, fallback, and line-breaking tests.**
@@ -535,9 +535,9 @@ struct PlatformCapabilities { ... }
 ## Task 9.2: Build shared editing model
 
 **Files:**
-- Create: `crates/floom-editor/src/document.rs`
-- Create: `crates/floom-editor/src/selection.rs`
-- Create: `crates/floom-editor/src/undo.rs`
+- Create: `crates/widgets/floom-editor/src/document.rs`
+- Create: `crates/widgets/floom-editor/src/selection.rs`
+- Create: `crates/widgets/floom-editor/src/undo.rs`
 - Test: editing semantics
 
 - [x] **Step 1: Write cursor/selection/undo tests.**
@@ -552,8 +552,8 @@ struct PlatformCapabilities { ... }
 ## Task 10.1: Build backend-neutral layout API
 
 **Files:**
-- Create: `crates/floom-layout/src/lib.rs`
-- Create: `crates/floom-layout/src/taffy_adapter.rs`
+- Create: `crates/core/floom-layout/src/lib.rs`
+- Create: `crates/core/floom-layout/src/taffy_adapter.rs`
 - Test: flex/grid/stack/measure tests
 
 - [x] **Step 1: Write layout contract tests.**
@@ -565,7 +565,7 @@ struct PlatformCapabilities { ... }
 ## Task 10.2: Implement Style and selector state
 
 **Files:**
-- Create: `crates/floom-style/src/lib.rs`
+- Create: `crates/core/floom-style/src/lib.rs`
 - Test: state selector/inheritance/token tests
 
 - [x] **Step 1: Write tests for normal/hover/pressed/focused/disabled/selected.**
@@ -625,7 +625,7 @@ struct PlatformCapabilities { ... }
 ## Task 11.4: Implement animation scheduler
 
 **Files:**
-- Create: `crates/floom-animation/src/lib.rs`
+- Create: `crates/system/floom-animation/src/lib.rs`
 - Test: tween/spring/keyframe tests
 
 - [x] **Step 1: Write deterministic animation tests with a fake clock.**
@@ -652,7 +652,7 @@ struct PlatformCapabilities { ... }
 ## Task 12.1: Implement VirtualViewport
 
 **Files:**
-- Create: `crates/floom-virtual/src/lib.rs`
+- Create: `crates/widgets/floom-virtual/src/lib.rs`
 - Test: 1k/10k/100k item range tests
 
 - [x] **Step 1: Write viewport/range/key reuse tests.**
@@ -665,7 +665,7 @@ struct PlatformCapabilities { ... }
 ## Task 12.2: Native view pooling
 
 **Files:**
-- Create: `crates/floom-native/src/pool.rs`
+- Create: `crates/native/floom-native/src/pool.rs`
 - Test: reuse/lifecycle tests
 
 - [x] **Step 1: Write native slot reuse tests.**
@@ -680,7 +680,7 @@ struct PlatformCapabilities { ... }
 ## Task 13.1: Semantics Tree
 
 **Files:**
-- Create: `crates/floom-accessibility/src/lib.rs`
+- Create: `crates/core/floom-accessibility/src/lib.rs`
 - Test: semantics tree tests
 
 - [x] **Step 1: Define semantics node schema.**
@@ -727,7 +727,7 @@ struct PlatformCapabilities { ... }
 ## Task 14.1: Primitive widgets
 
 **Files:**
-- Create: `crates/floom-widgets/src/primitives.rs`
+- Create: `crates/widgets/floom-widgets/src/primitives.rs`
 - Test: primitive snapshots
 
 - [x] **Step 1: Implement Text, Icon, Image, Container, Spacer, Divider.**
@@ -738,13 +738,13 @@ struct PlatformCapabilities { ... }
 > Note: the primitives record through `floom_core::PaintContext`, which was
 > extended in this task (it had no colour and no text/image op at all). See
 > `docs/superpowers/decisions/2026-09-12-widget-paint-context-extension.md`.
-> Snapshots are inline textual snapshots in `crates/floom-widgets/tests`,
+> Snapshots are inline textual snapshots in `crates/widgets/floom-widgets/tests`,
 > produced by `floom_widgets::testkit` — no external snapshot crate is used.
 
 ## Task 14.2: Interactive controls
 
 **Files:**
-- Create: `crates/floom-widgets/src/controls.rs`
+- Create: `crates/widgets/floom-widgets/src/controls.rs`
 - Test: interaction/snapshot tests
 
 - [x] **Step 1: Implement Button.**
@@ -768,9 +768,9 @@ struct PlatformCapabilities { ... }
 ## Task 14.3: Navigation/layout widgets
 
 **Files:**
-- Create: `crates/floom-widgets/src/compose.rs` (structural composites) and
-  `crates/floom-widgets/src/navigation.rs` (navigation chrome)
-- Test: `crates/floom-app/tests/reconcile.rs` + per-module unit tests
+- Create: `crates/widgets/floom-widgets/src/compose.rs` (structural composites) and
+  `crates/widgets/floom-widgets/src/navigation.rs` (navigation chrome)
+- Test: `crates/app/floom-app/tests/reconcile.rs` + per-module unit tests
 
 - [x] **Step 1: Implement List/Grid/Stack/Tabs.**
 - [x] **Step 2: Implement NavigationBar/NavigationRail/Drawer.**
@@ -783,7 +783,7 @@ struct PlatformCapabilities { ... }
 >   BottomSheet/Tabs) and `navigation.rs` holds the navigation chrome
 >   (NavigationBar/NavigationRail/NavigationDrawer). `Conditional` and `Overlay`
 >   were added because the overlay-backed widgets build on them.
-> - The `WidgetHost` reconciliation coordinator (`crates/floom-app`) diffs each
+> - The `WidgetHost` reconciliation coordinator (`crates/app/floom-app`) diffs each
 >   composite's `children()` by `ChildKey`; a composite flags a change from
 >   `Widget::update` via `mark_children_dirty`. Its layout lowering now combines
 >   a slot's flex-item intent with the widget's own container intent, and
@@ -794,7 +794,7 @@ struct PlatformCapabilities { ... }
 
 **Files:**
 - Create: `crates/floom-forms/src/lib.rs`
-- Test: validation/form-state tests + `crates/floom-app/tests/forms.rs`
+- Test: validation/form-state tests + `crates/widgets/floom-widgets/src/forms.rs`
 
 - [x] **Step 1: Define FormController state.**
 - [x] **Step 2: Implement validators and async validation.**
@@ -805,7 +805,7 @@ struct PlatformCapabilities { ... }
 > - `floom-forms` is deliberately **widget-free**: the architecture puts
 >   `framework/` *below* `widgets/`, so the crate models a form as plain data
 >   and exposes a closure-based `FieldBinding<C>` seam. The widgets layer (here,
->   `crates/floom-app/tests/forms.rs`) supplies the binding for `TextField` /
+>   `crates/widgets/floom-widgets/src/forms.rs`) supplies the binding for `TextField` /
 >   `Switch` / `Select` and drives the controller end-to-end. `floom-forms`
 >   therefore adds no dependency edges.
 > - Async validation models the server-round-trip race: `begin_validation`
@@ -872,8 +872,8 @@ struct PlatformCapabilities { ... }
 ## Task 16.1: Define Native ABI
 
 **Files:**
-- Create: `crates/floom-native/Cargo.toml`
-- Create: `crates/floom-native/src/lib.rs`
+- Create: `crates/native/floom-native/Cargo.toml`
+- Create: `crates/native/floom-native/src/lib.rs`
 - Test: native-provider contract tests
 
 **Interfaces:**
@@ -915,8 +915,8 @@ enum NativeCompositionMode { Overlay, Texture, Surface, Offscreen }
 ## Task 16.4: Implement snapshot/offscreen transition mode
 
 **Files:**
-- Modify: `crates/floom-animation`
-- Modify: `crates/floom-native`
+- Modify: `crates/system/floom-animation`
+- Modify: `crates/native/floom-native`
 - Test: transition snapshot tests
 
 - [ ] **Step 1: Add native snapshot capability.**
@@ -985,10 +985,10 @@ enum NativeCompositionMode { Overlay, Texture, Surface, Offscreen }
 ## Task 18.1: Define native component schema
 
 **Files:**
-- Create: `crates/floom-codegen/schema/*.rs`
+- Create: `crates/frontend/floom-dsl/src/codegen/schema.rs*.rs`
 - Test: schema round-trip tests
 
-- [x] **Step 1: Define typed command/event/property schema.** — `crates/floom-codegen/src/schema.rs`: `ComponentSchema` + `PropertySchema` / `CommandSchema` / `EventSchema` / `Param`, `TypeRef`, validated `Ident`.
+- [x] **Step 1: Define typed command/event/property schema.** — `crates/frontend/floom-dsl/src/codegen/schema.rs`: `ComponentSchema` + `PropertySchema` / `CommandSchema` / `EventSchema` / `Param`, `TypeRef`, validated `Ident`.
 - [x] **Step 2: Define ABI versioning.** — `AbiVersion { major, minor }` with `compatible()` (same major, producer minor ≥ required minor).
 - [x] **Step 3: Add schema serialization for tooling only.** — serde derive + `serde_json` round-trip test; `From` bridges to the `floom-types` native vocabulary so the compiler stays runtime-free.
 - [x] **Step 4: Commit.** — lands together with Phase 18.2 below (2026-09-18; the crate had been created but never committed, and was missing from the architecture `LAYERS` table — both fixed).
@@ -996,7 +996,7 @@ enum NativeCompositionMode { Overlay, Texture, Surface, Offscreen }
 ## Task 18.2: Generate Swift/Kotlin/C/C++ glue
 
 **Files:**
-- Create: `crates/floom-codegen/backends/*`
+- Create: `crates/frontend/floom-dsl/src/codegen/backends/*`
 - Test: generated-code compile fixtures
 
 - [x] **Step 1: Implement C ABI generator.** — `src/backends/c.rs`: opaque handle, property getters/setters (access-aware), commands, event callbacks; helper types (`floom_bytes`, `floom_slice_*`, `floom_resource_id`, opaque forwards) emitted only when used. Struct-shaped callback params are expanded to `(pointer, length)` — no aggregate copies across FFI, and the only shape Swift's `@convention(c)` can represent.
@@ -1065,15 +1065,15 @@ enum NativeCompositionMode { Overlay, Texture, Surface, Offscreen }
 ## Task 20.1: DataGrid/Table/Tree
 
 **Files:**
-- Create: `crates/floom-widgets-data/src/data_grid.rs`
-- Create: `crates/floom-widgets-data/src/tree.rs`
+- Create: `crates/widgets/floom-widgets-data/src/data_grid.rs`
+- Create: `crates/widgets/floom-widgets-data/src/tree.rs`
 - Test: virtualization/sort/edit/selection tests
 
 - [x] **Step 1: Define headless data models.** `model.rs`: `RowId`/`ColumnId`/`Column`/`CellValue` (+`parse`/`display`/ordering), `SortSpec`+`SortDirection` with the three-state `toggled` cycle and a stable `sorted_order`, `SelectionMode`/`SelectionModel` (cursor/anchor/range/toggle, `navigate`/`jump`/`clamp_to`), `TableModel` trait + `VecTable`, and `EditSession`/`CellEdit`/`EditHistory` (push clears redo). `EditSession::move_caret` owns the caret bounds rule so no caller can walk the caret off the text.
 - [x] **Step 2: Add virtualized rendering.** `data_grid.rs` and `tree.rs` both sit on `floom_virtual::VirtualViewport`, so only the rows inside the box are laid out and painted. Tests assert the sharp form: a 100k-row grid and a 100k-node tree emit the *same* paint ops as a 10k one, `visible_range` is a function of the box alone, and the `RowPool`'s high-water mark stays at the window size after 1,000 scrolled frames. `benches/virtual_rows.rs` measures it: `paint_window` is **flat** (5.79 µs at 1k rows vs 5.72 µs at 100k), and the `build_model` control **scales** (47 µs → 6.11 ms) — without the control the flatness would only mean the benchmark forgot to vary anything.
 - [x] **Step 3: Add keyboard navigation and selection.** Arrows (shift to extend), Home/End, PageUp/PageDown by a window, Ctrl/Cmd+A, Space to toggle, Enter to edit; pointer click / shift-click / modifier-click / double-click; the cursor is scrolled back into view on every move. Left/Right in the tree drill out/in; the grid's Left/Right move the active column.
 - [x] **Step 4: Add editing/undo integration.** `EditSession` rejects a value that does not parse for its column kind and stays open; a committed edit is pushed to `EditHistory` (only a fresh commit — `apply` is also the undo/redo path) so Ctrl+Z / Ctrl+Shift+Z round-trip.
-- [x] **Step 5: Commit.** `crates/floom-widgets-data` registered in the root manifest and in the arch gate's L6 row; 125 tests green.
+- [x] **Step 5: Commit.** `crates/widgets/floom-widgets-data` registered in the root manifest and in the arch gate's L6 row; 125 tests green.
 
 ## Task 20.2: Charts and media controls
 
@@ -1095,7 +1095,7 @@ Elevated), `ControlSize`, `InteractionState`, a uniform `StyleSetBuilder`, the c
 hazard as two copies of an a11y mapping table, so there is one copy.
 
 The gallery is what makes "the variants are distinguishable" measurable: every cell is resolved
-from the same table and painted into one scene, then snapped through `crates/floom-snapshot`
+from the same table and painted into one scene, then snapped through `crates/devtools/floom-snapshot`
 (Phase 24.2) at three layers — scene graph, resolved property table (readable, so a diff names
 the variant and the property that moved), and pixels. Each system asserts its snapshots can
 fail by recolouring one role and checking the hash moves.
@@ -1106,7 +1106,7 @@ every design system would have resolved to visually identical output and the gal
 would have been near-unfalsifiable. Four shape properties were added — `radius`, `border_width`,
 `border_color`, `elevation` — with `merge_over` extended and `inherit_typography` deliberately
 *not* (a child must not inherit its parent's border). Evidence: 3 new tests in
-`crates/floom-style/tests/style_resolve.rs` (4 → 7 passing) including
+`crates/core/floom-style/tests/style_resolve.rs` (4 → 7 passing) including
 `shape_props_do_not_inherit`.
 
 Also registered `design-systems/` in the architecture gate's `LIB_DIRS` completeness guard. The
@@ -1191,7 +1191,7 @@ fluent 23, harmony 24). Every system is registered at L5 in
 ## Task 22.1: Define versioned UI IR
 
 **Files:**
-- Create: `crates/floom-ui-ir`
+- Create: `crates/frontend/floom-dsl/src/ui_ir`
 - Test: schema round-trip fixtures
 
 - [x] **Step 1: Define node/property/slot/event schema.** Table-driven (`schema.rs`): style/layout/widget classes route `radius` to `floom_style` and `grow` to `LayoutRequest` without name-matching; per-kind event table is deliberately narrow. Validation reports *which kinds declare the name* so "not allowed here" becomes actionable.
@@ -1202,7 +1202,7 @@ fluent 23, harmony 24). Every system is registered at L5 in
 ## Task 22.2: Implement DSL parser/compiler
 
 **Files:**
-- Create: `crates/floom-dsl`
+- Create: `crates/frontend/floom-dsl`
 - Test: parser/compiler fixtures
 
 - [x] **Step 1: Define syntax for structure, style, events, variants, and bindings.** `key = kind prop=value on:click=handler { … }`, `bindings { name: type }`, `@name` for value references; handler names are bare identifiers matched against declared bindings.
@@ -1214,7 +1214,7 @@ fluent 23, harmony 24). Every system is registered at L5 in
 ## Task 22.3: Hot reload
 
 **Files:**
-- Create: `crates/floom-hot-reload`
+- Create: `crates/devtools/floom-hot-reload`
 - Test: live style/layout tree patching
 
 - [x] **Step 1: Add runtime UI patch protocol.** `diff(old, new)` matches by stable `NodeKey` only; ops are Insert/Remove/Move/SetStyle/ClearLayout/SetLayout/AddEvent/RemoveEvent. `apply` is transactional against a checkpoint and wires invalidations into `DirtySet` (children on structure, style+paint on style, ancestor propagation on layout).
@@ -1229,7 +1229,7 @@ fluent 23, harmony 24). Every system is registered at L5 in
 ## Task 23.1: Inspection protocol
 
 **Files:**
-- Create: `crates/floom-inspector` (module-per-snapshot rather than one protocol.rs)
+- Create: `crates/devtools/floom-inspector` (module-per-snapshot rather than one protocol.rs)
 - Test: snapshot schemas
 
 - [x] **Step 1: Define versioned tree/style/layout/scene/performance snapshot types.** `ProtocolVersion` carries concrete rules (same major required; newer minor refused — an unknown field cannot faithfully round-trip; older minor loadable). Each snapshot validates: dangling parents, duplicate ids, unknown scene lines, negative durations, cache math (hits+misses vs entries). The wire format is one JSON envelope per snapshot with serde; round-trip and version-rejection are tested. 10 tests.
@@ -1239,7 +1239,7 @@ fluent 23, harmony 24). Every system is registered at L5 in
 ## Task 23.2: Inspector UI
 
 **Files:**
-- Create: `crates/floom-devtools` (headless `Inspector` over `floom_hot_reload::LiveTree`; a GUI panel is a frontend concern)
+- Create: `crates/devtools/floom-devtools` (headless `Inspector` over `floom_hot_reload::LiveTree`; a GUI panel is a frontend concern)
 - Test: inspector navigation tests
 
 - [x] **Step 1: Implement element tree.** `children(key)` in document order, `path_to_root`, `id_of`, `find_by_kind`; unknown keys navigate to nothing rather than panicking.
@@ -1289,19 +1289,19 @@ tester.drag(...)
 tester.assert_text(selector, text)
 ```
 
-- [x] **Step 1: Write interaction tests using semantic/test-id selectors.** — DONE 2026-09-15 as `crates/floom-testkit` (the planned `floom-test` name is owned by the v1 `test/` crate): `Selector` resolves by Label/Role/Id — the same strings the a11y tree publishes. 14 harness tests pin the harness itself (`tests/testkit.rs`), because a harness bug reads exactly like a product bug.
+- [x] **Step 1: Write interaction tests using semantic/test-id selectors.** — DONE 2026-09-15 as `crates/devtools/floom-testkit` (the planned `floom-test` name is owned by the v1 `test/` crate): `Selector` resolves by Label/Role/Id — the same strings the a11y tree publishes. 14 harness tests pin the harness itself (`tests/testkit.rs`), because a harness bug reads exactly like a product bug.
 - [x] **Step 2: Implement headless runtime harness.** — `TestApp` wraps FakePlatform → AppRunner → WidgetHost; actors `tap`/`type_text`/`drag`/`key`/`preedit`/`settle`/`drain`, readers `assert_text`/`labels`/`bounds`/`scene_nodes`. Surfaced two real bugs: `settle` returned while frames were still owed, and unmounted (dead-but-slotted) nodes were still found by `host.widget::<T>()` — the host now exposes `is_mounted`/`live_semantics_hint`.
 - [x] **Step 3: Commit.** — `5187233`.
 
 ## Task 24.2: Snapshot engine
 
 **Files:**
-- Create: `crates/floom-snapshot`
+- Create: `crates/devtools/floom-snapshot`
 - Test: PNG/scene/semantics snapshots
 
-- [x] **Step 1: Implement software-renderer snapshots.** — DONE 2026-09-18 in `crates/floom-snapshot`: `PixelSnapshot` renders the scene through the software presenter offscreen and hashes the RGBA8 buffer (FNV-1a, hand-rolled — stable across Rust versions).
+- [x] **Step 1: Implement software-renderer snapshots.** — DONE 2026-09-18 in `crates/devtools/floom-snapshot`: `PixelSnapshot` renders the scene through the software presenter offscreen and hashes the RGBA8 buffer (FNV-1a, hand-rolled — stable across Rust versions).
 - [x] **Step 2: Implement Scene snapshot.** — `SceneSnapshot` over the retained scene graph, one deterministic line per live node.
-- [x] **Step 3: Implement Semantics snapshot.** — `SemanticsSnapshot` over `SemanticsTree`, sorted by `(index, generation)`. Goldens land in the *asserting* crate via `snapshots_dir!()` — the original `env!("CARGO_MANIFEST_DIR")` version dropped every downstream golden into `crates/floom-snapshot/snapshots/` (fixed in Phase 21).
+- [x] **Step 3: Implement Semantics snapshot.** — `SemanticsSnapshot` over `SemanticsTree`, sorted by `(index, generation)`. Goldens land in the *asserting* crate via `snapshots_dir!()` — the original `env!("CARGO_MANIFEST_DIR")` version dropped every downstream golden into `crates/devtools/floom-snapshot/snapshots/` (fixed in Phase 21).
 - [x] **Step 4: Add deterministic font/resource test fixtures.** — `single_rect_scene` / `semantics_node` builders; design-system galleries (Phase 21) pin 93 goldens across four systems with `UPDATE_SNAPSHOTS=1` regeneration and re-read.
 - [x] **Step 5: Commit.** — `e98fa9e2` (engine + first consumers).
 
@@ -1312,10 +1312,10 @@ tester.assert_text(selector, text)
 ## Task 25.1: Agent protocol
 
 **Files:**
-- Create: `crates/floom-agent`
+- Create: `crates/system/floom-accuracy/src/agent`
 - Test: protocol round-trip tests
 
-- [x] **Step 1: Define inspection/control commands.** — DONE 2026-09-18 as `crates/floom-agent`: `Command` = Tree/Semantics/Scene/Screenshot/Performance/Schema + Tap/TypeText/Drag; selectors are semantic only (Label/Role) — host-internal `NodeId`s are handles a client cannot forge or keep alive across reloads. A missed selector returns `SelectorNotFound` carrying what *is* on screen, so an agent can correct itself.
+- [x] **Step 1: Define inspection/control commands.** — DONE 2026-09-18 as `crates/system/floom-accuracy/src/agent`: `Command` = Tree/Semantics/Scene/Screenshot/Performance/Schema + Tap/TypeText/Drag; selectors are semantic only (Label/Role) — host-internal `NodeId`s are handles a client cannot forge or keep alive across reloads. A missed selector returns `SelectorNotFound` carrying what *is* on screen, so an agent can correct itself.
 - [x] **Step 2: Version protocol payloads.** — Requests carry `floom_inspector::ProtocolVersion`; the gate reuses the inspector rule (same major, older-or-equal minor), refused newer minors tested.
 - [x] **Step 3: Implement local transport.** — `local_channel` (in-memory pair, test-driven server loop) and `spawn_loopback` (TCP, length-prefixed JSON, app built *inside* the server thread via factory so nothing headless must be `Send`).
 - [x] **Step 4: Add authentication/localhost-only guard for development.** — `bind` refuses any non-loopback host with `PermissionDenied`; non-loopback peers are dropped before their first byte; `with_token` gates every request (`AuthRequired`). Guard is the transport, not a convention.
@@ -1343,16 +1343,16 @@ tester.assert_text(selector, text)
 ## Task 26.1: Design contract schema
 
 **Files:**
-- Create: `crates/floom-ui-ir/src/design_contract.rs`
+- Create: `crates/frontend/floom-dsl/src/ui_ir/design_contract.rs`
 - Test: expected/actual comparison tests
 
-- [x] **Step 1: Define dimensions/spacing/typography/colors/radius/state/animation/accessibility fields.** — DONE 2026-09-18: `crates/floom-ui-ir/src/design_contract.rs` — versioned (`ContractVersion`, same major/older-minor rule as the IR) `DesignContract` with `Dimensions`/`Spacing`/`Radius`/`TypeStyle`/`ColorRole`/`StateStyle`+overrides/`Animation`/`Accessibility` (WCAG 4.5 contrast + 44 pt target as the defaults a silent design still promises).
+- [x] **Step 1: Define dimensions/spacing/typography/colors/radius/state/animation/accessibility fields.** — DONE 2026-09-18: `crates/frontend/floom-dsl/src/ui_ir/design_contract.rs` — versioned (`ContractVersion`, same major/older-minor rule as the IR) `DesignContract` with `Dimensions`/`Spacing`/`Radius`/`TypeStyle`/`ColorRole`/`StateStyle`+overrides/`Animation`/`Accessibility` (WCAG 4.5 contrast + 44 pt target as the defaults a silent design still promises).
 - [x] **Step 2: Implement deterministic comparison output.** — `compare(expected, actual) -> ContractDiff`: one fixed field walk, lists sorted by name, entries as `(path, expected, actual)` with `"<absent>"` for one-sided names. Rendering *is* the tolerance: floats render at three decimals, so `8`/`8.0`/`8.0004` match and `8.5` disagrees — one rule does both jobs where a separate epsilon would be a second implementation of "how close is close".
 - [x] **Step 3: Commit.** — this commit. 7 inline tests (identical-match, one-path-per-family, missing/extra colours, tolerance+rendering, state/typography names, JSON round trip, version gate).
 
 ## Task 26.2: Figma importer boundary
 
-- [x] Define an importer API accepting normalized design data. — `crates/floom-ui-ir/src/importer.rs`: the boundary takes `DesignFile` (frames/text/buttons with hex fills, auto-layout, variants), not Figma's REST shapes — a Figma-specific converter upstream owns that.
+- [x] Define an importer API accepting normalized design data. — `crates/frontend/floom-dsl/src/ui_ir/importer.rs`: the boundary takes `DesignFile` (frames/text/buttons with hex fills, auto-layout, variants), not Figma's REST shapes — a Figma-specific converter upstream owns that.
 - [x] Map auto-layout → Flex, spacing → gap, padding → padding, variants → semantic variants, text styles → typography tokens. — Frame+auto-layout → `Stack` (`axis`/`gap`/`padding`), frame without → `Container`; fill/stroke → `background`/`border_*` (a text node's fill is its `foreground`); variants validated against the IR's own `VARIANT_DOMAIN` (unknown → `UnknownVariant` naming the allowed set, never coerced); text runs → `Text` `label`/`size` plus a named contract token. Names become keys; collisions and illegal names are refused, not repaired.
 - [x] Emit UI IR and Design Contract. — `import() -> ImportedDesign { document, contract }`, both from one deterministic walk; the emitted document passes `UiDocument::validate()` (tested), and `compare` on two imports of the same fixture matches.
 - [x] Add fixture-based tests. — `fixtures/normalized_design.json` + `tests/importer.rs`, 13 tests: mapping table, variant refusal with allowed set, key rules (`BadName`/`DuplicateKey`), `MissingText`, contract emission (distinct fills share a role named by first user), determinism, and the design-vs-drifted-implementation diff naming `spacing.gap`/`radius.corner`.
@@ -1364,7 +1364,7 @@ tester.assert_text(selector, text)
 
 ## Task 27.1: Build reference gallery
 
-- [x] Create representative screens: settings, dashboard, feed, editor, media list, form, dialog, navigation, webview screen. — DONE 2026-09-19 as `crates/floom-accuracy` (L8): `Screen::ALL`, nine screens built from real widgets as a pure function of a `ScreenTokens` table (card + title/body + screen rows + a primary/secondary action pair each). The dialog dims via an in-tree scrim, navigation splits a drawer beside the pane, and the webview screen mounts a labelled placeholder — real web content stays behind the Phase 17 OS providers, and the screen says so.
+- [x] Create representative screens: settings, dashboard, feed, editor, media list, form, dialog, navigation, webview screen. — DONE 2026-09-19 as `crates/system/floom-accuracy` (L8): `Screen::ALL`, nine screens built from real widgets as a pure function of a `ScreenTokens` table (card + title/body + screen rows + a primary/secondary action pair each). The dialog dims via an in-tree scrim, navigation splits a drawer beside the pane, and the webview screen mounts a labelled placeholder — real web content stays behind the Phase 17 OS providers, and the screen says so.
 - [x] Store reference design contracts. — `fixtures/contracts/<screen>.json`, one Phase 26 `DesignContract` per screen (dimensions 360x640, gap 12, padding 16, radius 10, title 18/body 14, accent #1e5fd6, WCAG 4.5 contrast floor, 48 px touch floor), version-gated on load.
 - [x] Commit fixtures. — this commit. Prerequisite shipped alongside: `floom-widgets::Labeled`, a labelled single-child group — the engine's styled boxes are `Container` leaves, so without a nameable wrapper nothing in a deep subtree can be addressed by label. Plus two tests.
 
@@ -1390,7 +1390,7 @@ tester.assert_text(selector, text)
 ## Task 28.1: Arena and allocation audit
 
 - [x] Run allocation profiling on 1k/10k/100k element scenarios. — counting
-  allocator in `crates/floom-app/tests/allocation.rs`; settled frame at 1101
+  allocator in `crates/app/floom-app/tests/allocation.rs`; settled frame at 1101
   nodes allocated 6743 times before the fixes, relayout at 110001 nodes went
   10029 → 28 allocations after them.
 - [x] Identify hidden per-node allocations. — three proven on the static
@@ -1418,7 +1418,7 @@ tester.assert_text(selector, text)
 ## Task 28.2: GPU cache budget system
 
 - [x] Add configurable geometry/resource/raster budgets. —
-  `crates/floom-renderer-vello/src/budget.rs` (feature-independent, unit
+  `crates/render/floom-renderer-vello/src/budget.rs` (feature-independent, unit
   tested without a GPU): `GpuCacheBudget { max_fragments,
   max_resource_bytes, max_scratch_bytes }` with `may_cache_fragment` /
   `may_cache_resource`; presenter enforcement in `encode` (refusal = draw
@@ -1442,7 +1442,7 @@ tester.assert_text(selector, text)
 ## Task 28.3: Idle/power optimization
 
 - [x] Verify no unnecessary frame request while scene is static. —
-  `crates/floom-app/tests/idle.rs`: after the content cascade settles, eight
+  `crates/app/floom-app/tests/idle.rs`: after the content cascade settles, eight
   quiet pumps add zero redraw requests (`a_settled_tree_stops_requesting_redraws`).
 - [x] Pause animation/nonessential tasks when background/suspended. —
   `WidgetHost::set_paused` freezes the animation clock (resumes from the
@@ -1463,7 +1463,7 @@ tester.assert_text(selector, text)
 ## Task 29.1: Public prelude
 
 - [x] Define `floom::prelude::*` as the beginner-facing stable surface. — the
-  2.0 facade crate **`floom`** (`crates/floom`, L9 in the layer table) owns
+  2.0 facade crate **`floom`** (`crates/app/floom`, L9 in the layer table) owns
   `floom::prelude`: the package name `floom` is still held by the v1
   monolith, and 29.2's preservation policy says v1 apps must keep compiling,
   so the facade takes the sibling name now and the one-line rename to `floom`
@@ -1487,12 +1487,12 @@ tester.assert_text(selector, text)
   `WidgetHost::mount_root`** (facade dev-depends on the monolith for exactly
   this test). Plus a positive inventory test pinning all 46 prelude names and
   a prelude-only hello app that mounts, paints and routes a button click
-  (`crates/floom/tests/prelude_surface.rs`, 5 tests + 4 doctests).
+  (`crates/app/floom/tests/prelude_surface.rs`, 5 tests + 4 doctests).
 - [x] Commit.
 
 ## Task 29.2: Deprecate legacy View internals
 
-- [x] Mark old View lifecycle APIs as compatibility/advanced. — `crates/floom/src/view`
+- [x] Mark old View lifecycle APIs as compatibility/advanced. — `crates/core/floom-core/src`
   module docs carry the compatibility-tier note; the frozen v1 surface lives
   at **`floom::compat::v1_prelude`** (verbatim copy of the current prelude
   body) so the stable v1 path exists *before* any future narrowing of
@@ -1564,7 +1564,7 @@ embedded
 
 ## Task 30.2: Architecture documentation
 
-- [x] Document Runtime, Scene, Renderer, Platform, Native, Widget, AI layers. — `docs/2.0/ARCHITECTURE.md`: an L0–L9 table (every row parity-checked against the gate's `LAYERS` by `crates/floom/tests/docs_parity.rs`), plus the three ABIs (renderer / platform / native) and the two crates deliberately outside the ladder. The "AI layer" is the L8 tooling tier (`floom-agent`, `floom-devtools`), documented as reachable only from the L9 facade and never shipped in an app binary.
+- [x] Document Runtime, Scene, Renderer, Platform, Native, Widget, AI layers. — `docs/2.0/ARCHITECTURE.md`: an L0–L9 table (every row parity-checked against the gate's `LAYERS` by `crates/app/floom/tests/docs_parity.rs`), plus the three ABIs (renderer / platform / native) and the two crates deliberately outside the ladder. The "AI layer" is the L8 tooling tier (`floom-agent`, `floom-devtools`), documented as reachable only from the L9 facade and never shipped in an app binary.
 - [x] Add dependency diagrams. — the layer diagram in the same file (arrows point down; `floom` is the only crate that may reach L8).
 - [x] Add contributor guide for new widget/backend/plugin. — four recipes: add a widget, add a renderer/platform backend (the three registrations, including `LIB_DIRS`), add a native plugin, add a crate/example.
 - [x] Commit.
@@ -1574,14 +1574,14 @@ embedded
 - [x] Document `View` → `Widget`/`Element` migration. — the Widget/Element contract in `floom-core` and the deprecation policy in `docs/2.0/RELEASE-POLICY.md`.
 - [x] Document `ViewId` compatibility. — §Step 3: `ViewId` (global registry) → `NodeId` (issued by, and scoped to, one `WidgetHost`), with the consequence for code that stashed ids in structs, threads or statics.
 - [x] Document renderer/platform plugin migration. — §Renderer plugins (v1 immediate-mode `begin/set_transform/fill/…` → 2.0 retained `render_scene(&SceneGraph, &DamageRegion)`) and §Platform plugins (winit baked into the monolith → the `floom-platform` `Platform`/`Window`/`Surface`/`Clipboard`/`Ime` ABI), each naming its conformance suite.
-- [x] Add before/after examples. — both halves are compiled **and run** by `crates/floom/tests/migration.rs` (5 tests): the before half through `floom::compat::v1_prelude`, the after half through `floom::prelude`. A migration guide whose snippets do not compile is worse than none.
+- [x] Add before/after examples. — both halves are compiled **and run** by `crates/app/floom/` (5 tests): the before half through `floom::compat::v1_prelude`, the after half through `floom::prelude`. A migration guide whose snippets do not compile is worse than none.
 - [x] Commit.
 
 ## Task 30.4: Release gates
 
 - [x] Define supported target versions and tested OS ranges. — `docs/2.0/RELEASE-POLICY.md` §Supported targets: `aarch64-apple-darwin` **tested** (macOS 26.6.2, Apple M4 Pro, rustc 1.98.0); `x86_64-apple-darwin` explicitly **untested**; Windows/Linux **device-gated** (winit lifecycle is portable, native composition is Phase 16.2 and incomplete); Android/iOS (17), OHOS/wasm/embedded (19) gated with the reason named.
 - [x] Define semantic-versioning policy for public crates. — §Versioning + the locked-surface table: prelude names, feature-bundle names, `Widget`/`WidgetAny` and the three plugin ABIs are breaking-on-change; `advanced` and L5 may change in a minor; L8 tooling carries no guarantee.
-- [x] Define renderer/platform conformance tests. — §Conformance names `crates/floom-renderer/tests/{contract,render_handoff}.rs`, `crates/floom-platform/tests/contracts.rs`, `crates/floom-platform-desktop/tests/{lifecycle,accessibility,winit_capabilities}.rs`, plus the facade/compat suites — and requires a backend to pass the **ABI's** suite, not only its own.
+- [x] Define renderer/platform conformance tests. — §Conformance names `crates/render/floom-renderer/tests/{contract,render_handoff}.rs`, `crates/platform/floom-platform/tests/contracts.rs`, `crates/platform/floom-platform-desktop/tests/{lifecycle,accessibility,winit_capabilities}.rs`, plus the facade/compat suites — and requires a backend to pass the **ABI's** suite, not only its own.
 - [x] Define memory/CPU benchmark gates. — §Performance: the 10 root bench targets and the per-crate suites, a 20 % regression rule, the idle-frame gate (`frames=2` over 8 s), and the two scale invariants. The regression rule is recorded as **manual today** — criterion baselines are not committed and no CI job enforces the percentage — rather than implied to be automatic.
 - [x] Define deprecation policy. — §Deprecation policy: the v1 compat tier guaranteed for the current major version of `floom`, removal requiring one release with `#[deprecated]` + a migration entry; the `floom` name reserved until the monolith retires.
 - [x] Commit release policy.
@@ -1596,14 +1596,14 @@ Judged 2026-09-18 against named evidence — see the acceptance run below. A
 crate existing is not evidence; each line names the test target or bench that
 would go red if the claim stopped being true.
 
-- [x] Core types stable. — `crates/floom-types`: zero dependencies, asserted in its own test; 15 inline tests.
-- [x] ElementArena stable. — `crates/floom-runtime-core/src/arena.rs` + `arena_tests.rs`; `element_arena` bench covers insert/get at 1k/10k/100k.
-- [x] Dirty propagation verified. — `crates/floom-runtime-core/src/dirty.rs` + `dirty_tests.rs`, `crates/floom-runtime-core/src/tree.rs` + `tree_tests.rs`; `dirty_vs_scan` bench group.
-- [x] Reactive bridge verified. — `crates/floom-runtime-core/src/reactive_bridge.rs` + `reactive_bridge_tests.rs`. Built on the **v1 reactive graph by design** (Task 3.1: "modify current reactive crate internals only where necessary"), so the `floom_legacy_reactive` edge is the intent, not leftover debt.
-- [x] Scheduler verified. — `crates/floom-scheduler` + `crates/floom-scheduler/tests/order.rs`.
-- [x] Scene ABI verified. — `crates/floom-scene` + `crates/floom-scene/tests/scene.rs`, `crates/floom-scene/tests/resources.rs`.
-- [x] Renderer ABI verified by Vello + software. — `crates/floom-renderer/tests/contract.rs` + `render_handoff.rs`; 21 vello + 19 software inline tests; `scene_render` bench.
-- [x] Platform ABI verified by fake backend + desktop backend. — `crates/floom-platform/src/fake.rs` + `crates/floom-platform/tests/contracts.rs`; `floom-platform-desktop` (33 inline + 6 integration, incl. `lifecycle.rs`, `winit_capabilities.rs`, `accessibility.rs`); plus real-window cases G1-1 / G1-5.
+- [x] Core types stable. — `crates/core/floom-types`: zero dependencies, asserted in its own test; 15 inline tests.
+- [x] ElementArena stable. — `crates/core/floom-runtime-core/src/arena.rs` + `arena_tests.rs`; `element_arena` bench covers insert/get at 1k/10k/100k.
+- [x] Dirty propagation verified. — `crates/core/floom-runtime-core/src/dirty.rs` + `dirty_tests.rs`, `crates/core/floom-runtime-core/src/tree.rs` + `tree_tests.rs`; `dirty_vs_scan` bench group.
+- [x] Reactive bridge verified. — `crates/core/floom-runtime-core/src/reactive_bridge.rs` + `reactive_bridge_tests.rs`. Built on the **v1 reactive graph by design** (Task 3.1: "modify current reactive crate internals only where necessary"), so the `floom_legacy_reactive` edge is the intent, not leftover debt.
+- [x] Scheduler verified. — `crates/core/floom-runtime-core` + `crates/core/floom-runtime-core/tests/scheduler_order.rs`.
+- [x] Scene ABI verified. — `crates/core/floom-scene` + `crates/core/floom-scene/tests/scene.rs`, `crates/core/floom-scene/tests/resources.rs`.
+- [x] Renderer ABI verified by Vello + software. — `crates/render/floom-renderer/tests/contract.rs` + `render_handoff.rs`; 21 vello + 19 software inline tests; `scene_render` bench.
+- [x] Platform ABI verified by fake backend + desktop backend. — `crates/platform/floom-platform/src/fake.rs` + `crates/platform/floom-platform/tests/contracts.rs`; `floom-platform-desktop` (33 inline + 6 integration, incl. `lifecycle.rs`, `winit_capabilities.rs`, `accessibility.rs`); plus real-window cases G1-1 / G1-5.
 - [x] Legacy adapter — **WAIVED (Policy A):** no legacy adapter; demos must target the new runtime before P0 claim.
 - [x] Baseline benchmarks and dependency checks pass. — 2178 tests / 0 failed / 72 ignored, architecture gate PASS, and **no budgeted bench exceeds its threshold** under `scripts/check-perf-budgets.sh` (best-of-3 Criterion medians against `docs/superpowers/benchmarks/floom-2-budget-baseline.json`; see the acceptance run below for why best-of-3 replaced the single run the 2026-09-18 pass used).
 
@@ -1613,13 +1613,13 @@ would go red if the claim stopped being true.
 - [x] Focus/Gesture/Animation/Overlay stable. — `floom-focus` (7+7), `floom-gesture` (4+4), `floom-animation` (3+3, `frame_rates` bench), `floom-overlay` (5+5); the overlay story was finished in R2.
 - [ ] Accessibility/IME functional on representative desktop/mobile targets. **PARTIAL — desktop only.** IME is functional on desktop end-to-end (R1: preedit reaches the focused `TextField`, commit replaces it, caret rect goes back to the OS). But the mobile half of this line cannot be met: `floom-platform-android` / `-ios` are headless capability-limited stubs, and floom-2 cannot run on mobile at all yet. Blocked on the same OS-surface bridge Phase 16 and Phase 19.4/19.5 stop at.
 - [x] Core widgets and forms complete. — `floom-widgets` (72 inline + 52 integration) covers primitives, controls, composites and navigation chrome; `floom-forms` (10) binds to the real controls. Phase 14.1–14.4 all ticked.
-- [x] Typed Navigation and VirtualViewport complete. — `floom-navigation` (13 tests, R6 glue `bf6a01c`); `crates/floom-virtual` (`ItemSizes`/`VisibleRange`/`VirtualViewport`, 7+7 tests, 1k/10k/100k benches).
-- [x] Snapshot/interaction tests cover core widgets. — `crates/floom-snapshot/tests/widgets.rs` (9 tests) mounts real `Text` / `Checkbox` / `Button` / `Container` / `Stack` widgets in a `WidgetHost` and holds scene, semantics and pixel goldens for them; `crates/floom-snapshot/tests/golden.rs` covers the engine itself. Two caveats are written into the test file rather than assumed away: a pixel hash over text depends on the host font stack, so the pixel golden is glyph-free, and the glyph path is instead pinned by a within-run comparison that also catches the Phase 27 defect (without the resource registry, two different strings hash identically). `crates/floom-testkit` (R3) gives the shared harness and all three app-level suites are rewritten on it, so interaction coverage is real. `crates/floom-snapshot` (Task 24.2) **now exists** (built 2026-09-18, `7cf…` commit): it renders a scene to pixels via `SoftwarePresenter`, hashes scene/semantics/pixel layers deterministically (FNV-1a), and provides a golden-file workflow (`assert_snapshot` + `UPDATE_SNAPSHOTS=1`) with 7 tests (3 unit + 4 golden) all passing. What remains is wiring real `floom-widgets` into that engine so core widgets have pixel/scene/semantics fixtures — integration work, not a missing engine. Not blocked on hardware.
+- [x] Typed Navigation and VirtualViewport complete. — `floom-navigation` (13 tests, R6 glue `bf6a01c`); `crates/widgets/floom-virtual` (`ItemSizes`/`VisibleRange`/`VirtualViewport`, 7+7 tests, 1k/10k/100k benches).
+- [x] Snapshot/interaction tests cover core widgets. — `crates/devtools/floom-snapshot/tests/widgets.rs` (9 tests) mounts real `Text` / `Checkbox` / `Button` / `Container` / `Stack` widgets in a `WidgetHost` and holds scene, semantics and pixel goldens for them; `crates/devtools/floom-snapshot/tests/golden.rs` covers the engine itself. Two caveats are written into the test file rather than assumed away: a pixel hash over text depends on the host font stack, so the pixel golden is glyph-free, and the glyph path is instead pinned by a within-run comparison that also catches the Phase 27 defect (without the resource registry, two different strings hash identically). `crates/devtools/floom-testkit` (R3) gives the shared harness and all three app-level suites are rewritten on it, so interaction coverage is real. `crates/devtools/floom-snapshot` (Task 24.2) **now exists** (built 2026-09-18, `7cf…` commit): it renders a scene to pixels via `SoftwarePresenter`, hashes scene/semantics/pixel layers deterministically (FNV-1a), and provides a golden-file workflow (`assert_snapshot` + `UPDATE_SNAPSHOTS=1`) with 7 tests (3 unit + 4 golden) all passing. What remains is wiring real `floom-widgets` into that engine so core widgets have pixel/scene/semantics fixtures — integration work, not a missing engine. Not blocked on hardware.
 
 ## P2 Acceptance
 
 - [ ] macOS/Windows/Linux/iOS/Android/Harmony/Web/Embedded backend matrix passes defined conformance suite. **BLOCKED — and the suite does not exist yet either.** Phase 19 is 0/24. Note that `docs/gates/*.md` is **not** this suite: those are the Floom **1.0** platform gates, every item still unrun with an empty Sign-off. macOS is the only platform with any real evidence (G1-1, G1-5, D1, D11); the other seven have none, and the mobile ones cannot be run here at all. Phase 19.1–19.8 is what has to define and then run the matrix.
-- [ ] WebView/Video/Camera/Map native providers work on agreed target subsets. **BLOCKED — the mechanism is built, the four named providers are not.** `crates/floom-native` gives the ABI (capability negotiation, slot pool, freeze/thaw, external texture) and `examples/floom-native-plugin` writes a complete `NativeViewProvider` against it (a TextInput bridge), so authoring a provider is a documented, tested path. What Phase 17 has not done is the OS-backed WebView/Video/Camera/Map set itself, each of which needs the platform surface of Phase 16.2/19.
+- [ ] WebView/Video/Camera/Map native providers work on agreed target subsets. **BLOCKED — the mechanism is built, the four named providers are not.** `crates/native/floom-native` gives the ABI (capability negotiation, slot pool, freeze/thaw, external texture) and `examples/floom-native-plugin` writes a complete `NativeViewProvider` against it (a TextInput bridge), so authoring a provider is a documented, tested path. What Phase 17 has not done is the OS-backed WebView/Video/Camera/Map set itself, each of which needs the platform surface of Phase 16.2/19.
 - [ ] Native composition policy works without widget-level platform conditionals. **PARTIAL — the policy is built and holds on macOS only.** The mechanism is real and verified: capability negotiation, `ClipSupport` fail-closed, sticky re-negotiation, freeze/thaw and the external-texture path all have headless tests, and D1/D11 confirm it on a real window. What is missing is the cross-platform half — the Win32/X11 `NativeViewHost` impls do not compile here, and the surface compositor (KMS/Android/iOS) is device-gated. So "no widget-level platform conditionals" is demonstrated on one backend, not proven across the set.
 
 ## P3 Acceptance
@@ -1627,19 +1627,19 @@ would go red if the claim stopped being true.
 All six blocked on unstarted phases; none is blocked on hardware, so this whole
 tier is available to anyone with the time.
 
-- [x] Inspector can trace Element → Scene → source. **PARTIAL — headless done, live tracing pending.** Phase 23 built `crates/floom-inspector` (versioned snapshot protocol: tree/style/layout/scene/performance, stable `ElementId` identities, optional `SourceLocation`), `crates/floom-devtools` (headless `Inspector` over the hot-reload `LiveTree`: navigation, per-`StyleState` property tables, source mapping, semantics viewer, `why_did_update` joining reactive source metadata with the ancestor chain) and the reactive `SignalSource` metadata in `floom-runtime-core` (23.4). What remains for a full tick is the live bridge — a running app feeding snapshots to a panel and the Element→Scene leg (scene capture per element) — which needs a real window loop.
-- [x] Profiler reports frame budget and allocations. **PARTIAL — engine done, app wiring pending.** `crates/floom-profiler` (23.3) instruments the seven stages with scoped guards over an injectable clock, flags `budget_exceeded` per frame, serializes the timeline as the protocol's `PerformanceSnapshot`, and carries explicit allocation counters plus cache hit/miss statistics (honest boundary: no global allocator hook). What remains is wiring it into the real window runner's frame loop so production numbers flow through.
-- [ ] MCP agent can inspect/click/type/scroll/screenshot. **PARTIAL — four of five verbs, on Floom's own transport.** Phase 25 shipped `crates/floom-agent` (`crates/floom-agent/src/protocol.rs`, `crates/floom-agent/src/transport.rs`, `crates/floom-agent/tests/agent_loop.rs`): inspect (`Tree`/`Semantics`/`Scene`/`Screenshot`/`Performance`/`Schema`) and control (`Tap`/`TypeText`/`Drag`) over an in-memory channel and a loopback-only TCP transport with a dev token. Two gaps against the line as written: there is **no `Scroll` command** — an agent cannot reach off-screen content — and the transport is length-prefixed JSON, **not MCP**. Both are software work, not hardware; the `Scroll` variant is the cheaper of the two.
-- [x] UI IR round-trips reference fixtures. — `crates/floom-ui-ir` (versioned IR + `fixtures/` at byte-level spec) and `crates/floom-dsl` (lexer/parser/lowering/emitter, whose emitted output is compiled by cargo for real).
-- [x] Hot reload handles compatible UI patches. — `crates/floom-hot-reload` (`diff.rs`/`live.rs`/`patch.rs`) matches by `NodeKey` so ids and state survive a patch, with checkpoint/rollback; `crates/floom-devtools/tests/inspector.rs` exercises the headless `Inspector` over its `LiveTree`.
-- [x] Figma/design contract diff works. — `crates/floom-accuracy` (`tokens.rs`/`screens.rs`/`evaluate.rs`/`benchmark.rs` + `crates/floom-accuracy/tests/evaluation.rs`, `crates/floom-accuracy/tests/gallery.rs`, `crates/floom-accuracy/tests/benchmark.rs`) compares a rendered gallery against a `DesignContract` fixture and drives a repair loop; the schema half is `crates/floom-agent/src/schema.rs`.
+- [x] Inspector can trace Element → Scene → source. **PARTIAL — headless done, live tracing pending.** Phase 23 built `crates/devtools/floom-inspector` (versioned snapshot protocol: tree/style/layout/scene/performance, stable `ElementId` identities, optional `SourceLocation`), `crates/devtools/floom-devtools` (headless `Inspector` over the hot-reload `LiveTree`: navigation, per-`StyleState` property tables, source mapping, semantics viewer, `why_did_update` joining reactive source metadata with the ancestor chain) and the reactive `SignalSource` metadata in `floom-runtime-core` (23.4). What remains for a full tick is the live bridge — a running app feeding snapshots to a panel and the Element→Scene leg (scene capture per element) — which needs a real window loop.
+- [x] Profiler reports frame budget and allocations. **PARTIAL — engine done, app wiring pending.** `crates/devtools/floom-devtools` (23.3) instruments the seven stages with scoped guards over an injectable clock, flags `budget_exceeded` per frame, serializes the timeline as the protocol's `PerformanceSnapshot`, and carries explicit allocation counters plus cache hit/miss statistics (honest boundary: no global allocator hook). What remains is wiring it into the real window runner's frame loop so production numbers flow through.
+- [ ] MCP agent can inspect/click/type/scroll/screenshot. **PARTIAL — four of five verbs, on Floom's own transport.** Phase 25 shipped `crates/system/floom-accuracy/src/agent` (`crates/system/floom-accuracy/src/agent/protocol.rs`, `crates/system/floom-accuracy/src/agent/transport.rs`, `crates/system/floom-accuracy/tests/agent_agent_loop.rs`): inspect (`Tree`/`Semantics`/`Scene`/`Screenshot`/`Performance`/`Schema`) and control (`Tap`/`TypeText`/`Drag`) over an in-memory channel and a loopback-only TCP transport with a dev token. Two gaps against the line as written: there is **no `Scroll` command** — an agent cannot reach off-screen content — and the transport is length-prefixed JSON, **not MCP**. Both are software work, not hardware; the `Scroll` variant is the cheaper of the two.
+- [x] UI IR round-trips reference fixtures. — `crates/frontend/floom-dsl/src/ui_ir` (versioned IR + `fixtures/` at byte-level spec) and `crates/frontend/floom-dsl` (lexer/parser/lowering/emitter, whose emitted output is compiled by cargo for real).
+- [x] Hot reload handles compatible UI patches. — `crates/devtools/floom-hot-reload` (`diff.rs`/`live.rs`/`patch.rs`) matches by `NodeKey` so ids and state survive a patch, with checkpoint/rollback; `crates/devtools/floom-devtools/tests/inspector.rs` exercises the headless `Inspector` over its `LiveTree`.
+- [x] Figma/design contract diff works. — `crates/system/floom-accuracy` (`tokens.rs`/`screens.rs`/`evaluate.rs`/`benchmark.rs` + `crates/system/floom-accuracy/tests/evaluation.rs`, `crates/system/floom-accuracy/tests/gallery.rs`, `crates/system/floom-accuracy/tests/benchmark.rs`) compares a rendered gallery against a `DesignContract` fixture and drives a repair loop; the schema half is `crates/system/floom-accuracy/src/agent/schema.rs`.
 
 ## P4 Acceptance
 
 - [x] Material/Cupertino/Fluent/Harmony design systems available. — `crates/ecosystem/floom-ui/crates/floom-material`, `crates/ecosystem/floom-ui/crates/floom-cupertino`, `crates/ecosystem/floom-ui/crates/floom-fluent` and `crates/ecosystem/floom-ui/crates/floom-harmony`, all built on the 2.0 stack (`floom-types`, `floom-style`, `crates/ecosystem/floom-ui/crates/floom-theme`, `floom-scene`, `crates/ecosystem/floom-ui/crates/floom-design`; all five design-system crates moved into the `floom-ui` workspace in Stage D) with 42 gallery/token tests between them. `crates/ecosystem/floom-ui` (~350 crates) is still v1-only and untouched; the Phase 21 crates are the 2.0 answer, not a port of it.
-- [x] Docs/examples complete. — `docs/2.0/EXAMPLES.md` (9 golden examples, each with its captured real output, run by `scripts/run-golden-examples.sh`), `docs/2.0/ARCHITECTURE.md`, `docs/2.0/RELEASE-POLICY.md`; `crates/floom/tests/docs_parity.rs` asserts the three pages agree with the tree, so they cannot rot silently.
-- [x] Third-party plugin authoring path documented. — `docs/2.0/ARCHITECTURE.md` §"Add a renderer or platform backend" and §"Add a native plugin", and two executable references: `examples/floom-native-plugin` writes a real `NativeViewProvider` end to end, and `crates/floom-platform/tests/contracts.rs` is the conformance suite a new backend must pass.
-- [ ] Compatibility/release policy active. **PARTIAL — written and self-checking, not yet exercised end to end.** `docs/2.0/RELEASE-POLICY.md` landed in Phase 30; `crates/floom/tests/docs_parity.rs` keeps it honest (every test/bench target it names exists; every example it lists exists and runs). Missing for "active": no release has been cut and measured against the policy, and `docs/gates/*.md` — the platform gates — are still entirely unrun. What 2.0 needs is its own conformance run, which Phase 19 owns.
+- [x] Docs/examples complete. — `docs/2.0/EXAMPLES.md` (9 golden examples, each with its captured real output, run by `scripts/run-golden-examples.sh`), `docs/2.0/ARCHITECTURE.md`, `docs/2.0/RELEASE-POLICY.md`; `crates/app/floom/tests/docs_parity.rs` asserts the three pages agree with the tree, so they cannot rot silently.
+- [x] Third-party plugin authoring path documented. — `docs/2.0/ARCHITECTURE.md` §"Add a renderer or platform backend" and §"Add a native plugin", and two executable references: `examples/floom-native-plugin` writes a real `NativeViewProvider` end to end, and `crates/platform/floom-platform/tests/contracts.rs` is the conformance suite a new backend must pass.
+- [ ] Compatibility/release policy active. **PARTIAL — written and self-checking, not yet exercised end to end.** `docs/2.0/RELEASE-POLICY.md` landed in Phase 30; `crates/app/floom/tests/docs_parity.rs` keeps it honest (every test/bench target it names exists; every example it lists exists and runs). Missing for "active": no release has been cut and measured against the policy, and `docs/gates/*.md` — the platform gates — are still entirely unrun. What 2.0 needs is its own conformance run, which Phase 19 owns.
 - [ ] Performance budgets enforced in CI. **PARTIAL — the budget exists and fails, the CI job does not.** `docs/superpowers/benchmarks/floom-2-budget-baseline.json` finally carries calibration numbers (best-of-3 Criterion medians for the five hot benches), and `scripts/check-perf-budgets.sh` measures and fails over the 10% threshold — verified able to fail, exit 1. Not wired into CI on purpose: the baseline is one host's numbers (macOS arm64, the only tested target) and a runner-specific failure is worse than no gate. Widening the support matrix in `docs/2.0/RELEASE-POLICY.md` is the prerequisite.
 
 ---
@@ -1690,8 +1690,8 @@ did not catch it.
 **2. The 2.0 format gate was red, and the drift was a day older than the reorg.**
 
 `cargo fmt --check` over the forty 2.0 packages failed on two files:
-`crates/floom-app/src/lib.rs` (import order) and
-`crates/floom-platform-desktop/src/native_appkit.rs` (`NativeSlot` /
+`crates/app/floom-app/src/lib.rs` (import order) and
+`crates/platform/floom-platform-desktop/src/native_appkit.rs` (`NativeSlot` /
 `NativeSnapshot` order). Both were introduced by `b6c05b63` — the D11 / 16.4
 commit of **2026-09-17** — not by the 2026-09-18 workspace reorg, which is the
 obvious suspect. Fixed by formatting those two packages individually; `--all`
@@ -1780,7 +1780,7 @@ and neither was visible from reading it.
 **1. Five evidence paths in ticked lines no longer existed.** `src/dirty.rs`,
 `src/tree.rs`, `src/reactive_bridge.rs` and two more were written before the
 workspace reorg and never updated; the corresponding files have lived in
-`crates/floom-runtime-core/src/` for weeks. A line that says "verified — see
+`crates/core/floom-runtime-core/src/` for weeks. A line that says "verified — see
 `src/dirty.rs`" was pointing at nothing, and nothing noticed, because reading a
 document is not checking it. All five now name where the file actually is.
 
@@ -1791,7 +1791,7 @@ and one P4 line said the design systems were BLOCKED while
 42 tests between them. Five of those lines are now ticked against real targets;
 the MCP one is PARTIAL for reasons given on the line itself.
 
-So the pass added `crates/floom/tests/acceptance.rs`: it parses this section and
+So the pass added `crates/app/floom/tests/acceptance.rs`: it parses this section and
 asserts that every path named as evidence exists, that no ticked line is
 evidence-free (waivers excepted), that P0 stays ticked, and that a **dated**
 acceptance run is present. The last one is why this section exists — the test
@@ -1799,7 +1799,7 @@ was red until it was written.
 
 ### Two gaps closed rather than annotated
 
-**P1, snapshot over real widgets.** `crates/floom-snapshot/tests/widgets.rs`
+**P1, snapshot over real widgets.** `crates/devtools/floom-snapshot/tests/widgets.rs`
 (9 tests) mounts actual `Text` / `Checkbox` / `Button` / `Container` / `Stack`
 widgets in a `WidgetHost` and holds scene, semantics and pixel goldens. Writing
 it surfaced a caveat worth recording: a scene node carries the **shaped advance
@@ -1869,7 +1869,7 @@ the phases are the plan and this is the record of where the plan was wrong.
 - [x] outside-click dismissal as a host rule (modals excluded)
 - [x] entry animation composited through a real frame clock
 
-**R3 — `crates/floom-testkit`** (`5187233`)
+**R3 — `crates/devtools/floom-testkit`** (`5187233`)
 - [x] shared harness; all app-level suites rewritten on it, no local scaffolding left
 
 **R5 — delivery hygiene** (`44cff56`, `879401b`)

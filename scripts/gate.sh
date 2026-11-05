@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # The gate, run where the code actually lives.
 #
 # Why this exists: the checks in `.github/workflows/ci.yml` never ran. `origin`

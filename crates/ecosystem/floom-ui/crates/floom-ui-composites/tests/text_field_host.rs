@@ -98,7 +98,7 @@ fn typing_reaches_the_focused_text_field() {
 
 /// The IME's half of the round trip: the platform turns keystrokes into
 /// `ImeCommit`/`ImePreedit`, the runner routes them to
-/// the focused field, which owns the `floom_ime` state machine and
+/// the focused field, which owns the `floom_core::ime` state machine and
 /// renders the marked text inline, and hands the OS the caret rect to anchor
 /// its popup -- then clears that area when the composition commits.
 #[test]

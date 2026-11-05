@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Host Embedding — 把 Floom 作为 Native 组件的一部分（add-to-app）
 
 > 状态：设计提案，**尚未实现**。本文回答的问题是「Floom 能不能像 Flutter
@@ -8,7 +10,7 @@
 
 | 方向 | 含义 | Flutter 对应 | Floom 现状 |
 | --- | --- | --- | --- |
-| **A. Native in Floom**<br>（平台视图） | Floom 是全屏，把原生控件嵌进来 | `AndroidView` / `UiKitView` | 规划里有：Phase 16（Native ABI）+ Phase 17（WebView/Video/Camera/Map）。`crates/floom-native` 已作为 Phase 12.2 前置落地了 `NativeViewPool` |
+| **A. Native in Floom**<br>（平台视图） | Floom 是全屏，把原生控件嵌进来 | `AndroidView` / `UiKitView` | 规划里有：Phase 16（Native ABI）+ Phase 17（WebView/Video/Camera/Map）。`crates/native/floom-native` 已作为 Phase 12.2 前置落地了 `NativeViewPool` |
 | **B. Floom in Native**<br>（add-to-app） | Native 是全屏，Floom 只占其中一块 | `FlutterView` / `FlutterFragment` / `FlutterViewController` | **规划里完全没有**。本文补的就是这个 |
 
 本文只讨论 **B**。
@@ -28,7 +30,7 @@
 全屏 Activity/ViewController**，而不是一个子视图。这跟 Flutter 的 add-to-app 不是
 一回事。
 
-补充事实（避免误判进度）：Floom 2.0 的 `crates/floom-platform-android` /
+补充事实（避免误判进度）：Floom 2.0 的 `crates/platform/floom-platform-android` /
 `-ios` 目前是 **headless 桩**（`lib.rs` 注释：*"headless until NDK surface glue
 exists"*），即 2.0 在移动端还没有能跑起来的后端；能上真机的仍是 `src/` 下
 1.x + lapce winit fork 那条路径。
@@ -81,7 +83,7 @@ EmbedderRuntime / EmbedderWindow / SurfaceHandle
    协议层不用重做**，只差宿主侧的桥。
 6. **无障碍合并进宿主树。** Floom 的语义树不能自成孤岛：Android 上要实现
    `AccessibilityNodeProvider` 挂到 `FloomView`、iOS 上要实现
-   `UIAccessibilityContainer`。`crates/floom-accessibility` 已经提供
+   `UIAccessibilityContainer`。`crates/core/floom-accessibility` 已经提供
    `SemanticsTree` + `SemanticsDiff`，桥接是纯增量。
 7. **与方向 A 的互操作。** 一个 `FloomView` 内部再嵌原生子控件时，需要
    `NativeCompositionMode::{Overlay, Texture, Surface, Offscreen}` 的能力协商

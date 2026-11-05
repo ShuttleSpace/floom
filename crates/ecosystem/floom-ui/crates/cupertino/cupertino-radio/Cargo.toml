@@ -14,17 +14,17 @@ edition = "2021"
 # features are presence flags, not data selectors.
 floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["cupertino"] }
-floom-signal = { path = "../../../../../floom-signal" }
+floom-signal = { path = "../../../../../core/floom-signal" }
 # The engine's colour type, which `floom-ui-composites`' `RadioStyle` speaks.
-floom-types = { path = "../../../../../floom-types" }
+floom-types = { path = "../../../../../core/floom-types" }
 # The engine's `Radio` lives a layer up, in the composite crate; this kit adapts
 # its tokens to that rather than to the widget crate it left.
 floom-ui-composites = { path = "../../floom-ui-composites" }
 
 [dev-dependencies]
-floom-core = { path = "../../../../../floom-core" }
+floom-core = { path = "../../../../../core/floom-core" }
 # The paint assertions read back a recorded scene, which needs the testkit the
 # engine ships.
-floom-widgets = { path = "../../../../../floom-widgets" }
-floom-types = { path = "../../../../../floom-types" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }
+floom-types = { path = "../../../../../core/floom-types" }
 floom-core-theme = { workspace = true }

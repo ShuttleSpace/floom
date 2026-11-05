@@ -7,15 +7,15 @@ edition = "2021"
 floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["material"] }
 floom-widget-md-icon = { workspace = true }
-floom-signal = { path = "../../../../../floom-signal" }
-floom-types = { path = "../../../../../floom-types" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-signal = { path = "../../../../../core/floom-signal" }
+floom-types = { path = "../../../../../core/floom-types" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }
 # The engine's `Select` moved up a layer; this kit adapts its tokens to
 # the composite, not to the widget crate it left.
 floom-ui-composites = { path = "../../floom-ui-composites" }
 
 [dev-dependencies]
-floom-core = { path = "../../../../../floom-core" }
+floom-core = { path = "../../../../../core/floom-core" }
 # The assertions measure painted geometry, which needs the recording testkit
 # the engine ships.
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }

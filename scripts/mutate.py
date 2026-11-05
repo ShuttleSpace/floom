@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 """Apply one deliberate edit to one file, for mutation-testing a test.
 
 The fourth delivery gate is "a failing test exists", and the only honest way

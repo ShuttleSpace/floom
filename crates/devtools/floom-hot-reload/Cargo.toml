@@ -1,0 +1,21 @@
+[package]
+name = "floom-hot-reload"
+description = "Hot-reload of widget, style and IR changes for Floom 2.0 applications"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-core = { path = "../../core/floom-core", version = "0.2.0" }
+floom-style = { path = "../../core/floom-style", version = "0.2.0" }
+floom-runtime-core = { path = "../../core/floom-runtime-core", version = "0.2.0" }
+# The reload protocol diffs two UI IR documents; the IR is folded into
+# floom-dsl as its `ui_ir` module.
+floom-dsl = { path = "../../frontend/floom-dsl", version = "0.2.0" }
+
+[dev-dependencies]
+# Test documents read better as DSL source than as struct literals.
+floom-dsl = { path = "../../frontend/floom-dsl", version = "0.2.0" }

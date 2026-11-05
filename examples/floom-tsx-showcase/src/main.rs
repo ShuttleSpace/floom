@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! A GUI that is authored in TSX and materialized at build time.
 //!
 //! `build.rs` compiles `src/counter.tsx` into `OUT_DIR/ui_gen.rs`; this file just

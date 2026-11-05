@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! Golden integration (Task 10): the TSX-authored tree mounts and renders
 //! headlessly through `floom-testkit` (software presenter, no GPU needed).
 //!

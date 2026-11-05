@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Cross-platform a11y + IME on-device integration test (#116)
 
 Companion to `docs/accessibility.md` (neutral protocol + desktop/mobile backends)
@@ -37,8 +39,8 @@ pointer click (routed through the identical `PendingAction` channel).
 
 ## 1. iOS — VoiceOver + IME
 
-Backend: `crates/floom/src/accessibility/backend_ios.rs` (UIAccessibility element mirror).
-IME: `crates/floom/src/platform/ohos_ime.rs` is OHOS-only; iOS IME is `crates/floom/src/platform/…ios_ime.rs`
+Backend: `crates/core/floom-accessibility/src` (UIAccessibility element mirror).
+IME: `crates/platform/floom-platform/src` is OHOS-only; iOS IME is `crates/platform/floom-platform/src…ios_ime.rs`
 (UITextField delegate + `UserEvent::IosIme`).
 
 ### 1.1 VoiceOver
@@ -73,7 +75,7 @@ IME: `crates/floom/src/platform/ohos_ime.rs` is OHOS-only; iOS IME is `crates/fl
 
 ## 2. Android — TalkBack + IME
 
-Backend: `crates/floom/src/accessibility/backend_android.rs` (`AccessibilityNodeInfo` + JNI
+Backend: `crates/core/floom-accessibility/src` (`AccessibilityNodeInfo` + JNI
 `nativePerformAction`). IME: Android uses the system IME via the winit/Android
 text-input path (no special floom bridge beyond the focus signal).
 
@@ -103,7 +105,7 @@ text-input path (no special floom bridge beyond the focus signal).
 
 ## 3. OpenHarmony — screen reader + IME
 
-IME: `crates/floom/src/platform/ohos_ime.rs` (`showKeyboard`/`hideKeyboard` +
+IME: `crates/platform/floom-platform/src` (`showKeyboard`/`hideKeyboard` +
 `updateImeCursorArea`/`updateImeConfig`, #112) — wired and `cargo check`
 green, but **best-effort** (depends on a focused ArkTS input / IME extension).
 **a11y: BLOCKED** — see §3.1.
@@ -149,7 +151,7 @@ green, but **best-effort** (depends on a focused ArkTS input / IME extension).
 - [ ] After any IME change, exercise at least one CJK + one Latin field on each
       target (composition path differs from plain commit).
 - [ ] Neutral `AccessAction` names must stay in sync between
-      `crates/floom/src/accessibility/{backend_ohos.rs,translate.rs}` and every platform
+      `crates/core/floom-accessibility/src{backend_ohos.rs,translate.rs}` and every platform
       backend's name→action map (the `action_name`/`action_from_name` pair and
       the iOS/Android/native enums).
 - [ ] New mobile target? Add its backend to the capability matrix in

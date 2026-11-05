@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the A5 custom-shader slice. Each mutation back up,
 # mutate (scripts/mutate.py), run the targeted test, record whether it FAILED,
 # restore, and verify the restore byte-exact. A mutation the targeted test does
@@ -45,8 +47,8 @@ mutate_one() {
   touch "$file"
 }
 
-SOFT=crates/floom-renderer-software/src/lib.rs
-VELLO=crates/floom-renderer-vello/src/gpu.rs
+SOFT=crates/render/floom-renderer-software/src/lib.rs
+VELLO=crates/render/floom-renderer-vello/src/gpu.rs
 
 # 1. software backend: dropping the skip counter makes the degradation silent.
 mutate_one "$SOFT" \
@@ -107,7 +109,7 @@ mutate_one "$VELLO" \
 #    widget surface drawing nothing, while every renderer-side test stays green
 #    (they build their scenes by hand). This is the mutation that says whether
 #    A5 is reachable from an app at all.
-HOST=crates/floom-app/src/lib.rs
+HOST=crates/app/floom-app/src/lib.rs
 mutate_one "$HOST" \
 "        self.push(floom_scene::SceneNode::shader(self.bounds, shader.clone()));" \
 "        let _ = shader;" \
@@ -129,7 +131,7 @@ mutate_one "$HOST" \
 # 7/8. The in-place setters: a builder is cloned into the tree, so a setter
 #      that swaps the value without bumping the revision paints the *old*
 #      program forever — the silent no-op this widget is most likely to ship.
-CANVAS=crates/floom-widgets/src/canvas.rs
+CANVAS=crates/widgets/floom-widgets/src/canvas.rs
 mutate_one "$CANVAS" \
 "    pub fn set_shader(&mut self, shader: Shader) {
         self.shader = shader;

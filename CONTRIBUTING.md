@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Contributing
 
 Floom aims to be a high performance UI library. New contributions are always welcome!
@@ -9,7 +11,7 @@ under `crates/`, flattened — one directory per crate, named after the package:
 
 ```
 crates/
-  floom/                 the public facade crate (its tests live in crates/floom/tests/)
+  floom/                 the public facade crate (its tests live in crates/app/floom/tests/)
   floom-<name>/          one directory per crate (core, runtime, render, ...)
   vendor/                forked upstream trees (separate workspaces)
   ecosystem/             satellite projects: floom-ui, floom-editor, plugins
@@ -17,7 +19,7 @@ docs/  examples/  scripts/  notices/  tests/
 ```
 
 The `floom` facade keeps its integration tests inside the crate
-(`crates/floom/tests/`), so they are picked up by normal Cargo discovery. The
+(`crates/app/floom/tests/`), so they are picked up by normal Cargo discovery. The
 top-level `tests/` directory holds CLI test fixtures, not the library's test
 suite.
 

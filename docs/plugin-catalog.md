@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # 平台插件迁移目录（Flutter → Floom）
 
 对 pub.dev 两个官方发布者（`flutter.dev`、`fluttercommunity.dev`）名下**全部插件包**
@@ -342,7 +344,7 @@ Wi-Fi 的 SSID / BSSID / 本机 IP（子网/网关刻意不做，crate 文档写
 ## 3. Tier B — 原生视图能力插件（5 个，需要 provider ABI）
 
 共同特征：能力本身是一个**视图**（框架不绘制它），必须实现第二个契约——
-provider ABI（`crates/floom-native-ffi/include/floom_native_provider.h`），
+provider ABI（`crates/native/floom-native-ffi/include/floom_native_provider.h`），
 并且要按 handoff 第 3 节的 A6b 决策把 provider 注册表做出来。
 **全部卡真机**，所以排在 Tier A 之后。
 
@@ -473,7 +475,7 @@ mDNS/Bonjour 服务发现（「局域网里有没有人提供 _http._tcp」）�
 | `vector_math` | `floom-types` 的几何/矩阵类型 | L0 |
 | `animations` / `after_layout` | `floom-animation` / 布局回调 | L5 |
 | `redux` / `state_persistence` / `listen` | `floom-signal` + `floom-persistence` | L2 / L5 |
-| `rfw`（远程 widget） | `floom-dsl` + `floom-ui-ir` | L8 |
+| `rfw`（远程 widget） | `floom-dsl`（含 `ui_ir` 模块） | L8 |
 | `flutter_svg` / `vector_graphics` / `path_parsing` | 渲染器 + `floom-text` 的矢量路径 | L4 / L3 |
 | `google_fonts` / `flutter_blurhash` | 资源加载 / 图像解码（widget 层） | L6 |
 | `flutter_shaders` | `floom-renderer` 的 shader 支持 | L4 |
@@ -489,7 +491,7 @@ mDNS/Bonjour 服务发现（「局域网里有没有人提供 _http._tcp」）�
 - `pigeon`（类型安全的平台通道代码生成）对应我们的是
   `floom create --plugin` 的脚手架 + C ABI 头——**我们不需要代码生成器，
   因为插件是链接期依赖而不是运行时通道**。这正是
-  `crates/floom-platform/src/plugins.rs` 模块文档论述的差异。
+  `crates/platform/floom-platform/src/plugins.rs` 模块文档论述的差异。
 - `flutter_plugin_android_lifecycle` 是「让插件拿到 Android 生命周期」的辅助包。
   我们的对应物是 `floom-platform-mobile` 的 JNI 桥（`with_env` / `activity`），
   9 个插件的 Android 臂都在用它。**不需要新 crate。**
@@ -508,7 +510,7 @@ federated plugin 结构（一个能力按平台拆包）。Floom 的对应结构
 `apple_maps_flutter`（只有 iOS，见 B5）、`wear`（Wear OS 配套）。
 
 `wear` 单独说一句：Flutter 侧它是「给 Wear OS 做配套表盘/app」。我们对应的故事是
-`floom-platform-harmony`（OHOS）和手表侧 ArkTS 应用——那是另一条线，
+`floom-platform` 的 `harmony` feature（OHOS）和手表侧 ArkTS 应用——那是另一条线，
 不是这个插件目录要解决的。
 
 ---
@@ -618,7 +620,7 @@ Java → dex → JNI → 真值读出 battery 61% · charging）。其余插件�
 代码早就拍过了，而且是两者兼有**：
 
 ```rust
-// crates/floom-types/src/native.rs
+// crates/core/floom-types/src/native.rs
 pub enum NativeViewKind {
     Map,
     Video,
@@ -637,7 +639,7 @@ pub enum NativeViewKind {
   这让 kind 名不分配、不无界，跨 FFI 时也没有"谁拥有这个字符串"的问题。
   这是本题的正解，原文写的 `Custom(String)` 反而更弱。
 
-**注册表本身（2026-10-27 落地）**：`crates/floom-native/src/registry.rs` 的
+**注册表本身（2026-10-27 落地）**：`crates/native/floom-native/src/registry.rs` 的
 `NativeProviderRegistry`，`WidgetHost` 持有它，`set_native_provider` 已删除。
 
 拍板的是原文没写出来的第三个选择：**显式 kind + miss 即拒 + 无兜底默认**。
@@ -686,7 +688,7 @@ bound/frozen/mode/焦点这些不变量一个字没改，每个后端照旧白�
 `Capability` 位由**平台适配器**回答 —— `Platform::capabilities()`，也就是
 `floom-platform-desktop` / `-mobile` / `-web` 这些 crate。位要诚实，就得由
 **知道实现是否在链接里**的那一方来置。可适配器看不见插件：实测
-`crates/floom-platform{,-desktop,-mobile}/Cargo.toml` 里 `floom-plugin-*` 依赖
+`crates/platform/floom-platform{,-desktop,-mobile}/Cargo.toml` 里 `floom-plugin-*` 依赖
 数为 **0**，而且不能有 —— `floom-platform` 在架构门禁里是必须保持
 platform/GPU-free 的 ABI，插件是它上面的一层，向上依赖被禁止。于是位只能由
 宿主在装配时自己置上，而 `floom-platform` 里就会出现一个"本层无人实现"的位，

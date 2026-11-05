@@ -1,0 +1,25 @@
+[package]
+name = "floom-text"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Renderer-neutral text layout and shaping for Floom 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+peniko = { workspace = true }
+parley = { workspace = true }
+# The `scale` feature is what lets the editor layout measure a glyph's ink
+# bounds, which is what makes a selection rectangle cover the glyphs it
+# covers rather than their advances.
+swash = { workspace = true, features = ["scale"] }
+rustc-hash.workspace = true
+
+[dev-dependencies]
+criterion = { version = "0.8.1", features = ["html_reports"] }
+
+[[bench]]
+name = "shaping"
+harness = false

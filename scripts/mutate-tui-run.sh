@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Mutation campaign for the TUI real-run-loop (crates/floom-platform-tui/src/run.rs
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
+# Mutation campaign for the TUI real-run-loop (crates/platform/floom-platform-tui/src/run.rs
 # + the resize/exit hooks in lib.rs). Same discipline as T1/T2: back up, mutate
 # (scripts/mutate.py), run the targeted lib test, record whether it went red,
 # restore byte-exact. A mutation no test catches is a test with no teeth.
@@ -37,8 +39,8 @@ mutate_one() {
 }
 
 UNIT="cargo test -q -p floom-platform-tui --lib"
-LIB=crates/floom-platform-tui/src/lib.rs
-RUN=crates/floom-platform-tui/src/run.rs
+LIB=crates/platform/floom-platform-tui/src/lib.rs
+RUN=crates/platform/floom-platform-tui/src/run.rs
 
 # 1. resize: stop emitting WindowResized, so a terminal resize never reaches the
 #    runner and the grid is never rebuilt.

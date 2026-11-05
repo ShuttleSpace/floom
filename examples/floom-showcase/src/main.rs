@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! The Floom 2.0 showcase: one application over the whole stack.
 //!
 //! Run with `cargo run -p floom-showcase`.

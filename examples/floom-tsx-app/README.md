@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # A Floom app written entirely in TSX
 
 `app.tsx` is the whole application. There is no `Cargo.toml`, no `main.rs`, and

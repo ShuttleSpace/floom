@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 """Merge plugin manifests into the app's, and set `android:hasCode` to match.
 
 `aapt2 link` takes one manifest. AGP merges library manifests into the app's;

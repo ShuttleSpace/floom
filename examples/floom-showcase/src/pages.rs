@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! The six pages of the showcase, each returning a `Stack`.
 //!
 //! Pages are declared by `page_for`, which the shell routes to. Each page owns

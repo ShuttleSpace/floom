@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the S8 slice (B4 opacity — the implicit transition
 # extended from colour to the compositor opacity channel). For each mutation:
 # back up, mutate (scripts/mutate.py), run the targeted test, record whether it
@@ -39,7 +41,7 @@ mutate_one() {
   touch "$file"
 }
 
-COMPOSE=crates/floom-widgets/src/compose.rs
+COMPOSE=crates/widgets/floom-widgets/src/compose.rs
 
 # 1. a transition that returns no longer starts from where it rested — `from` is
 #    left at its initial value, so the 0.5 -> 1.0 leg snaps to full opacity

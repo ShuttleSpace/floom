@@ -7,11 +7,11 @@ edition = "2021"
 # Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
 floom-widget-runtime = { workspace = true, features = ["material"] }
 floom-core-theme = { workspace = true }
-floom-signal = { path = "../../../../../floom-signal" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-signal = { path = "../../../../../core/floom-signal" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }
 
 [dev-dependencies]
 # The `Widget` trait, for `layout_request`.
-floom-core = { path = "../../../../../floom-core" }
+floom-core = { path = "../../../../../core/floom-core" }
 floom-core-theme = { workspace = true, features = ["material"] }
-floom-types = { path = "../../../../../floom-types" }
+floom-types = { path = "../../../../../core/floom-types" }

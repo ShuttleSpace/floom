@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! Floom 2.0 on macOS — the desktop analogue of `examples/floom-android`.
 //!
 //! `floom-window` already proves the stack runs in a real window; what this

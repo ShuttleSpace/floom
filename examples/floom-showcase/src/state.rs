@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! Application state that outlives a page rebuild.
 //!
 //! `SyncBaseSignal` (not the `Rc`-based `RwSignal`) is the one that crosses

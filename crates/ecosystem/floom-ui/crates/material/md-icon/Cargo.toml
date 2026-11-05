@@ -9,11 +9,11 @@ edition = "2021"
 # icon is now a `floom_widgets::VectorIcon` filled from parsed path data.
 floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["material"] }
-floom-signal = { path = "../../../../../floom-signal" }
-floom-core = { path = "../../../../../floom-core" }
-floom-types = { path = "../../../../../floom-types" }
-floom-widgets = { path = "../../../../../floom-widgets" }
+floom-signal = { path = "../../../../../core/floom-signal" }
+floom-core = { path = "../../../../../core/floom-core" }
+floom-types = { path = "../../../../../core/floom-types" }
+floom-widgets = { path = "../../../../../widgets/floom-widgets" }
 
 [dev-dependencies]
 floom-core-theme = { workspace = true }
-floom-types = { path = "../../../../../floom-types" }
+floom-types = { path = "../../../../../core/floom-types" }

@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: MIT
 //! Build script: compile the TSX, lower it, and emit Rust into `OUT_DIR`.
 //!
-//! `floom-tsx` turns `src/counter.tsx` into a `floom_ui_ir::UiDocument`, and
+//! `floom-tsx` turns `src/counter.tsx` into a `floom_dsl::ui_ir::UiDocument`, and
 //! `floom-dsl` lowers that into a Rust builder program. The generated `ui_gen.rs`
 //! is `include!`d by `main.rs`.
 

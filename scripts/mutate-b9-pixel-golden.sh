@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the B9 slice (per-frame pixel goldens, MOTION-GAP B9).
 #
 # The golden net is only worth having if it actually *bites*: if a frame
 # changes and the golden does not go red, the net is decoration. So we break
 # the thing under test on purpose and watch the right test fail. Four mutations
-# hit the novel comparison/freeze logic in crates/floom-snapshot/src/frames.rs
+# hit the novel comparison/freeze logic in crates/devtools/floom-snapshot/src/frames.rs
 # (these are the parts a plain hash could never have caught), and one hits the
 # pixel layer the net guards — disabling the software blur, which must fail the
 # blurred-card golden. A mutation a test does not catch is a test with no teeth.
@@ -43,8 +45,8 @@ mutate_one() {
   touch "$file"
 }
 
-FRAMES=crates/floom-snapshot/src/frames.rs
-SW=crates/floom-renderer-software/src/lib.rs
+FRAMES=crates/devtools/floom-snapshot/src/frames.rs
+SW=crates/render/floom-renderer-software/src/lib.rs
 
 # 1. frozen() lies and says every sequence moves — a still would pass as an
 #    animation, so the test that asserts a moving sequence is NOT frozen must go.

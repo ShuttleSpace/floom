@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Workspace conventions
 
 Floom is a Cargo workspace organised after the model of
@@ -20,8 +22,8 @@ source attribution, and a `notices/` directory for license compliance.
   - `-testkit` testing harness
 - **Legacy (v1) crates are quarantined under `legacy/` with the `floom-legacy-`
   prefix** so they are unmistakable next to their 2.0 successors. Example:
-  `crates/floom-renderer` (`floom-legacy-renderer`) vs
-  `crates/floom-renderer` (`floom-renderer`).
+  `crates/render/floom-renderer` (`floom-legacy-renderer`) vs
+  `crates/render/floom-renderer` (`floom-renderer`).
 
 ## 2. Layered directory topology
 

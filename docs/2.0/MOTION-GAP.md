@@ -1,3 +1,5 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 # 绘制与动画能力缺口（Canvas & Motion Gap）
 
 > 对标对象：**Flutter** 与 **Compose Multiplatform（KMP 路线的 UI 层）**。

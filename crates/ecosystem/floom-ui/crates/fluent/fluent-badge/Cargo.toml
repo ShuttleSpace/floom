@@ -16,9 +16,9 @@ floom-core-theme = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["fluent"] }
 # The theme binding, which is `RwSignal<MultiTheme>` exactly as in the other
 # ported kits.
-floom-signal = { path = "../../../../../floom-signal" }
+floom-signal = { path = "../../../../../core/floom-signal" }
 # The engine colour type, which `BadgeStyle` speaks.
-floom-types = { path = "../../../../../floom-types" }
+floom-types = { path = "../../../../../core/floom-types" }
 # The engine badge; this kit resolves the palette and hands the bubble the
 # explicit values 2.0 wants rather than reading a global theme signal.
 floom-ui-composites = { path = "../../floom-ui-composites" }

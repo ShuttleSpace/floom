@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 //! Golden example: native view composition, and how to write a plugin (Phase 30.1).
 //!
 //! A "native plugin" is a type implementing [`NativeViewProvider`]: it declares

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 """List the Android library modules of every plugin an app depends on.
 
 The app's APK needs one thing from a plugin that Cargo cannot give it: the

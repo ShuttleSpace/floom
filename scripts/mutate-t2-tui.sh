@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the T2 slice (the terminal platform layer + diff
 # redraw). Same discipline as T1: back up, mutate (scripts/mutate.py), run the
 # targeted test, record whether it went red, restore byte-exact. A mutation no
@@ -38,8 +40,8 @@ mutate_one() {
 
 UNIT="cargo test -q -p floom-platform-tui --lib"
 DIFF="cargo test -q -p floom-renderer-tui --lib"
-ANSI=crates/floom-renderer-tui/src/ansi.rs
-INPUT=crates/floom-platform-tui/src/input.rs
+ANSI=crates/render/floom-renderer-tui/src/ansi.rs
+INPUT=crates/platform/floom-platform-tui/src/input.rs
 
 # 1. Diff: drop the leading reset that establishes a known colour baseline.
 #    (The bare `out.push_str(RESET);` also appears in encode_with_stats, so the

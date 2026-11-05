@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
 # Mutation campaign for the S6 slice (B5 AnimatedContent — the content-keyed
 # generalisation of Crossfade). For each mutation: back up, mutate
 # (scripts/mutate.py), run the targeted test, record whether it FAILED, restore,
@@ -39,7 +41,7 @@ mutate_one() {
   touch "$file"
 }
 
-COMPOSE=crates/floom-widgets/src/compose.rs
+COMPOSE=crates/widgets/floom-widgets/src/compose.rs
 
 # 1. a switch stops spawning the arriving side — the departure is never answered,
 #    so the scene holds one mounted child mid-switch instead of two.

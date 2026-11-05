@@ -9,9 +9,9 @@ edition = "2021"
 # (`RwSignal`, `create_global_rw_signal`) and the two value types it converts
 # to (`peniko::Color`, `parley::style::FontWeight`). See
 # `docs/porting-floem-ui-to-2.0.md`.
-floom-signal = { path = "../../../../floom-signal" }
+floom-signal = { path = "../../../../core/floom-signal" }
 # The engine's colour type, for the boundary conversion.
-floom-types = { path = "../../../../floom-types" }
+floom-types = { path = "../../../../core/floom-types" }
 peniko = "0.6"
 parley = "0.7"
 
