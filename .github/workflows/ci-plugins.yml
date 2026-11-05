@@ -1,0 +1,113 @@
+on:
+  push:
+    branches:
+      - main
+      - floom-2.0
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+name: CI plugins
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  # The capability plugins are their own workspace (`crates/ecosystem/plugins`),
+  # so the core jobs in `ci-core.yml` build none of them: a plugin is not a
+  # member of the root, and `cargo fmt $FLOOM2_PACKAGES` cannot reach across
+  # that boundary. This job is what keeps them formatted, linted and tested.
+  #
+  # Both runners, not one: each host compiles a *different* set of `cfg` arms
+  # (AppKit on macOS, `dirs`/`secret-tool` on Linux), so a single-OS job would
+  # report green over code it never compiled.
+  plugins:
+    name: Capability plugins on ${{ matrix.os }}
+    if: github.event.pull_request.draft == false
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      PLUGIN_MANIFEST: crates/ecosystem/plugins/Cargo.toml
+    defaults:
+      run:
+        working-directory: crates/ecosystem/plugins
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain & add rustfmt
+        run: |
+          rustup update --no-self-update
+          rustup component add rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: plugins-${{ matrix.os }}
+          workspaces: crates/ecosystem/plugins -> target
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Fetch dependencies
+        run: cargo fetch
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Run tests
+        run: cargo test --workspace --no-fail-fast
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- --deny warnings
+
+  # Every satellite workspace under `crates/ecosystem/`, derived from the
+  # manifests rather than listed: a satellite is a `Cargo.toml` there that opens
+  # with `[workspace]`. The root manifest excludes the whole `crates/ecosystem`
+  # tree, so root `cargo test --workspace` and the `build` job in `ci-core.yml`
+  # never reach either one.
+  #
+  # That is not hypothetical. `d131b5af` moved `PixelSnapshot::of` behind the
+  # `ReferencePixels` trait and separately taught vello to draw drop shadows;
+  # the design-system galleries in `floom-ui` then failed both to compile *and*
+  # to hash the same, and neither showed up anywhere. `floom-editor`'s 25
+  # paint-level tests were committed and run by nothing at all. This job is the
+  # only thing that runs either.
+  #
+  # The whole workspace rather than a package list: `floom-ui` alone is 306
+  # members, every one a headless test that renders into a buffer. A
+  # hand-maintained `-p` list is how the `FLOOM2_PACKAGES` scope got truncated
+  # once already.
+  ecosystem-check:
+    name: Ecosystem workspaces (design-system goldens, editor)
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain
+        run: rustup update --no-self-update
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Space-separated workspace roots, relative to the repo root.
+          workspaces: crates/ecosystem/floom-ui crates/ecosystem/floom-editor
+          key: ecosystem-check
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Run the satellite tests
+        run: |
+          status=0
+          for manifest in crates/ecosystem/*/Cargo.toml; do
+            grep -qx '\[workspace\]' "$manifest" || continue
+            dir="$(dirname "$manifest")"
+            echo "::group::$dir"
+            (cd "$dir" && cargo test --workspace --no-fail-fast) || status=1
+            echo "::endgroup::"
+          done
+          exit "$status"

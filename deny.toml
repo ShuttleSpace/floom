@@ -1,0 +1,73 @@
+# Dependency policy for the root workspace, checked in CI by `cargo-deny`
+# (ci-core.yml) and locally with `cargo deny check`.
+#
+# Scope: the root Cargo.toml graph, `examples/*` included. `crates/vendor/*`
+# and `crates/ecosystem/*` are separate workspaces and are not part of it.
+
+[graph]
+# Every triple CI compiles for, so the license/advisory data reflects what is
+# actually built rather than just this host.
+targets = [
+    { triple = "x86_64-apple-darwin" },
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "x86_64-pc-windows-msvc" },
+    { triple = "aarch64-linux-android" },
+    { triple = "aarch64-apple-ios" },
+]
+
+[advisories]
+version = 2
+# Advisories that cannot be cleared by a lockfile-level move. Each entry is a
+# deliberate, documented exception -- revisit when the dependency stack moves:
+#
+# RUSTSEC-2024-0436 (`paste` unmaintained): no safe upgrade exists; the crate is
+#   pulled in transitively and the maintainer has archived it. Upstream forks
+#   (`pastey`) exist but swapping a transitive macro dep is out of scope here.
+# RUSTSEC-2026-0192 (`ttf-parser` unmaintained): no safe upgrade exists; it
+#   arrives through `ab_glyph` -> `owned_ttf_parser`. The suggested replacement
+#   (`skrifa`) is an API change in a transitive font stack.
+# RUSTSEC-2026-0194 / RUSTSEC-2026-0195 (`quick-xml`): fixes land in 0.41, a
+#   breaking 0.x bump that a lockfile update cannot reach (the graph pins
+#   `^0.38`). Revisit when the dependent crate bumps its `quick-xml` requirement.
+ignore = [
+    "RUSTSEC-2024-0436",
+    "RUSTSEC-2026-0192",
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
+]
+
+[licenses]
+version = 2
+confidence-threshold = 0.8
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "ISC",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Zlib",
+]
+
+[bans]
+# Duplicates warn rather than deny: the graphics stack regularly ships crates
+# that pin different majors of the same dependency, and a hard fail every time
+# that happens trains people to ignore this whole check.
+multiple-versions = "warn"
+# Wildcards warn rather than deny: the floom workspace uses path dependencies
+# internally (`examples/*` and floom-platform/* reference sibling crates by
+# path with no version requirement), and cargo encodes those as `*`. Tightening
+# back to deny requires first version-pinning those path deps.
+wildcards = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# The `lapce/winit` fork is the package-renamed `floem-winit` tree wired in
+# via `[patch]` from `crates/vendor/floem-winit`.
+allow-git = ["https://github.com/lapce/winit"]

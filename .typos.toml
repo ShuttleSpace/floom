@@ -1,0 +1,35 @@
+# Drives the `typos` check (ci-core.yml → `crate-ci/typos@v1`).
+#
+# `crates/vendor/*` is forked upstream code, not ours to re-spell; every work
+# tree of ours (crates/, examples/, docs/, scripts/, ecosystem/) stays on.
+
+[default.extend-words]
+# `mis-` is an English prefix, not a truncation of `miss`: mis-recovery,
+# mis-emitted, mis-routed.
+mis = "mis"
+# `worl|d` renders the caret split of the word `world` in an editor-core doc
+# example (rope_text.rs).
+worl = "worl"
+# `iy0` is a coordinate identifier paired with `ix0` in the mutate scripts'
+# embedded Rust heredocs.
+iy = "iy"
+# `on:clik=save` is an unknown-event probe attribute in the DSL lower tests;
+# the token only needs to be unknown.
+clik = "clik"
+# `udid`/`UDID` are device-identifier tokens in the iOS gate docs.
+udid = "udid"
+UDID = "UDID"
+# `pn`/`png` cover the `PNG` acronym in prose (`PN`/`PNG`/`PNGs`).
+pn = "pn"
+png = "png"
+# `tha` is a fragment of a proper-noun phrase in an editor-core doc example.
+tha = "tha"
+# `threed` is a placeholder string (`com.example.threed`).
+threed = "threed"
+# `ba` is a variable name (and hex digit run) in Rust code.
+ba = "ba"
+# `fo` is a base64 test input.
+fo = "fo"
+
+[files]
+extend-exclude = ["crates/vendor"]
