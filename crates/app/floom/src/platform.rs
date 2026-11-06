@@ -48,7 +48,9 @@ pub enum OnUnsupported {
 /// A capability the backend does not have.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PlatformError {
+    /// Name of the backend that lacks the capability.
     pub backend: &'static str,
+    /// The capability it cannot provide.
     pub capability: Capability,
 }
 
@@ -67,8 +69,11 @@ impl std::error::Error for PlatformError {}
 /// The app loop's request: one window, described without a backend in sight.
 #[derive(Debug, Clone)]
 pub struct AppRequest {
+    /// Window title shown by the backend.
     pub title: String,
+    /// Initial window size.
     pub size: floom_types::Size,
+    /// Whether the user may resize the window.
     pub resizable: bool,
 }
 

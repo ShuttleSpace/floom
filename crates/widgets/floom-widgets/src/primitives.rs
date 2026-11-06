@@ -214,9 +214,7 @@ pub fn stroke_rounded_outline(
     );
 }
 
-// ---------------------------------------------------------------------------
 // Text
-// ---------------------------------------------------------------------------
 
 /// A run of static text.
 #[derive(Debug, Clone, PartialEq)]
@@ -409,9 +407,7 @@ impl Widget for Text {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Icon
-// ---------------------------------------------------------------------------
 
 /// A single glyph from an icon font.
 ///
@@ -515,9 +511,7 @@ impl Widget for Icon {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Image
-// ---------------------------------------------------------------------------
 
 /// A registered image resource.
 #[derive(Debug, Clone, PartialEq)]
@@ -648,9 +642,7 @@ impl Widget for Image {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Container
-// ---------------------------------------------------------------------------
 
 /// A decoration box: background, corner radius, inner padding, and elevation.
 ///
@@ -1033,9 +1025,7 @@ impl Widget for Container {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Spacer
-// ---------------------------------------------------------------------------
 
 /// Empty space along one axis. Paints nothing and emits no semantics.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -1140,9 +1130,7 @@ impl Widget for Spacer {
     fn semantics(&self, _cx: &mut dyn SemanticsContext, _id: ElementId) {}
 }
 
-// ---------------------------------------------------------------------------
 // Divider
-// ---------------------------------------------------------------------------
 
 /// Where a rule sits on its *cross* axis.
 ///

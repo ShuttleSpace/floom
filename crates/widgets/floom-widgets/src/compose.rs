@@ -36,9 +36,7 @@ use floom_core::{
 
 use crate::primitives::SemanticsHint;
 
-// ---------------------------------------------------------------------------
 // Stack
-// ---------------------------------------------------------------------------
 
 /// Lays out its children along one [`Axis`] with a fixed gap.
 #[derive(Clone)]
@@ -217,9 +215,7 @@ impl Widget for Stack {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Scroll
-// ---------------------------------------------------------------------------
 
 /// A viewport that scrolls its content vertically or horizontally.
 ///
@@ -611,9 +607,7 @@ impl Widget for Scroll {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Conditional
-// ---------------------------------------------------------------------------
 
 /// Shows its single child when `when` is true, otherwise renders nothing.
 ///
@@ -903,9 +897,7 @@ impl Widget for Conditional {
     }
 }
 
-// ---------------------------------------------------------------------------
 // PresenceLeaf
-// ---------------------------------------------------------------------------
 
 /// A child whose `when` is driven by a shared flag rather than internal state,
 /// so a parent (a [`Crossfade`]) can flip it without holding the child's node.
@@ -958,9 +950,7 @@ impl Widget for PresenceLeaf {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Crossfade
-// ---------------------------------------------------------------------------
 
 /// Swaps between two contents by crossfading them, instead of cutting.
 ///
@@ -1090,9 +1080,7 @@ impl Widget for Crossfade {
     }
 }
 
-// ---------------------------------------------------------------------------
 // SharedTransitionLayout
-// ---------------------------------------------------------------------------
 
 /// What the shared element is doing right now.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1366,9 +1354,7 @@ fn absolute_layout(top: f32) -> LayoutRequest {
     }
 }
 
-// ---------------------------------------------------------------------------
 // AnimatedContent
-// ---------------------------------------------------------------------------
 
 /// A content-keyed presence transition: whenever the tracked `value` changes,
 /// the outgoing content stays mounted and plays its exit while the incoming
@@ -1658,10 +1644,8 @@ impl<T: Clone + Eq + Send + Sync + 'static> WidgetAny for AnimatedContent<T> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Opacity — implicit opacity transition (B4 extended from colour to the
 // compositor opacity channel)
-// ---------------------------------------------------------------------------
 
 /// A single-child wrapper that applies an opacity to its subtree, with an
 /// optional implicit transition: change the target and the subtree fades from
@@ -1787,9 +1771,7 @@ impl Widget for Opacity {
     }
 }
 
-// ---------------------------------------------------------------------------
 // List
-// ---------------------------------------------------------------------------
 
 /// A data-driven list. Mirrors `items` into keyed rows so inserting/removing in
 /// the middle keeps each surviving row's widget (scroll position, focus, …)
@@ -1907,9 +1889,7 @@ impl<T: Clone + Send + Sync + 'static> WidgetAny for List<T> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Grid
-// ---------------------------------------------------------------------------
 
 /// A data-driven grid: rows of `columns` keyed cells.
 ///

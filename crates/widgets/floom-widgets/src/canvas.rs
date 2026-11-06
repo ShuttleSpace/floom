@@ -247,9 +247,7 @@ impl WidgetAny for Canvas {
     }
 }
 
-// ---------------------------------------------------------------------------
 // ShaderBox — a box whose ink is a caller-supplied WGSL program (A5)
-// ---------------------------------------------------------------------------
 
 /// A box filled by a custom WGSL fragment shader — the widget-facing half of
 /// the custom-shader gap (A5).

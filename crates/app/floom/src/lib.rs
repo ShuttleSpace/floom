@@ -62,6 +62,7 @@
 //! the `compile_fail` is meaningful rather than a vacuous missing-crate pass.
 
 #![forbid(unsafe_code)]
+#![warn(missing_docs)]
 
 // The layered stack, re-exported under its own names. Anything the prelude
 // deliberately leaves out stays reachable through these explicit paths — that
@@ -80,16 +81,16 @@ pub mod devtools;
 pub mod platform;
 #[cfg(feature = "devtools")]
 pub use floom_devtools;
-#[cfg(feature = "mobile")]
-pub use floom_platform_android;
-#[cfg(feature = "desktop")]
-pub use floom_platform_desktop;
 #[cfg(feature = "embedded")]
 pub use floom_platform::embedded as floom_platform_embedded;
 #[cfg(feature = "mobile")]
 pub use floom_platform::harmony as floom_platform_harmony;
 #[cfg(feature = "mobile")]
 pub use floom_platform::ios as floom_platform_ios;
+#[cfg(feature = "mobile")]
+pub use floom_platform_android;
+#[cfg(feature = "desktop")]
+pub use floom_platform_desktop;
 #[cfg(feature = "tui")]
 pub use floom_platform_tui::{TuiApp, TuiPlatform};
 #[cfg(feature = "web")]

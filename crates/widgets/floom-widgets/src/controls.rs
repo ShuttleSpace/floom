@@ -314,9 +314,7 @@ fn draw_centered_text(
     cx.fill_text(origin, text, size, FontWeight::Normal, color);
 }
 
-// ---------------------------------------------------------------------------
 // Button
-// ---------------------------------------------------------------------------
 
 /// A UI callback.
 ///
@@ -731,9 +729,7 @@ impl Widget for Button {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Pressable
-// ---------------------------------------------------------------------------
 
 /// A single-child wrapper that makes its child act as one clickable surface.
 ///
@@ -1009,9 +1005,7 @@ impl Widget for Pressable {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Switch
-// ---------------------------------------------------------------------------
 
 pub type BoolCallback = Box<dyn Fn(bool)>;
 
@@ -1411,9 +1405,7 @@ impl Widget for Switch {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Progress
-// ---------------------------------------------------------------------------
 
 /// How much of an indeterminate bar's width the moving segment covers.
 const INDETERMINATE_SEGMENT: f64 = 0.3;
