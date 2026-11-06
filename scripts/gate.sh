@@ -312,6 +312,7 @@ doc        cargo test --doc
 arch       scripts/check-architecture-deps.sh
 probe      the device probe compiles with `--features real`
 plugins    the capability plugins compile on the host
+plugin-template  every plugin carries the documented template files
 android    the plugins compile for aarch64-linux-android
 ios        the plugins compile for aarch64-apple-ios
 windows    the plugins with real Windows arms compile for x86_64-pc-windows-msvc
@@ -508,6 +509,12 @@ plugins_check() {
     cargo clippy --workspace --all-targets --all-features -- --deny warnings )
 }
 has_check plugins && run_check plugins "" plugins_check
+
+# The template files are promises the workspace's glob cannot enforce: a plugin
+# joins `members` by matching the directory name, whether or not it carries a
+# README, example, TypeScript facade or ABI header.
+plugin_template_check() { ./scripts/check-plugin-templates.sh; }
+has_check plugin-template && run_check plugin-template "" plugin_template_check
 
 # Android: `cargo check --target`, exactly what the CI job runs. No NDK and no
 # `cargo ndk` — `check` does not link, so the target's std is the only thing

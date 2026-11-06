@@ -256,6 +256,11 @@ fn write_project(
          \x20   println!(\"cargo:rerun-if-changed={{app}}\");\n\
          \x20   println!(\"cargo:rerun-if-changed=build.rs\");\n\
          \x20   let source = std::fs::read_to_string(&app).expect(\"read the TSX app\");\n\
+         \x20   let doc = floom_tsx::compile(&source)\n\
+         \x20       .unwrap_or_else(|e| panic!(\"{{app}}: {{e}}\"));\n\
+         \x20   let dts = std::path::Path::new(&app).with_extension(\"d.ts\");\n\
+         \x20   std::fs::write(&dts, floom_tsx::generate_dts(&doc))\n\
+         \x20       .expect(\"write the .d.ts\");\n\
          \x20   let generated = floom_tsx::generate(&source)\n\
          \x20       .unwrap_or_else(|e| panic!(\"{{app}}: {{e}}\"));\n\
          \x20   let out = std::env::var(\"OUT_DIR\").expect(\"OUT_DIR\");\n\
@@ -371,6 +376,37 @@ mod tests {
         let manifest = fs::read_to_string(dir.join("run").join("Cargo.toml")).expect("manifest");
         assert!(manifest.contains("[workspace]"), "{manifest}");
         assert!(manifest.contains("features = []"), "{manifest}");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_generated_build_script_emits_editor_declarations() {
+        // The TSX app is the source of truth, and the declarations are what an
+        // editor completes against. They are written beside the app so the
+        // editor finds them without a path to configure.
+        let dir = std::env::temp_dir().join(format!("floom-run-dts-{}", std::process::id()));
+        let crates = dir.join("crates");
+        for name in [
+            "floom",
+            "floom-core",
+            "floom-types",
+            "floom-widgets",
+            "floom-signal",
+            "floom-tsx",
+            "floom-dsl",
+        ] {
+            fs::create_dir_all(crates.join(name)).expect("mkdir");
+        }
+        write_project(&dir.join("run"), Path::new("/tmp/app.tsx"), &crates, "").expect("write");
+        let build_rs = fs::read_to_string(dir.join("run").join("build.rs")).expect("build.rs");
+        assert!(
+            build_rs.contains("floom_tsx::generate_dts"),
+            "the build script must emit the declarations:\n{build_rs}"
+        );
+        assert!(
+            build_rs.contains(r#"with_extension("d.ts")"#),
+            "the declarations belong beside the app:\n{build_rs}"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 }

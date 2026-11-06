@@ -21,7 +21,7 @@ USAGE:
 COMMANDS:
     run <APP.tsx>    Compile a TSX app and launch it (no Rust written by hand)
     create <NAME>    Scaffold a new Floom app
-    create --plugin  Scaffold a Floom plugin (Rust half + native halves)
+    create --plugin  Scaffold a Floom plugin (Rust half + native halves + .d.ts)
     help             Show this message
 
 OPTIONS (run):
@@ -391,6 +391,11 @@ fn create_plugin(opts: &CreateOpts, root: &Path) -> Result<(), String> {
         &templates::plugin_root_readme(&opts.name, &opts.platforms),
     )?;
 
+    // The TypeScript facade sits at the package root, beside the manifest, so
+    // an editor resolves `floom-plugin-<name>` from the package it belongs to
+    // rather than from a path inside the Rust crate.
+    write(&root.join("index.d.ts"), &templates::plugin_dts(&opts.name))?;
+
     println!(
         "Created Floom plugin `{}` in ./{}",
         opts.name,
@@ -398,6 +403,7 @@ fn create_plugin(opts: &CreateOpts, root: &Path) -> Result<(), String> {
     );
     println!("  crate:        floom-plugin-{}", opts.name);
     println!("  platforms:    {}", opts.platforms.join(", "));
+    println!("  types:        index.d.ts");
     println!("  organisation: {}", opts.org);
     println!();
     println!("Next:");
@@ -1086,6 +1092,26 @@ mod tests {
             manifest.contains("cc = \"1\""),
             "build.rs compiles the native half, so `cc` is a build dependency"
         );
+    }
+
+    #[test]
+    fn the_generated_plugin_carries_a_typescript_facade() {
+        // The Rust half is the implementation, but a TSX or web host reads the
+        // package through its declarations. A scaffold without them is a
+        // package an editor cannot complete.
+        let dir = scaffold("dts", &["macos"]);
+        let dts = read(&dir, "index.d.ts");
+
+        assert!(
+            dts.contains("declare module \"floom-plugin-dts\""),
+            "the facade must declare the package it belongs to:\n{dts}"
+        );
+        for name in ["version", "enable", "disable", "capability", "register"] {
+            assert!(
+                dts.contains(&format!("export function {name}(")),
+                "missing `{name}` in the facade:\n{dts}"
+            );
+        }
     }
 
     #[test]

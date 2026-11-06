@@ -105,10 +105,13 @@ compile-time macro cannot answer that.
 crates/ecosystem/plugins/floom-plugin-<capability>/
 ├── Cargo.toml
 ├── build.rs                 compiles the C halves, emits the cfg
+├── index.d.ts               the TypeScript facade, mirroring the Rust API
 ├── src/lib.rs               the `extern "C"` declarations and the Rust API
 ├── src/android.rs           the Android edge: JNI calls into the Java half
 ├── android/                 the Android half (Gradle library module + Java)
+├── example/                 a runnable host that prints what the plugin answers
 └── native/
+    ├── README.md            the per-target mapping
     ├── common/              the C ABI header — the single source of truth
     ├── desktop/             the desktop half (C)
     ├── ios/                 the iOS half (Swift, exported with `@_cdecl`)
@@ -116,6 +119,14 @@ crates/ecosystem/plugins/floom-plugin-<capability>/
     ├── web/                 the web half (JavaScript)
     └── tui/                 nothing: the terminal has no native surface
 ```
+
+`index.d.ts` mirrors the Rust surface name for name: a `Result<T, E>` becomes a
+`void` return that throws the Rust error string, and `Option<T>` becomes `T |
+null`. A plugin whose platform arms are Rust modules rather than C keeps the
+`native/common/` contract header and the `native/README.md` mapping and writes
+`src/<target>.rs` instead of a native half; the layout still says where a native
+half would go, and `scripts/check-plugin-templates.sh` (run by the gate's
+`plugin-template` check) refuses a plugin that is missing any of these files.
 
 `build.rs` compiles the halves that are C (the desktop half for the current
 target; the OpenHarmony helper on Harmony) and emits

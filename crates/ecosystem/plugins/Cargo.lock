@@ -386,6 +386,7 @@ dependencies = [
 name = "floom-plugin-background-work"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
 ]
@@ -394,6 +395,7 @@ dependencies = [
 name = "floom-plugin-battery"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
  "objc2",
@@ -418,6 +420,7 @@ dependencies = [
 name = "floom-plugin-connectivity"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
  "objc2",
@@ -427,6 +430,7 @@ dependencies = [
 name = "floom-plugin-device-info"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
  "objc2",
@@ -436,6 +440,7 @@ dependencies = [
 name = "floom-plugin-file-dialog"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "objc2",
  "windows-sys",
 ]
@@ -444,6 +449,7 @@ dependencies = [
 name = "floom-plugin-local-auth"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
  "objc2",
@@ -453,6 +459,7 @@ dependencies = [
 name = "floom-plugin-location"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
  "objc2",
@@ -463,6 +470,7 @@ dependencies = [
 name = "floom-plugin-mdns"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "mdns-sd",
 ]
 
@@ -470,6 +478,7 @@ dependencies = [
 name = "floom-plugin-network-info"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
 ]
@@ -479,6 +488,7 @@ name = "floom-plugin-notifications"
 version = "0.2.0"
 dependencies = [
  "block2",
+ "cc",
  "dispatch2",
  "floom-platform-mobile",
  "jni",
@@ -489,6 +499,7 @@ dependencies = [
 name = "floom-plugin-open-url"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
  "objc2",
@@ -499,6 +510,7 @@ dependencies = [
 name = "floom-plugin-package-info"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
  "objc2",
@@ -508,6 +520,7 @@ dependencies = [
 name = "floom-plugin-paths"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "dirs",
  "floom-platform-mobile",
  "jni",
@@ -518,6 +531,7 @@ dependencies = [
 name = "floom-plugin-prefs"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "dirs",
  "floom-platform-mobile",
  "jni",
@@ -528,6 +542,7 @@ dependencies = [
 name = "floom-plugin-secure-storage"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "dirs",
  "floom-platform-mobile",
  "jni",
@@ -539,6 +554,7 @@ dependencies = [
 name = "floom-plugin-sensors"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
  "objc2",
@@ -548,6 +564,7 @@ dependencies = [
 name = "floom-plugin-share"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
  "objc2",
@@ -559,6 +576,7 @@ dependencies = [
 name = "floom-plugin-tray"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "objc2",
  "objc2-app-kit",
  "objc2-foundation",
@@ -571,6 +589,7 @@ dependencies = [
 name = "floom-plugin-vibration"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
  "objc2",
@@ -580,6 +599,7 @@ dependencies = [
 name = "floom-plugin-wakelock"
 version = "0.2.0"
 dependencies = [
+ "cc",
  "floom-platform-mobile",
  "jni",
  "objc2",

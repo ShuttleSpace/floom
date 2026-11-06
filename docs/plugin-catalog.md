@@ -598,6 +598,13 @@ cargo test --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-<
 因为代码已经是那个形状，且 `floom-platform-mobile` 的 JNI 桥就是为它存在的。
 统一形状是独立的工程决策，不阻塞任何条目。
 
+**2026-11-06 更新**：形状没有统一（实现仍是 Shape A），但**模板件已补齐**——
+22 个插件现在都有 `README.md`、`build.rs`、`native/README.md`、
+`native/common/floom_<name>.h`、`example/` 和 `index.d.ts`；`camera` /
+`webview` 的真实原生半边从 crate 根目录迁到了 `native/<platform>/`。
+`scripts/check-plugin-templates.sh`（gate 的 `plugin-template` check）守住这张
+清单，`floom create --plugin` 也会生成 `index.d.ts`。
+
 **分叉已闭合（2026-10-29）**：教义与代码的分叉不再是一条前进的道路。统一形状收敛
 为 **Java 库模块形状**（Android）+ **Swift C ABI**（iOS）+ **C 半边**（桌面）：
 

@@ -1132,6 +1132,41 @@ int floom_{ident}_abi_version(void) {{
     )
 }
 
+/// The plugin's TypeScript facade, `index.d.ts`.
+///
+/// Mirrors the Rust half the scaffold emits — `version`, `enable`, `disable`,
+/// `capability`, `register` — so a TSX or web host gets the same names. A
+/// `Result<T, E>` becomes a `void` return that throws the Rust error string;
+/// `Option<T>` becomes `T | null`.
+pub fn plugin_dts(name: &str) -> String {
+    format!(
+        r#"// SPDX-License-Identifier: MIT
+// TypeScript facade for `floom-plugin-{name}`.
+//
+// Mirrors the crate's public Rust API name for name. `Result<T, E>` becomes a
+// return value that throws the Rust error string; `Option<T>` becomes `T |
+// null`. This is a declaration only: the capability is implemented by the Rust
+// crate, not by JavaScript.
+
+declare module "floom-plugin-{name}" {{
+  export function version(): string;
+
+  /** Claims the plugin's platform state. Throws when the native half refuses. */
+  export function enable(): void;
+
+  /** Releases whatever `enable` claimed. */
+  export function disable(): void;
+
+  /** The capability id, or `null` when this target has no native half. */
+  export function capability(): number | null;
+
+  /** Registers this plugin with the process-wide table. */
+  export function register(): void;
+}}
+"#
+    )
+}
+
 /// The plugin's `README.md`, stating the two halves and the boundary between them.
 pub fn plugin_root_readme(name: &str, platforms: &[String]) -> String {
     let mut s = format!(

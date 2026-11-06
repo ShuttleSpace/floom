@@ -1,3 +1,7 @@
 /target/
 **/*.rs.bk
 .DS_Store
+# Each `example/` is its own workspace, so cargo writes a lock beside it. The
+# lock is a build artifact of the demo, not a pinned dependency.
+**/example/Cargo.lock
+**/example/target/
