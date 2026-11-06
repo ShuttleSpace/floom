@@ -70,6 +70,32 @@ Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `build`, `ci`
 Mark breaking changes with `!` after the type (or a `BREAKING CHANGE:` footer).
 Keep each commit focused on one logical change.
 
+## Pull requests
+
+Keep PRs small and focused on a single logical change — the same discipline as the
+commit messages above. A PR that touches one concern is faster to review, safer to
+merge, and easier to bisect or revert than a catch-all branch.
+
+The project merges with **squash**: every commit on the PR collapses into one
+commit on `main`, and the PR title becomes that commit's subject line. So:
+
+- Write the PR title as a [Conventional Commits](https://www.conventionalcommits.org)
+  summary (`feat(widgets): …`, `fix(renderer-vello): …`, …). It is the commit
+  message a reader of `git log` will see.
+- Keep the PR body self-contained — it becomes the squashed commit's body.
+- Make the branch's commits follow Conventional Commits too. The squash keeps only
+  the title, but a clean branch is easier to review and rebase.
+
+Before requesting review, run the checks under
+[Verifying your changes](#verifying-your-changes) — `cargo fmt --all --check`,
+`cargo clippy … --deny warnings`, `cargo test --workspace`, and the layered
+architecture gate in `scripts/check-architecture-deps.sh`. CI runs the same suite,
+and a green PR is reviewed sooner.
+
+If your change spans the layered architecture, keep the `LAYERS` table in
+`docs/architecture.md` and the gate in `scripts/check-architecture-deps.sh` in
+sync — `crates/app/floom/tests/docs_parity.rs` fails the build if they drift.
+
 The best way to start contributing to Floom is to learn how it works by looking at the examples. If you think there are more examples that can be added, feel free to send in a PR!
 
 Alternatively, you can have a look at issues to see if there is anything you'd like to pick up.
