@@ -1,39 +1,56 @@
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: The Floom Authors -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 
 # floom-plugin-vibration
 
-Haptics and device vibration.
+Haptic feedback and vibration.
 
-A capability plugin: one capability, one crate, opt-in by dependency. The SDK
-ships none of these; an app that wants this capability adds the crate, and an
-app that does not does not link it.
+Adapted from `gpui-mobile` (Apache-2.0).
 
-## Platforms
+A **capability plugin**: one capability, one crate, opt-in by
+dependency. The SDK does not carry it — an app that wants this
+capability adds this crate, and an app that does not, does not link
+it.
 
-| Target | Arm | What it does |
-|---|---|---|
-| Android | `src/android.rs` | real: `Vibrator` over JNI |
-| iOS | `src/ios.rs` | real: `UIImpactFeedbackGenerator` / `AudioToolbox` |
-| desktop | `src/lib.rs` | refuses: a desktop has no haptic motor |
+Where an arm is not wired yet, the call reports that plainly rather
+than returning a value that looks measured.
 
-Where an arm is not written, the API still compiles and returns a named
-refusal (`Err`), or the honest inert value (`None`/`false`/a default). It never
-returns a value it did not measure.
+## Supported platforms
 
-## API
+| Platform | Support | Backend |
+|----------|---------|---------|
+| Android | ✅ Real | `src/android.rs` |
+| iOS | ✅ Real | `src/ios.rs` |
+| macOS | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Windows | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Linux | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| OpenHarmony | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Web | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 
-- `pub enum HapticFeedback { Light, Medium, Heavy, Selection, Success, Warning, Error }`
-- `pub fn vibrate(duration_ms: u32) -> Result<(), String>`
-- `pub fn haptic_feedback(feedback: HapticFeedback) -> Result<(), String>`
-- `pub fn can_vibrate() -> bool`
+Every target **compiles and runs** this plugin. Where a platform has no native
+arm, the call returns an honest inert value or a named `Err` — never a value it
+did not measure. The matrix above shows which platforms ship a real
+implementation versus the inert fallback.
 
-## Using it
+## Capabilities
+
+This plugin provides:
+
+- `vibrate` — Vibrate the device for the given duration in milliseconds.
+- `haptic_feedback` — Trigger a specific haptic feedback pattern.
+- `can_vibrate` — Check whether the device supports vibration.
+
+
+## Integration
+
+Add the crate as a dependency of your app:
 
 ```toml
 [dependencies]
 floom-plugin-vibration = { path = "crates/ecosystem/plugins/floom-plugin-vibration" }
 ```
+
+A minimal use:
 
 ```rust,ignore
 if floom_plugin_vibration::can_vibrate() {
@@ -43,6 +60,15 @@ if floom_plugin_vibration::can_vibrate() {
 }
 ```
 
+## API
+
+The public Rust surface (mirrored by `index.d.ts`):
+
+- `pub enum HapticFeedback {`
+- `pub fn vibrate(duration_ms: u32) -> Result<(), String> {`
+- `pub fn haptic_feedback(feedback: HapticFeedback) -> Result<(), String> {`
+- `pub fn can_vibrate() -> bool {`
+
 ## Layout
 
 This plugin follows the capability-plugin template in
@@ -50,8 +76,7 @@ This plugin follows the capability-plugin template in
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.
-- `native/common/floom_vibration.h` — the C ABI contract a native
-  half implements.
+- `native/common/floom_vibration.h` — the C ABI contract a native half implements.
 - `index.d.ts` — the TypeScript facade, mirroring the Rust API name for name.
 - `example/` — a runnable host that prints what the plugin answers here.
 

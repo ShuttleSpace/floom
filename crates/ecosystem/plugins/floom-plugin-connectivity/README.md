@@ -1,41 +1,58 @@
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: The Floom Authors -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 
 # floom-plugin-connectivity
 
-The device's network connectivity: type, connected, metered.
+Network reachability and connection type.
 
-A capability plugin: one capability, one crate, opt-in by dependency. The SDK
-ships none of these; an app that wants this capability adds the crate, and an
-app that does not does not link it.
+Adapted from `gpui-mobile` (Apache-2.0). The native arms read
+`SystemConfiguration` (iOS) and `ConnectivityManager` (Android). The host
+arm reports "no connection".
 
-## Platforms
+A **capability plugin**: one capability, one crate, opt-in by
+dependency. The SDK does not carry it — an app that wants this
+capability adds this crate, and an app that does not, does not link
+it.
 
-| Target | Arm | What it does |
-|---|---|---|
-| Android | `src/android.rs` | real: `ConnectivityManager` over JNI |
-| iOS | `src/ios.rs` | real: `SCNetworkReachability` through objc2 |
-| desktop | `src/lib.rs` | inert: `ConnectionType.None`, `false`, `false` |
+Where an arm is not wired yet, the call reports that plainly rather
+than returning a value that looks measured.
 
-Where an arm is not written, the API still compiles and returns a named
-refusal (`Err`), or the honest inert value (`None`/`false`/a default). It never
-returns a value it did not measure.
+## Supported platforms
 
-## API
+| Platform | Support | Backend |
+|----------|---------|---------|
+| Android | ✅ Real | `src/android.rs` |
+| iOS | ✅ Real | `src/ios.rs` |
+| macOS | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Windows | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Linux | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| OpenHarmony | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Web | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 
-- `pub enum ConnectionType { None, Wifi, Mobile, Ethernet, Bluetooth, Other }`
-- `pub struct ConnectivityStatus { pub connection_type: ConnectionType, pub is_connected: bool, pub is_metered: bool }`
-- `pub fn connection_type() -> ConnectionType`
-- `pub fn connectivity_status() -> ConnectivityStatus`
-- `pub fn is_connected() -> bool`
-- `pub fn is_metered() -> bool`
+Every target **compiles and runs** this plugin. Where a platform has no native
+arm, the call returns an honest inert value or a named `Err` — never a value it
+did not measure. The matrix above shows which platforms ship a real
+implementation versus the inert fallback.
 
-## Using it
+## Capabilities
+
+This plugin provides:
+
+- `connectivity_status` — The full connectivity status.
+- `is_connected` — Whether any network path is currently usable.
+- `is_metered` — Whether the active connection is metered (e.g. cellular, capped).
+
+
+## Integration
+
+Add the crate as a dependency of your app:
 
 ```toml
 [dependencies]
 floom-plugin-connectivity = { path = "crates/ecosystem/plugins/floom-plugin-connectivity" }
 ```
+
+A minimal use:
 
 ```rust,ignore
 let status = floom_plugin_connectivity::connectivity_status();
@@ -44,6 +61,16 @@ if status.is_connected && status.is_metered {
 }
 ```
 
+## API
+
+The public Rust surface (mirrored by `index.d.ts`):
+
+- `pub enum ConnectionType {`
+- `pub struct ConnectivityStatus {`
+- `pub fn connectivity_status() -> ConnectivityStatus {`
+- `pub fn is_connected() -> bool {`
+- `pub fn is_metered() -> bool {`
+
 ## Layout
 
 This plugin follows the capability-plugin template in
@@ -51,8 +78,7 @@ This plugin follows the capability-plugin template in
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.
-- `native/common/floom_connectivity.h` — the C ABI contract a native
-  half implements.
+- `native/common/floom_connectivity.h` — the C ABI contract a native half implements.
 - `index.d.ts` — the TypeScript facade, mirroring the Rust API name for name.
 - `example/` — a runnable host that prints what the plugin answers here.
 

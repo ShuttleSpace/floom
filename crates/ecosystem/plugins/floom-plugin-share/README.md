@@ -1,44 +1,71 @@
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: The Floom Authors -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 
 # floom-plugin-share
 
-The platform share sheet.
+Share sheet — hand text or files to other apps.
 
-A capability plugin: one capability, one crate, opt-in by dependency. The SDK
-ships none of these; an app that wants this capability adds the crate, and an
-app that does not does not link it.
+Adapted from `gpui-mobile` (Apache-2.0). The arms present
+`NSSharingServicePicker` (macOS), `UIActivityViewController` (iOS) and an
+`Intent.ACTION_SEND` / `ACTION_SEND_MULTIPLE` chooser (Android). Windows
+and Linux refuse and name the door: WinRT's `DataTransferManager` needs the
+app's `HWND`, and Linux has no cross-desktop share API at all.
 
-## Platforms
+A **capability plugin**: one capability, one crate, opt-in by
+dependency. The SDK does not carry it — an app that wants this
+capability adds this crate, and an app that does not, does not link
+it.
 
-| Target | Arm | What it does |
-|---|---|---|
-| Android | `src/android.rs` | real: `ACTION_SEND` over JNI |
-| iOS | `src/ios.rs` | real: `UIActivityViewController` through objc2 |
-| macOS | `src/macos.rs` | real: `NSSharingServicePicker` |
-| Windows | `src/lib.rs` | refuses: `DataTransferManager` needs the app's HWND |
-| Linux | `src/lib.rs` | refuses: no cross-desktop share API |
+Where an arm is not wired yet, the call reports that plainly rather
+than returning a value that looks measured.
 
-Where an arm is not written, the API still compiles and returns a named
-refusal (`Err`), or the honest inert value (`None`/`false`/a default). It never
-returns a value it did not measure.
+## Supported platforms
 
-## API
+| Platform | Support | Backend |
+|----------|---------|---------|
+| Android | ✅ Real | `src/android.rs` |
+| iOS | ✅ Real | `src/ios.rs` |
+| macOS | ✅ Real | `src/macos.rs` |
+| Windows | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Linux | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| OpenHarmony | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Web | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 
-- `pub fn share_text(text: &str) -> Result<(), String>`
-- `pub fn share_files(paths: &[&str]) -> Result<(), String>`
+Every target **compiles and runs** this plugin. Where a platform has no native
+arm, the call returns an honest inert value or a named `Err` — never a value it
+did not measure. The matrix above shows which platforms ship a real
+implementation versus the inert fallback.
 
-## Using it
+## Capabilities
+
+This plugin provides:
+
+- `share_text` — Present the system share sheet for a block of text.
+- `share_files` — Present the system share sheet for one or more local file paths.
+
+
+## Integration
+
+Add the crate as a dependency of your app:
 
 ```toml
 [dependencies]
 floom-plugin-share = { path = "crates/ecosystem/plugins/floom-plugin-share" }
 ```
 
+A minimal use:
+
 ```rust,ignore
 floom_plugin_share::share_text("look at this")?;
 floom_plugin_share::share_files(&["/tmp/report.pdf"])?;
 ```
+
+## API
+
+The public Rust surface (mirrored by `index.d.ts`):
+
+- `pub fn share_text(text: &str) -> Result<(), String> {`
+- `pub fn share_files(paths: &[&str]) -> Result<(), String> {`
 
 ## Layout
 
@@ -47,8 +74,7 @@ This plugin follows the capability-plugin template in
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.
-- `native/common/floom_share.h` — the C ABI contract a native
-  half implements.
+- `native/common/floom_share.h` — the C ABI contract a native half implements.
 - `index.d.ts` — the TypeScript facade, mirroring the Rust API name for name.
 - `example/` — a runnable host that prints what the plugin answers here.
 

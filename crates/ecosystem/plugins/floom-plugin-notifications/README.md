@@ -1,40 +1,59 @@
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: The Floom Authors -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 
 # floom-plugin-notifications
 
-The device's notification authorisation and scheduling.
+Local notifications — permission, enablement and scheduling.
 
-A capability plugin: one capability, one crate, opt-in by dependency. The SDK
-ships none of these; an app that wants this capability adds the crate, and an
-app that does not does not link it.
+Adapted from `gpui-mobile` (Apache-2.0). The native arms read
+`UNUserNotificationCenter` (iOS and macOS) and `NotificationManager`
+(Android). Windows and Linux refuse and name the door: WinRT's toasts need
+an app identity, and Linux has no cross-desktop API (a freedesktop
+notification daemon speaks D-Bus).
 
-## Platforms
+A **capability plugin**: one capability, one crate, opt-in by
+dependency. The SDK does not carry it — an app that wants this
+capability adds this crate, and an app that does not, does not link
+it.
 
-| Target | Arm | What it does |
-|---|---|---|
-| Android | `src/android.rs` | real: `NotificationManager` over JNI |
-| iOS / macOS | `src/apple.rs` | real: `UNUserNotificationCenter` through objc2 |
-| Windows | `src/lib.rs` | refuses: toasts need an app identity and the WinRT crate |
-| Linux | `src/lib.rs` | refuses: no cross-desktop API; the freedesktop daemon is D-Bus |
+Where an arm is not wired yet, the call reports that plainly rather
+than returning a value that looks measured.
 
-Where an arm is not written, the API still compiles and returns a named
-refusal (`Err`), or the honest inert value (`None`/`false`/a default). It never
-returns a value it did not measure.
+## Supported platforms
 
-## API
+| Platform | Support | Backend |
+|----------|---------|---------|
+| Android | ✅ Real | `src/android.rs` |
+| iOS | ✅ Real | `src/apple.rs` |
+| macOS | ✅ Real | `src/apple.rs` |
+| Windows | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Linux | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| OpenHarmony | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Web | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 
-- `pub struct Notification { pub title: String, pub body: String, pub badge: Option<u32>, pub sound: bool, pub delay_seconds: Option<u64> }`
-- `pub fn are_notifications_enabled() -> bool`
-- `pub fn request_authorization() -> Result<(), String>`
-- `pub fn schedule(notification: &Notification) -> Result<(), String>`
+Every target **compiles and runs** this plugin. Where a platform has no native
+arm, the call returns an honest inert value or a named `Err` — never a value it
+did not measure. The matrix above shows which platforms ship a real
+implementation versus the inert fallback.
 
-## Using it
+## Capabilities
+
+This plugin provides:
+
+- `request_authorization` — Request permission to present notifications.
+- `schedule` — Display or schedule a notification.
+
+
+## Integration
+
+Add the crate as a dependency of your app:
 
 ```toml
 [dependencies]
 floom-plugin-notifications = { path = "crates/ecosystem/plugins/floom-plugin-notifications" }
 ```
+
+A minimal use:
 
 ```rust,ignore
 floom_plugin_notifications::request_authorization()?;
@@ -45,6 +64,14 @@ floom_plugin_notifications::schedule(&floom_plugin_notifications::Notification {
 })?;
 ```
 
+## API
+
+The public Rust surface (mirrored by `index.d.ts`):
+
+- `pub struct Notification {`
+- `pub fn request_authorization() -> Result<(), String> {`
+- `pub fn schedule(notification: &Notification) -> Result<(), String> {`
+
 ## Layout
 
 This plugin follows the capability-plugin template in
@@ -52,8 +79,7 @@ This plugin follows the capability-plugin template in
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.
-- `native/common/floom_notifications.h` — the C ABI contract a native
-  half implements.
+- `native/common/floom_notifications.h` — the C ABI contract a native half implements.
 - `index.d.ts` — the TypeScript facade, mirroring the Rust API name for name.
 - `example/` — a runnable host that prints what the plugin answers here.
 

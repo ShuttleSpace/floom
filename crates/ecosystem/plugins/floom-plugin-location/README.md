@@ -1,47 +1,80 @@
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: The Floom Authors -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 
 # floom-plugin-location
 
-The device's location and its authorisation state.
+Geolocation — authorization, availability and a one-shot position read.
 
-A capability plugin: one capability, one crate, opt-in by dependency. The SDK
-ships none of these; an app that wants this capability adds the crate, and an
-app that does not does not link it.
+Adapted from `gpui-mobile` (Apache-2.0). The native arms read
+`CLLocationManager` (iOS) and `LocationManager` (Android). The host arm
+refuses every call that needs a real position.
 
-## Platforms
+Note: continuous location streaming is a separate concern (a subscription
+with callbacks); this package only exposes the synchronous reads plus the
+permission gates an app must check first. What "synchronous" costs is
+documented per call: `current_location` on Android is the OS's last-known
+cached fix, not a fresh one, and on iOS there is no synchronous route at all.
 
-| Target | Arm | What it does |
-|---|---|---|
-| Android | `src/android.rs` | real: `LocationManager` over JNI |
-| iOS | `src/ios.rs` | real: `CLLocationManager` through objc2 |
-| desktop | `src/lib.rs` | inert: `NotDetermined`, `false`, and named refusals |
+A **capability plugin**: one capability, one crate, opt-in by
+dependency. The SDK does not carry it — an app that wants this
+capability adds this crate, and an app that does not, does not link
+it.
 
-Where an arm is not written, the API still compiles and returns a named
-refusal (`Err`), or the honest inert value (`None`/`false`/a default). It never
-returns a value it did not measure.
+Where an arm is not wired yet, the call reports that plainly rather
+than returning a value that looks measured.
 
-## API
+## Supported platforms
 
-- `pub enum LocationAuthorization { NotDetermined, Restricted, Denied, AuthorizedWhenInUse, AuthorizedAlways }`
-- `pub struct Location { pub latitude: f64, pub longitude: f64, pub altitude: f64, pub horizontal_accuracy: f64, pub vertical_accuracy: f64, pub timestamp: i64 }`
-- `pub fn authorization_status() -> LocationAuthorization`
-- `pub fn is_location_enabled() -> bool`
-- `pub fn request_authorization() -> Result<(), String>`
-- `pub fn current_location() -> Result<Location, String>`
+| Platform | Support | Backend |
+|----------|---------|---------|
+| Android | ✅ Real | `src/android.rs` |
+| iOS | ✅ Real | `src/ios.rs` |
+| macOS | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Windows | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Linux | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| OpenHarmony | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Web | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 
-## Using it
+Every target **compiles and runs** this plugin. Where a platform has no native
+arm, the call returns an honest inert value or a named `Err` — never a value it
+did not measure. The matrix above shows which platforms ship a real
+implementation versus the inert fallback.
+
+## Capabilities
+
+This plugin provides:
+
+- `is_location_enabled` — Whether the device has any location provider enabled at the OS level.
+- `request_authorization` — Request location authorization. Returns `Err` if already denied or the
+- `current_location` — Best-effort one-shot position read.
+
+
+## Integration
+
+Add the crate as a dependency of your app:
 
 ```toml
 [dependencies]
 floom-plugin-location = { path = "crates/ecosystem/plugins/floom-plugin-location" }
 ```
 
+A minimal use:
+
 ```rust,ignore
 floom_plugin_location::request_authorization()?;
 let fix = floom_plugin_location::current_location()?;
 println!("{}, {}", fix.latitude, fix.longitude);
 ```
+
+## API
+
+The public Rust surface (mirrored by `index.d.ts`):
+
+- `pub enum LocationAuthorization {`
+- `pub struct Location {`
+- `pub fn is_location_enabled() -> bool {`
+- `pub fn request_authorization() -> Result<(), String> {`
+- `pub fn current_location() -> Result<Location, String> {`
 
 ## Layout
 
@@ -50,8 +83,7 @@ This plugin follows the capability-plugin template in
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.
-- `native/common/floom_location.h` — the C ABI contract a native
-  half implements.
+- `native/common/floom_location.h` — the C ABI contract a native half implements.
 - `index.d.ts` — the TypeScript facade, mirroring the Rust API name for name.
 - `example/` — a runnable host that prints what the plugin answers here.
 

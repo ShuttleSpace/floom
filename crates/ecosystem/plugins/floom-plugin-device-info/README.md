@@ -1,43 +1,68 @@
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: The Floom Authors -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
 
 # floom-plugin-device-info
 
-Device identity and environment facts.
+Device identity and environment facts (model, OS, locale, …).
 
-A capability plugin: one capability, one crate, opt-in by dependency. The SDK
-ships none of these; an app that wants this capability adds the crate, and an
-app that does not does not link it.
+Adapted from `gpui-mobile` (Apache-2.0). The native arms read
+`UIDevice` (iOS) and `Build` / `SystemProperty` (Android). The host arm
+returns an empty [`DeviceInfo`] so the crate stays a no-op on desktop/web.
 
-## Platforms
+A **capability plugin**: one capability, one crate, opt-in by
+dependency. The SDK does not carry it — an app that wants this
+capability adds this crate, and an app that does not, does not link
+it.
 
-| Target | Arm | What it does |
-|---|---|---|
-| Android | `src/android.rs` | real: `android.os.Build` over JNI |
-| iOS | `src/ios.rs` | real: `UIDevice` through objc2 |
-| desktop | `src/lib.rs` | inert: `DeviceInfo::default()` and `"unknown"` |
+Where an arm is not wired yet, the call reports that plainly rather
+than returning a value that looks measured.
 
-Where an arm is not written, the API still compiles and returns a named
-refusal (`Err`), or the honest inert value (`None`/`false`/a default). It never
-returns a value it did not measure.
+## Supported platforms
 
-## API
+| Platform | Support | Backend |
+|----------|---------|---------|
+| Android | ✅ Real | `src/android.rs` |
+| iOS | ✅ Real | `src/ios.rs` |
+| macOS | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Windows | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Linux | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| OpenHarmony | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| Web | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 
-- `pub struct DeviceInfo { pub model: String, pub manufacturer: String, pub os_name: String, pub os_version: String, pub sdk_version: Option<i32>, pub is_physical_device: bool, pub locale: String }`
-- `pub fn device_info() -> DeviceInfo`
-- `pub fn device_name() -> String`
+Every target **compiles and runs** this plugin. Where a platform has no native
+arm, the call returns an honest inert value or a named `Err` — never a value it
+did not measure. The matrix above shows which platforms ship a real
+implementation versus the inert fallback.
 
-## Using it
+## Capabilities
+
+This plugin provides:
+
+- `device_name` — A short, human-readable device name (e.g. the user's phone name).
+
+
+## Integration
+
+Add the crate as a dependency of your app:
 
 ```toml
 [dependencies]
 floom-plugin-device-info = { path = "crates/ecosystem/plugins/floom-plugin-device-info" }
 ```
 
+A minimal use:
+
 ```rust,ignore
 let info = floom_plugin_device_info::device_info();
 println!("{} {} ({})", info.manufacturer, info.model, info.os_version);
 ```
+
+## API
+
+The public Rust surface (mirrored by `index.d.ts`):
+
+- `pub struct DeviceInfo {`
+- `pub fn device_name() -> String {`
 
 ## Layout
 
@@ -46,8 +71,7 @@ This plugin follows the capability-plugin template in
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.
-- `native/common/floom_device_info.h` — the C ABI contract a native
-  half implements.
+- `native/common/floom_device-info.h` — the C ABI contract a native half implements.
 - `index.d.ts` — the TypeScript facade, mirroring the Rust API name for name.
 - `example/` — a runnable host that prints what the plugin answers here.
 

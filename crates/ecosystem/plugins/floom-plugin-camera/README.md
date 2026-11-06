@@ -1,45 +1,65 @@
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: The Floom Authors -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
+
 # floom-plugin-camera
 
-A native camera view, contributed by a plugin.
+A **native camera**, contributed by a plugin.
 
-The capability is a **view** the framework does not paint: a camera preview the
+The capability is a view the framework does not paint: a camera preview the
 platform's own camera API renders live frames into, driven from the framework
-side through the provider ABI (`floom-native-ffi`). The plugin owns the
-capability; the host owns the window.
+side through the provider ABI ([`floom_native_ffi::floom_native`]).
 
-A capability plugin: one capability, one crate, opt-in by dependency. The SDK
-ships none of these; an app that wants a camera adds the crate.
+# Layout
 
-## Platforms
+The plugin is split by platform. Each platform's native half lives under
+`native/<platform>/` (`android/` is the exception: it is a Gradle module at
+the crate root), and `src/<platform>.rs` holds that half's Rust FFI bridge.
+The shared C-ABI contract lives in `native/common/floom_camera.h`. This file
+dispatches the public surface to whichever platform is being compiled.
 
-| Target | Arm | What it does |
-|---|---|---|
-| Android | `android/` + `src/android.rs` | Java `FloomCameraView`, driven over JNI; the Rust half owns the `NativeViewProvider` |
-| iOS | `native/ios/` + `src/ios.rs` | Objective-C `AVFoundation`, compiled by `build.rs` |
-| macOS | `native/macos/` + `src/macos.rs` | Objective-C `AVFoundation`, compiled by `build.rs` |
-| Linux | `native/linux/` + `src/linux.rs` | C11 + GStreamer/X11, compiled by `build.rs` |
-| Windows | `native/windows/` + `src/windows.rs` | C++ `MediaFoundation`, compiled by `build.rs` |
-| OpenHarmony | `native/ohos/` + `src/ohos.rs` | C++ half, compiled by `build.rs` |
-| Web | `src/web.rs` | pure Rust `getUserMedia` into a `<video>` element |
-| Terminal | `src/tui.rs` | refuses: a terminal has no camera |
+- `android/` — Java half (`FloomCameraView`), driven through JNI; the Rust
+half owns the `NativeViewProvider`.
+- `native/macos/` `native/ios/` `native/windows/` `native/linux/`
+`native/ohos/` — a C/Objective-C/C++ native half that registers a
+`FloomNativeProviderV1` vtable; the Rust half calls it through `extern "C"`.
+- `src/web.rs` — pure Rust (`web-sys`): `getUserMedia` into a `<video>` element.
+- `src/tui.rs` — unsupported: a terminal has no camera.
 
-## API
+## Supported platforms
 
-- `pub fn version() -> String`
-- `pub fn capability() -> i32`
-- `pub fn enable() -> Result<(), String>`
-- `pub fn disable()`
-- `pub unsafe fn provider(host_window: *const c_void) -> Result<Box<dyn NativeViewProvider>, CProviderError>`
-- `pub fn register()`
+| Platform | Support | Backend |
+|----------|---------|---------|
+| Android | ✅ Real | `src/android.rs` |
+| iOS | ✅ Real | `src/ios.rs` |
+| macOS | ✅ Real | `src/macos.rs` |
+| Windows | ✅ Real | `src/windows.rs` |
+| Linux | ✅ Real | `src/linux.rs` |
+| OpenHarmony | ✅ Real | `src/ohos.rs` |
+| Web | ✅ Real | `src/web.rs` |
 
-## Using it
+Every target **compiles and runs** this plugin. Where a platform has no native
+arm, the call returns an honest inert value or a named `Err` — never a value it
+did not measure. The matrix above shows which platforms ship a real
+implementation versus the inert fallback.
+
+## Capabilities
+
+This plugin provides:
+
+- `version` — The plugin's version.
+- `capability` — The plugin's capability id.
+
+
+## Integration
+
+Add the crate as a dependency of your app:
 
 ```toml
 [dependencies]
 floom-plugin-camera = { path = "crates/ecosystem/plugins/floom-plugin-camera" }
 ```
+
+A minimal use:
 
 ```rust,ignore
 floom_plugin_camera::register();
@@ -48,18 +68,21 @@ floom_platform::plugin("camera").enable()?;
 let provider = unsafe { floom_plugin_camera::provider(window) }?;
 ```
 
+## API
+
+The public Rust surface (mirrored by `index.d.ts`):
+
+- `pub fn version() -> String {`
+- `pub fn capability() -> i32 {`
+
 ## Layout
 
-This plugin follows the native-view variant of the template in
-[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#a-plugin-that-contributes-a-native-view):
+This plugin follows the capability-plugin template in
+[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#the-layout):
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
-- `src/<target>.rs` — each target's Rust bridge.
-- `native/common/floom_camera.h` — the plugin's own C ABI (enable/disable/
-  capability plus provider registration).
-- `native/common/` also carries `floom_native_provider.h`, the framework's
-  provider ABI.
-- `native/<target>/` — the compiled native halves.
+- `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.
+- `native/common/floom_camera.h` — the C ABI contract a native half implements.
 - `index.d.ts` — the TypeScript facade, mirroring the Rust API name for name.
 - `example/` — a runnable host that prints what the plugin answers here.
 
@@ -69,6 +92,3 @@ This plugin follows the native-view variant of the template in
 cargo test --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-camera
 cargo run  --manifest-path crates/ecosystem/plugins/floom-plugin-camera/example/Cargo.toml
 ```
-
-Device verification is separate: a camera preview needs a real camera and the
-platform's permission prompt.

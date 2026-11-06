@@ -1,49 +1,100 @@
 <!-- SPDX-License-Identifier: MIT -->
-<!-- SPDX-FileCopyrightText: The Floom Authors -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
+
 # floom-plugin-webview
 
-A native web view, contributed by a plugin.
+The `webview` plugin — a capability that is a **native view**.
 
-The capability is a **view** the framework does not paint: a `WKWebView` on
-macOS and iOS, a `WebView` on Android and Linux, a WebView2 on Windows. What
-the view *shows* is the web's own business; this crate owns the capability
-(create / place / destroy a native view, drive a JS bridge) and nothing about
-any one platform.
+The capability is a view the framework does not paint: a `WKWebView` on
+macOS, a `WebView` on Android or Linux, a WebView2 on Windows, and so on.
+What the view *shows* is the web's own business; this crate owns the
+*capability* (create / place / destroy a native view, drive a JS bridge)
+and nothing about any one platform.
 
-A capability plugin: one capability, one crate, opt-in by dependency. The SDK
-ships none of these; an app that wants a web view adds the crate.
+# Layout
 
-## Platforms
+`src/` is the **unified API**. It is the only surface an example or host
+touches: [`enable`], [`provider`], [`load_url`], [`post_message`],
+[`set_message_callback`], [`diagnostics`], [`register`]. None of it names a
+platform.
 
-| Target | Arm | What it does |
+Each platform is a **peer project to `src/`**, implemented in whatever
+native code it needs and reached through FFI. All compiled halves live
+under `native/<platform>/`:
+
+| dir              | platform | native half                                   |
+|------------------|----------|-----------------------------------------------|
+| `native/macos/`  | macOS    | Objective-C (`WKWebView`), built by `build.rs` |
+| `native/ios/`    | iOS      | Objective-C (`WKWebView`), built by `build.rs` |
+| `native/linux/`  | Linux    | C11 + GTK/WebKitGTK, built by `build.rs`       |
+| `native/windows/`| Windows  | C++ (WebView2), built by `build.rs`            |
+| `android/`       | Android  | Gradle + Java (`WebView`)                      |
+
+`src/web.rs` and `src/tui.rs` are honest refusals: a browser host *is* the
+web view and a terminal has no view layer, so there is no separate
+native-view capability to contribute — the plugin says so rather than faking
+one. `src/ohos.rs` is scaffolded as a refusal until a native XComponent half
+lands.
+
+# Two contracts
+
+| | asks | shape |
 |---|---|---|
-| Android | `android/` + `src/android.rs` | Gradle + Java `WebView`, reached over JNI |
-| iOS | `native/ios/` + `src/ios.rs` | Objective-C `WKWebView`, compiled by `build.rs` |
-| macOS | `native/macos/` + `src/macos.rs` | Objective-C `WKWebView`, compiled by `build.rs` |
-| Linux | `native/linux/` + `src/linux.rs` | C11 + GTK/WebKitGTK, compiled by `build.rs` |
-| Windows | `native/windows/` + `src/windows.rs` | C++ WebView2, compiled by `build.rs` |
-| OpenHarmony | `src/ohos.rs` | refuses until a native XComponent half lands |
-| Web | `src/web.rs` | refuses: the browser host *is* the web view |
-| Terminal | `src/tui.rs` | refuses: a terminal has no view layer |
+| the plugin's own ABI (`native/common/floom_webview.h`) | is the capability available? | four functions; the plugin is a singleton |
+| the provider ABI (`floom-native-ffi`) | how is the native view created, placed and torn down? | a versioned struct of function pointers; the provider is an instance per window |
 
-## API
+A plugin whose capability is a native view implements both.
 
-- `pub fn version() -> String`
-- `pub fn enable() -> Result<(), String>`
-- `pub fn disable()`
-- `pub fn capability() -> i32`
-- `pub fn load_url(slot: NativeSlot, url: &str) -> Result<(), String>`
-- `pub fn post_message(slot: NativeSlot, json: &str) -> Result<(), String>`
-- `pub fn set_message_callback(cb: Option<unsafe extern "C" fn(FloomNativeSlot, *const c_char)>)`
-- `pub unsafe fn provider(host_window: *const c_void) -> Result<Box<dyn NativeViewProvider>, CProviderError>`
-- `pub fn register()`
+# Which side owns what
 
-## Using it
+The plugin owns the *capability*; the host owns the *transport*. The native
+half reaches the host's window through the provider's `attach`, and the
+framework drives the provider through the ordinary Rust [`NativeViewProvider`]
+trait — so the controller's lifecycle invariants apply to this plugin exactly
+as they apply to a Rust one.
+
+# How the two halves find each other
+
+On macOS, the native half (Objective-C) hands its vtable to this crate from a
+constructor, and this crate hands the provider to the host on request. On
+every other platform the binding is a Rust struct that drives a native
+control through that platform's own bridge. Nothing is looked up by name at
+runtime: the symbols resolve when the crate is linked.
+
+## Supported platforms
+
+| Platform | Support | Backend |
+|----------|---------|---------|
+| Android | ✅ Real | `src/android.rs` |
+| iOS | ✅ Real | `src/ios.rs` |
+| macOS | ✅ Real | `src/macos.rs` |
+| Windows | ✅ Real | `src/windows.rs` |
+| Linux | ✅ Real | `src/linux.rs` |
+| OpenHarmony | ✅ Real | `src/ohos.rs` |
+| Web | ✅ Real | `src/web.rs` |
+
+Every target **compiles and runs** this plugin. Where a platform has no native
+arm, the call returns an honest inert value or a named `Err` — never a value it
+did not measure. The matrix above shows which platforms ship a real
+implementation versus the inert fallback.
+
+## Capabilities
+
+This plugin provides:
+
+- `register` — Registers this plugin with the process-wide table, using the active
+
+
+## Integration
+
+Add the crate as a dependency of your app:
 
 ```toml
 [dependencies]
 floom-plugin-webview = { path = "crates/ecosystem/plugins/floom-plugin-webview" }
 ```
+
+A minimal use:
 
 ```rust,ignore
 floom_plugin_webview::register();
@@ -51,20 +102,22 @@ floom_platform::plugin("webview").enable()?;
 let provider = unsafe { floom_plugin_webview::provider(window) }?;
 ```
 
+## API
+
+The public Rust surface (mirrored by `index.d.ts`):
+
+- `pub fn register() {`
+
 ## Layout
 
-This plugin follows the native-view variant of the template in
-[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#a-plugin-that-contributes-a-native-view):
+This plugin follows the capability-plugin template in
+[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#the-layout):
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
-- `src/<target>.rs` — each target's Rust bridge.
-- `native/common/floom_webview.h` — the plugin's own C ABI (enable/disable/
-  capability/version plus provider registration).
-- `native/common/floom_native_provider.h` — the framework's provider ABI.
-- `native/<target>/` — the compiled native halves.
+- `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.
+- `native/common/floom_webview.h` — the C ABI contract a native half implements.
 - `index.d.ts` — the TypeScript facade, mirroring the Rust API name for name.
 - `example/` — a runnable host that prints what the plugin answers here.
-- `examples/` — the Rust examples that drive a real view.
 
 ## Verification
 
@@ -72,6 +125,3 @@ This plugin follows the native-view variant of the template in
 cargo test --manifest-path crates/ecosystem/plugins/Cargo.toml -p floom-plugin-webview
 cargo run  --manifest-path crates/ecosystem/plugins/floom-plugin-webview/example/Cargo.toml
 ```
-
-Device verification is separate: a real web view needs a live window and the
-platform's web engine.
