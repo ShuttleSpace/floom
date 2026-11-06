@@ -213,7 +213,7 @@ pub fn take_ime_input() -> Vec<ImeInput> {
 ///
 /// This is the *control* half of the package: [`soft_keyboard_state`] reads
 /// what the OS reports, this changes it. On Android the keyboard is driven
-/// through a hidden anchor view — see [`android`] for why the obvious NDK route
+/// through a hidden anchor view — see `android.rs` for why the obvious NDK route
 /// cannot work for a `NativeActivity`.
 ///
 /// `Err` means the request could not be issued at all (the platform bridge is

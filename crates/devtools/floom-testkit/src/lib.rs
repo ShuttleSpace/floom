@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: MIT
 //! A headless app, driven the way a real window would drive it.
 //!
-//! Three integration suites in `floom-app` had each grown their own copy of the
-//! same harness — a fake platform, a runner, a scene-damage drain, a key
-//! mapping — and every new widget test paid for it again. This is that harness,
-//! once, with the parts a test actually reaches for named.
-//!
 //! ```no_run
 //! use floom_testkit::TestApp;
 //! use floom_widgets::Switch;
