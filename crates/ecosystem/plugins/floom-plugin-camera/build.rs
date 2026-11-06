@@ -5,16 +5,16 @@
 //! discovery and therefore no serialization boundary — a call from the app is a
 //! machine call, resolved when this crate is linked.
 //!
-//! Each platform directory holds its own native half; only the one matching the
-//! active target is compiled. `android/` is built by Gradle into an AAR and
-//! reached through JNI, `web/` is pure Rust, and `tui/` is unsupported — those
-//! three need no C compilation here.
+//! Each platform directory under `native/` holds its own native half; only the
+//! one matching the active target is compiled. `android/` (at the crate root)
+//! is built by Gradle into an AAR and reached through JNI, `web/` is pure Rust,
+//! and `tui/` is unsupported — those three need no C compilation here.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Compile `file` from `dir` with the given compiler flags, and link the listed
 /// Apple frameworks (ignored on non-Apple targets).
-fn compile_native(manifest: &PathBuf, dir: &str, file: &str, flags: &[&str], frameworks: &[&str]) {
+fn compile_native(manifest: &Path, dir: &str, file: &str, flags: &[&str], frameworks: &[&str]) {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR is set by cargo"));
 
     // The provider ABI header comes from the crate that owns it, so the two
@@ -24,6 +24,7 @@ fn compile_native(manifest: &PathBuf, dir: &str, file: &str, flags: &[&str], fra
         .join("..")
         .join("..")
         .join("..")
+        .join("native")
         .join("floom-native-ffi")
         .join("include")
         .join("floom_native_provider.h");
@@ -38,7 +39,7 @@ fn compile_native(manifest: &PathBuf, dir: &str, file: &str, flags: &[&str], fra
     let mut build = cc::Build::new();
     build
         .file(&source)
-        .include(manifest.join("common"))
+        .include(manifest.join("native").join("common"))
         .include(&out_dir);
     for flag in flags {
         build.flag_if_supported(flag);
@@ -55,7 +56,7 @@ fn compile_native(manifest: &PathBuf, dir: &str, file: &str, flags: &[&str], fra
 }
 
 fn main() {
-    println!("cargo:rerun-if-changed=common");
+    println!("cargo:rerun-if-changed=native");
     println!("cargo:rustc-check-cfg=cfg(floom_plugin_native)");
     // OpenHarmony is `target_os = "linux"` with `target_env = "ohos"` at the
     // Rust level, but the plugin layer names the platform by the value the
@@ -70,27 +71,33 @@ fn main() {
     match target_os.as_str() {
         "macos" => compile_native(
             &manifest,
-            "macos",
+            "native/macos",
             "floom_camera.m",
             &["-fobjc-arc"],
             &["AppKit", "Foundation", "AVFoundation"],
         ),
         "ios" => compile_native(
             &manifest,
-            "ios",
+            "native/ios",
             "floom_camera.m",
             &["-fobjc-arc"],
             &["UIKit", "Foundation", "AVFoundation"],
         ),
         "windows" => compile_native(
             &manifest,
-            "windows",
+            "native/windows",
             "floom_camera.cpp",
             &["/std:c++17"],
             &[],
         ),
-        "linux" => compile_native(&manifest, "linux", "floom_camera.c", &[], &[]),
-        "ohos" => compile_native(&manifest, "ohos", "floom_camera.cpp", &["-std=c++17"], &[]),
+        "linux" => compile_native(&manifest, "native/linux", "floom_camera.c", &[], &[]),
+        "ohos" => compile_native(
+            &manifest,
+            "native/ohos",
+            "floom_camera.cpp",
+            &["-std=c++17"],
+            &[],
+        ),
         // `android` builds its Java half via Gradle; `web` is pure Rust; `tui`
         // is unsupported. None of them compile a C native half here.
         _ => {

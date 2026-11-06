@@ -1,44 +1,43 @@
-/* iOS native half of the camera plugin.
+/* macOS native half of the camera plugin.
  *
  * Builds a `FloomNativeProviderV1` vtable that composites a live
- * AVFoundation capture preview into the host's `UIView`, and registers it
- * with the Rust half from a constructor. The Rust side (`src/ios.rs`) then
- * drives this vtable through the provider ABI.
+ * AVFoundation capture preview into the host's `NSView`, and registers it with
+ * the Rust half from a constructor. The Rust side (`src/macos.rs`) then drives
+ * this vtable through the provider ABI.
  *
- * Compiled by `build.rs` for `aarch64-apple-ios` with `-fobjc-arc` and linked
- * against UIKit, Foundation, AVFoundation and QuartzCore. iOS shares
- * AVFoundation with macOS; the difference is that a preview composites into
- * a `UIView`'s layer rather than an `NSView`'s.
+ * Compiled by `build.rs` with `-fobjc-arc` and linked against AppKit,
+ * Foundation and AVFoundation.
  */
 
 #include <stdio.h>
 #include <string.h>
 
-#import <UIKit/UIKit.h>
+#import <AppKit/AppKit.h>
 #import <AVFoundation/AVFoundation.h>
 
-#include "floom_plugin_camera.h"
+#include "floom_camera.h"
 
-/* One camera for the process. A plugin is a singleton, so a single session
- * and preview layer are enough. */
+/* One camera for the process. A plugin is a singleton, so a single session and
+ * preview layer are enough; the host's slot accounting is what keeps several
+ * participants from colliding. */
 static AVCaptureSession *g_session = nil;
 static AVCaptureVideoPreviewLayer *g_preview = nil;
-static UIView *g_host = nil;
+static NSView *g_host = nil;
 static int g_live = 0;
 static int g_refused = 0;
 
 static int32_t cam_attach(void *self, const void *host_window) {
-    (void)self;
     if (host_window == NULL) {
         return 1;
     }
-    /* A `UIView`'s backing layer always exists. */
-    g_host = (__bridge UIView *)host_window;
+    g_host = (__bridge NSView *)host_window;
+    if (g_host != nil && g_host.layer == nil) {
+        [g_host setWantsLayer:YES];
+    }
     return 0;
 }
 
 static FloomNativeCapabilities cam_capabilities(void *self) {
-    (void)self;
     FloomNativeCapabilities c;
     memset(&c, 0, sizeof(c));
     c.modes[0] = FLOOM_NATIVE_MODE_OVERLAY;
@@ -54,8 +53,6 @@ static FloomNativeCapabilities cam_capabilities(void *self) {
 static int32_t cam_create(void *self, FloomNativeSlot slot, uint32_t kind,
                           const char *kind_name, char *out_error,
                           uint32_t out_capacity) {
-    (void)self;
-    (void)slot;
     if (kind != FLOOM_NATIVE_KIND_CUSTOM) {
         g_refused++;
         return 1;
@@ -69,6 +66,7 @@ static int32_t cam_create(void *self, FloomNativeSlot slot, uint32_t kind,
         return 0;
     }
 
+    NSError *err = nil;
     AVCaptureDevice *device =
         [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
     if (device == nil) {
@@ -79,9 +77,6 @@ static int32_t cam_create(void *self, FloomNativeSlot slot, uint32_t kind,
         return 1;
     }
 
-    /* Camera access is a user permission: a refusal here is the simulator
-     * or a denied prompt, and the Rust half surfaces the error code. */
-    NSError *err = nil;
     AVCaptureDeviceInput *input =
         [AVCaptureDeviceInput deviceInputWithDevice:device error:&err];
     if (input == nil) {
@@ -113,8 +108,6 @@ static int32_t cam_create(void *self, FloomNativeSlot slot, uint32_t kind,
 }
 
 static void cam_destroy(void *self, FloomNativeSlot slot) {
-    (void)self;
-    (void)slot;
     if (g_session != nil) {
         [g_session stopRunning];
         if (g_preview != nil) {
@@ -130,13 +123,9 @@ static void cam_destroy(void *self, FloomNativeSlot slot) {
 
 static void cam_apply(void *self, FloomNativeSlot slot,
                       const FloomNativeState *state) {
-    (void)self;
-    (void)slot;
     if (g_preview == nil || state == NULL) {
         return;
     }
-    /* The rect crosses in device pixels; CALayer geometry lives in the same
-     * space the host rendered into. */
     CGFloat x = (CGFloat)state->rect.x;
     CGFloat y = (CGFloat)state->rect.y;
     CGFloat w = (CGFloat)state->rect.width;
@@ -179,7 +168,6 @@ int floom_camera_refused_count(void) { return g_refused; }
 int floom_camera_live_count(void) { return g_live; }
 
 int floom_camera_slot_is_attached(FloomNativeSlot slot) {
-    (void)slot;
     if (g_preview == nil || g_host == nil) {
         return 0;
     }

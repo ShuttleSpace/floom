@@ -5,18 +5,16 @@
 //! plugin discovery and therefore no serialization boundary — a call from the
 //! app is a machine call, resolved when this crate is linked.
 //!
-//! Each platform's half lives in its own peer directory — `macos/` (Objective-C),
-//! `linux/` (C11 + GTK) — and `common/` holds the C ABI header both of them
-//! implement, so one contract cannot drift from the other.
+//! Each platform's half lives in its own peer directory under `native/` —
+//! `native/macos/` (Objective-C), `native/linux/` (C11 + GTK) — and
+//! `native/common/` holds the C ABI header both of them implement, so one
+//! contract cannot drift from the other.
 
 use std::path::PathBuf;
 
 fn main() {
-    println!("cargo:rerun-if-changed=common");
-    println!("cargo:rerun-if-changed=macos");
-    println!("cargo:rerun-if-changed=linux");
-    println!("cargo:rerun-if-changed=ios");
-    println!("cargo:rerun-if-changed=windows");
+    println!("cargo:rerun-if-changed=native");
+
     println!("cargo:rustc-check-cfg=cfg(floom_plugin_native)");
     // Platform/backend cfgs this crate will use on not-yet-built targets.
     println!("cargo:rustc-check-cfg=cfg(target_os, values(\"ohos\"))");
@@ -27,7 +25,7 @@ fn main() {
     );
     let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR is set by cargo"));
-    let common = manifest.join("common");
+    let common = manifest.join("native").join("common");
 
     // The provider ABI comes from the crate that owns it, so the two cannot
     // drift. The path is relative because the header is not a dependency:
@@ -37,6 +35,7 @@ fn main() {
         .join("..")
         .join("..")
         .join("..")
+        .join("native")
         .join("floom-native-ffi")
         .join("include")
         .join("floom_native_provider.h");
@@ -47,7 +46,10 @@ fn main() {
 
     match target_os.as_str() {
         "macos" => {
-            let source = manifest.join("macos").join("floom_webview.m");
+            let source = manifest
+                .join("native")
+                .join("macos")
+                .join("floom_webview.m");
             println!("cargo:rerun-if-changed={}", source.display());
 
             cc::Build::new()
@@ -66,7 +68,7 @@ fn main() {
             println!("cargo:rustc-link-lib=framework=WebKit");
         }
         "ios" => {
-            let source = manifest.join("ios").join("floom_webview.m");
+            let source = manifest.join("native").join("ios").join("floom_webview.m");
             println!("cargo:rerun-if-changed={}", source.display());
 
             cc::Build::new()
@@ -84,7 +86,10 @@ fn main() {
             println!("cargo:rustc-link-lib=framework=WebKit");
         }
         "linux" => {
-            let source = manifest.join("linux").join("floom_webview.c");
+            let source = manifest
+                .join("native")
+                .join("linux")
+                .join("floom_webview.c");
             println!("cargo:rerun-if-changed={}", source.display());
 
             cc::Build::new()
@@ -104,7 +109,10 @@ fn main() {
             println!("cargo:rustc-link-lib=dylib=webkit2gtk-4.1");
         }
         "windows" => {
-            let source = manifest.join("windows").join("floom_webview.cpp");
+            let source = manifest
+                .join("native")
+                .join("windows")
+                .join("floom_webview.cpp");
             println!("cargo:rerun-if-changed={}", source.display());
 
             cc::Build::new()

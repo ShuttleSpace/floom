@@ -17,7 +17,7 @@
 #include <ace/xcomponent/native_interface_xcomponent.h>
 #include <native_window/external_window.h>
 
-#include "floom_plugin_camera.h"
+#include "floom_camera.h"
 
 /* One camera for the process. A plugin is a singleton, so a single session
  * and preview output are enough; the host's slot accounting is what keeps

@@ -26,6 +26,11 @@ pub fn capability() -> i32 {
     0
 }
 
+/// # Safety
+///
+/// The signature exists so the terminal binding has the same shape as the
+/// real ones. It never dereferences `_host_window`: the call refuses before
+/// touching it, so any value — including a dangling one — is sound.
 pub unsafe fn provider(
     _host_window: *const c_void,
 ) -> Result<Box<dyn NativeViewProvider>, CProviderError> {
@@ -34,6 +39,10 @@ pub unsafe fn provider(
     ))
 }
 
+/// # Safety
+///
+/// Same contract as [`provider`]: the handle is never dereferenced, and the
+/// refusal is returned before it could be.
 pub unsafe fn boxed_provider(
     _host_window: *const c_void,
 ) -> Result<Box<dyn NativeViewProvider>, CProviderError> {

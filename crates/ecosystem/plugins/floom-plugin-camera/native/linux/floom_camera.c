@@ -19,7 +19,7 @@
 
 #include <X11/Xlib.h>
 
-#include "floom_plugin_camera.h"
+#include "floom_camera.h"
 
 /* One camera for the process. A plugin is a singleton, so a single pipeline
  * and one embedded X11 window are enough; the host's slot accounting is what

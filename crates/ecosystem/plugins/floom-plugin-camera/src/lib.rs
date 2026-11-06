@@ -6,19 +6,19 @@
 //!
 //! # Layout
 //!
-//! The plugin is split by platform. Each platform owns a directory at the crate
-//! root — `android/ ios/ windows/ macos/ linux/ ohos/ web/ tui/` — holding its
-//! native half, and `src/<platform>.rs` holds that half's Rust FFI bridge. The
-//! shared C-ABI contract lives in `common/floom_plugin_camera.h`. This file
+//! The plugin is split by platform. Each platform's native half lives under
+//! `native/<platform>/` (`android/` is the exception: it is a Gradle module at
+//! the crate root), and `src/<platform>.rs` holds that half's Rust FFI bridge.
+//! The shared C-ABI contract lives in `native/common/floom_camera.h`. This file
 //! dispatches the public surface to whichever platform is being compiled.
 //!
 //! - `android/` — Java half (`FloomCameraView`), driven through JNI; the Rust
 //!   half owns the `NativeViewProvider`.
-//! - `macos/` `ios/` `windows/` `linux/` `ohos/` — a C/Objective-C/C++ native
-//!   half that registers a `FloomNativeProviderV1` vtable; the Rust half calls
-//!   it through `extern "C"`.
-//! - `web/` — pure Rust (`web-sys`): `getUserMedia` into a `<video>` element.
-//! - `tui/` — unsupported: a terminal has no camera.
+//! - `native/macos/` `native/ios/` `native/windows/` `native/linux/`
+//!   `native/ohos/` — a C/Objective-C/C++ native half that registers a
+//!   `FloomNativeProviderV1` vtable; the Rust half calls it through `extern "C"`.
+//! - `src/web.rs` — pure Rust (`web-sys`): `getUserMedia` into a `<video>` element.
+//! - `src/tui.rs` — unsupported: a terminal has no camera.
 
 pub mod common;
 

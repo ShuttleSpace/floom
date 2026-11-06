@@ -300,7 +300,7 @@ fn main() {
     let observer = AppObserver::new(mtm);
     unsafe {
         NSNotificationCenter::defaultCenter().addObserver_selector_name_object(
-            &*observer,
+            &observer,
             objc2::sel!(windowWillClose:),
             Some(NSWindowWillCloseNotification),
             Some(&*window),
