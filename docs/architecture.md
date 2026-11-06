@@ -167,12 +167,12 @@ advertised set.
 ### Add a crate
 
 Beyond the three registrations above: keep dependencies downward, do not name
-concrete backends from below L4, and update `docs/2.0/ARCHITECTURE.md` — the
+concrete backends from below L4, and update `docs/architecture.md` — the
 parity test will fail until you do.
 
 ### Add an example
 
 Add `examples/floom2-<topic>/`, make it run headless and assert the invariant
-it demonstrates, then document it in `docs/2.0/EXAMPLES.md`. The parity test
+it demonstrates, then document it in `docs/examples.md`. The parity test
 requires both directions: no undocumented example, no documented example that
 does not exist.

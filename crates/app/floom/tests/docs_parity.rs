@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 //! Phase 30 — the documentation cannot drift away from the tree.
 //!
-//! `docs/2.0/EXAMPLES.md`, `ARCHITECTURE.md` and `RELEASE-POLICY.md` all make
+//! `docs/examples.md`, `ARCHITECTURE.md` and `RELEASE-POLICY.md` all make
 //! claims that are checkable: which examples exist and which of them run
 //! headless, which crate sits at which layer, which test and bench targets the
 //! release gate names. A doc that lists a file that was renamed — or omits an
@@ -51,7 +51,7 @@ fn first_token(cell: &str) -> String {
 
 fn documented_examples() -> Vec<(String, String)> {
     // (name, status) for every row of the index table.
-    rows(&read("docs/2.0/EXAMPLES.md"))
+    rows(&read("docs/examples.md"))
         .filter(|cells| cells.len() >= 5 && cells[1].starts_with('`'))
         .map(|cells| (first_token(&cells[1]), cells[4].clone()))
         .filter(|(name, _)| name != "example")
@@ -97,7 +97,7 @@ fn every_floom2_example_is_documented() {
         }
         assert!(
             documented.contains(&name),
-            "`examples/{name}` is not in docs/2.0/EXAMPLES.md — add a row or delete the example"
+            "`examples/{name}` is not in docs/examples.md — add a row or delete the example"
         );
     }
 }
@@ -112,7 +112,7 @@ fn every_documented_example_either_exists_or_is_marked_gated() {
         }
         assert!(
             on_disk.contains(&name),
-            "docs/2.0/EXAMPLES.md advertises `{name}` as {status} but examples/{name} does not exist"
+            "docs/examples.md advertises `{name}` as {status} but examples/{name} does not exist"
         );
     }
 }
@@ -129,7 +129,7 @@ fn the_headless_rows_are_exactly_the_examples_the_script_runs() {
     assert_eq!(
         headless,
         scripted_examples(),
-        "docs/2.0/EXAMPLES.md's headless rows and scripts/run-golden-examples.sh disagree — \
+        "docs/examples.md's headless rows and scripts/run-golden-examples.sh disagree — \
          one of them will run (or skip) an example the other does not know about"
     );
     assert!(
@@ -183,7 +183,7 @@ fn gate_layers() -> BTreeMap<String, u8> {
 /// `crate -> layer` as the architecture document claims it.
 fn documented_layers() -> BTreeMap<String, u8> {
     let mut layers = BTreeMap::new();
-    for cells in rows(&read("docs/2.0/ARCHITECTURE.md")) {
+    for cells in rows(&read("docs/architecture.md")) {
         if cells.len() < 3 || !cells[1].starts_with('`') {
             continue;
         }
@@ -214,11 +214,11 @@ fn the_layer_table_matches_the_architecture_gate() {
 
     assert!(
         missing_in_doc.is_empty(),
-        "in scripts/check-architecture-deps.sh but not docs/2.0/ARCHITECTURE.md: {missing_in_doc:?}"
+        "in scripts/check-architecture-deps.sh but not docs/architecture.md: {missing_in_doc:?}"
     );
     assert!(
         extra_in_doc.is_empty(),
-        "in docs/2.0/ARCHITECTURE.md but not scripts/check-architecture-deps.sh: {extra_in_doc:?}"
+        "in docs/architecture.md but not scripts/check-architecture-deps.sh: {extra_in_doc:?}"
     );
 
     let wrong_level: Vec<String> = gate
@@ -235,7 +235,7 @@ fn the_layer_table_matches_the_architecture_gate() {
 
 #[test]
 fn the_release_gate_names_only_targets_that_exist() {
-    let policy = read("docs/2.0/RELEASE-POLICY.md");
+    let policy = read("docs/release-policy.md");
 
     // Every path in backticks: test targets, scripts, docs.
     let mut checked = 0;
@@ -249,7 +249,7 @@ fn the_release_gate_names_only_targets_that_exist() {
         }
         assert!(
             root().join(token).exists(),
-            "docs/2.0/RELEASE-POLICY.md names `{token}`, which does not exist"
+            "docs/release-policy.md names `{token}`, which does not exist"
         );
         checked += 1;
     }
@@ -261,7 +261,7 @@ fn the_release_gate_names_only_targets_that_exist() {
 
 #[test]
 fn the_size_table_names_examples_that_exist() {
-    let policy = read("docs/2.0/RELEASE-POLICY.md");
+    let policy = read("docs/release-policy.md");
     let on_disk = example_directories();
     let documented: Vec<String> = documented_examples().into_iter().map(|(n, _)| n).collect();
 
@@ -292,7 +292,7 @@ fn the_size_table_names_examples_that_exist() {
         );
         assert!(
             documented.contains(&name.to_string()),
-            "`{name}` is in the size table but not in docs/2.0/EXAMPLES.md"
+            "`{name}` is in the size table but not in docs/examples.md"
         );
         checked += 1;
     }
@@ -312,7 +312,7 @@ fn the_bench_targets_named_by_the_policy_exist() {
     // and a test that has quietly stopped describing the thing it guards is worse
     // than no test — so the shape is asserted explicitly below rather than
     // inferred from a sentence that may move.
-    let policy = read("docs/2.0/RELEASE-POLICY.md");
+    let policy = read("docs/release-policy.md");
 
     // Scoped to the benchmark section. Parsing the whole document picks up every
     // other table in it -- the release-gate matrix, the supported-target rows --
@@ -362,7 +362,7 @@ fn the_bench_targets_named_by_the_policy_exist() {
             .unwrap_or_else(|| root().join(format!("crates/{crate_name}/benches/{target}.rs")));
         assert!(
             path.exists(),
-            "docs/2.0/RELEASE-POLICY.md names bench `{crate_name}::{target}`, \
+            "docs/release-policy.md names bench `{crate_name}::{target}`, \
              but {} does not exist",
             path.strip_prefix(root()).unwrap_or(&path).display()
         );

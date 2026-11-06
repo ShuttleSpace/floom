@@ -108,7 +108,7 @@ struct AccordionPanel {
 /// compositor channel carries a size. [`Accordion::content_transition`] is
 /// therefore compositor-only — a fade, a grow or a slide over the revealed
 /// subtree — while the box appears at its final height. See
-/// `docs/2.0/MOTION-GAP.md` (B4, the "size" entry under "not done").
+/// `docs/motion-gap.md` (B4, the "size" entry under "not done").
 pub struct Accordion {
     panels: Vec<AccordionPanel>,
     style: AccordionStyle,

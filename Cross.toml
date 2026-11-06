@@ -1,7 +1,7 @@
 # Cross-compilation configuration — https://github.com/cross-rs/cross
 #
 # Floom targets macOS / Windows / Linux / Android / iOS / Harmony / Web /
-# Embedded (see docs/2.0/RELEASE-POLICY.md). Cross is used to produce the
+# Embedded (see docs/release-policy.md). Cross is used to produce the
 # Linux builds from a macOS/Windows dev host; the other targets are built with
 # their platform toolchains directly (Xcode, NDK, wasm-pack, …).
 

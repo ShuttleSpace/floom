@@ -6,7 +6,7 @@ This is the gate a release has to pass, and the promise it makes once it has.
 Every claim here that can be checked mechanically is checked:
 `crates/app/floom/tests/docs_parity.rs` asserts that the test targets and benchmark
 targets named below actually exist, and that the golden-example list matches
-`docs/2.0/EXAMPLES.md`.
+`docs/examples.md`.
 
 ## Versioning
 

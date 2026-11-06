@@ -530,7 +530,7 @@ federated plugin 结构（一个能力按平台拆包）。Floom 的对应结构
 | 2 | `scripts/gate.sh` 的 `CAPABILITY_PLUGINS` | `plugins` check 的完整性守卫会打印「in the plugin workspace but in no gate list」并失败——这是唯一会发现「新插件没人查」的地方 |
 | 3 | `scripts/gate.sh` 的 `MOBILE_CAPABILITY_PLUGINS`（仅移动插件） | `android` / `ios` check 不跑它，原生半边编译不过也看不见 |
 | 4 | `scripts/check-architecture-deps.sh` 的 `LAYERS`（L5 组） | `arch` check **直接失败**：`UNREGISTERED 2.0 library crate(s)` |
-| 5 | `docs/2.0/ARCHITECTURE.md` 的 layer 表 | `docs_parity.rs::the_layer_table_matches_the_architecture_gate` 失败 |
+| 5 | `docs/architecture.md` 的 layer 表 | `docs_parity.rs::the_layer_table_matches_the_architecture_gate` 失败 |
 | 6 | `.github/workflows/ci.yml` 的 `plugins` job 不需要改（它跑整个 workspace），但 `android-check` / `ios-check` 的 `-p` 列表要加 | CI 不编译那条臂（同 #3） |
 | 7 | `CHANGELOG.md` 的 `Unreleased` | 无自动失败，但发布政策要求记录 |
 
