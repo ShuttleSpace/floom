@@ -751,14 +751,15 @@ mod tests {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .and_then(|p| p.parent())
-            .expect("crates/app/floom-cli sits two levels below the root")
+            .and_then(|p| p.parent())
+            .expect("crates/app/floom-cli sits three levels below the root")
             .to_path_buf()
     }
 
     /// Scaffold a plugin into a scratch directory and return it.
     fn scaffold(name: &str, platforms: &[&str]) -> PathBuf {
         let root = repo_root();
-        let dir = root.join("target").join(format!("floom-cli-test-{name}"));
+        let dir = root.join("tests").join(format!("floom-cli-test-{name}"));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).expect("scratch directory");
 

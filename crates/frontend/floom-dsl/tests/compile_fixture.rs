@@ -4,7 +4,7 @@
 //! A syntax check (`syn`-style) proves the output *parses*; this fixture
 //! proves it *means something*: the builder calls type-check against the
 //! actual `floom-widgets` API. The scratch crate lives under the workspace
-//! `target/` directory with its own target dir, so nothing collides with the
+//! `tests/` directory with its own target dir, so nothing collides with the
 //! outer build's file lock and the dependency stack compiles once and is
 //! cached across runs.
 //!
@@ -32,7 +32,7 @@ root = stack axis=vertical gap=8 {
 
 fn workspace_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../")
+        .join("../../../")
         .canonicalize()
         .expect("workspace root")
 }
@@ -46,7 +46,7 @@ fn workspace_root() -> PathBuf {
 /// files land in the same timestamp tick.
 fn scratch_crate(name: &str, lib_rs: &str) -> PathBuf {
     let root = workspace_root();
-    let crate_dir = root.join("target/dsl-fixture").join(name);
+    let crate_dir = root.join("tests/dsl-fixture").join(name);
     std::fs::create_dir_all(crate_dir.join("src")).expect("create scratch crate");
 
     // The composite controls live in the satellite `floom-ui` workspace, so a
@@ -74,7 +74,7 @@ fn scratch_crate(name: &str, lib_rs: &str) -> PathBuf {
 /// Run `cargo check` over the scratch crate with a dedicated target dir.
 fn cargo_check(crate_dir: &Path) -> Result<String, String> {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
-    let target_dir = workspace_root().join("target/dsl-fixture/target");
+    let target_dir = workspace_root().join("tests/dsl-fixture/target");
     let output = Command::new(&cargo)
         .arg("check")
         .arg("--manifest-path")
