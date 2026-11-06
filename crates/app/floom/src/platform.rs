@@ -2,7 +2,7 @@
 //! The one platform door.
 //!
 //! An app calls [`run`](crate::run) and, when it needs to know what the
-//! compiled-in platform can do, [`require`]. It never names a backend, never
+//! compiled-in platform can do, [`require`](crate::platform::require). It never names a backend, never
 //! chooses between `run_desktop` / `run_android` / `run_web`, and never links a
 //! backend crate directly.
 //!
@@ -11,22 +11,22 @@
 //! Every backend (`winit` desktop, Android, web, terminal, embedded) already
 //! implements [`floom_platform::Platform`], but that trait is the *backend*
 //! contract: it creates surfaces and polls events, and a caller that held one
-//! would be writing the app loop itself. [`PlatformBackend`] is the *app*
+//! would be writing the app loop itself. [`PlatformBackend`](crate::platform::PlatformBackend) is the *app*
 //! contract — a name, a capability set, and one `run` that owns the loop — so
 //! the facade can swap backends behind a single call.
 //!
 //! # What happens when a platform cannot do something
 //!
 //! A capability that is missing is a policy decision, not an error the caller
-//! invents each time. [`require`] takes the policy:
+//! invents each time. [`require`](crate::platform::require) takes the policy:
 //!
 //! | Policy | Missing capability means |
 //! |---|---|
-//! | [`OnUnsupported::Warn`] | log and carry on without the feature |
-//! | [`OnUnsupported::Fail`] | return [`PlatformError`] to the caller |
-//! | [`OnUnsupported::Exit`] | log and `exit(1)` — the app cannot work at all |
+//! | [`OnUnsupported::Warn`](crate::platform::OnUnsupported::Warn) | log and carry on without the feature |
+//! | [`OnUnsupported::Fail`](crate::platform::OnUnsupported::Fail) | return [`PlatformError`](crate::platform::PlatformError) to the caller |
+//! | [`OnUnsupported::Exit`](crate::platform::OnUnsupported::Exit) | log and `exit(1)` — the app cannot work at all |
 //!
-//! The default for [`run`](crate::run) is [`OnUnsupported::Fail`]: a window that
+//! The default for [`run`](crate::run) is [`OnUnsupported::Fail`](crate::platform::OnUnsupported::Fail): a window that
 //! can never paint is not a degraded app, it is a broken one.
 
 use std::fmt;

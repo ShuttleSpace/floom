@@ -7,7 +7,7 @@
 //! counters. This crate deliberately links no runtime — a frontend can parse a
 //! snapshot without a window, and a backend can serve one without a GUI.
 //!
-//! Versioning has concrete semantics, mirroring [`floom_dsl::ui_ir`]'s rule and for
+//! Versioning has concrete semantics, mirroring `floom_dsl::ui_ir`'s rule and for
 //! the same reason: a reader must never be handed fields it cannot represent.
 //! A snapshot with the same major and an **older or equal minor** loads; a
 //! newer minor is refused (the reader cannot faithfully round-trip unknown

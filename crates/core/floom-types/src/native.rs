@@ -99,7 +99,7 @@ pub struct NativeSnapshot {
 /// decoupling that puts the other native nouns in this crate rather than in
 /// `floom-native`.
 ///
-/// The bytes are always [`ImageFormat::Rgba8`] / premultiplied, the format the
+/// The bytes are always `ImageFormat::Rgba8` / premultiplied, the format the
 /// vello path uploads verbatim; the host does the OS-specific conversion
 /// (AppKit hands back `ARGB` premultiplied) before it stashes one here.
 #[derive(Debug, Clone)]

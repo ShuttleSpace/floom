@@ -75,7 +75,7 @@ pub struct FloomNativeCapabilities {
     pub input_passthrough: u8,
     pub input_capture: u8,
     pub focusable: u8,
-    /// A [`CLIP_*`] value.
+    /// A `CLIP_*` value.
     pub clip: u8,
     pub reserved: [u8; 3],
 }
@@ -90,9 +90,9 @@ pub struct FloomNativeState {
     pub visible: u8,
     pub reserved: [u8; 2],
     pub z: u32,
-    /// An [`INPUT_*`] value.
+    /// An `INPUT_*` value.
     pub input: u32,
-    /// A [`MODE_*`] value.
+    /// A `MODE_*` value.
     pub mode: u32,
 }
 

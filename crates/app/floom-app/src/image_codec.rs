@@ -5,7 +5,7 @@
 //! upload and the software path consume verbatim), while decoders produce
 //! straight-alpha RGBA. This module owns that one conversion so producers
 //! never hand-roll it: [`decode_image`] normalises any supported format to
-//! 8-bit RGBA and premultiplies, and [`WidgetHost::register_image_decoded`]
+//! 8-bit RGBA and premultiplies, and [`WidgetHost::register_image_decoded`](crate::WidgetHost::register_image_decoded)
 //! (in the parent crate) feeds the result straight into the registry.
 
 /// A decoded image in the registry's native format.

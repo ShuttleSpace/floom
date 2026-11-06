@@ -8,7 +8,7 @@ use crate::arena::ElementArena;
 
 type ChildList = SmallVec<[ElementId; 4]>;
 
-/// Child lists keyed by element index, kept consistent with [`Element::parent`].
+/// Child lists keyed by element index, kept consistent with [`Element::parent`](crate::tree::ElementTree::parent).
 #[derive(Debug, Default)]
 pub struct ElementTree {
     children: Vec<ChildList>,

@@ -266,7 +266,7 @@ impl RestorationSnapshot {
     /// Replay the snapshot into `store`, replacing the keys it holds.
     ///
     /// Entries in the store that the snapshot does not mention are left alone;
-    /// call [`clear`](Self::clear) first via [`wipe_then_restore`] semantics if
+    /// call [`clear`](Self::clear) first via wipe-then-restore semantics if
     /// a whole-session restore is wanted (see [`RestorationSnapshot::restore_all`]).
     pub fn restore<S: KeyValueStore>(&self, store: &mut S) -> Result<usize, S::Error> {
         let mut written = 0;

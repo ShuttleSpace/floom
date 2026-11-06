@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 //! Old document → new document, as a patch of named operations.
 //!
-//! Matching is by [`NodeKey`] and only by [`NodeKey`]. That single decision is
+//! Matching is by [`NodeKey`](floom_dsl::ui_ir::NodeKey) and only by [`NodeKey`](floom_dsl::ui_ir::NodeKey). That single decision is
 //! what makes state survive a reload: a node whose key still exists keeps its
 //! element, so everything keyed by the element — styles, layout, wiring, and
 //! whatever state a layer stashed on it — carries over. Matching by position

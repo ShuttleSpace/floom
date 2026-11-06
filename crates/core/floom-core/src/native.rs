@@ -86,7 +86,7 @@ impl NativeRequest {
 
 /// The fallback a participant gets when the host cannot composite natively.
 ///
-/// Returned by [`UpdateContext::request_native`]: a widget that needs a real
+/// Returned by [`UpdateContext::request_native`](crate::UpdateContext::request_native): a widget that needs a real
 /// native view must decide what to do without one, and "nothing" is a decision
 /// worth making explicitly rather than by omission.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -221,7 +221,7 @@ pub fn root_readme(name: &str, platforms: &[String]) -> String {
 
 /// The Rust half of a plugin: the crate a caller depends on.
 ///
-/// `register` puts `enable` into [`floom_platform`]'s table, and it is what a
+/// `register` puts `enable` into `floom_platform`'s table, and it is what a
 /// caller invokes before `plugin("name").enable()`. It is
 /// a plain function rather than a closure because a plugin is a link-time
 /// dependency in Floom, not a runtime-discovered one: by the time the app runs,

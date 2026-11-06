@@ -286,7 +286,7 @@ pub struct WinitPlatform {
     /// one source: the bridge's own
     /// [`DesktopNativeBridge::platform_capabilities`](crate::DesktopNativeBridge::platform_capabilities).
     /// The distinction matters because advertising
-    /// [`Capability::NATIVE_VIEW`](floom_platform::Capability::NATIVE_VIEW) makes
+    /// [`Capability::NATIVE_VIEW`](floom_platform::Capability::NATIVE_VIEW)(floom_platform::Capability::NATIVE_VIEW) makes
     /// every `NativeSurface` mount try to composite, so a session that never
     /// built a bridge must not advertise it.
     native_caps: Option<PlatformCapabilities>,
@@ -332,7 +332,7 @@ impl WinitPlatform {
     /// app's to own: this crate knows how to make an AppKit one and nothing
     /// above it needs to know that AppKit was involved. Handing one out is what
     /// flips [`Platform::capabilities`](floom_platform::Platform::capabilities)
-    /// to advertising [`Capability::NATIVE_VIEW`], which is why the flag is set
+    /// to advertising [`Capability::NATIVE_VIEW`](floom_platform::Capability::NATIVE_VIEW), which is why the flag is set
     /// here and not at construction.
     ///
     /// Calling this twice for one window builds a second set of views over the

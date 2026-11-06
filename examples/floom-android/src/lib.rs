@@ -3,10 +3,10 @@
 //! Android (winit) event loop instead of the desktop one.
 //!
 //! `native-activity` loads `libfloom_android_example.so` and calls
-//! [`android_main`]; that is why this crate is a `cdylib`. The GPU surface is
+//! `android_main`; that is why this crate is a `cdylib`. The GPU surface is
 //! built from the Android `ANativeWindow*` by the renderer exactly the way the
 //! desktop window is — the only Android-specific seam is the entry point and the
-//! [`AndroidRunner`] callbacks that pump the app from winit's push loop.
+//! `AndroidRunner` callbacks that pump the app from winit's push loop.
 //!
 //! This is the floom analogue of `examples/android` (the v1 entry point) and
 //! closes the last gap in `crates/platform/floom-platform-android`: turning the

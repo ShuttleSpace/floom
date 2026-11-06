@@ -139,10 +139,10 @@ pub trait UpdateContext {
     /// inside its own `update`.
     ///
     /// Re-stating the same request is free; a host that has already granted it
-    /// returns the same grant. Changing [`NativeRequest::key`] is how a
+    /// returns the same grant. Changing [`NativeRequest::key`](crate::NativeRequest::key) is how a
     /// virtualized row asks for a different slot.
     ///
-    /// [`NativeGrant::Refused`] means the host has no provider, or the provider
+    /// [`NativeGrant::Refused`](crate::NativeGrant::Refused) means the host has no provider, or the provider
     /// offers no mode this participant accepts. A caller must decide what to
     /// draw instead: silently showing nothing is how a "supported" feature
     /// becomes an empty rectangle on one platform.
@@ -241,7 +241,7 @@ pub trait EventContext {
     ///
     /// A scrolling container needs the content's extent to clamp against, and a
     /// wheel event arrives here rather than in `update`. The host has already
-    /// measured it for [`Widget::needs_content_size`] widgets, so the answer is
+    /// measured it for [`Widget::needs_content_size`](crate::Widget::needs_content_size) widgets, so the answer is
     /// the same number — this is the same measurement, read at the moment it is
     /// needed rather than cached and re-read.
     ///
@@ -525,7 +525,7 @@ pub trait SemanticsContext {
     /// describe at all. Compose's canvas and Flutter's `CustomPaint` both
     /// defaulted to invisible for exactly this reason, and both now require the
     /// author to attach semantics explicitly — so the default here is
-    /// [`SemanticsRole::None`], i.e. publish nothing, and a widget that draws
+    /// [`SemanticsRole::None`](crate::SemanticsRole::None), i.e. publish nothing, and a widget that draws
     /// something worth describing says so.
     fn set_role(&mut self, role: crate::SemanticsRole) {
         let _ = role;

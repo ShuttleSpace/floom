@@ -16,9 +16,9 @@ use crate::ui_ir::value::ValueType;
 /// `grow` to `floom_core::LayoutRequest` without knowing property names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PropClass {
-    /// Style properties ([`floom_style::StyleProps`] vocabulary).
+    /// Style properties (`floom_style::StyleProps` vocabulary).
     Style,
-    /// Layout intent ([`floom_core::LayoutRequest`] vocabulary).
+    /// Layout intent (`floom_core::LayoutRequest` vocabulary).
     Layout,
     /// A property of the widget itself.
     Widget,

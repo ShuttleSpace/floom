@@ -13,9 +13,9 @@ pub use floom_platform::{Capability, Clipboard, Ime, Platform, PlatformEvent, Wi
 
 /// Build an Android-capability host (headless until NDK surface glue exists).
 ///
-/// On a real Android target this is superseded by [`android`] (the winit
-/// backend): its [`android::run`] is the real entry point and
-/// [`android::AndroidPlatform`] the real [`Platform`] implementation. This
+/// On a real Android target this is superseded by `android` (the winit
+/// backend): its `android::run` is the real entry point and
+/// `android::AndroidPlatform` the real [`Platform`] implementation. This
 /// headless constructor stays available on every target so host-side unit
 /// tests and tooling can still exercise the capability surface.
 pub fn android_platform() -> HostPlatform {

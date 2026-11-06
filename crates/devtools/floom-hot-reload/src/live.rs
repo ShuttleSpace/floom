@@ -11,7 +11,7 @@ use floom_style::{StyleMap, StyleProps, StyleSet, StyleState};
 use floom_types::ElementId;
 
 /// A mounted document: the element tree it produced and the tables keyed by
-/// the stable [`NodeKey`]s that produced it.
+/// the stable [`NodeKey`](floom_dsl::ui_ir::NodeKey)s that produced it.
 #[derive(Debug, Default)]
 pub struct LiveTree {
     pub(crate) arena: ElementArena,

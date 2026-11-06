@@ -2,15 +2,15 @@
 //! Versioned, serializable UI intermediate representation (Phase 22.1).
 //!
 //! The IR is the *source of truth* a UI is authored in when it does not come
-//! from Rust source: the DSL lowers into it ([`floom-dsl`]), the hot-reload
-//! protocol diffs two of them ([`floom-hot-reload`]), and the inspector walks
+//! from Rust source: the DSL lowers into it (`floom-dsl`), the hot-reload
+//! protocol diffs two of them (`floom-hot-reload`), and the inspector walks
 //! it to explain a running tree. It therefore has to be two things at once:
 //!
-//! - **Stable on the wire.** Every document carries its [`IrVersion`], and the
-//!   reader's acceptance rules are explicit ([`IrVersion::check`]). A document
+//! - **Stable on the wire.** Every document carries its [`IrVersion`](crate::ui_ir::IrVersion), and the
+//!   reader's acceptance rules are explicit ([`IrVersion::check`](crate::ui_ir::IrVersion::check)). A document
 //!   is parsed, validated and re-serialized byte for byte by the fixtures, so a
 //!   field rename cannot pass unnoticed.
-//! - **Cheap to reason about offline.** A node's identity is a [`NodeKey`], a
+//! - **Cheap to reason about offline.** A node's identity is a [`NodeKey`](crate::ui_ir::NodeKey), a
 //!   stable string the runtime can match across a reload — not an index, which
 //!   would silently move when a sibling is inserted.
 //!

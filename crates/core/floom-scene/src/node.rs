@@ -109,7 +109,7 @@ pub enum SceneNode {
     ///
     /// `rect` is the *result* area, not the area read: a blur samples a
     /// `reach`-wide halo outside it, which is why
-    /// [`bounds_hint`](Self::bounds_hint) reports the inflated rect.
+    /// [`bounds_hint`](crate::SceneNode::bounds_hint)(Self::bounds_hint) reports the inflated rect.
     BackdropFilter { rect: Rect, filter: Filter },
     /// A custom shader filling `bounds`.
     ///
@@ -121,7 +121,7 @@ pub enum SceneNode {
     /// cannot honour.
     ///
     /// A real draw node, not a stream marker: it paints pixels of its own, so it
-    /// carries `bounds` and reports them from [`bounds_hint`].
+    /// carries `bounds` and reports them from [`bounds_hint`](crate::SceneNode::bounds_hint).
     Shader { bounds: Rect, shader: Shader },
     Image {
         bounds: Rect,

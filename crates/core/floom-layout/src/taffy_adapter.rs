@@ -85,11 +85,11 @@ pub struct LayoutStyle {
     pub width: Option<Length>,
     pub height: Option<Length>,
     /// Floors for the two axes. `None` is taffy's `auto`, i.e. no constraint —
-    /// see [`floom_core::LayoutRequest::min_width`] for why this is not `Some(0.0)`.
+    /// see `floom_core::LayoutRequest` for why this is not `Some(0.0)`.
     pub min_width: Option<Length>,
     pub min_height: Option<Length>,
     /// Ceilings for the two axes. See
-    /// [`floom_core::LayoutRequest::max_width`].
+    /// `floom_core::LayoutRequest`.
     pub max_width: Option<Length>,
     pub max_height: Option<Length>,
     pub flex_grow: f32,

@@ -14,7 +14,7 @@
 //! The compiler lowers the wrapper's child into the widget tree and reads the
 //! wrapper's attributes for the window. Emitting then produces two files: the
 //! widget program (`ui_gen.rs`) and a `main.rs` that mounts it through
-//! [`floom::run`], so the author never writes Rust.
+//! `floom::run`, so the author never writes Rust.
 
 use std::path::Path;
 

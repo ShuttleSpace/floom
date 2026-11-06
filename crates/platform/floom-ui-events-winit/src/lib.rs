@@ -58,12 +58,12 @@ use winit::{
 /// This handles:
 ///  - [`ModifiersChanged`][`WindowEvent::ModifiersChanged`]
 ///  - [`KeyboardInput`][`WindowEvent::KeyboardInput`]
-///  - [`Touch`][`WindowEvent::Touch`]
-///  - [`MouseInput`][`WindowEvent::MouseInput`]
+///  - `WindowEvent::Touch`
+///  - `WindowEvent::MouseInput`
 ///  - [`MouseWheel`][`WindowEvent::MouseWheel`]
-///  - [`CursorMoved`][`WindowEvent::CursorMoved`]
-///  - [`CursorEntered`][`WindowEvent::CursorEntered`]
-///  - [`CursorLeft`][`WindowEvent::CursorLeft`]
+///  - `WindowEvent::CursorMoved`
+///  - `WindowEvent::CursorEntered`
+///  - `WindowEvent::CursorLeft`
 ///  - [`PinchGesture`][`WindowEvent::PinchGesture`]
 ///  - [`RotationGesture`][`WindowEvent::RotationGesture`]
 #[derive(Debug, Default)]

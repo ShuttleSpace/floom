@@ -14,7 +14,7 @@ use crate::color::Color;
 /// `FontWeight::Medium` and `FontWeight::SemiBold` at 68 call sites, so the
 /// variant names are chosen to match its call sites rather than to be tidy.
 ///
-/// [`Normal`] is the default and is what every text path that does not ask for a
+/// [`Normal`](crate::FontWeight::Normal) is the default and is what every text path that does not ask for a
 /// weight gets — which is why it is the `Default` rather than a value every
 /// constructor has to be handed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

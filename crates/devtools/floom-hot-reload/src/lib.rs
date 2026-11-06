@@ -3,7 +3,7 @@
 //! retained tree without throwing away per-element state.
 //!
 //! The contract, in one sentence: **nodes are matched by their stable
-//! [`NodeKey`], so a node the edit did not touch keeps its [`ElementId`] and
+//! [`NodeKey`](floom_dsl::ui_ir::NodeKey), so a node the edit did not touch keeps its [`ElementId`](floom_types::ElementId) and
 //! everything keyed by it** — styles, layout requests, event wiring, and any
 //! state a layer stashed on the element (scroll offset, focus, …).
 //!

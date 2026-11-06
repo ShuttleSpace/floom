@@ -2,7 +2,7 @@
 //! Semantics tree and accessibility adapter ABI for Floom 2.0.
 //!
 //! Widgets describe their accessibility semantics through a retained
-//! [`SemanticsTree`] keyed by [`ElementId`]. The runtime's `SEMANTICS` dirty
+//! [`SemanticsTree`] keyed by [`ElementId`](floom_types::ElementId). The runtime's `SEMANTICS` dirty
 //! flag routes into [`SemanticsTree::mark_semantics_dirty`]; the frame loop
 //! drains [`SemanticsTree::collect_updates`] into a [`SemanticsDiff`] that
 //! platform adapters ([`AccessibilityAdapter`]) translate to OS a11y APIs.

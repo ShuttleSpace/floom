@@ -551,7 +551,7 @@ where
 ///
 /// One deliberate non-re-export: the widgets crate also defines a
 /// `floom_widgets::Axis` (divider/image orientation) distinct from the
-/// layout [`Axis`] here. The layout `Axis` is what `Stack`/`List`/`Grid`
+/// layout [`Axis`](floom_core::Axis) here. The layout `Axis` is what `Stack`/`List`/`Grid`
 /// take, so it wins the glob; the orientation enum stays at its explicit
 /// path `floom::widgets::Axis`.
 pub mod prelude {

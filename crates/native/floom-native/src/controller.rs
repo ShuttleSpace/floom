@@ -7,7 +7,7 @@
 //! here instead, once:
 //!
 //! - every `create` is eventually matched by a `destroy`;
-//! - a *recycled* slot — same [`NativeViewId`], higher generation — is re-bound
+//! - a *recycled* slot — same [`NativeViewId`](crate::NativeViewId), higher generation — is re-bound
 //!   before anything is applied to it, because the handle the provider is
 //!   holding belongs to the previous generation;
 //! - a rect never crosses to a provider with a negative extent;

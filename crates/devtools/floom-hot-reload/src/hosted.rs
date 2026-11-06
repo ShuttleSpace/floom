@@ -84,7 +84,7 @@ impl HostedTree {
         self.live.set_layout(id, layout);
     }
 
-    /// The live tree, ready for an [`crate::Inspector`].
+    /// The live tree, ready for an `Inspector`.
     pub fn finish(self) -> LiveTree {
         self.live
     }

@@ -1248,7 +1248,7 @@ impl WidgetHost {
     /// Makes an open overlay hit-testable or not, without unmounting it.
     ///
     /// The two halves have to move together. The overlay stack decides whether a
-    /// press lands on the overlay at all ([`floom_overlay::OverlayManager`]),
+    /// press lands on the overlay at all ([`OverlayManager`](floom_widgets::overlay::OverlayManager)),
     /// while the main router holds a hit region for every node in its subtree —
     /// so flipping only the stack leaves `resolve_target` still finding the
     /// covering node and handing it a click meant for the app beneath. Both are
@@ -2436,7 +2436,7 @@ impl WidgetHost {
     /// The paint and layout fields are what make the Style and Layout readouts
     /// answerable. A host that mounts engine widgets has no document and no IR
     /// props, so the only description of a node is the node: its widget's
-    /// [`Widget::paint_style`] and a layout request. Both are asked of the
+    /// [`Widget::paint_style`](floom_core::Widget::paint_style) and a layout request. Both are asked of the
     /// widget *now*, which is the same freshness rule the rest of this method
     /// follows — and both are allowed to answer `None`, which the readout shows
     /// as an empty section rather than filling in.

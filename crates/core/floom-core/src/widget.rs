@@ -211,7 +211,7 @@ pub trait Widget {
     /// own widget crate could not be added to it at all. The list was a
     /// correctness trap dressed as an implementation detail: a new focusable
     /// widget compiled, mounted, tracked focus and painted no ring, and nothing
-    /// failed. Same shape as [`overlay_opened`] / [`overlay_closed`]: the host
+    /// failed. Same shape as [`overlay_opened`](crate::Widget::overlay_opened) / [`overlay_closed`](crate::Widget::overlay_closed): the host
     /// asks the tree, the widget answers.
     fn set_focused(&mut self, focused: bool) {
         let _ = focused;

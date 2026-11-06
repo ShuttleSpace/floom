@@ -8,7 +8,7 @@
 //!
 //! * [`ErrorBoundary::capture`] wraps a fallible section — a panic becomes a
 //!   recorded [`Report`] and the caller gets the fallback verdict.
-//! * [`ErrorBoundary::classify`] + [`Severity`] sort failures into
+//! * [`ErrorBoundary::classify_with`](crate::ErrorBoundary::classify_with) + [`Severity`] sort failures into
 //!   *recoverable* (record, render the fallback, keep going) and *fatal*
 //!   (record, then re-raise — a corrupted app state must not be papered over).
 //! * [`Report`] preserves diagnostic context: the callback location, a
@@ -23,7 +23,7 @@ use std::fmt;
 use std::rc::Rc;
 
 /// How bad a failure is, decided by the app via
-/// [`ErrorBoundary::classify`](ErrorBoundary::classify).
+/// [`ErrorBoundary::classify_with`](crate::ErrorBoundary::classify_with).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
     /// Record + fallback + continue: a view failed, the app lives.

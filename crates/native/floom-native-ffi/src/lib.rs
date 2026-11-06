@@ -13,7 +13,7 @@
 //! declares a `FloomNativeProviderV1` — a versioned struct of function
 //! pointers — which the **native side implements** and the **Rust side
 //! calls**. [`CProvider`] is the thin adapter that presents such a provider
-//! as an ordinary Rust [`NativeViewProvider`], so the controller's lifecycle
+//! as an ordinary Rust [`NativeViewProvider`](floom_native::NativeViewProvider), so the controller's lifecycle
 //! invariants apply to it exactly as they apply to a Rust provider.
 //!
 //! # Why a vtable and not named symbols

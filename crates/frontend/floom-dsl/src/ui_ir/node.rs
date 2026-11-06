@@ -246,7 +246,7 @@ impl Slot {
 /// - *inline* — [`EventBinding::inline`] carries the handler's Rust source
 ///   directly (`onClick={() => setCount(count() + 1)}`). The compiler lowers the
 ///   JS arrow into Rust, so there is no binding name to look up and [`body`] holds
-///   the code. [`UiDocument::validate`] skips the binding lookup when [`body`] is
+///   the code. [`UiDocument::validate`](crate::ui_ir::UiDocument::validate) skips the binding lookup when [`body`] is
 ///   set.
 ///
 /// [`body`]: EventBinding::body

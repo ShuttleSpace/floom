@@ -50,7 +50,7 @@ impl AccessibilityFrame {
 
 /// Translates semantics diffs into a concrete assistive-technology API.
 pub trait AccessibilityAdapter {
-    /// Apply the diff produced by [`SemanticsTree::collect_updates`].
+    /// Apply the diff produced by [`SemanticsTree::collect_updates`](crate::SemanticsTree::collect_updates).
     fn update(&mut self, diff: &SemanticsDiff);
     fn capabilities(&self) -> AccessibilityCapabilities;
     /// Request an action on a node.

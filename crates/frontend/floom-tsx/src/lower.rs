@@ -609,7 +609,7 @@ pub fn lower(parsed: &Parsed) -> Result<UiDocument> {
 /// Lower a parsed TSX module and surface the app/window config.
 ///
 /// Resolution of the entry (`mount`, the `<App>` wrapper, `window.*` calls) lives
-/// in [`entry::resolve`]; this lowers the resolved root into a document.
+/// in [`entry::resolve`](crate::entry::resolve); this lowers the resolved root into a document.
 pub fn lower_with_app(parsed: &Parsed) -> Result<(UiDocument, crate::entry::AppConfig)> {
     let entry = crate::entry::resolve(parsed)?;
     let doc = lower_with_root(parsed, &entry.root)?;
@@ -618,7 +618,7 @@ pub fn lower_with_app(parsed: &Parsed) -> Result<(UiDocument, crate::entry::AppC
 
 /// Lower a resolved root (`mount` target, default export, or `<App>` child) into
 /// a validated `UiDocument`. Entry resolution and window config live upstream in
-/// [`entry::resolve`]; this only turns JSX into nodes and bindings.
+/// [`entry::resolve`](crate::entry::resolve); this only turns JSX into nodes and bindings.
 pub fn lower_with_root(parsed: &Parsed, root_jsx: &Option<RootJsx>) -> Result<UiDocument> {
     // Module-level signal/context declarations are the authoritative bindings;
     // JSX-derived refs/handlers reference them and must not be duplicated.
