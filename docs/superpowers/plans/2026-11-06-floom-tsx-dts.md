@@ -332,7 +332,7 @@
           }
       }
       // 颜色类型收窄、domain 联合、App 包装器、shim 函数、entry 句柄。
-      assert!(dts.contains("Floom.Color = `#${string}`"));
+      assert!(dts.contains("export type Color = `#${string}`"), "color must be narrowed to #hex");
       assert!(dts.contains("\"horizontal\" | \"vertical\""));
       assert!(dts.contains("interface AppProps"));
       assert!(dts.contains("export function createSignal<T>"));
@@ -365,9 +365,85 @@
   在 `decl_parity.rs` 里实现轻量文本提取（**不引入 `regex` 依赖**，仅用字符串切分），再写以下断言。提取函数：
   ```rust
   /// 抽取 `IntrinsicElements { ... }` 里的 `Key: Floom.XxxProps;` 的 Key。
-  fn intrinsic_tags(dts: &str) -> Vec<String> { /* 行扫描，仅在该块内 */ }
+  fn intrinsic_tags(dts: &str) -> Vec<String> {
+      let mut out = Vec::new();
+      let mut in_block = false;
+      for line in dts.lines() {
+          if line.trim_start().starts_with("interface IntrinsicElements") {
+              in_block = true;
+              continue;
+          }
+          if in_block {
+              let t = line.trim();
+              if t == "}" { break; }
+              if let Some((key, _)) = t.split_once(':') {
+                  out.push(key.trim().to_string());
+              }
+          }
+      }
+      out
+  }
   /// 抽取某个 `interface XxxProps { ... }` 内的 `name?: type;` 字段名。
-  fn field_names(dts: &str, interface: &str) -> Vec<String> { /* 行扫描 */ }
+  fn field_names(dts: &str, interface: &str) -> Vec<String> {
+      let marker = format!("interface {interface}");
+      let mut out = Vec::new();
+      let mut depth: i32 = 0;
+      let mut in_iface = false;
+      for line in dts.lines() {
+          let t = line.trim_start();
+          if t.starts_with(&marker) {
+              in_iface = true;
+              depth = 0;
+              continue;
+          }
+          if in_iface {
+              depth += t.matches('{').count() as i32 - t.matches('}').count() as i32;
+              if let Some((name, _)) = t.split_once(':') {
+                  let name = name.trim();
+                  if !name.is_empty()
+                      && name.chars().next().map(|c| c.is_alphabetic()).unwrap_or(false)
+                  {
+                      out.push(name.to_string());
+                  }
+              }
+              if depth <= 0 { break; }
+          }
+      }
+      out
+  }
+  /// 抽取所有 `interface XxxProps` 的名字。
+  fn interface_names(dts: &str) -> Vec<String> {
+      let mut out = Vec::new();
+      for line in dts.lines() {
+          let t = line.trim_start();
+          if let Some(rest) = t.strip_prefix("interface ") {
+              if let Some(name) = rest.split_whitespace().next() {
+                  if name.ends_with("Props") {
+                      out.push(name.to_string());
+                  }
+              }
+          }
+      }
+      out
+  }
+  /// `decl.rs::kind_ts_name` 的镜像（原生 → Web/Video/Map/TextInput，其余 PascalCase）。
+  fn ts_name(kind: floem_dsl::ui_ir::NodeKind) -> String {
+      use floem_dsl::ui_ir::NativeKind;
+      use floem_dsl::ui_ir::NodeKind;
+      match kind {
+          NodeKind::Native(NativeKind::Web) => "Web".to_string(),
+          NodeKind::Native(NativeKind::Video) => "Video".to_string(),
+          NodeKind::Native(NativeKind::Map) => "Map".to_string(),
+          NodeKind::Native(NativeKind::TextInput) => "TextInput".to_string(),
+          other => other.name().split('_').map(|s| {
+              let mut c = s.chars();
+              match c.next() {
+                  Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+                  None => String::new(),
+              }
+          }).collect(),
+      }
+  }
   ```
   测试：
   ```rust
@@ -381,7 +457,7 @@
   }
 
   #[test] fn parity_prop_accepted() {
-      use floom_dsl::ui_ir::{NodeKind, all_prop_names, prop_spec};
+      use floem_dsl::ui_ir::{NodeKind, prop_spec};
       let dts = floem_tsx::generate_dts();
       for kind in NodeKind::ALL {
           let iface = format!("{}Props", ts_name(kind));
@@ -396,8 +472,17 @@
   #[test] fn parity_event_accepted() {
       use floom_dsl::ui_ir::EventName;
       let dts = floem_tsx::generate_dts();
-      /* 从 IntrinsicElements 的每个接口里抽取 onXxx 字段，strip "on" 后
-         EventName::parse 必须成功 */
+      // 遍历所有 XxxProps 接口，抽取 onXxx 字段，strip "on" 后 EventName::parse 必须成功。
+      for iface in interface_names(&dts) {
+          for field in field_names(&dts, &iface) {
+              if let Some(name) = field.strip_prefix("on") {
+                  let ev = name.chars().next().unwrap().to_lowercase().collect::<String>()
+                      + &name[1..];
+                  assert!(EventName::parse(&ev).is_some(),
+                      "declared handler on{name} does not resolve to a known event");
+              }
+          }
+      }
   }
 
   #[test] fn parity_entry_accepted() {
@@ -429,13 +514,14 @@
   }
 
   #[test] fn parity_full_document_roundtrip() {
-      // 用从生成文本里抽出的每个 tag+field 拼出一段 TSX，整体编译必须成功。
+      // 用从生成文本里抽出的每个 tag 拼出一段 TSX，整体编译必须成功。
+      // 每个组件用最简 <Tag />（schema 属性都是可选的），容器无子节点也可解析；
+      // 属性/事件的逐个接受已由 parity_prop_accepted / parity_event_accepted 覆盖。
       let dts = floem_tsx::generate_dts();
       let mut body = String::new();
       for tag in intrinsic_tags(&dts) {
           if tag == "App" { continue; }
-          // 跳过原生/占位里需要特殊子树的组件也可；这里统一给属性样本值。
-          body += &element_with_samples(tag, &dts);
+          body += &format!("<{tag} />");
       }
       let src = format!(
           "import {{ mount }} from \"floom\";\nfunction App() {{ return <Stack>{body}</Stack>; }}\nmount(App);"
@@ -444,17 +530,18 @@
   }
 
   #[test] fn parity_encouraged_syntax() {
+      // 验证 parser 不拒绝 .d.ts 鼓励的 TS 语法。
       let src = r#"
-        import type { Component } from "floom";
-        const [n, setN]: [floom.Accessor<number>, floom.Setter<number>] = createSignal<number>(0);
+        import { createSignal, mount } from "floom";
+        const [n, setN]: [floom.Accessor<number>, floem.Setter<number>] = createSignal<number>(0);
         function App(): JSX.Element { return <Stack />; }
-        const C: Component = () => <Stack />;
+        const C: floem.Component = () => <Stack />;
         mount(App);
       "#;
-      // 注：该片段需把 Accessor/Setter 从模块导入；实际只验证 parser 不拒绝这些语法。
+      floem_tsx::compile(src).expect("encouraged TS syntax must parse");
   }
   ```
-  > `element_with_samples(tag, dts)`：对 `field_names` 的每个字段（跳过 `class`/`children`/`when`-这类 bool 给 `true`、number 给 `0`、Text/Color 给 `"x"`/`"#abcdef"`、domain 取第一项、List 跳过），拼成 `<Tag a={0} label="x" ... />`，容器再塞一个 `<Text label="x"/>` 子节点。该辅助函数实现在测试文件内。
+  > `parity_full_document_roundtrip` 用最简 `<Tag />` 拼装，避免给每个属性塞样本值导致的类型/子树噪声；属性与事件的逐个接受分别由 `parity_prop_accepted` / `parity_event_accepted` 证明，整体仍满足「声明 ⊆ 解析器接受」。
 
 - [ ] **Step 2：跑测试**
 
