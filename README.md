@@ -39,7 +39,7 @@ fn counter_view() -> impl IntoView {
 ```
 
 
-<img src="docs/img/quickstart.jpg" width="300"/>
+<img src="../floem-archive/docs/img/quickstart.jpg" width="300"/>
 
 
 ## Features
@@ -53,7 +53,7 @@ Inspired by [Xilem](https://github.com/linebender/xilem), [Leptos](https://githu
 - **Customizable widgets**: Widgets are highly customizable. You can customize both the appearance and behavior of widgets using the styling API, which supports theming with classes. You can also install third-party themes.
 - **Transitions and Animations**: Floom supports both transitions and animations. Transitions, like css transitions, can animate any property that can be interpolated and can be applied alongside other styles, including in classes.
     Floom also supports full keyframe animations that build on the ergonomics of the style system. In both transitions and animations, Floom supports easing with spring functions.
-- **Element inspector**: Inspired by your browser's developer tools, Floom provides a [diagnostic tool](docs/img/inspector.jpg) to debug your layout.
+- **Element inspector**: Inspired by your browser's developer tools, Floom provides a [diagnostic tool](../floem-archive/docs/img/inspector.jpg) to debug your layout.
 - **Global themes**: Support for light and dark themes, built in design system to easily declare your own
 - **Localization**: Floom supports localizations via [Fluent](https://github.com/projectfluent/fluent-rs) crate with support for fallbacks, easy switching languages on runtime or even overriding active language for chosen part of you app
 
@@ -66,18 +66,18 @@ Backend authors can experiment with the public but unstable [`floom::embedder`](
 To sample Floom's capabilities, check out the repo and run the [showcase](examples/floom-showcase/src/main.rs) example with `cargo run -p floom-showcase`. Its `/components` page mounts every Tier-0 widget; the images below are its widget gallery and inspector views.
 
 
-<img src="docs/img/widget-gallery-dark.jpg" width="900"/>
+<img src="../floem-archive/docs/img/widget-gallery-dark.jpg" width="900"/>
 
 <details>
     <summary>Light Mode</summary>
 
-<img src="docs/img/widget-gallery-light.jpg" width="900"/>
+<img src="../floem-archive/docs/img/widget-gallery-light.jpg" width="900"/>
 </details>
 
 
 
 
-<img src="docs/img/inspector.jpg" width="900"/>
+<img src="../floem-archive/docs/img/inspector.jpg" width="900"/>
 
 To help you master Floom, we provide [documentation](https://docs.rs/floom) and [code examples](examples/).
 

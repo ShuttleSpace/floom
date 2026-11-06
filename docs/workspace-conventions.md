@@ -5,7 +5,7 @@
 Floom is a Cargo workspace organised after the model of
 [EpicGames/lore](https://github.com/EpicGames/lore): a single namespace prefix,
 single-responsibility crates, a `crates/vendor/` directory for forked upstream code with
-source attribution, and a `notices/` directory for license compliance.
+source attribution, and a root `deny.toml` for license compliance.
 
 ## 1. Crate naming
 
@@ -80,7 +80,8 @@ workspace-wide dependency pin — lives under its own directory instead (see
 
 They are wired in via `[patch]` in the root `Cargo.toml` and are listed in
 `exclude = ["vendor"]` so they are not ordinary workspace members. License
-compliance for them is recorded in `notices/manual-additions.toml`.
+compliance for them is recorded in the archived
+`../floem-archive/notices/manual-additions.toml`.
 
 Current forks:
 
@@ -98,12 +99,14 @@ Current forks:
   workspace's own `winit` pin), so it is not `exclude`d — but it carries a
   `NOTICE.md` all the same. See `ui-events/floem-winit/NOTICE.md`.
 
-## 4. License compliance → `notices/`
+## 4. License compliance → `deny.toml`
 
-`notices/` holds `deny.toml` (cargo-deny) and `about.toml` (cargo-about) configs.
-Run `cargo deny --config notices/deny.toml check` and
-`cargo about generate --config notices/about.toml -o THIRD-PARTY.html` after
-installing the tools. See `notices/README.md`.
+The root `deny.toml` is the dependency-veto / license policy CI enforces
+(`cargo deny check`, see `ci-core.yml`). The `cargo-about` configuration and the
+manual license annotations for the in-tree forks live in the external archive
+under `../floem-archive/notices/` (`about.toml`, `manual-additions.toml`,
+`README.md`); generate a third-party notice there with
+`cargo about generate --config ../floem-archive/notices/about.toml -o THIRD-PARTY.html`.
 
 ## 5. Shared workspace metadata
 

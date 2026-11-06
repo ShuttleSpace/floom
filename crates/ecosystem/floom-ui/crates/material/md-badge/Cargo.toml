@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# Ported off the v1 monolith (see docs/porting-floem-ui-to-2.0.md). The theme
+# Ported off the v1 monolith (see ../floem-archive/docs/porting-floem-ui-to-2.0.md). The theme
 # signal comes from floom-widget-runtime, which is already ported.
 #
 # `features = ["material"]`. All three design-system features are the *same* gate

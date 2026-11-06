@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+# Ported off the v1 `floom` monolith (see ../floem-archive/docs/porting-floem-ui-to-2.0.md).
 #
 # The `features = ["fluent"]` is on the *dev*-dependency: this kit takes a
 # snapshot of its own design system rather than reading the app-wide theme

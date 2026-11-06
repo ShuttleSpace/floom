@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+# Ported off the v1 `floom` monolith (see ../floem-archive/docs/porting-floem-ui-to-2.0.md).
 # v1's `svg` view and the renderer's `usvg` path have no 2.0 equivalent, so the
 # icon is now a `floom_widgets::VectorIcon` filled from parsed path data.
 floom-core-theme = { workspace = true }

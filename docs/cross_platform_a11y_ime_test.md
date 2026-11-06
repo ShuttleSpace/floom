@@ -2,7 +2,7 @@
 <!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Cross-platform a11y + IME on-device integration test (#116)
 
-Companion to `docs/accessibility.md` (neutral protocol + desktop/mobile backends)
+Companion to `../floem-archive/docs/accessibility.md` (neutral protocol + desktop/mobile backends)
 and `docs/ohos.md`. This is the **manual on-device** verification plan for the
 screen-reader (a11y) and soft-keyboard (IME) paths on the three mobile targets
 after the automated tests pass:

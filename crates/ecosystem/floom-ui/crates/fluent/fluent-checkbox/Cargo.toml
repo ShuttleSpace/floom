@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# Ported off the v1 monolith (see docs/porting-floem-ui-to-2.0.md). The theme
+# Ported off the v1 monolith (see ../floem-archive/docs/porting-floem-ui-to-2.0.md). The theme
 # binding is `RwSignal<MultiTheme>`, built here for `DesignSystem::Fluent`
 # rather than read from the app-wide signal -- the same choice `fluent-radio`
 # makes, and the opposite of Material's.

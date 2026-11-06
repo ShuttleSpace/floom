@@ -86,7 +86,7 @@ fn an_explicit_size_replaces_the_token_and_leaves_the_glyph() {
 /// So the crate's own design system is unverified by test, and the only thing that
 /// could verify it is a `MultiTheme` that actually carried its design system. Until
 /// that exists, a kit can be wired to the wrong theme and no assertion here will
-/// notice. Recorded in `docs/porting-floem-ui-to-2.0.md` rather than papered over
+/// notice. Recorded in `../floem-archive/docs/porting-floem-ui-to-2.0.md` rather than papered over
 /// with a test that passes for the wrong reason.
 #[test]
 fn the_crate_really_reads_cupertino_tokens() {

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# Ported off the v1 `floom` monolith (see docs/porting-floem-ui-to-2.0.md).
+# Ported off the v1 `floom` monolith (see ../floem-archive/docs/porting-floem-ui-to-2.0.md).
 floom-core-theme = { workspace = true }
 # The panel is a host overlay: `OverlayHost` is the engine's bookkeeping for
 # one, and it is shared by the three design systems.

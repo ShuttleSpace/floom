@@ -42,4 +42,4 @@ without being invalidated.
 ## Theme-agnostic
 
 Like every 2.0 widget it takes resolved values; deciding which palette is the
-kit's job. See `docs/porting-floem-ui-to-2.0.md`.
+kit's job. See `../floem-archive/docs/porting-floem-ui-to-2.0.md`.

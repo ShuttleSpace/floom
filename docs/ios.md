@@ -37,7 +37,7 @@
 This document tracks the iOS backend for Floom, built on top of the
 experimental [`embedder`](../src/embedder) protocol from
 [`docs/superpowers/plans/2026-08-03-embedder-api.md`](../docs/superpowers/plans/2026-08-03-embedder-api.md).
-It mirrors the structure of [`android.md`](./android.md) (Phase 1, done) so the
+It mirrors the structure of [`android.md`](../floem-archive/docs/android.md) (Phase 1, done) so the
 two mobile backends stay comparable.
 
 ## Architecture at a glance

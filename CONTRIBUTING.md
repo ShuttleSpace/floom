@@ -15,7 +15,7 @@ crates/
   floom-<name>/          one directory per crate (core, runtime, render, ...)
   vendor/                forked upstream trees (separate workspaces)
   ecosystem/             satellite projects: floom-ui, floom-editor, plugins
-docs/  examples/  scripts/  notices/  tests/
+docs/  examples/  scripts/  tests/
 ```
 
 The `floom` facade keeps its integration tests inside the crate
