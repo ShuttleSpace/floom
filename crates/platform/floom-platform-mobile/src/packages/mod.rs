@@ -16,21 +16,10 @@
 //!
 //! # What is not here
 //!
-//! Everything else — the battery, the connectivity, the device's identity,
-//! the biometrics, the location, the notifications, the sensors, the share
-//! sheet, the haptics — is a **capability**, and a capability is a plugin:
-//! one crate, opt-in by dependency, reaching the OS through a native host
-//! library. They live under `crates/floom-plugin-<capability>/`.
-//!
-//! The split is not cosmetic. A capability in this crate would be linked into
-//! every mobile app that depends on the platform adapter, whether it wanted
-//! the capability or not; a capability in its own crate is linked only by the
-//! apps that ask for it. That is the whole of "the SDK stays small".
-//!
-//! The rule is enforced, not merely documented: the architecture gate refuses
-//! a dependency from a `floom-platform-*` crate to a `floom-plugin-*` crate,
-//! because the platform reaching *up* to a plugin is the direction that would
-//! put the capability back in.
+//! Every other mobile capability — battery, connectivity, identity, biometrics,
+//! location, notifications, sensors, share sheet, haptics — is a **plugin**, not
+//! platform code. The split and the architecture-gate rule that enforces it are
+//! in `docs/api/mobile-platform-layering.md`.
 
 pub mod clipboard;
 pub mod keyboard;

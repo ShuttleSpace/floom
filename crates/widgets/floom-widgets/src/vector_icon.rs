@@ -1,35 +1,13 @@
 // SPDX-License-Identifier: MIT
 //! `VectorIcon` — an icon drawn from vector path data.
 //!
-//! Icons used to be handed as SVG markup to the renderer (`usvg` +
-//! `Renderer::draw_svg`). Floom's paint contract has no SVG: a widget draws with
-//! rectangles, text and [`Path`]s. Rather than port a document renderer into a
-//! widget crate, this draws the one shape every icon set is made of — a filled
-//! outline — and [`crate::svg_path`] parses the `d` attribute.
+//! The paint contract has no SVG, so this draws the one shape every icon set is
+//! made of — a filled outline — and [`crate::svg_path`] parses the `d` attribute.
+//! It is a widget (not a `Canvas`) so it earns intrinsic size, semantics, and a
+//! scene snapshot a test can assert.
 //!
-//! ## Why this is a widget and not a `Canvas`
-//!
-//! A `Canvas` closure could do the same drawing, but the icon is the most reused
-//! piece of vector UI there is (16 floem-ui components draw one), so it earns a
-//! type: intrinsic size, semantics, and a scene snapshot a test can assert. All
-//! three kits ship identical icon sets — Material, Cupertino and Fluent's tables
-//! differ only in glyphs — so this is promoted once here rather than written
-//! three times.
-//!
-//! ## Theme-agnostic
-//!
-//! Like every 2.0 widget it takes a resolved `color` and `size`; deciding *which*
-//! palette is the kit's job (`floom-core-theme` -> `MdIcon::resolve`). See
-//! `docs/porting-floem-ui-to-2.0.md`.
-//!
-//! ## Geometry
-//!
-//! The path is authored in a view box (`viewBox="0 0 24 24"`, or any other user
-//! space) and mapped onto whatever box layout hands the widget. The mapping
-//! preserves aspect ratio and centres the result, because stretching a glyph to
-//! fill an over-sized slot is never what a caller means and a squashed `menu`
-//! reads as a bug. Paint fills `cx.bounds()`; `size` only feeds the layout
-//! request.
+//! The view-box path is mapped onto the layout box preserving aspect ratio and
+//! centred, because stretching or squashing a glyph reads as a bug.
 
 use floom_accessibility::SemanticsRole;
 use floom_core::{

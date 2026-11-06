@@ -1,15 +1,6 @@
 // SPDX-License-Identifier: MIT
 //! The devtools panel — the visible half of [`crate::Inspector`].
 //!
-//! Electron's devtools are one line of code and a keystroke away: `require('electron-devtools')`
-//! in, then Ctrl+Shift+I (or the menu item) toggles the panel. The same deal,
-//! spelled for Floom:
-//!
-//! ```ignore
-//! floom::devtools::attach(&mut host);      // one line, once, at startup
-//! // ... then press F12 at any time to show/hide the panel.
-//! ```
-//!
 //! ## What this module owns
 //!
 //! Three things the headless inspector deliberately did not:
