@@ -27,3 +27,6 @@ objc2 = "0.6"
 # The Android half reaches `Vibrator` through JNI.
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.22"
+
+[build-dependencies]
+cc = "1"

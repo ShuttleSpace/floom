@@ -36,3 +36,6 @@ dirs = "6"
 # `secret-tool` is libsecret's command-line face; the crate shell out to it the
 # same way `floom-plugin-open-url` shells out to `xdg-open`.
 [target.'cfg(target_os = "linux")'.dependencies]
+
+[build-dependencies]
+cc = "1"

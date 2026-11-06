@@ -30,3 +30,6 @@ objc2 = { version = "0.6", default-features = false, features = ["std"] }
 # in the lock via `floom-plugin-paths`.
 [target.'cfg(any(target_os = "linux", target_os = "windows"))'.dependencies]
 dirs = "6"
+
+[build-dependencies]
+cc = "1"

@@ -35,3 +35,6 @@ dispatch2 = { version = "0.3", default-features = false, features = [
     "std",
     "block2",
 ] }
+
+[build-dependencies]
+cc = "1"

@@ -26,3 +26,6 @@ jni = "0.22"
 # SystemConfiguration for the C functions it calls.
 [target.'cfg(target_os = "ios")'.dependencies]
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
+
+[build-dependencies]
+cc = "1"

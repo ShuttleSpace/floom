@@ -23,3 +23,6 @@ jni = "0.22"
 # same object graph on both, so both targets share one arm and one dependency.
 [target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
+
+[build-dependencies]
+cc = "1"

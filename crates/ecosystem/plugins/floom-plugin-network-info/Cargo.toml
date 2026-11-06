@@ -25,3 +25,6 @@ jni = "0.22"
 # (`CNCopySupportedInterfaces` / `CNCopyCurrentNetworkInfo`) — plain FFI, no
 # Objective-C messages, so no objc2 is involved.
 [target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
+
+[build-dependencies]
+cc = "1"

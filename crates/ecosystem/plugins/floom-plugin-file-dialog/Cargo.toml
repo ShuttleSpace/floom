@@ -38,3 +38,6 @@ windows-sys = { version = "0.61", features = [
   "Win32_UI_Shell_Common",
   "Win32_System_Com",
 ] }
+
+[build-dependencies]
+cc = "1"

@@ -1,0 +1,12 @@
+[package]
+name = "floom-plugin-network-info-example"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+floom-plugin-network-info = { path = ".." }
+
+# The example's own workspace, so it does not join the plugin workspace above
+# it and gets a target directory of its own.
+[workspace]

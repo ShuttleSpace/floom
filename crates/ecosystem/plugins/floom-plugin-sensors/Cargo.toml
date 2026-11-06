@@ -26,3 +26,6 @@ jni = "0.22"
 # CoreMotion for the two class lookups.
 [target.'cfg(target_os = "ios")'.dependencies]
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
+
+[build-dependencies]
+cc = "1"

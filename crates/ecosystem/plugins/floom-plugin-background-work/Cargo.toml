@@ -19,3 +19,6 @@ publish = false
 [target.'cfg(target_os = "android")'.dependencies]
 floom-platform-mobile = { path = "../../../platform/floom-platform-mobile", version = "0.2.0" }
 jni = "0.22"
+
+[build-dependencies]
+cc = "1"

@@ -33,3 +33,6 @@ objc2-core-location = { version = "0.3", default-features = false, features = [
     "std",
     "CLLocationManager",
 ] }
+
+[build-dependencies]
+cc = "1"

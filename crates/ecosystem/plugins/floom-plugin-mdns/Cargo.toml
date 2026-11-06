@@ -19,3 +19,6 @@ publish = false
 # mDNSResponder, which is what keeps a plugin whose siblings link nothing at
 # all honest about what adding this one costs.
 mdns-sd = "0.21"
+
+[build-dependencies]
+cc = "1"
