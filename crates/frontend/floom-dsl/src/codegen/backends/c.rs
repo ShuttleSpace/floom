@@ -311,11 +311,15 @@ mod tests {
         assert_eq!(c_type(&TypeRef::Bool), "bool");
         assert_eq!(c_type(&TypeRef::Bytes), "floom_bytes");
         assert_eq!(
-            c_type(&TypeRef::Resource(crate::codegen::schema::Ident::new("T").unwrap())),
+            c_type(&TypeRef::Resource(
+                crate::codegen::schema::Ident::new("T").unwrap()
+            )),
             "floom_resource_id"
         );
         assert_eq!(
-            c_type(&TypeRef::Handle(crate::codegen::schema::Ident::new("V").unwrap())),
+            c_type(&TypeRef::Handle(
+                crate::codegen::schema::Ident::new("V").unwrap()
+            )),
             "void *"
         );
         assert_eq!(

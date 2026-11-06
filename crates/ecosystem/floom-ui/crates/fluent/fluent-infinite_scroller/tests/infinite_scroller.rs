@@ -69,7 +69,6 @@ fn wheel(delta: f64) -> Event {
     })
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentInfiniteScrollerStyle = kit().resolved_style();
@@ -108,7 +107,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_viewport_is_painted_v1_s_colour() {
@@ -174,7 +172,6 @@ fn the_idle_footer_is_an_empty_box() {
         "v1's idle footer was the footer's padding tall"
     );
 }
-
 
 #[test]
 fn the_scroller_asks_for_more_at_the_end() {
@@ -267,7 +264,6 @@ fn the_loading_flag_is_the_hosts_to_write() {
         "and the host can start a fetch"
     );
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot() {

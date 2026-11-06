@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 use floom_core::{Element, ElementId, ElementKind, HostedKind, HostedNode, LayoutRequest};
-use floom_style::StyleProps;
 use floom_dsl::ui_ir::{NodeKey, NodeKind};
+use floom_style::StyleProps;
 
 use crate::LiveTree;
 

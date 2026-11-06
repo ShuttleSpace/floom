@@ -1,4 +1,3 @@
-
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Rect, Widget};
 use floom_types::Color;
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
@@ -73,7 +72,6 @@ fn lines(kit: MaterialEmptyState) -> Vec<(String, f32, Color)> {
     out
 }
 
-
 /// The tokens and the ink reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -118,7 +116,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_surface_is_painted_v1_s_colour() {

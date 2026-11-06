@@ -1,4 +1,3 @@
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -76,7 +75,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -149,7 +147,6 @@ fn the_height_is_the_prop_s_when_it_is_positive() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_area_is_painted_v1_s_colours() {
@@ -241,7 +238,6 @@ fn the_arrows_are_painted_with_v1_s_glyphs() {
         .expect("the next arrow is painted");
     assert_eq!(text, "›", "v1's next glyph");
 }
-
 
 /// Only the current slide is mounted.
 #[test]

@@ -1,5 +1,3 @@
-
-
 use std::path::PathBuf;
 
 /// The dialog arms — the crate's one list of them.

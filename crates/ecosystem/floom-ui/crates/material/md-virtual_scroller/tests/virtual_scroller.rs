@@ -1,4 +1,3 @@
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -85,7 +84,6 @@ fn wheel(delta: f64) -> Event {
     })
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -143,7 +141,6 @@ fn the_style_reports_the_numbers_the_paint_uses() {
     assert_eq!(style.viewport_height, 200.0, "the caller's viewport height");
 }
 
-
 #[test]
 fn the_viewport_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -169,7 +166,6 @@ fn the_viewport_is_painted_v1_s_colour() {
         "v1's outline was the outline colour at 80"
     );
 }
-
 
 #[test]
 fn only_the_windows_rows_are_mounted() {
@@ -254,7 +250,6 @@ fn the_props_report_the_numbers() {
         "the props' callback slot stays empty; the kit holds its own handle"
     );
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

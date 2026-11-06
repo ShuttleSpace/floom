@@ -11,14 +11,14 @@
 //! against the measurements directly, because a floor is a ">= " claim, not an
 //! exact value.
 
-use floom_snapshot::{PixelSnapshot, ReferencePixels};
-use floom_testkit::{Selector, TestApp};
-use floom_types::contrast_ratio;
-use floom_types::{Point, Rect};
 use floom_dsl::ui_ir::{
     ColorRole, ContractDiff, ContractVersion, DesignContract, Dimensions, Radius, Spacing,
     TypeStyle, compare,
 };
+use floom_snapshot::{PixelSnapshot, ReferencePixels};
+use floom_testkit::{Selector, TestApp};
+use floom_types::contrast_ratio;
+use floom_types::{Point, Rect};
 use floom_widgets::Text;
 
 use crate::screens::{Screen, screen_size};

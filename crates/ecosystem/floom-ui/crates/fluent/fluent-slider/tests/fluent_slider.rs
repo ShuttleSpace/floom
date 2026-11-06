@@ -46,7 +46,6 @@ fn paint(slider: &Slider, bounds: Rect) -> (Vec<PaintOp>, String) {
     (recorder.ops().to_vec(), recorder.snapshot())
 }
 
-
 #[test]
 fn the_track_is_an_undimmed_surface_variant() {
     let binding = theme();
@@ -89,7 +88,6 @@ fn the_geometry_is_the_slider_tokens() {
     assert_eq!(style.thumb_size, tokens.thumb_size);
     assert_eq!(style.thumb_radius, tokens.thumb_radius);
 }
-
 
 #[test]
 fn neither_a_halo_nor_a_drop_shadow() {
@@ -159,7 +157,6 @@ fn the_track_corner_radius_token_is_readable_but_unexpressible() {
         "the style's only radius field is the thumb's, and it carries the token"
     );
 }
-
 
 #[test]
 fn the_mounted_slider_paints_exactly_three_shapes() {

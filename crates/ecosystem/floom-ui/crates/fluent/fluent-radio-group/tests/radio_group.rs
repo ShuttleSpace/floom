@@ -54,7 +54,6 @@ fn ring_of(row: &dyn Widget) -> Box<dyn Widget> {
     row.children().remove(0).build()
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentRadioGroupStyle = kit().resolved_style();
@@ -87,7 +86,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_ring_and_the_dot_are_painted_in_v1_s_colours() {
@@ -180,7 +178,6 @@ fn the_label_is_painted_in_v1_s_ink() {
         "and the chosen label takes the indicator's colour"
     );
 }
-
 
 #[test]
 fn the_option_chosen_before_mount_is_the_chosen_one() {

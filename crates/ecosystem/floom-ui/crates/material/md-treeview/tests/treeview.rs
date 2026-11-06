@@ -1,4 +1,3 @@
-
 use floom_core::Widget;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
@@ -47,7 +46,6 @@ fn to_paint(c: floom_core_theme::tokens::color::Color) -> floom_types::Color {
         a: c.a,
     }
 }
-
 
 /// The six scalar tokens, read from Material's table.
 #[test]
@@ -104,7 +102,6 @@ fn the_unused_token_is_carried_rather_than_deleted() {
     );
 }
 
-
 /// Field for field, including the nesting and the initial `expanded`.
 #[test]
 fn the_props_nodes_become_engine_nodes() {
@@ -152,7 +149,6 @@ fn the_two_node_types_are_different_shapes() {
     );
 }
 
-
 /// The rows the tree shows, through the kit.
 #[test]
 fn the_kit_shows_the_same_rows_v1_would_have() {
@@ -199,7 +195,6 @@ fn the_kits_forest_and_the_widgets_are_one_allocation() {
          either is seen by both"
     );
 }
-
 
 /// `props()` reports the nodes and the callback, as v1 did.
 #[test]

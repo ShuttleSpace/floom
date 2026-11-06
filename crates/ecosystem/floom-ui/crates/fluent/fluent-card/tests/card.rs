@@ -43,7 +43,6 @@ fn surface_inside(ripple: &floom_widgets::Ripple) -> floom_widgets::Surface {
         .clone()
 }
 
-
 #[test]
 fn a_new_card_resolves_its_own_kits_tokens() {
     assert_eq!(
@@ -92,7 +91,6 @@ fn card_radius(theme: &MultiTheme) -> f32 {
     }
 }
 
-
 #[test]
 fn the_drawn_radius_is_the_themes_not_the_cards_token() {
     let token_radius = card().resolved_style().border_radius;
@@ -124,7 +122,6 @@ fn the_drawn_radius_follows_the_theme_rather_than_a_literal() {
          the theme, not baked in. A literal would fail here."
     );
 }
-
 
 #[test]
 fn the_card_is_a_ripple_over_a_surface() {
@@ -164,7 +161,6 @@ fn the_surface_inside_the_ripple_paints() {
         "drawn at the theme's radius: {painted}"
     );
 }
-
 
 #[test]
 fn the_content_goes_inside_the_box() {
@@ -215,7 +211,6 @@ fn the_padding_and_the_shadow_survive_the_ripple() {
     assert!(declared.padding.is_some(), "padding");
     assert!(surface.decoration().drop_shadow().is_some(), "elevation");
 }
-
 
 #[test]
 fn elevation_is_clamped_to_the_declared_levels() {

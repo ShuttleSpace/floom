@@ -1,4 +1,3 @@
-
 use floom_core::Widget;
 use floom_signal::SignalGet;
 use floom_types::{Color, Rect};

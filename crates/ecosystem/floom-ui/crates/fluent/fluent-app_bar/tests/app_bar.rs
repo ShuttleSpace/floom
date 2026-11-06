@@ -40,7 +40,6 @@ fn slot(text: &'static str) -> Child {
     })
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentAppBarStyle = kit().resolved_style();
@@ -92,7 +91,6 @@ fn the_callers_height_wins_over_the_token() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_bar_is_painted_in_v1_s_colour() {
@@ -165,7 +163,6 @@ fn an_elevation_draws_the_shadow() {
         "v1's shadow: the blur grows with the elevation, the spread is one"
     );
 }
-
 
 #[test]
 fn the_callers_slots_are_mounted() {

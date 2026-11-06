@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{Child, ChildKey, LayoutRequest, WidgetAny};
@@ -385,10 +384,7 @@ impl MaterialNumberInput {
                     .height(style.button_size),
                 dec,
             )
-            .push_layout(
-                LayoutRequest::new().grow(1.0),
-                text,
-            )
+            .push_layout(LayoutRequest::new().grow(1.0), text)
             .push_layout(
                 LayoutRequest::new()
                     .width(style.button_size)

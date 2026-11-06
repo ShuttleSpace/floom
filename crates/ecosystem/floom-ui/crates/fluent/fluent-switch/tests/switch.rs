@@ -20,7 +20,6 @@ fn fluent() -> FluentSwitch {
     FluentSwitch::new().with_theme(MultiTheme::new_for(DesignSystem::Fluent))
 }
 
-
 #[test]
 fn the_engine_default_would_have_drawn_a_different_switch() {
     let engine = floom_widgets::Switch::new("").track_bounds(ROW);
@@ -78,7 +77,6 @@ fn the_dead_thumb_offset_is_not_reproduced() {
     );
     assert_ne!(on.x0, ROW.x0 + 20.0, "the formula v1 never applied");
 }
-
 
 #[test]
 fn the_resting_colours_come_from_the_theme() {
@@ -155,7 +153,6 @@ fn a_disabled_switch_paints_the_explicit_disabled_colours() {
     );
     assert!(painted.contains(&track), "expected {track} in {painted}");
 }
-
 
 #[test]
 fn the_checked_flag_reaches_the_engine() {

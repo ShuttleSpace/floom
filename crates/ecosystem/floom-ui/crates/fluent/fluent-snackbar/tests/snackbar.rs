@@ -110,7 +110,6 @@ fn press_action(surface: &Box<dyn WidgetAny>) {
     action.event(&mut up, id);
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentSnackbarStyle = kit().resolved_style();
@@ -150,7 +149,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-
 #[test]
 fn the_bar_is_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -186,7 +184,6 @@ fn the_action_is_painted_in_v1_s_ink() {
         "the action's ink"
     );
 }
-
 
 #[test]
 fn the_bar_is_only_there_while_the_snackbar_is_up() {

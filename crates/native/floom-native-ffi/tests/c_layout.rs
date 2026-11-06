@@ -56,9 +56,11 @@ fn scratch() -> PathBuf {
 /// Find a C compiler, or `None`.
 fn find_compiler() -> Option<String> {
     if let Ok(explicit) = std::env::var("CC")
-        && !explicit.is_empty() && which(&explicit) {
-            return Some(explicit);
-        }
+        && !explicit.is_empty()
+        && which(&explicit)
+    {
+        return Some(explicit);
+    }
     COMPILERS
         .iter()
         .find(|name| which(name))

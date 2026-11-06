@@ -48,7 +48,6 @@ fn to_paint(c: floom_core_theme::tokens::color::Color) -> floom_types::Color {
     }
 }
 
-
 #[test]
 fn the_tokens_reach_the_engine_style() {
     let theme = fluent();
@@ -103,7 +102,6 @@ fn the_unused_token_is_carried_rather_than_deleted() {
     );
 }
 
-
 #[test]
 fn the_props_nodes_become_engine_nodes() {
     let nodes = to_engine_nodes(&props_nodes());
@@ -147,7 +145,6 @@ fn the_two_node_types_are_different_shapes() {
         "CONTROL: two distinct types, so the mapping is a real conversion"
     );
 }
-
 
 #[test]
 fn the_kit_shows_the_same_rows_v1_would_have() {
@@ -193,7 +190,6 @@ fn the_kits_forest_and_the_widgets_are_one_allocation() {
          either is seen by both"
     );
 }
-
 
 #[test]
 fn the_props_report_the_nodes_and_the_callback() {

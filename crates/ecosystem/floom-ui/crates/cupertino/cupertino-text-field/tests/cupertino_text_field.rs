@@ -583,7 +583,6 @@ fn the_props_cross_into_the_widget() {
     );
 }
 
-
 /// **The tripwire for the three kits converging.** Cupertino tints its rim on
 /// hover, Material thickens it on focus, Fluent rings the box on focus. Each of
 /// the assertions below is one of those answers.

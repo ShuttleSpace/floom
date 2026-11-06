@@ -34,12 +34,12 @@
 
 use std::collections::HashMap;
 
+use crate::services::{Scope, Services};
 use floom_core::error::{ErrorBoundary, Outcome};
 use floom_platform::{Platform, PlatformEvent, SurfaceTarget};
 use floom_renderer::{
     AttachedSurface, ExternalFrame, Presenter, RendererCapabilities, SurfaceHandles,
 };
-use crate::services::{Scope, Services};
 use floom_types::{
     CursorStyle, Event, ImeUpdate, Key, KeyEvent, KeyPhase, Modifiers, Point, PointerEvent,
     PointerKind, PointerPhase, Rect, ScrollEvent, Size, SurfaceId, WindowId,

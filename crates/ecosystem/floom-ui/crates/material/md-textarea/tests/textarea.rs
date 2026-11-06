@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{ElementId, Event, Rect, Widget};
@@ -53,7 +52,6 @@ fn type_text<W: Widget + ?Sized>(widget: &mut W, ch: char) {
     let mut key = TestEventContext::new(id, BOX, Event::Key(KeyEvent::down(Key::Char(ch))));
     widget.event(&mut key, id);
 }
-
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -117,7 +115,6 @@ fn the_dead_numbers_are_v1_s() {
     );
 }
 
-
 #[test]
 fn the_box_is_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -178,7 +175,6 @@ fn the_box_is_as_tall_as_the_rows_ask() {
         "the field is as tall as the rows ask for"
     );
 }
-
 
 /// Typing fires the callback, and the text is the field's.
 #[test]

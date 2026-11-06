@@ -85,9 +85,10 @@ impl Counter {
         for index in 0..self.host.node_count() {
             let node = self.host.node_at(index).unwrap();
             if let Some(button) = self.host.widget::<Button>(node)
-                && button.label() == label {
-                    return node;
-                }
+                && button.label() == label
+            {
+                return node;
+            }
         }
         panic!("no button labelled {label:?}");
     }

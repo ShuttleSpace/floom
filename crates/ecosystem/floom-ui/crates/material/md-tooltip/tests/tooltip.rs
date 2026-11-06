@@ -1,4 +1,3 @@
-
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget};
 use floom_types::{Color, PointerPhase};
 use floom_ui_composites::Tooltip;
@@ -90,7 +89,6 @@ fn bubble_painted(tooltip: &Tooltip) -> (Option<Color>, Option<Color>) {
     (fill, ink)
 }
 
-
 /// The tokens and the colours reach the engine's style.
 #[test]
 fn the_tokens_and_colours_reach_the_engine_style() {
@@ -124,7 +122,6 @@ fn the_gap_is_v1_s() {
         "v1's `translate_y(4.0)`, a literal and not a token"
     );
 }
-
 
 #[test]
 fn the_bubble_paints_v1_s_appearance() {

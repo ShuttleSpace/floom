@@ -6,16 +6,16 @@
 //! Rust-where-feasible half of the platform pattern: the other platforms hand
 //! their pointer to a native half, the browser *is* the native half.
 
+use floom_native_ffi::CProviderError;
+use floom_native_ffi::floom_native::{
+    ClipSupport, InputModes, NativeCapabilities, NativeCompositionMode, NativeError, NativeSlot,
+    NativeState, NativeViewKind, NativeViewProvider,
+};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::c_void;
-use floom_native_ffi::floom_native::{
-    ClipSupport, InputModes, NativeCapabilities, NativeCompositionMode, NativeError, NativeState,
-    NativeViewKind, NativeViewProvider, NativeSlot,
-};
-use floom_native_ffi::CProviderError;
 use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::{spawn_local, JsFuture};
+use wasm_bindgen_futures::{JsFuture, spawn_local};
 use web_sys::{Document, HtmlElement, HtmlMediaElement, HtmlVideoElement, Window};
 
 use crate::common::PLUGIN_NAME;
@@ -150,7 +150,10 @@ impl NativeViewProvider for WebCameraProvider {
 
     fn blur(&mut self, _slot: NativeSlot) {}
 
-    fn snapshot(&mut self, _slot: NativeSlot) -> Option<floom_native_ffi::floom_native::NativeSnapshot> {
+    fn snapshot(
+        &mut self,
+        _slot: NativeSlot,
+    ) -> Option<floom_native_ffi::floom_native::NativeSnapshot> {
         None
     }
 

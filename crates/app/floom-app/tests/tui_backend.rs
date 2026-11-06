@@ -34,7 +34,6 @@ fn host_with_label(content: &str) -> WidgetHost {
 
 /// The characters of the busiest row, left to right, trimmed of padding.
 fn busiest_row(grid: &floom_renderer_tui::TuiGrid) -> String {
-    
     (0..grid.rows())
         .map(|row| {
             (0..grid.cols())

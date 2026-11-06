@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget, WidgetAny};
@@ -103,7 +102,6 @@ fn tap(dial: &Stack, index: usize) {
     pressable.event(&mut up, id);
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -163,7 +161,6 @@ fn a_disabled_dial_is_v1_s_dimmed_pair() {
     );
 }
 
-
 #[test]
 fn the_button_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -196,7 +193,6 @@ fn the_button_is_the_size_the_token_says() {
         "the token's button size"
     );
 }
-
 
 /// The fan is mounted only while the dial is open.
 #[test]

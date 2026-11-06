@@ -1,5 +1,3 @@
-
-
 use floom_core::Widget;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
@@ -30,8 +28,6 @@ fn to_paint(c: floom_core_theme::tokens::color::Color) -> floom_types::Color {
         a: c.a,
     }
 }
-
-
 
 #[test]
 fn the_tokens_reach_the_engine_surface() {
@@ -90,7 +86,6 @@ fn the_container_is_the_accent_at_26() {
     );
 }
 
-
 #[test]
 fn three_accents_are_fixed_literals_and_one_is_the_themes_error() {
     let theme = material();
@@ -137,7 +132,6 @@ fn the_variant_selects_the_accent_and_therefore_the_tint() {
         "and therefore two tints — so the variant is not read past the accent"
     );
 }
-
 
 /// The outer shape: a tinted, rounded `Surface` holding one row.
 #[test]
@@ -263,7 +257,6 @@ fn the_message_is_the_second_line_and_not_bold() {
          separately rather than both inheriting one value"
     );
 }
-
 
 /// `on_dismiss` is stored twice — a v1 `Box` for the props and an
 /// `Arc<dyn Fn() + Send + Sync>` for the engine — from one closure.

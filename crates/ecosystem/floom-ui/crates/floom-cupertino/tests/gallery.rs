@@ -1,4 +1,3 @@
-
 use floom_cupertino::{CupertinoTheme, GALLERY_COLUMNS, button_gallery, button_gallery_labels};
 use floom_design::{GallerySample, contrast_ratio, gallery_size};
 use floom_snapshot::{

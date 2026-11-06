@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Event, Point, Rect, Widget, WidgetAny};
 use floom_types::{Color, PointerEvent};
 use floom_widgets::testkit::{
@@ -116,7 +115,6 @@ fn connector_fill(row: &dyn Widget, index: usize) -> Option<Color> {
     })
 }
 
-
 /// The tokens reach the style.
 #[test]
 fn the_tokens_reach_the_style() {
@@ -183,7 +181,6 @@ fn the_props_report_the_flags() {
     assert!(kit.props().non_linear);
 }
 
-
 /// Three steps and two connectors: the row alternates.
 #[test]
 fn the_row_has_a_connector_between_each_pair_of_steps() {
@@ -215,7 +212,6 @@ fn the_gap_between_the_steps_is_the_tokens() {
         .expect("the row asks for its own space");
     assert_eq!(request.gap, Some(kit().resolved_style().gap));
 }
-
 
 /// The current step and the one behind it are filled; the ones ahead are not.
 #[test]
@@ -329,7 +325,6 @@ fn the_connectors_follow_the_selection() {
     );
 }
 
-
 /// A change of selection asks the host for a new row: 2.0's tree is built
 /// once, so the row's colours cannot follow the selection otherwise.
 #[test]
@@ -428,7 +423,6 @@ fn a_non_linear_stepper_makes_every_step_clickable() {
         "a non-linear stepper lets any step be clicked"
     );
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

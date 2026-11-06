@@ -1,4 +1,3 @@
-
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Rect};
 use floom_widgets::VectorIcon;

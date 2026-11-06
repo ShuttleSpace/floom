@@ -9,8 +9,8 @@
 //! resolved properties say the widget is styled by it, with the values the
 //! domain allows.
 
-use floom_inspector::{ProtocolVersion, STYLE_STATES};
 use floom_dsl::ui_ir::{NodeKind, PropClass, all_prop_names, events_for, prop_spec};
+use floom_inspector::{ProtocolVersion, STYLE_STATES};
 
 use crate::agent::protocol::PROTOCOL_VERSION;
 
@@ -84,8 +84,11 @@ pub fn component_schema() -> ComponentSchema {
             WidgetInfo {
                 name: kind.to_string(),
                 container: kind.is_container(),
-                slots: if kind
-                    .is_container() { vec!["children".to_string()] } else { Default::default() },
+                slots: if kind.is_container() {
+                    vec!["children".to_string()]
+                } else {
+                    Default::default()
+                },
                 properties,
                 events: events_for(*kind).map(|e| e.to_string()).collect(),
                 tokens,

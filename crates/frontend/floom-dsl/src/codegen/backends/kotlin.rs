@@ -214,6 +214,9 @@ mod tests {
     fn camel_case_conversion() {
         assert_eq!(camel_case("maybe_count"), "maybeCount");
         assert_eq!(camel_case("src"), "src");
-        assert_eq!(crate::codegen::backends::snake_case("VideoPlayer"), "video_player");
+        assert_eq!(
+            crate::codegen::backends::snake_case("VideoPlayer"),
+            "video_player"
+        );
     }
 }

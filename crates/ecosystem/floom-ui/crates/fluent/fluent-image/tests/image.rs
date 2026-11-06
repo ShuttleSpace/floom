@@ -62,7 +62,6 @@ fn text_of(ops: &[PaintOp]) -> (String, f32, Color) {
         .expect("the placeholder is painted")
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentImageStyle = kit().resolved_style();
@@ -94,7 +93,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_placeholder_is_the_alt_text_on_the_placeholder_fill() {
@@ -188,7 +186,6 @@ fn the_box_is_the_size_the_caller_asked_for() {
     );
 }
 
-
 #[test]
 fn the_props_report_the_source_and_the_flags() {
     let kit = kit()
@@ -205,7 +202,6 @@ fn the_props_report_the_source_and_the_flags() {
     assert!(kit.props().rounded);
     assert!(kit.props().cover);
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_not_the_app_wide_signal() {

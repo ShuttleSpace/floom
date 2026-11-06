@@ -128,7 +128,6 @@ fn the_props_report_the_group_state() {
     assert_eq!(group.props().title.as_deref(), Some("Section"));
 }
 
-
 fn rows_of(accordion: &floom_ui_composites::Accordion) -> Box<dyn floom_core::WidgetAny> {
     let mut leaf = accordion.children()[0].build();
     let mut create = floom_widgets::testkit::AllocatingCreateContext::new();

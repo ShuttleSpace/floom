@@ -62,5 +62,7 @@ fn main() {
     #[cfg(feature = "real")]
     run_gui();
     #[cfg(not(feature = "real"))]
-    println!("floom-tsx-showcase: codegen compiled. Rebuild with --features real to open the window.");
+    println!(
+        "floom-tsx-showcase: codegen compiled. Rebuild with --features real to open the window."
+    );
 }

@@ -1,4 +1,3 @@
-
 use floom_design::{
     CellPaint, DepthField, button_gallery_labels as shared_labels, button_gallery_scene,
 };

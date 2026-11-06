@@ -87,7 +87,6 @@ fn click(widget: &mut dyn WidgetAny) {
     widget.event(&mut cx, id);
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentWindowStyle = kit().resolved_style();
@@ -142,7 +141,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-
 #[test]
 fn the_box_is_painted_the_surface_and_the_outline() {
     let resolved = kit().resolved_style();
@@ -161,7 +159,6 @@ fn the_box_is_painted_the_surface_and_the_outline() {
     );
     assert_eq!(colour, paint(resolved.border_color), "v1's outline colour");
 }
-
 
 #[test]
 fn the_page_on_show_is_the_one_that_was_selected() {
@@ -250,7 +247,6 @@ fn the_props_report_the_flags() {
     assert!(kit.props().show_dots);
     assert!(!kit.props().continuous);
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_not_the_app_wide_signal() {

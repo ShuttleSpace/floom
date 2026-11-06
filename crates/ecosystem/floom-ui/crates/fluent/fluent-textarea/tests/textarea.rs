@@ -52,7 +52,6 @@ fn type_text<W: Widget + ?Sized>(widget: &mut W, ch: char) {
     widget.event(&mut key, id);
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentTextareaStyle = kit().resolved_style();
@@ -126,7 +125,6 @@ fn the_dead_numbers_are_v1_s() {
     );
 }
 
-
 #[test]
 fn the_box_is_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -185,7 +183,6 @@ fn the_box_is_as_tall_as_the_rows_ask() {
         "the box is as tall as the rows ask for"
     );
 }
-
 
 #[test]
 fn typing_fires_the_callback() {

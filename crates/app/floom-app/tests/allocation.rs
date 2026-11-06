@@ -27,32 +27,38 @@ thread_local! {
 struct Counting;
 
 unsafe impl GlobalAlloc for Counting {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 { unsafe {
-        // `try_with` (not `with`): during thread teardown the TLS may already
-        // be gone, and an allocator that panics there takes the process down.
-        if MEASURING.try_with(|m| m.get()).unwrap_or(false) {
-            COUNT.with(|c| c.set(c.get() + 1));
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        unsafe {
+            // `try_with` (not `with`): during thread teardown the TLS may already
+            // be gone, and an allocator that panics there takes the process down.
+            if MEASURING.try_with(|m| m.get()).unwrap_or(false) {
+                COUNT.with(|c| c.set(c.get() + 1));
+            }
+            System.alloc(layout)
         }
-        System.alloc(layout)
-    }}
+    }
 
-    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 { unsafe {
-        if MEASURING.try_with(|m| m.get()).unwrap_or(false) {
-            COUNT.with(|c| c.set(c.get() + 1));
+    unsafe fn alloc_zeroed(&self, layout: Layout) -> *mut u8 {
+        unsafe {
+            if MEASURING.try_with(|m| m.get()).unwrap_or(false) {
+                COUNT.with(|c| c.set(c.get() + 1));
+            }
+            System.alloc_zeroed(layout)
         }
-        System.alloc_zeroed(layout)
-    }}
+    }
 
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) { unsafe {
-        System.dealloc(ptr, layout)
-    }}
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        unsafe { System.dealloc(ptr, layout) }
+    }
 
-    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 { unsafe {
-        if MEASURING.try_with(|m| m.get()).unwrap_or(false) {
-            COUNT.with(|c| c.set(c.get() + 1));
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        unsafe {
+            if MEASURING.try_with(|m| m.get()).unwrap_or(false) {
+                COUNT.with(|c| c.set(c.get() + 1));
+            }
+            System.realloc(ptr, layout, new_size)
         }
-        System.realloc(ptr, layout, new_size)
-    }}
+    }
 }
 
 #[global_allocator]

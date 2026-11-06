@@ -1,4 +1,3 @@
-
 use floom_core::Widget;
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::icon_button::IconButtonVariant as PropsVariant;
@@ -17,7 +16,6 @@ fn button() -> MdIconButton {
     let _ = material();
     MdIconButton::new("close")
 }
-
 
 /// The four scalar reads, straight from `IconButtonTokens`.
 #[test]
@@ -53,7 +51,6 @@ fn an_explicit_size_replaces_the_token_and_leaves_the_glyph() {
     );
     assert_ne!(resized.size, token_size, "and the two really do differ");
 }
-
 
 #[test]
 fn the_variant_table_matches_v1s_three_pairs() {
@@ -105,7 +102,6 @@ fn the_ripple_ink_follows_v1s_rule() {
     );
 }
 
-
 #[test]
 fn the_disabled_colours_are_two_alphas_of_on_surface() {
     let theme = material();
@@ -133,7 +129,6 @@ fn the_disabled_colours_are_two_alphas_of_on_surface() {
     );
 }
 
-
 #[test]
 fn every_props_variant_maps_to_an_engine_variant() {
     for (props, expected) in [
@@ -157,7 +152,6 @@ fn every_props_variant_maps_to_an_engine_variant() {
         );
     }
 }
-
 
 #[test]
 fn the_kit_hands_the_engine_a_pressable_box() {
@@ -235,7 +229,6 @@ fn two_views_agree() {
     assert_eq!(a.icon().fill(), b.icon().fill());
     assert_eq!(a.icon().edge(), b.icon().edge());
 }
-
 
 #[test]
 fn the_props_report_the_click_callback() {

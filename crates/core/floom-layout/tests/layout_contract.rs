@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: MIT
-use floom_layout::{
-    FlexDirection, JustifyContent, LayoutEngine, LayoutStyle, MeasureFn,
-};
+use floom_layout::{FlexDirection, JustifyContent, LayoutEngine, LayoutStyle, MeasureFn};
 use floom_types::{Insets, Length, Point, Size};
 
 #[test]

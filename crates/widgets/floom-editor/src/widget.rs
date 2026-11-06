@@ -197,11 +197,7 @@ impl EditorWidget {
     /// one.
     fn insert_char(&mut self, ch: char) {
         let sel = self.document.selection();
-        self.commit(Transaction::replace(
-            sel.start(),
-            sel.end(),
-            ch.to_string(),
-        ));
+        self.commit(Transaction::replace(sel.start(), sel.end(), ch.to_string()));
     }
 
     /// Inserts a newline at the selection.
@@ -451,39 +447,40 @@ impl Widget for EditorWidget {
         // accent ink and underlined, so a composition is visible *before* it is
         // committed. A commit arrives as character keys and replaces it.
         if !self.preedit.is_empty()
-            && let Some(caret) = caret {
-                let baseline = caret.y1 - (caret.y1 - caret.y0) * 0.2;
-                cx.fill_text_in(
-                    Point::new(caret.x0, baseline),
-                    &self.preedit,
-                    self.font_size as f32,
-                    FontWeight::Normal,
-                    COMPOSITION_FILL,
-                    &FontFamily::SansSerif,
-                );
-                let width = self.preedit.chars().count() as f64 * self.font_size * 0.6;
-                cx.fill_rect(
-                    Rect {
-                        x0: caret.x0,
-                        y0: caret.y1 - 1.0,
-                        x1: caret.x0 + width,
-                        y1: caret.y1,
-                    },
-                    COMPOSITION_FILL,
-                );
-                let head = self.preedit_caret.min(self.preedit.len());
-                let chars = self.preedit[..head].chars().count() as f64;
-                let x = caret.x0 + chars * self.font_size * 0.6;
-                cx.fill_rect(
-                    Rect {
-                        x0: x,
-                        y0: caret.y0,
-                        x1: x + CARET_WIDTH,
-                        y1: caret.y1,
-                    },
-                    COMPOSITION_FILL,
-                );
-            }
+            && let Some(caret) = caret
+        {
+            let baseline = caret.y1 - (caret.y1 - caret.y0) * 0.2;
+            cx.fill_text_in(
+                Point::new(caret.x0, baseline),
+                &self.preedit,
+                self.font_size as f32,
+                FontWeight::Normal,
+                COMPOSITION_FILL,
+                &FontFamily::SansSerif,
+            );
+            let width = self.preedit.chars().count() as f64 * self.font_size * 0.6;
+            cx.fill_rect(
+                Rect {
+                    x0: caret.x0,
+                    y0: caret.y1 - 1.0,
+                    x1: caret.x0 + width,
+                    y1: caret.y1,
+                },
+                COMPOSITION_FILL,
+            );
+            let head = self.preedit_caret.min(self.preedit.len());
+            let chars = self.preedit[..head].chars().count() as f64;
+            let x = caret.x0 + chars * self.font_size * 0.6;
+            cx.fill_rect(
+                Rect {
+                    x0: x,
+                    y0: caret.y0,
+                    x1: x + CARET_WIDTH,
+                    y1: caret.y1,
+                },
+                COMPOSITION_FILL,
+            );
+        }
     }
 
     fn event(&mut self, cx: &mut dyn EventContext, id: ElementId) -> bool {
@@ -529,11 +526,12 @@ impl Widget for EditorWidget {
                 // the OS finalizing it: the committed text replaces the
                 // preedit, so the preedit is dropped first.
                 if key.is_text_input()
-                    && let Key::Char(ch) = key.key {
-                        self.cancel_preedit();
-                        self.insert_char(ch);
-                        return true;
-                    }
+                    && let Key::Char(ch) = key.key
+                {
+                    self.cancel_preedit();
+                    self.insert_char(ch);
+                    return true;
+                }
 
                 match key.key {
                     Key::Named(floom_types::NamedKey::Enter) => {

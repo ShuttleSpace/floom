@@ -221,9 +221,10 @@ impl RepairPolicy for DiffDrivenPolicy {
         // floor names the height the action must reach.
         for floor in &report.floors {
             if floor.check.contains("touch target")
-                && let Ok(height) = floor.floor.parse::<f64>() {
-                    edits.push(TokenEdit::ControlHeight(height as f32));
-                }
+                && let Ok(height) = floor.floor.parse::<f64>()
+            {
+                edits.push(TokenEdit::ControlHeight(height as f32));
+            }
         }
         edits
     }

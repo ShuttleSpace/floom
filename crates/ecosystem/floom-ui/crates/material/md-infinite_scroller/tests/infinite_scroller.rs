@@ -1,4 +1,3 @@
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -72,7 +71,6 @@ fn wheel(delta: f64) -> Event {
     })
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -112,7 +110,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_viewport_is_painted_v1_s_colour() {
@@ -180,7 +177,6 @@ fn the_idle_footer_is_an_empty_box() {
         "v1's idle footer was the footer's padding tall"
     );
 }
-
 
 /// The scroller asks for the next page when the user reaches the end.
 #[test]
@@ -279,7 +275,6 @@ fn the_loading_flag_is_the_hosts_to_write() {
         "and the host can start a fetch"
     );
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

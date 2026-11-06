@@ -68,7 +68,6 @@ fn bar_fill(bar: &dyn WidgetAny) -> Option<Color> {
     })
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentSparklineStyle = kit().resolved_style();
@@ -175,7 +174,6 @@ fn the_props_report_the_series() {
     assert_eq!(kit.props().line_width, 6.0);
 }
 
-
 #[test]
 fn the_bars_are_painted_in_v1_s_colour() {
     let sparkline = kit().values(vec![1.0, 2.0]).view();
@@ -242,7 +240,6 @@ fn the_bars_have_v1_s_width() {
     }
 }
 
-
 #[test]
 fn the_sparkline_declares_its_rendered_size() {
     let request = kit().width(120.0).height(30.0).view();
@@ -257,7 +254,6 @@ fn the_gap_between_the_bars_is_v1_s() {
     let request = request.layout_request().expect("a request");
     assert_eq!(request.gap, Some(6.0), "the props' `line_width`");
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

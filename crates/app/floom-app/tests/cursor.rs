@@ -92,9 +92,10 @@ fn sweep(
             let x = W * f64::from(col) / 30.0;
             let at = Point::new(x, y);
             if let Some(cursor) = hover(platform, runner, window, at)
-                && !seen.iter().any(|(c, _)| *c == cursor) {
-                    seen.push((cursor, at));
-                }
+                && !seen.iter().any(|(c, _)| *c == cursor)
+            {
+                seen.push((cursor, at));
+            }
         }
     }
     seen

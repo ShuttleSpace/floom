@@ -32,7 +32,6 @@ fn token_factor() -> f32 {
     tokens.factor
 }
 
-
 #[test]
 fn the_factor_is_the_callers_when_it_is_positive() {
     let style: FluentParallaxStyle = kit().factor(0.75).resolved_style();
@@ -72,7 +71,6 @@ fn the_default_factor_never_reaches_the_token() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_layer_moves_the_content_by_the_scroll_times_the_factor() {
@@ -159,12 +157,10 @@ fn the_content_is_mounted_under_the_layer() {
     assert_eq!(layer.children().len(), 1, "the content");
 }
 
-
 #[test]
 fn the_props_report_the_factor() {
     assert_eq!(kit().factor(0.4).props().factor, 0.4);
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

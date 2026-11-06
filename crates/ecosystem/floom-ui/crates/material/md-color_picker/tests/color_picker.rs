@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{ElementId, Event, Point, Rect, Widget, WidgetAny};
@@ -75,7 +74,6 @@ fn stack_of(surface: &dyn WidgetAny) -> Box<dyn WidgetAny> {
     children.remove(0).build()
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -127,7 +125,6 @@ fn the_literals_v1_wrote_are_reported() {
     assert_eq!(style.hex_font_size, 14.0, "v1's field text");
     assert_eq!(style.thumb_border_width, 2.0, "v1's thumb border");
 }
-
 
 #[test]
 fn the_picker_is_painted_in_v1_s_colours() {
@@ -218,7 +215,6 @@ fn the_hex_field_spells_the_colour_out() {
     assert_eq!(texts[0].0, "#2196f3", "v1's hex spelling");
     assert_eq!(texts[0].1, style.hex_font_size);
 }
-
 
 /// The alpha strip is only there when the picker was asked for one.
 #[test]

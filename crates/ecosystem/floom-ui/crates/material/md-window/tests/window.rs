@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Point, Rect, Widget, WidgetAny};
@@ -93,7 +92,6 @@ fn click(widget: &mut dyn WidgetAny) {
     widget.event(&mut cx, id);
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -149,7 +147,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-
 #[test]
 fn the_box_is_painted_the_surface_and_the_outline() {
     let resolved = kit().resolved_style();
@@ -168,7 +165,6 @@ fn the_box_is_painted_the_surface_and_the_outline() {
     );
     assert_eq!(colour, paint(resolved.border_color), "v1's outline colour");
 }
-
 
 /// The page on show is the one that was selected.
 #[test]
@@ -262,7 +258,6 @@ fn the_props_report_the_flags() {
     assert!(kit.props().show_dots);
     assert!(!kit.props().continuous);
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

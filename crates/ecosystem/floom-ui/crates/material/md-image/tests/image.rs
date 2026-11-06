@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Length, Rect, Widget};
 use floom_types::{Color, ResourceId, Size};
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
@@ -65,7 +64,6 @@ fn text_of(ops: &[PaintOp]) -> (String, f32, Color) {
         .expect("the placeholder is painted")
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -98,7 +96,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_placeholder_is_the_alt_text_on_the_placeholder_fill() {
@@ -195,7 +192,6 @@ fn the_box_is_the_size_the_caller_asked_for() {
     );
 }
 
-
 /// The props report the source and the flags.
 #[test]
 fn the_props_report_the_source_and_the_flags() {
@@ -213,7 +209,6 @@ fn the_props_report_the_source_and_the_flags() {
     assert!(kit.props().rounded);
     assert!(kit.props().cover);
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

@@ -16,8 +16,8 @@ pub mod canvas;
 pub mod circular_progress;
 pub mod compose;
 pub mod controls;
-pub mod forms;
 pub mod focus;
+pub mod forms;
 pub mod gesture;
 pub mod native;
 pub mod navigation;
@@ -95,19 +95,23 @@ pub use text_input::{
 pub use vector_icon::VectorIcon;
 
 /// Overlay tree with z-order hit priority, focus scopes, and enter/exit animation.
-pub use overlay::{CompositorProp, OverlayEntry, OverlayManager, OverlayHandle, OverlayKind, sheet_bounds};
+pub use overlay::{
+    CompositorProp, OverlayEntry, OverlayHandle, OverlayKind, OverlayManager, sheet_bounds,
+};
 
 /// Focus scopes and keyboard traversal (Tab / Shift-Tab).
 pub use focus::{FocusDirection, FocusManager, FocusScopeId};
 
+pub use forms::rules;
 /// Form state and validation — widget-free, closure-based field bindings.
 pub use forms::{FieldBinding, FormController, Rule, Validation, ValidationTicket};
-pub use forms::rules;
 
 /// Gesture arena: Tab/Pinch/Long-press recognizers the widgets drive.
-pub use gesture::{GestureArena, GestureKind, PointerSample, Recognizer, RecognizerId, RecognizerState};
+pub use gesture::{
+    GestureArena, GestureKind, PointerSample, Recognizer, RecognizerId, RecognizerState,
+};
 
-/// Typed routing and navigation for Floom 2.0.
-pub use navigation::{Navigator, Page, Router, Route};
 pub use navigation::navigation_containers::{StackNav, TabNav};
 pub use navigation::navigation_url::Url;
+/// Typed routing and navigation for Floom 2.0.
+pub use navigation::{Navigator, Page, Route, Router};

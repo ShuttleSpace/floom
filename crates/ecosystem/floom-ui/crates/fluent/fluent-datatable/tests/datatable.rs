@@ -131,7 +131,6 @@ fn click(row: &mut Box<dyn WidgetAny>) -> bool {
     consumed
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentDataTableStyle = kit().resolved_style();
@@ -211,7 +210,6 @@ fn the_props_report_the_table() {
     );
 }
 
-
 #[test]
 fn the_frame_is_filled_and_outlined_in_v1_s_colours() {
     let style = table().resolved_style();
@@ -284,7 +282,6 @@ fn the_cells_are_painted_in_v1_s_ink() {
     assert_eq!(size, style.font_size, "v1's body size");
     assert_eq!(ink, paint(style.on_surface), "v1's body ink");
 }
-
 
 #[test]
 fn the_header_comes_first_and_the_last_row_is_the_last_row() {
@@ -396,7 +393,6 @@ fn a_table_with_no_callback_still_consumes_the_click() {
     assert!(click(&mut first), "the pressable consumes it");
     assert_eq!(rows.len(), 3, "and the table is still there");
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Length, Rect, Widget, WidgetAny};
 use floom_types::Color;
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
@@ -57,7 +56,6 @@ fn content_of(kit: MaterialMain) -> Box<dyn WidgetAny> {
     middle.children().remove(1).build()
 }
 
-
 /// The theme's fill and the design system reach the style.
 #[test]
 fn the_theme_and_the_design_system_reach_the_style() {
@@ -85,7 +83,6 @@ fn the_insets_are_the_layout_signals_own_numbers() {
     assert_eq!(style.left, 256.0, "the open left drawer");
     assert_eq!(style.right, 320.0, "the open right drawer");
 }
-
 
 /// The content is painted in the theme's background colour.
 #[test]
@@ -142,7 +139,6 @@ fn the_spacers_are_sized_from_the_registered_insets() {
         "and as tall as the region"
     );
 }
-
 
 /// The region is a column of the top spacer, the middle row and the bottom
 /// spacer.
@@ -202,7 +198,6 @@ fn the_content_box_is_empty_when_there_is_no_child() {
         "there is nothing to put in the content"
     );
 }
-
 
 /// Material's theme is the app-wide signal, so a change of theme re-themes
 /// the main region with everything else.

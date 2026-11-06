@@ -108,7 +108,6 @@ fn connector_fill(row: &dyn Widget, index: usize) -> Option<Color> {
     })
 }
 
-
 #[test]
 fn the_tokens_reach_the_style() {
     let style: FluentStepperStyle = kit().resolved_style();
@@ -173,7 +172,6 @@ fn the_props_report_the_flags() {
     assert!(kit.props().non_linear);
 }
 
-
 #[test]
 fn the_row_has_a_connector_between_each_pair_of_steps() {
     let widget = kit().items(steps(&["One", "Two", "Three"])).view();
@@ -203,7 +201,6 @@ fn the_gap_between_the_steps_is_the_tokens() {
         .expect("the row asks for its own space");
     assert_eq!(request.gap, Some(kit().resolved_style().gap));
 }
-
 
 #[test]
 fn the_current_step_is_filled_and_the_ones_ahead_are_not() {
@@ -312,7 +309,6 @@ fn the_connectors_follow_the_selection() {
     );
 }
 
-
 #[test]
 fn a_change_of_selection_asks_for_a_new_row() {
     let mut widget = kit().items(steps(&["One", "Two"])).selected(0).view();
@@ -406,7 +402,6 @@ fn a_non_linear_stepper_makes_every_step_clickable() {
         "a non-linear stepper lets any step be clicked"
     );
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

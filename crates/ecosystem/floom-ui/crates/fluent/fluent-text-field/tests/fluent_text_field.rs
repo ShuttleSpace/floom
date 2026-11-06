@@ -117,7 +117,6 @@ fn type_text(field: &mut TextField, id: ElementId, text: &str) {
     }
 }
 
-
 #[test]
 fn the_geometry_is_this_kits_text_field_tokens() {
     let tokens = field_tokens();
@@ -158,7 +157,6 @@ fn the_fill_is_surface_and_the_ink_is_on_surface_at_body_medium() {
         "v1 wrote `typography().body.medium.font_size` -- the token, not a number"
     );
 }
-
 
 #[test]
 fn the_resting_rim_is_one_point_of_outline_and_focus_recolours_it() {
@@ -233,7 +231,6 @@ fn the_interaction_fills_are_inherited_because_v1_named_none() {
     );
 }
 
-
 #[test]
 fn the_placeholder_and_the_preedit_are_inherited_not_themed() {
     let binding = theme();
@@ -258,7 +255,6 @@ fn the_placeholder_and_the_preedit_are_inherited_not_themed() {
         "control: `primary` is the obvious theme answer and it is not this one"
     );
 }
-
 
 #[test]
 fn the_field_measures_its_own_content_rather_than_filling_its_parent() {
@@ -298,7 +294,6 @@ fn the_field_measures_its_own_content_rather_than_filling_its_parent() {
     );
 }
 
-
 #[test]
 fn max_length_reaches_the_engine_and_clamps_typing_too() {
     let capped = FluentTextField::new()
@@ -335,7 +330,6 @@ fn max_length_reaches_the_engine_and_clamps_typing_too() {
         "and the refusal is not a truncation: the oldest character is the one kept"
     );
 }
-
 
 #[test]
 fn on_change_reports_typing_and_not_the_builders_value() {
@@ -375,7 +369,6 @@ fn on_change_reports_typing_and_not_the_builders_value() {
     );
 }
 
-
 #[test]
 fn password_is_carried_and_still_renders_in_the_clear() {
     let kit = FluentTextField::new()
@@ -397,7 +390,6 @@ fn password_is_carried_and_still_renders_in_the_clear() {
         "and this port does not start masking on its own:\n{snapshot}"
     );
 }
-
 
 #[test]
 fn a_disabled_field_is_not_the_enabled_one() {
@@ -449,7 +441,6 @@ fn a_disabled_field_does_not_accept_typing() {
     assert_eq!(disabled.text(), "", "the engine's own rule, not this kit's");
 }
 
-
 #[test]
 fn the_props_cross_into_the_widget() {
     let field = FluentTextField::new()
@@ -481,7 +472,6 @@ fn the_props_cross_into_the_widget() {
         "so the placeholder does reach assistive technology while empty"
     );
 }
-
 
 #[test]
 fn the_focus_affordance_is_a_ring_outside_the_box() {
@@ -625,7 +615,6 @@ fn hovering_leaves_this_kits_rim_alone() {
         "leaving changes nothing about this kit's rim either:\n{snapshot}"
     );
 }
-
 
 #[test]
 fn the_theme_binding_is_reachable_on_both_constructors() {

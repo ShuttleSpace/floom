@@ -1,4 +1,3 @@
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -30,7 +29,6 @@ fn options() -> Vec<String> {
 fn style() -> ComboboxStyle {
     MdCombobox::new().resolved_style()
 }
-
 
 #[test]
 fn the_tokens_come_from_combobox_tokens() {
@@ -126,7 +124,6 @@ fn the_border_follows_v1s_three_cases_in_v1s_order() {
     );
 }
 
-
 #[test]
 fn the_theme_is_not_selected_by_naming_it_and_nothing_has_set_it() {
     let named_material = style();
@@ -141,7 +138,6 @@ fn the_theme_is_not_selected_by_naming_it_and_nothing_has_set_it() {
          `new_for` ignores its argument"
     );
 }
-
 
 #[test]
 fn props_report_what_the_builder_set() {
@@ -166,7 +162,6 @@ fn props_report_what_the_builder_set() {
 fn the_default_placeholder_is_v1s() {
     assert_eq!(MdCombobox::new().props().placeholder, "Select\u{2026}");
 }
-
 
 #[test]
 fn the_viewed_combobox_places_its_panel_below_the_field_with_material_s_gap() {

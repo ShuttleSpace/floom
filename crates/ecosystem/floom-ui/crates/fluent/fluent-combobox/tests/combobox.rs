@@ -31,7 +31,6 @@ fn style() -> ComboboxStyle {
     FluentCombobox::new().resolved_style()
 }
 
-
 #[test]
 fn the_panel_sits_flush_against_the_field() {
     assert_eq!(style().panel_gap, 0.0);
@@ -63,7 +62,6 @@ fn the_two_kits_gap_the_panel_differently() {
     );
 }
 
-
 #[test]
 fn the_chevron_comes_from_this_kits_own_table() {
     let path = floom_widget_fluent_icon::fluent_icon_path("expand_more");
@@ -90,7 +88,6 @@ fn the_engine_icon_uses_the_same_path_the_table_holds() {
     );
 }
 
-
 #[test]
 fn the_theme_is_not_selected_by_naming_it() {
     let named_fluent = style();
@@ -104,7 +101,6 @@ fn the_theme_is_not_selected_by_naming_it() {
         "two different named design systems resolve the same metrics"
     );
 }
-
 
 #[test]
 fn the_tokens_come_from_combobox_tokens() {
@@ -151,7 +147,6 @@ fn the_border_follows_v1s_order() {
     );
 }
 
-
 #[test]
 fn props_report_what_the_builder_set() {
     let combo = FluentCombobox::new()
@@ -167,7 +162,6 @@ fn props_report_what_the_builder_set() {
     assert!(props.disabled);
     assert!(props.on_change.is_some());
 }
-
 
 #[test]
 fn the_viewed_combobox_places_its_panel_flush_below_the_field() {

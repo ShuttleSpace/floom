@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Event, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
 use floom_widgets::testkit::{
@@ -79,7 +78,6 @@ fn fill_of(widget: &dyn Widget) -> Option<Color> {
     })
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -131,7 +129,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-
 #[test]
 fn the_panel_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -157,7 +154,6 @@ fn the_scrim_is_painted_v1_s_colour() {
     };
     assert_eq!(fill_of(&*scrim), Some(expected), "the scrim's fill");
 }
-
 
 /// A closed drawer mounts nothing at all.
 #[test]

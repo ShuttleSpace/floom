@@ -1,4 +1,3 @@
-
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets, Shadow};
 use floom_widgets::Surface;
@@ -19,7 +18,6 @@ const BLACK: Color = Color {
     b: 0,
     a: 255,
 };
-
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MdCardStyle {

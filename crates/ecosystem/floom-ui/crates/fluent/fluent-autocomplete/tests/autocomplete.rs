@@ -25,7 +25,6 @@ fn recording() -> (FluentAutocomplete, Arc<Mutex<Vec<Option<String>>>>) {
     (combo, seen)
 }
 
-
 #[test]
 fn choosing_an_option_reports_its_text() {
     let (mut combo, seen) = recording();
@@ -56,7 +55,6 @@ fn the_mounted_widget_adapts_the_index_to_text() {
         "a row click reports text even though the engine only ever holds an index"
     );
 }
-
 
 #[test]
 fn committing_free_text_reports_what_was_typed() {
@@ -141,7 +139,6 @@ fn committing_without_a_callback_is_fine() {
     assert_eq!(combo.pick().lock().unwrap().selected, None);
 }
 
-
 #[test]
 fn the_commit_point_is_public_because_focus_cannot_be_observed() {
     let (combo, seen) = recording();
@@ -149,7 +146,6 @@ fn the_commit_point_is_public_because_focus_cannot_be_observed() {
     combo.commit();
     assert_eq!(seen.lock().unwrap().as_slice(), [Some("kiwi".to_string())]);
 }
-
 
 #[test]
 fn the_tokens_come_from_autocomplete_tokens() {
@@ -204,7 +200,6 @@ fn the_theme_is_not_selected_by_naming_it() {
     assert_eq!(fluent.height, fluent.height);
 }
 
-
 /// one is a compile error rather than a silent bug — which is why this assertion exists
 #[test]
 fn props_are_autocomplete_props() {
@@ -222,7 +217,6 @@ fn the_default_placeholder_is_the_autocompletes_own() {
     let combo = FluentAutocomplete::new();
     assert_eq!(combo.props().placeholder, "Type to search\u{2026}");
 }
-
 
 #[test]
 fn the_view_places_its_panel_below_the_field() {

@@ -24,6 +24,7 @@ use std::collections::HashMap;
 
 use floom_accessibility::{SemanticsRole, SemanticsTree};
 use floom_core::{Align, Axis, ElementKind, LayoutRequest, Position};
+use floom_dsl::ui_ir::NodeKind;
 use floom_hot_reload::{ElementRef, LiveTree, NodeKey};
 use floom_inspector::{
     LayoutDto, LayoutEntry, LayoutSnapshot, ProtocolVersion, SceneLines, SourceLocation,
@@ -32,7 +33,6 @@ use floom_inspector::{
 use floom_runtime_core::{BindingRegistry, BindingReport};
 use floom_style::{StyleProps, StyleState};
 use floom_types::ElementId;
-use floom_dsl::ui_ir::NodeKind;
 
 /// The style states an inspector reports, in precedence order.
 pub const INSPECTED_STATES: [StyleState; 6] = [

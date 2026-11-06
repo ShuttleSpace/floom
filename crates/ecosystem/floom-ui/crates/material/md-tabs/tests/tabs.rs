@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{ElementId, LayoutRequest, Point, Rect, Widget, WidgetAny};
@@ -112,7 +111,6 @@ fn click(tab: &mut dyn WidgetAny) {
     tab.event(&mut cx, id);
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -149,7 +147,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_labels_are_painted_in_v1_s_inks() {
@@ -225,7 +222,6 @@ fn the_label_box_is_the_tabs_height_with_the_tokens_padding() {
     assert_eq!(padding.bottom, 0.0, "v1 padded the label sideways only");
 }
 
-
 /// Clicking a tab moves the highlight and calls the callback.
 #[test]
 fn clicking_a_tab_moves_the_highlight() {
@@ -278,7 +274,6 @@ fn the_props_report_the_tabs() {
         "the props' callback slot stays empty"
     );
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

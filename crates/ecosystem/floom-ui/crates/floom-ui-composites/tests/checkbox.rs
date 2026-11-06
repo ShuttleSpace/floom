@@ -1,4 +1,3 @@
-
 use floom_accessibility::SemanticsState;
 use floom_core::{ElementId, Point, Rect, Widget};
 use floom_types::{Color, Rect as TypesRect};

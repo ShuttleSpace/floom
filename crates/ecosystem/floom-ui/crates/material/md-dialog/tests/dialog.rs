@@ -1,4 +1,3 @@
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -24,7 +23,6 @@ fn dialog() -> MdDialog {
         .title("Delete file")
         .content("This cannot be undone.")
 }
-
 
 #[test]
 fn open_and_is_open_read_and_write_one_flag() {
@@ -77,7 +75,6 @@ fn taking_an_external_flag_seeds_the_props() {
     let dialog = dialog().with_open_flag(flag);
     assert!(dialog.props().open, "so `props()` agrees with the flag");
 }
-
 
 #[test]
 fn the_viewed_dialog_asks_for_a_modal_dialog_over_the_viewport() {
@@ -172,7 +169,6 @@ fn the_flag_opens_it_again_after_a_dismissal() {
     );
 }
 
-
 #[test]
 fn the_card_is_a_bordered_surface() {
     let mut view = dialog().open(true).view();
@@ -187,7 +183,6 @@ fn the_card_is_a_bordered_surface() {
         "v1's card was a surface with a max width, a padding, a radius and a shadow"
     );
 }
-
 
 #[test]
 fn the_tokens_come_from_dialog_tokens() {
@@ -249,7 +244,6 @@ fn the_shadow_is_black_at_v1s_alpha() {
     assert_eq!(style.shadow_alpha, 30);
 }
 
-
 #[test]
 fn all_nine_theme_weights_map_by_name() {
     use floom_core_theme::tokens::typography::FontWeight as Theme;
@@ -304,7 +298,6 @@ fn the_action_weight_comes_from_the_ramp_not_from_a_literal() {
     );
 }
 
-
 #[test]
 fn props_report_the_v1_shaped_callbacks() {
     let fired = Arc::new(AtomicUsize::new(0));
@@ -339,7 +332,6 @@ fn actions_accumulate() {
         .action("Three", || {});
     assert_eq!(dialog.props().actions.len(), 3);
 }
-
 
 #[test]
 fn the_theme_is_not_selected_by_naming_it() {

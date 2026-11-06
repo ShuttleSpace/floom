@@ -293,7 +293,6 @@ fn the_loading_flag_is_the_hosts_to_write() {
     );
 }
 
-
 /// The theme: v1's Cupertino infinite scroller took a *snapshot* of its own design
 /// system, so a change of the app-wide theme does not re-theme it.
 #[test]

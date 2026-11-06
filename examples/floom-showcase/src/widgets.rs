@@ -6,8 +6,8 @@
 use std::sync::Arc;
 
 use floom::floom_core::{
-    Child, ChildKey, CreateContext, ElementId, LayoutRequest, SemanticsHint, UpdateContext,
-    Widget, WidgetAny,
+    Child, ChildKey, CreateContext, ElementId, LayoutRequest, SemanticsHint, UpdateContext, Widget,
+    WidgetAny,
 };
 use floom::floom_types::{Color, FontWeight, Insets};
 use floom::floom_widgets::{Button, Spacer, Stack, Surface, Text};

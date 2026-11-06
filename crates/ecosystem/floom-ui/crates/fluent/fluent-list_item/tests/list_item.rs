@@ -26,7 +26,6 @@ fn list_tokens(theme: &MultiTheme) -> floom_core_theme::component_tokens::ListIt
     }
 }
 
-
 #[test]
 fn the_hard_coded_numbers_are_preserved_and_disagree_with_the_tokens() {
     let theme = fluent();
@@ -88,7 +87,6 @@ fn the_title_weight_comes_from_the_typography_scale() {
     );
 }
 
-
 #[test]
 fn no_subtitle_leaves_the_engine_field_empty() {
     assert_eq!(item().resolved_style().subtitle_size, Some(12.0));
@@ -97,7 +95,6 @@ fn no_subtitle_leaves_the_engine_field_empty() {
     let with = item().subtitle("Home network").view();
     assert!(with.has_subtitle(), "a subtitle makes two");
 }
-
 
 #[test]
 fn the_kit_hands_over_a_pressable_band() {
@@ -130,7 +127,6 @@ fn the_title_and_subtitle_travel_into_the_row() {
     assert_eq!(item().subtitle("Home").view().title(), "Wi-Fi");
 }
 
-
 #[test]
 fn disabled_reaches_the_row_and_its_ripple() {
     let view = item().disabled(true).view();
@@ -143,7 +139,6 @@ fn disabled_reaches_the_row_and_its_ripple() {
         "and v1's `.disabled(disabled)` reached the ink"
     );
 }
-
 
 #[test]
 fn nav_is_carried_but_unread() {

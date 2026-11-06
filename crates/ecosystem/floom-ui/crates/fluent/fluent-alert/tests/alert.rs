@@ -31,7 +31,6 @@ fn to_paint(c: floom_core_theme::tokens::color::Color) -> floom_types::Color {
     }
 }
 
-
 #[test]
 fn the_tokens_reach_the_engine_surface() {
     let theme = theme();
@@ -89,7 +88,6 @@ fn the_container_is_the_accent_at_26() {
     );
 }
 
-
 #[test]
 fn three_accents_are_fixed_literals_and_one_is_the_themes_error() {
     let theme = theme();
@@ -135,7 +133,6 @@ fn the_variant_selects_the_accent_and_therefore_the_tint() {
         "and therefore two tints — so the variant is not read past the accent"
     );
 }
-
 
 #[test]
 fn the_banner_is_a_surface_holding_one_row() {
@@ -257,7 +254,6 @@ fn the_message_is_the_second_line_and_not_bold() {
          separately rather than both inheriting one value"
     );
 }
-
 
 #[test]
 fn the_props_report_the_dismiss_callback() {

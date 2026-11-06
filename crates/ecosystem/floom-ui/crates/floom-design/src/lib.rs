@@ -1,4 +1,3 @@
-
 mod gallery;
 mod style;
 mod variant;

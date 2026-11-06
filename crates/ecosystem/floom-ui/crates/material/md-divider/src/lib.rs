@@ -1,4 +1,3 @@
-
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_widgets::{Divider, RuleAlignment};

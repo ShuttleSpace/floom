@@ -86,7 +86,6 @@ fn bubble_painted(tooltip: &Tooltip) -> (Option<Color>, Option<Color>) {
     (fill, ink)
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_engine_style() {
     let style: FluentTooltipStyle = kit().resolved_style();
@@ -119,7 +118,6 @@ fn the_gap_is_v1_s() {
         "v1's Fluent bubble had no offset"
     );
 }
-
 
 #[test]
 fn the_bubble_paints_v1_s_appearance() {

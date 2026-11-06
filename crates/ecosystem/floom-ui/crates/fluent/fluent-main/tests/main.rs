@@ -54,7 +54,6 @@ fn content_of(kit: FluentMain) -> Box<dyn WidgetAny> {
     middle.children().remove(1).build()
 }
 
-
 #[test]
 fn the_theme_and_the_design_system_reach_the_style() {
     let style: FluentMainStyle = kit().resolved_style();
@@ -80,7 +79,6 @@ fn the_insets_are_the_layout_signals_own_numbers() {
     assert_eq!(style.left, 256.0, "the open left drawer");
     assert_eq!(style.right, 320.0, "the open right drawer");
 }
-
 
 #[test]
 fn the_content_is_painted_in_the_background() {
@@ -136,7 +134,6 @@ fn the_spacers_are_sized_from_the_registered_insets() {
     );
 }
 
-
 #[test]
 fn the_region_is_a_column_of_three() {
     let region = kit().view();
@@ -190,7 +187,6 @@ fn the_content_box_is_empty_when_there_is_no_child() {
         "there is nothing to put in the content"
     );
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot() {

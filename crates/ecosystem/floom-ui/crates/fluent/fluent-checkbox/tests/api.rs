@@ -206,7 +206,6 @@ fn click(checkbox: &mut Checkbox, id: ElementId) {
     dispatch(checkbox, id, ROW, PointerEvent::primary_up(at).into());
 }
 
-
 #[test]
 fn the_indicator_is_the_checkbox_tokens_with_a_two_point_rim() {
     let tokens = checkbox_tokens();
@@ -306,7 +305,6 @@ fn the_rim_is_primary_while_checked_and_outline_while_not() {
     );
 }
 
-
 #[test]
 fn the_mark_is_on_primary_at_seven_tenths_of_the_box() {
     let binding = theme();
@@ -383,7 +381,6 @@ fn an_unchecked_box_draws_no_mark() {
     );
 }
 
-
 #[test]
 fn the_label_is_on_surface_at_the_body_size_eight_points_on() {
     let binding = theme();
@@ -421,7 +418,6 @@ fn the_label_is_on_surface_at_the_body_size_eight_points_on() {
         "\n{snapshot}"
     );
 }
-
 
 #[test]
 fn the_disabled_palette_is_on_surface_at_38_and_12_and_not_97() {
@@ -518,7 +514,6 @@ fn an_enabled_box_carries_no_disabled_alpha() {
     assert_eq!(alpha_of(style.border_color), 255, "undimmed");
     assert_eq!(alpha_of(style.mark_color), 255, "undimmed");
 }
-
 
 #[test]
 fn mounting_carries_the_props_across() {
@@ -619,7 +614,6 @@ fn the_disabled_flag_does_not_move_the_style() {
         "`CheckboxStyle` names a colour per state; `Checkbox` picks"
     );
 }
-
 
 #[test]
 fn the_layer_is_the_indicator_plus_four_points_of_padding() {
@@ -750,7 +744,6 @@ fn focus_does_not_open_the_layer() {
     );
 }
 
-
 #[test]
 fn the_focus_affordance_is_a_ring_around_the_whole_control() {
     let binding = theme();
@@ -786,7 +779,6 @@ fn the_focus_affordance_is_a_ring_around_the_whole_control() {
         "and not the same colour either"
     );
 }
-
 
 #[test]
 fn the_design_system_const_is_what_v1_put_on_the_struct() {

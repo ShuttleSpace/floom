@@ -106,7 +106,6 @@ fn tap(bar: &BottomNavigationBar, index: usize) {
     }
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentBottomNavigationStyle = kit().resolved_style();
@@ -161,7 +160,6 @@ fn the_props_report_the_destinations_and_not_the_callback() {
     assert_eq!(kit.props().selected, 0);
     assert!(kit.props().on_change.is_none());
 }
-
 
 #[test]
 fn the_bar_paints_v1_s_fill_and_rule() {
@@ -281,7 +279,6 @@ fn the_chosen_destination_has_a_rule_along_its_top_edge() {
         "and no rule on a destination that is not chosen"
     );
 }
-
 
 #[test]
 fn the_bar_is_a_row_of_the_tokens_height() {

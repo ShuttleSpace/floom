@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Length, Rect, Widget};
 use floom_types::Color;
 use floom_widgets::testkit::{
@@ -89,7 +88,6 @@ fn scrim_ops(kit: MaterialSheet) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -160,7 +158,6 @@ fn the_scrim_is_black_at_160() {
          the literal and not about the token"
     );
 }
-
 
 /// The panel is painted the surface colour.
 #[test]
@@ -272,7 +269,6 @@ fn an_elevated_sheet_casts_the_shadow() {
     );
 }
 
-
 /// The shared flag is what opens and closes the sheet.
 #[test]
 fn the_open_flag_opens_and_closes_the_sheet() {
@@ -317,7 +313,6 @@ fn the_props_report_the_side_and_the_elevation() {
     assert!(kit.props().open);
     assert!(kit.is_open(), "and the flag agrees with the prop");
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

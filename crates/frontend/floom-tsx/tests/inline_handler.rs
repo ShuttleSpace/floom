@@ -6,8 +6,8 @@
 //! and that a `createSignal` read in a prop lowers to a `Ref` binding. The runtime
 //! re-render is the closure-capture seam and is verified separately on a GPU box.
 
-use floom_tsx::compile;
 use floom_dsl::ui_ir::{NodeKind, PropValue};
+use floom_tsx::compile;
 
 /// Find the first node of a kind, so a test can inspect its events/props.
 fn find(doc: &floom_dsl::ui_ir::UiDocument, kind: NodeKind) -> &floom_dsl::ui_ir::UiNode {

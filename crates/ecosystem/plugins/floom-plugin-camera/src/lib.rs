@@ -26,18 +26,18 @@ pub mod common;
 mod android;
 #[cfg(all(target_os = "ios", not(feature = "tui")))]
 mod ios;
-#[cfg(all(target_os = "macos", not(feature = "tui")))]
-mod macos;
-#[cfg(all(target_os = "windows", not(feature = "tui")))]
-mod windows;
 #[cfg(all(target_os = "linux", not(feature = "tui")))]
 mod linux;
+#[cfg(all(target_os = "macos", not(feature = "tui")))]
+mod macos;
 #[cfg(all(target_os = "ohos", not(feature = "tui")))]
 mod ohos;
-#[cfg(all(target_arch = "wasm32", not(feature = "tui")))]
-mod web;
 #[cfg(feature = "tui")]
 mod tui;
+#[cfg(all(target_arch = "wasm32", not(feature = "tui")))]
+mod web;
+#[cfg(all(target_os = "windows", not(feature = "tui")))]
+mod windows;
 
 #[cfg(not(any(
     target_os = "android",
@@ -66,20 +66,20 @@ pub fn capability() -> i32 {
 // is on, and the platform halves are not even compiled.
 #[cfg(all(target_os = "android", not(feature = "tui")))]
 pub use android::{disable, enable, provider, register};
-#[cfg(all(target_os = "macos", not(feature = "tui")))]
-pub use macos::{disable, enable, provider, register};
 #[cfg(all(target_os = "ios", not(feature = "tui")))]
 pub use ios::{disable, enable, provider, register};
-#[cfg(all(target_os = "windows", not(feature = "tui")))]
-pub use windows::{disable, enable, provider, register};
 #[cfg(all(target_os = "linux", not(feature = "tui")))]
 pub use linux::{disable, enable, provider, register};
+#[cfg(all(target_os = "macos", not(feature = "tui")))]
+pub use macos::{disable, enable, provider, register};
 #[cfg(all(target_os = "ohos", not(feature = "tui")))]
 pub use ohos::{disable, enable, provider, register};
-#[cfg(all(target_arch = "wasm32", not(feature = "tui")))]
-pub use web::{disable, enable, provider, register};
 #[cfg(feature = "tui")]
 pub use tui::{disable, enable, provider, register};
+#[cfg(all(target_arch = "wasm32", not(feature = "tui")))]
+pub use web::{disable, enable, provider, register};
+#[cfg(all(target_os = "windows", not(feature = "tui")))]
+pub use windows::{disable, enable, provider, register};
 
 #[cfg(not(any(
     target_os = "android",

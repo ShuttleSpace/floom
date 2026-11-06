@@ -136,7 +136,6 @@ fn tap_submit(slot: &Box<dyn WidgetAny>) {
     }
 }
 
-
 #[test]
 fn the_tokens_and_the_props_reach_the_style() {
     let style: FluentFormStyle = kit().resolved_style();
@@ -207,7 +206,6 @@ fn the_numbers_v1_wrote_as_literals_are_literals_here() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_form_surface_is_painted_in_v1_s_fill() {
@@ -289,7 +287,6 @@ fn the_summary_is_empty_but_the_slot_is_still_there() {
     assert_eq!(summary.children().len(), 0, "no messages to paint");
 }
 
-
 #[test]
 fn the_callers_content_is_mounted_in_the_first_slot() {
     let child = Child::new(ChildKey::index(0), LayoutRequest::new(), || {
@@ -305,7 +302,6 @@ fn the_callers_content_is_mounted_in_the_first_slot() {
     });
     assert_eq!(text.as_deref(), Some("a field"), "the caller's content");
 }
-
 
 #[test]
 fn the_submit_callback_fires_while_the_form_is_valid() {
@@ -382,14 +378,12 @@ fn the_submit_button_can_be_left_out() {
     );
 }
 
-
 #[test]
 fn the_props_report_the_shape_and_not_the_callback() {
     let kit = kit().submit_label("Send").show_submit(false);
     assert_eq!(kit.props().submit_label, "Send");
     assert!(!kit.props().show_submit);
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

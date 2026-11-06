@@ -88,17 +88,16 @@ impl FluentTimeline {
     pub fn view(self) -> Stack {
         let style = self.resolved_style();
         let count = self.props.items.len();
-        let mut column = Stack::new(Axis::Vertical)
-            .request(
-                LayoutRequest::new()
-                    .padding(Insets {
-                        left: f64::from(style.padding),
-                        right: f64::from(style.padding),
-                        top: f64::from(style.padding),
-                        bottom: f64::from(style.padding),
-                    })
-                    .cross_align(Align::Start),
-            );
+        let mut column = Stack::new(Axis::Vertical).request(
+            LayoutRequest::new()
+                .padding(Insets {
+                    left: f64::from(style.padding),
+                    right: f64::from(style.padding),
+                    top: f64::from(style.padding),
+                    bottom: f64::from(style.padding),
+                })
+                .cross_align(Align::Start),
+        );
 
         for (index, item) in self.props.items.iter().enumerate() {
             let is_last = index + 1 == count;

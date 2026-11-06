@@ -19,7 +19,6 @@ fn button() -> FluentIconButton {
     FluentIconButton::new("close")
 }
 
-
 #[test]
 fn the_tokens_reach_the_engine_style() {
     let theme = fluent();
@@ -72,7 +71,6 @@ fn the_crate_really_reads_fluent_tokens() {
     );
 }
 
-
 #[test]
 fn the_variant_table_matches_v1s_three_pairs() {
     let theme = fluent();
@@ -123,7 +121,6 @@ fn the_ripple_ink_follows_v1s_rule() {
     );
 }
 
-
 #[test]
 fn the_disabled_colours_are_two_alphas_of_on_surface() {
     let theme = fluent();
@@ -151,7 +148,6 @@ fn the_disabled_colours_are_two_alphas_of_on_surface() {
     );
 }
 
-
 #[test]
 fn every_props_variant_maps_to_an_engine_variant() {
     for (props, expected) in [
@@ -175,7 +171,6 @@ fn every_props_variant_maps_to_an_engine_variant() {
         );
     }
 }
-
 
 #[test]
 fn the_kit_hands_the_engine_a_pressable_box() {
@@ -250,7 +245,6 @@ fn two_views_agree() {
     assert_eq!(a.icon().fill(), b.icon().fill());
     assert_eq!(a.icon().edge(), b.icon().edge());
 }
-
 
 #[test]
 fn the_props_report_the_click_callback() {

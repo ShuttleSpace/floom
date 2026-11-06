@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::Widget;
@@ -24,7 +23,6 @@ fn recording() -> (MdAutocomplete, Arc<Mutex<Vec<Option<String>>>>) {
         .on_change(move |text| sink.lock().unwrap().push(text));
     (combo, seen)
 }
-
 
 #[test]
 fn choosing_an_option_reports_its_text() {
@@ -57,7 +55,6 @@ fn the_mounted_widget_adapts_the_index_to_text() {
         "a row click reports text even though the engine only ever holds an index"
     );
 }
-
 
 #[test]
 fn committing_free_text_reports_what_was_typed() {
@@ -146,7 +143,6 @@ fn committing_without_a_callback_is_fine() {
     assert_eq!(combo.pick().lock().unwrap().selected, None);
 }
 
-
 #[test]
 fn the_commit_point_is_public_because_focus_cannot_be_observed() {
     let (combo, seen) = recording();
@@ -154,7 +150,6 @@ fn the_commit_point_is_public_because_focus_cannot_be_observed() {
     combo.commit();
     assert_eq!(seen.lock().unwrap().as_slice(), [Some("kiwi".to_string())]);
 }
-
 
 #[test]
 fn the_tokens_come_from_autocomplete_tokens() {
@@ -201,7 +196,6 @@ fn the_theme_is_not_selected_by_naming_it() {
     assert_eq!(material.height, cupertino.height);
 }
 
-
 #[test]
 fn props_are_autocomplete_props() {
     let (combo, _) = recording();
@@ -218,7 +212,6 @@ fn the_default_placeholder_is_the_autocompletes_own() {
     let combo = MdAutocomplete::new();
     assert_eq!(combo.props().placeholder, "Type to search\u{2026}");
 }
-
 
 /// The view places its panel below the field with Material's gap — the same placement a
 /// combobox makes, because it is the same engine widget.

@@ -321,9 +321,10 @@ where
         }
         PointerPhase::Down | PointerPhase::Up => {
             if event.phase == PointerPhase::Down
-                && let Some(key) = key_of(event.position) {
-                    guard.set_picked(key);
-                }
+                && let Some(key) = key_of(event.position)
+            {
+                guard.set_picked(key);
+            }
             true
         }
         _ => false,

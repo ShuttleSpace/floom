@@ -1,4 +1,3 @@
-
 use floom_core::{
     Child, ChildKey, ElementId, Event, Key, KeyEvent, LayoutRequest, Rect, Widget, WidgetAny,
 };
@@ -83,7 +82,6 @@ fn click(widget: &mut dyn WidgetAny) {
     );
 }
 
-
 /// The tokens reach the style.
 #[test]
 fn the_tokens_reach_the_style() {
@@ -139,7 +137,6 @@ fn the_props_report_the_value() {
     assert_eq!(kit.props().value, "Hello");
 }
 
-
 /// The display row: the value and the edit affordance.
 #[test]
 fn the_display_row_holds_the_value_and_the_edit_affordance() {
@@ -177,7 +174,6 @@ fn the_editing_row_holds_the_field_and_the_two_buttons() {
     let row = row_of(&widget);
     assert_eq!(row.children().len(), 3, "the field, the tick and the cross");
 }
-
 
 /// The display row shows the value.
 #[test]
@@ -227,7 +223,6 @@ fn the_edit_affordance_is_a_glyph_in_on_surface_variant() {
         "v1 drew the edit affordance in `on_surface_variant`"
     );
 }
-
 
 /// The edit affordance opens the field, and the draft takes the value.
 #[test]
@@ -315,7 +310,6 @@ fn a_change_of_mode_asks_for_the_other_row() {
         "the mode moved, so the other row is mounted"
     );
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

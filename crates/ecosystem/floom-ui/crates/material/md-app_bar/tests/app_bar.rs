@@ -1,4 +1,3 @@
-
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Rect, Widget};
 use floom_types::Color;
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
@@ -40,7 +39,6 @@ fn slot(text: &'static str) -> Child {
         Box::new(floom_widgets::Text::new(text))
     })
 }
-
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -94,7 +92,6 @@ fn the_callers_height_wins_over_the_token() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_bar_is_painted_in_v1_s_colour() {
@@ -168,7 +165,6 @@ fn an_elevation_draws_the_shadow() {
         "v1's shadow: the blur grows with the elevation, the spread is one"
     );
 }
-
 
 /// The caller's leading slot and actions are mounted.
 #[test]

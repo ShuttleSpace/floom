@@ -5,11 +5,11 @@
 
 pub mod blur;
 mod degradation;
-pub mod skia_abi;
 mod external;
 mod frame_queue;
 mod golden;
 mod present;
+pub mod skia_abi;
 
 pub use degradation::DegradationReport;
 pub use external::{ExternalFrame, ExternalTextureCache, ExternalTextureStats, ImportDecision};

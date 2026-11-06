@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{ElementId, Event, Rect, Widget};
@@ -83,7 +82,6 @@ fn row_of(field: &dyn floom_core::WidgetAny) -> Box<dyn floom_core::WidgetAny> {
     field.children().remove(0).build()
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -142,7 +140,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_field_is_painted_in_v1_s_colours() {
@@ -245,7 +242,6 @@ fn the_two_steppers_are_tiles_of_the_token_s_size() {
         assert_eq!(text, glyph, "the glyph on the tile");
     }
 }
-
 
 #[test]
 fn the_label_sits_above_the_field() {

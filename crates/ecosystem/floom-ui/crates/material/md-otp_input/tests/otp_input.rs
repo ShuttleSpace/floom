@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{ElementId, Event, Rect, Widget, WidgetAny};
@@ -69,7 +68,6 @@ fn input_of(box_widget: &dyn WidgetAny) -> Box<dyn WidgetAny> {
     box_widget.children().remove(0).build()
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -101,7 +99,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_boxes_are_painted_in_v1_s_colours() {
@@ -188,7 +185,6 @@ fn the_gap_between_the_boxes_is_the_token_s_gap() {
         .expect("the row asks for its own space");
     assert_eq!(request.gap, Some(resolved.gap), "the token's gap");
 }
-
 
 /// Typing in a box writes the code and fires the callback.
 #[test]

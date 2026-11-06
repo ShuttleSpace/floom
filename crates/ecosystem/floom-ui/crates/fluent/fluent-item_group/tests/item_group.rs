@@ -30,7 +30,6 @@ fn three_rows() -> FluentItemGroup {
         .row("Three", || Box::new(floom_widgets::Text::new("three")))
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_engine_style() {
     let style = group().select_group_style();
@@ -109,7 +108,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(group().resolved_style().design_system, "fluent");
 }
 
-
 #[test]
 fn one_widget_answers_both_accessors() {
     let widget = group()
@@ -150,7 +148,6 @@ fn the_initial_selection_is_readable_through_both_accessors() {
     );
 }
 
-
 #[test]
 fn every_declared_row_reaches_the_widget() {
     let widget = three_rows().view(None::<fn(usize)>, None::<fn(Vec<usize>)>);
@@ -175,7 +172,6 @@ fn an_empty_group_still_builds() {
     assert!(widget.children().is_empty());
     assert!(widget.layout_request().is_some(), "and it is still a stack");
 }
-
 
 #[test]
 fn both_callbacks_are_reported_and_agree() {

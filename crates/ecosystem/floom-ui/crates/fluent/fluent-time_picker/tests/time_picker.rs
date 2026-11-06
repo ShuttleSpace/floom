@@ -96,7 +96,6 @@ fn hour_down(style: &FluentTimePickerStyle, panel: Rect) -> Rect {
     }
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentTimePickerStyle = kit().resolved_style();
@@ -159,7 +158,6 @@ fn the_literals_v1_wrote_are_reported() {
     assert_eq!(style.done_height, 32.0, "v1's 'Done' button");
 }
 
-
 #[test]
 fn the_field_is_painted_in_v1_s_colours() {
     let style = kit().resolved_style();
@@ -190,7 +188,6 @@ fn the_placeholder_is_painted_in_the_variant_ink() {
     assert_eq!(texts[0].0, "Select time");
     assert_eq!(texts[0].2, paint(style.on_surface_variant));
 }
-
 
 #[test]
 fn the_panel_is_asked_of_the_host_below_the_field() {

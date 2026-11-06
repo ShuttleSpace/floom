@@ -60,9 +60,10 @@ impl<'a> AgentSession<'a> {
     fn dispatch(&mut self, request: &AgentRequest) -> Result<Payload, AgentError> {
         crate::agent::protocol::check_version(request.version)?;
         if let Some(expected) = &self.token
-            && request.token.as_deref() != Some(expected.as_str()) {
-                return Err(AgentError::AuthRequired);
-            }
+            && request.token.as_deref() != Some(expected.as_str())
+        {
+            return Err(AgentError::AuthRequired);
+        }
         match &request.command {
             Command::Tree => Ok(Payload::Tree(self.tree())),
             Command::Semantics => Ok(Payload::Semantics(self.semantics())),

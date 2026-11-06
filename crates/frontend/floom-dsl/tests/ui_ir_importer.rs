@@ -10,8 +10,7 @@
 //! worse than no document at all.
 
 use floom_dsl::ui_ir::{
-    DesignAxis, DesignContract, DesignFile, DesignNode, NodeKind, PropValue, Rgba,
-    compare, import,
+    DesignAxis, DesignContract, DesignFile, DesignNode, NodeKind, PropValue, Rgba, compare, import,
 };
 
 const FIXTURE: &str = include_str!("../fixtures/normalized_design.json");
@@ -216,7 +215,10 @@ fn a_child_node_needs_a_name_its_key_can_be_built_from() {
     let mut file = fixture_file();
     file.root.children[0].name = "has space!".into();
     let error = import(&file).expect_err("not a legal key segment");
-    assert!(matches!(error, floom_dsl::ui_ir::ImporterError::BadName { .. }));
+    assert!(matches!(
+        error,
+        floom_dsl::ui_ir::ImporterError::BadName { .. }
+    ));
 }
 
 /// A node needs `text` exactly when its role says so.

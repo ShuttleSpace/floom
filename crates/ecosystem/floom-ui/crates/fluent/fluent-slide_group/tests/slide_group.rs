@@ -115,7 +115,6 @@ fn settle(conditional: &mut dyn WidgetAny) -> usize {
     conditional.children().len()
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentSlideGroupStyle = kit().resolved_style();
@@ -161,7 +160,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_chosen_item_has_a_primary_indicator() {
@@ -282,7 +280,6 @@ fn the_arrows_are_filled_and_inked() {
     assert_eq!(ink, paint(style.on_surface_variant), "and the arrows' ink");
 }
 
-
 #[test]
 fn there_are_no_arrows_for_one_item() {
     let area = FluentSlideGroup::new()
@@ -318,7 +315,6 @@ fn the_items_touch() {
         "and the token's height"
     );
 }
-
 
 #[test]
 fn tapping_an_item_chooses_it_and_says_so() {

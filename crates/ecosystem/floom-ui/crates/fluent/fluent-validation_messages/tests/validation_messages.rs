@@ -59,7 +59,6 @@ fn message_painted(list: &ValidationMessagesList, index: usize) -> (String, f32,
         .expect("a message is painted")
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentValidationMessagesStyle = kit().resolved_style();
@@ -93,7 +92,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-
 #[test]
 fn the_messages_are_painted_in_the_error_colour() {
     let resolved = kit().resolved_style();
@@ -119,7 +117,6 @@ fn the_gap_between_the_messages_is_the_one_v1_used() {
     assert_eq!(request.axis, Some(floom_core::Axis::Vertical));
     assert_eq!(request.gap, Some(resolved.painted_gap));
 }
-
 
 #[test]
 fn an_empty_list_has_no_messages() {

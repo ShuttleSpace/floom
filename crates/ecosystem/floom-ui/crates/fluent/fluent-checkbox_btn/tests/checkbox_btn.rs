@@ -132,7 +132,6 @@ fn tap(widget: &Stack) {
     }
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentCheckboxBtnStyle = kit().resolved_style();
@@ -188,7 +187,6 @@ fn the_numbers_v1_wrote_as_literals_are_literals_here() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_unchecked_pill_paints_v1_s_fill_and_rim() {
@@ -300,7 +298,6 @@ fn the_disabled_label_is_painted_with_v1_s_disabled_ink() {
     );
 }
 
-
 #[test]
 fn clicking_the_pill_switches_it_on() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -375,7 +372,6 @@ fn a_disabled_pill_does_not_answer() {
     assert!(seen.lock().unwrap().is_empty());
 }
 
-
 #[test]
 fn the_props_report_the_shape_and_not_the_callback() {
     let kit = kit().checked(true).disabled(true).label("Notify");
@@ -384,7 +380,6 @@ fn the_props_report_the_shape_and_not_the_callback() {
     assert_eq!(kit.props().label.as_deref(), Some("Notify"));
     assert!(kit.props().on_change.is_none());
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

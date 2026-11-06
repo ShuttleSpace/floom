@@ -1,4 +1,3 @@
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -31,7 +30,6 @@ fn panels(count: usize) -> MdExpansionPanels {
     }
     built
 }
-
 
 #[test]
 fn the_resolved_style_is_the_theme_tokens() {
@@ -77,7 +75,6 @@ fn the_engine_widget_declares_the_token_axis_and_gap() {
     assert_eq!(req.gap, Some(tokens().gap), "the token gap, not a default");
 }
 
-
 #[test]
 fn every_declared_panel_becomes_one_slot() {
     let accordion = panels(3).resolve();
@@ -107,7 +104,6 @@ fn the_single_panel_rule_survives_the_trip() {
         "unless the caller opts out"
     );
 }
-
 
 #[test]
 fn a_body_is_a_send_sync_builder() {
@@ -152,7 +148,6 @@ fn the_body_inset_carries_both_tokens() {
         f64::from(tokens.content_padding + tokens.indent)
     );
 }
-
 
 #[test]
 fn the_indicator_is_a_pair_of_distinct_glyphs() {
@@ -224,7 +219,6 @@ fn the_kit_hands_the_engine_a_builder_that_is_told_the_state() {
         "and the two states resolve to different glyphs"
     );
 }
-
 
 #[test]
 fn the_shared_props_report_the_multiple_rule_only() {

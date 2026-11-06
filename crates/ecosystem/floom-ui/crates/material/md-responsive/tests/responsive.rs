@@ -1,4 +1,3 @@
-
 use floom_core::Widget;
 use floom_types::{Color, Length, Rect};
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};

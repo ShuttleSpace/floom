@@ -6,8 +6,8 @@
 
 use std::ffi::c_void;
 
-use floom_native_ffi::floom_native::NativeViewProvider;
 use floom_native_ffi::CProviderError;
+use floom_native_ffi::floom_native::NativeViewProvider;
 
 const MESSAGE: &str = "the camera plugin is not available on a terminal backend";
 

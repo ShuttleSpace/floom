@@ -86,7 +86,6 @@ fn scrim_ops(kit: FluentSheet) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentSheetStyle = kit().resolved_style();
@@ -160,7 +159,6 @@ fn the_scrim_is_black_at_160() {
          the literal and not about the token"
     );
 }
-
 
 #[test]
 fn the_panel_is_painted_the_surface_colour() {
@@ -267,7 +265,6 @@ fn an_elevated_sheet_casts_the_shadow() {
     );
 }
 
-
 #[test]
 fn the_open_flag_opens_and_closes_the_sheet() {
     let kit = kit();
@@ -308,7 +305,6 @@ fn the_props_report_the_side_and_the_elevation() {
     assert!(kit.props().open);
     assert!(kit.is_open(), "and the flag agrees with the prop");
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

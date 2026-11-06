@@ -99,7 +99,6 @@ fn tap(dial: &Stack, index: usize) {
     pressable.event(&mut up, id);
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentSpeedDialStyle = kit().resolved_style();
@@ -158,7 +157,6 @@ fn a_disabled_dial_is_v1_s_dimmed_pair() {
     );
 }
 
-
 #[test]
 fn the_button_is_painted_in_v1_s_ink() {
     let resolved = kit().resolved_style();
@@ -190,7 +188,6 @@ fn the_button_is_the_size_the_token_says() {
         "the token's button size"
     );
 }
-
 
 #[test]
 fn the_fan_is_mounted_only_while_the_dial_is_open() {

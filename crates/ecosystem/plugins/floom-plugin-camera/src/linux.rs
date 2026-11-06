@@ -80,8 +80,7 @@ pub unsafe fn provider(
     let vtable = raw as *const FloomNativeProviderV1;
     let provider = unsafe { CProvider::from_raw(vtable) };
     // SAFETY: the handle outlives the provider by the caller's contract.
-    unsafe { provider.with_host(host_window) }
-        .map(|p| Box::new(p) as Box<dyn NativeViewProvider>)
+    unsafe { provider.with_host(host_window) }.map(|p| Box::new(p) as Box<dyn NativeViewProvider>)
 }
 
 /// Registers this plugin with the process-wide table.

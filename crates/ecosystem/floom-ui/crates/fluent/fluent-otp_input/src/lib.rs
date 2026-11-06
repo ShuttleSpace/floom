@@ -198,17 +198,16 @@ impl FluentOtpInput {
             let padding_vert = ((size - font_size) / 2.0).max(0.0) as f64;
 
             row = row.push_layout(LayoutRequest::new().width(size).height(size), move || {
-                let field = Child::new(
-                    ChildKey::index(0),
-                    LayoutRequest::new().grow(1.0),
-                    {
-                        let buffer = buffer.clone();
-                        let code = code.clone();
-                        let reals = reals.clone();
-                        let on_change = on_change.clone();
-                        move || {
-                            let mut input = TextInput::new(buffer.clone()).placeholder("").style(
-                                TextInputStyle {
+                let field = Child::new(ChildKey::index(0), LayoutRequest::new().grow(1.0), {
+                    let buffer = buffer.clone();
+                    let code = code.clone();
+                    let reals = reals.clone();
+                    let on_change = on_change.clone();
+                    move || {
+                        let mut input =
+                            TextInput::new(buffer.clone())
+                                .placeholder("")
+                                .style(TextInputStyle {
                                     font_size,
                                     color: text_color,
                                     background: None,
@@ -217,62 +216,58 @@ impl FluentOtpInput {
                                     padding_horiz,
                                     padding_vert,
                                     ..TextInputStyle::default()
-                                },
-                            );
-                            input = input.on_change({
-                                let buffer = buffer.clone();
-                                let code = code.clone();
-                                let reals = reals.clone();
-                                let on_change = on_change.clone();
-                                move |text: String| {
-                                    if disabled {
-                                        return;
-                                    }
-                                    let ch = text
-                                        .chars()
-                                        .next()
-                                        .map(|c| c.to_string())
-                                        .unwrap_or_default();
-                                    if ch == MASK {
-                                        return;
-                                    }
-                                    {
-                                        let mut reals =
-                                            reals.lock().unwrap_or_else(|e| e.into_inner());
-                                        if let Some(slot) = reals.get_mut(index) {
-                                            if *slot != ch {
-                                                *slot = ch.clone();
-                                            }
+                                });
+                        input = input.on_change({
+                            let buffer = buffer.clone();
+                            let code = code.clone();
+                            let reals = reals.clone();
+                            let on_change = on_change.clone();
+                            move |text: String| {
+                                if disabled {
+                                    return;
+                                }
+                                let ch = text
+                                    .chars()
+                                    .next()
+                                    .map(|c| c.to_string())
+                                    .unwrap_or_default();
+                                if ch == MASK {
+                                    return;
+                                }
+                                {
+                                    let mut reals = reals.lock().unwrap_or_else(|e| e.into_inner());
+                                    if let Some(slot) = reals.get_mut(index) {
+                                        if *slot != ch {
+                                            *slot = ch.clone();
                                         }
-                                    }
-                                    let new_code: String = read_reals(&reals)
-                                        .into_iter()
-                                        .filter(|slot| !slot.is_empty())
-                                        .collect();
-                                    let changed = {
-                                        let mut code =
-                                            code.lock().unwrap_or_else(|e| e.into_inner());
-                                        if *code == new_code {
-                                            false
-                                        } else {
-                                            *code = new_code.clone();
-                                            true
-                                        }
-                                    };
-                                    if changed {
-                                        if let Some(callback) = &on_change {
-                                            callback(new_code);
-                                        }
-                                    }
-                                    if masked && !ch.is_empty() {
-                                        write_text(&buffer, MASK);
                                     }
                                 }
-                            });
-                            Box::new(input) as Box<dyn WidgetAny>
-                        }
-                    },
-                );
+                                let new_code: String = read_reals(&reals)
+                                    .into_iter()
+                                    .filter(|slot| !slot.is_empty())
+                                    .collect();
+                                let changed = {
+                                    let mut code = code.lock().unwrap_or_else(|e| e.into_inner());
+                                    if *code == new_code {
+                                        false
+                                    } else {
+                                        *code = new_code.clone();
+                                        true
+                                    }
+                                };
+                                if changed {
+                                    if let Some(callback) = &on_change {
+                                        callback(new_code);
+                                    }
+                                }
+                                if masked && !ch.is_empty() {
+                                    write_text(&buffer, MASK);
+                                }
+                            }
+                        });
+                        Box::new(input) as Box<dyn WidgetAny>
+                    }
+                });
                 Box::new(
                     Surface::new()
                         .request(LayoutRequest::new().width(size).height(size))

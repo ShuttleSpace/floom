@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 /// A shared number.

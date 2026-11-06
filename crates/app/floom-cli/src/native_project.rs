@@ -220,7 +220,8 @@ android.nonTransitiveRClass=true
 # its own built-in rules.
 android.builtInKotlin=false
 kotlin.code.style=official
-"#.to_string()
+"#
+    .to_string()
 }
 
 /// `android/gradle/wrapper/gradle-wrapper.properties`.
@@ -256,13 +257,15 @@ pub fn android_local_properties(sdk_dir: &str) -> String {
 /// sentence the person reading it can act on.
 pub fn detect_android_sdk() -> Option<String> {
     if let Ok(dir) = std::env::var("ANDROID_HOME")
-        && !dir.is_empty() {
-            return Some(dir);
-        }
+        && !dir.is_empty()
+    {
+        return Some(dir);
+    }
     if let Ok(dir) = std::env::var("ANDROID_SDK_ROOT")
-        && !dir.is_empty() {
-            return Some(dir);
-        }
+        && !dir.is_empty()
+    {
+        return Some(dir);
+    }
     let mac = std::env::var("HOME")
         .ok()
         .map(|h| format!("{h}/Library/Android/sdk"));

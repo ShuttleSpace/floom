@@ -1,4 +1,3 @@
-
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -116,7 +115,6 @@ fn click(radio: &mut Radio, id: ElementId) {
     dispatch(radio, id, ROW, PointerEvent::primary_up(at).into());
 }
 
-
 #[test]
 fn the_ring_and_its_rim_are_the_radio_tokens() {
     let tokens = radio_tokens();
@@ -190,7 +188,6 @@ fn the_interior_is_transparent() {
     );
 }
 
-
 #[test]
 fn a_disabled_radio_is_on_surface_at_38() {
     let binding = theme();
@@ -238,7 +235,6 @@ fn a_disabled_radio_is_not_the_enabled_one() {
     assert_ne!(disabled_style(), style());
 }
 
-
 #[test]
 fn the_label_is_on_surface_at_the_token_size() {
     let tokens = radio_tokens();
@@ -259,7 +255,6 @@ fn the_label_is_on_surface_at_the_token_size() {
     assert_eq!(ink.b, colors.on_surface.b);
     assert_eq!(alpha_of(ink), 255, "undimmed while enabled");
 }
-
 
 #[test]
 fn the_halo_is_primary_at_twenty_and_thirty_while_pressed() {
@@ -410,7 +405,6 @@ fn neither_interaction_variant_is_this_kits_own() {
     );
 }
 
-
 #[test]
 fn the_touch_target_is_reserved_by_the_layout() {
     let style = style();
@@ -444,7 +438,6 @@ fn the_touch_target_is_reserved_by_the_layout() {
         "control: the engine's default reserves 16, so this assertion is not vacuous"
     );
 }
-
 
 /// The props cross into the widget, and both of the two places `disabled` lives
 /// are set from the same builder flag.

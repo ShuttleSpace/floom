@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{Axis, ElementId, Length, Point, Rect, Widget, WidgetAny};
@@ -84,7 +83,6 @@ fn tap(control: &mut dyn WidgetAny) {
     }
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -135,7 +133,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 /// The selected page is filled in `primary` and inked in `on_primary`.
 #[test]
@@ -250,7 +247,6 @@ fn the_buttons_are_the_tokens_square() {
     assert_eq!(request.height, Some(Length::Px(style.button_size)));
 }
 
-
 #[test]
 fn the_controls_are_a_column() {
     let outer = kit().total(3).current(1).view();
@@ -296,7 +292,6 @@ fn the_container_keeps_the_tokens_gap() {
         "v1 wrote the token's gap here"
     );
 }
-
 
 /// A page button answers with its own page.
 #[test]

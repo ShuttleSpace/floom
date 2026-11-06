@@ -1,4 +1,3 @@
-
 use floom_core::PaintContext;
 use floom_types::{Color, Rect};
 use floom_widgets::stroke_rounded_outline;

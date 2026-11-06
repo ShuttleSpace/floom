@@ -1,4 +1,3 @@
-
 use floom_types::{Color, Easing, Transition};
 
 /// Convert a `0xRRGGBB` integer to a [`Color`].

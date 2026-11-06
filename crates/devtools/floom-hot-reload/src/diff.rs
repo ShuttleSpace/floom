@@ -42,9 +42,10 @@ fn structure(document: &UiDocument) -> HashMap<NodeKey, NodeState> {
         .collect();
     for node in &document.nodes {
         if let Some(state) = out.get_mut(&node.key)
-            && let Some(slot) = node.slots.first() {
-                state.children = slot.children.clone();
-            }
+            && let Some(slot) = node.slots.first()
+        {
+            state.children = slot.children.clone();
+        }
         for slot in &node.slots {
             for (index, child) in slot.children.iter().enumerate() {
                 if let Some(state) = out.get_mut(child) {

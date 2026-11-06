@@ -1,4 +1,3 @@
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -50,7 +49,6 @@ fn indicator(kit: MaterialPullToRefresh) -> Box<dyn floom_core::WidgetAny> {
     let column = column(kit);
     column.children().remove(0).build()
 }
-
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -106,7 +104,6 @@ fn the_threshold_is_the_props_not_the_token() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_box_is_painted_v1_s_colour() {
@@ -172,7 +169,6 @@ fn the_refreshing_state_shows_v1_s_other_label() {
         .expect("the label is painted");
     assert_eq!(text, "↻ Refreshing…", "v1's label while refreshing");
 }
-
 
 /// The indicator is absent until there is something to say.
 #[test]

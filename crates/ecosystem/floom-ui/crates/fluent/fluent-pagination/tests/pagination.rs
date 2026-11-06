@@ -79,7 +79,6 @@ fn tap(control: &mut dyn WidgetAny) {
     }
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentPaginationStyle = kit().resolved_style();
@@ -129,7 +128,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_selected_page_is_filled_in_primary() {
@@ -239,7 +237,6 @@ fn the_buttons_are_the_tokens_square() {
     assert_eq!(request.height, Some(Length::Px(style.button_size)));
 }
 
-
 #[test]
 fn the_controls_are_a_column() {
     let outer = kit().total(3).current(1).view();
@@ -283,7 +280,6 @@ fn the_container_keeps_the_tokens_gap() {
         "v1 wrote the token's gap here"
     );
 }
-
 
 #[test]
 fn a_page_button_answers_with_its_page() {

@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::Color;
 use floom_widgets::testkit::{
@@ -141,7 +140,6 @@ fn tap(widget: &Stack) {
     }
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -198,7 +196,6 @@ fn the_numbers_v1_wrote_as_literals_are_literals_here() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 /// The unchecked pill: `surface_variant` with an `outline` rim.
 #[test]
@@ -318,7 +315,6 @@ fn the_disabled_label_is_painted_with_v1_s_disabled_ink() {
     );
 }
 
-
 /// Clicking the pill switches it on, and says so.
 #[test]
 fn clicking_the_pill_switches_it_on() {
@@ -397,7 +393,6 @@ fn a_disabled_pill_does_not_answer() {
     assert!(seen.lock().unwrap().is_empty());
 }
 
-
 #[test]
 fn the_props_report_the_shape_and_not_the_callback() {
     let kit = kit().checked(true).disabled(true).label("Notify");
@@ -406,7 +401,6 @@ fn the_props_report_the_shape_and_not_the_callback() {
     assert_eq!(kit.props().label.as_deref(), Some("Notify"));
     assert!(kit.props().on_change.is_none());
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

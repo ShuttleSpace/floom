@@ -105,7 +105,6 @@ fn cell_rect(style: &FluentDatePickerStyle, bounds: Rect, row: usize, column: us
     }
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentDatePickerStyle = kit().resolved_style();
@@ -182,7 +181,6 @@ fn the_unread_token_stays_unread() {
     );
 }
 
-
 #[test]
 fn the_field_is_painted_in_v1_s_colours() {
     let style = kit().resolved_style();
@@ -234,7 +232,6 @@ fn the_border_is_primary_while_the_calendar_is_open() {
         "v1 drew the open field's border in primary"
     );
 }
-
 
 #[test]
 fn the_calendar_is_asked_of_the_host_below_the_field() {

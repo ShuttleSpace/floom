@@ -66,7 +66,6 @@ fn fill_painted(hover: &HoverBox) -> Option<Color> {
     })
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentHoverStyle = kit().resolved_style();
@@ -96,7 +95,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_fill_is_painted_in_v1_s_colour() {
@@ -141,7 +139,6 @@ fn the_fill_covers_the_whole_box() {
         .expect("the fill is painted");
     assert_eq!(bounds, BOX);
 }
-
 
 #[test]
 fn the_child_is_mounted_inside_the_box() {

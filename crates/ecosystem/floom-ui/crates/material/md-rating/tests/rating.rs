@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
@@ -83,7 +82,6 @@ fn tap(row: &Stack, index: usize) {
     star.event(&mut up, id);
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -110,7 +108,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_filled_stars_are_painted_in_v1_s_ink() {
@@ -184,7 +181,6 @@ fn a_value_above_the_maximum_is_clamped() {
         );
     }
 }
-
 
 /// A tap fills the stars below it and reports the new value.
 #[test]

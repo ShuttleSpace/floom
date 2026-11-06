@@ -49,7 +49,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-
 #[test]
 fn the_tokens_reach_the_style() {
     let style: FluentRangeSliderStyle = kit().resolved_style();
@@ -115,7 +114,6 @@ fn the_props_report_the_range() {
     assert_eq!(kit.props().step, 2.0);
 }
 
-
 #[test]
 fn the_track_the_band_and_the_two_thumbs_are_painted() {
     let resolved = kit().resolved_style();
@@ -174,7 +172,6 @@ fn the_band_runs_between_the_two_thumbs() {
         band.x1
     );
 }
-
 
 #[test]
 fn a_drag_moves_the_nearer_thumb() {
@@ -283,7 +280,6 @@ fn the_two_values_are_shared_with_the_caller() {
         .cloned();
     assert_eq!(low.as_deref(), Some("10"), "the shared map holds the value");
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

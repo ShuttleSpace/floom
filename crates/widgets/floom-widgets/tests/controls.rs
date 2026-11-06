@@ -6,7 +6,8 @@ use std::rc::Rc;
 
 use floom_accessibility::SemanticsState;
 use floom_core::{
-    Axis, Child, ChildKey, ElementId, Key, KeyPhase, LayoutRequest, NamedKey, Point, Rect, Size, Widget, WidgetAny,
+    Axis, Child, ChildKey, ElementId, Key, KeyPhase, LayoutRequest, NamedKey, Point, Rect, Size,
+    Widget, WidgetAny,
 };
 use floom_scene::SceneNode;
 use floom_types::{Brush, Color, KeyEvent, Length, Modifiers, PointerEvent, PointerPhase};
@@ -14,8 +15,8 @@ use floom_widgets::Stack;
 use floom_widgets::controls::{Button, Pressable, Progress, Switch, SwitchPalette};
 use floom_widgets::primitives::Text;
 use floom_widgets::testkit::{
-    AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, TestEventContext,
-    dispatch, paint_snapshot,
+    AllocatingCreateContext, RecordingUpdateContext, SceneRecorder, TestEventContext, dispatch,
+    paint_snapshot,
 };
 
 const ROW: Rect = Rect {
@@ -259,11 +260,7 @@ fn switch_tokens_reproduce_kit_geometry() {
         .knob_bounds(ROW);
 
     assert_eq!((off.width(), off.height()), (24.0, 24.0), "square knob");
-    assert_eq!(
-        off.x0,
-        ROW.x0 + 2.0,
-        "2px from the start"
-    );
+    assert_eq!(off.x0, ROW.x0 + 2.0, "2px from the start");
     assert_eq!(on.x1, ROW.x0 + 52.0 - 2.0, "2px from the far end");
     assert_eq!(off.x1, ROW.x0 + 26.0);
     assert_eq!(on.x0, ROW.x0 + 26.0);

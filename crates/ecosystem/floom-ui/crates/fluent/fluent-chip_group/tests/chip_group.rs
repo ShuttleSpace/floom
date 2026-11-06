@@ -116,7 +116,6 @@ fn tap(group: &SelectGroup, index: usize) {
     }
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_engine_style() {
     let style = group().select_group_style();
@@ -203,7 +202,6 @@ fn the_resolved_style_is_enough_to_build_the_widget() {
     assert_eq!(by_hand.declared_style(), by_port);
 }
 
-
 #[test]
 fn the_unchosen_chip_paints_the_unchosen_appearance() {
     let resolved = group().resolved_style();
@@ -239,7 +237,6 @@ fn the_chip_paints_its_own_label_at_v1_s_size() {
     assert_eq!(text, "One");
     assert_eq!(size, 13.0, "v1 wrote `.font_size(13.0)`");
 }
-
 
 #[test]
 fn the_chosen_chip_comes_off_when_it_is_tapped_again() {
@@ -297,7 +294,6 @@ fn one_chip_at_a_time_by_default() {
     tap(&group, 1);
     assert_eq!(group.selection(), vec![1], "not [0, 1]");
 }
-
 
 #[test]
 fn the_change_callback_reports_the_chosen_chips() {

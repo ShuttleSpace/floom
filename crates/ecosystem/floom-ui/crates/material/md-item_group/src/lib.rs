@@ -1,4 +1,3 @@
-
 use floom_core::Axis;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::{Color as PaintColor, Insets};

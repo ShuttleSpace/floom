@@ -1,4 +1,3 @@
-
 use floom_accessibility::SemanticsRole;
 use floom_core::{
     Color, CreateContext, ElementId, Event, EventContext, Key, KeyEvent, KeyPhase, NamedKey,

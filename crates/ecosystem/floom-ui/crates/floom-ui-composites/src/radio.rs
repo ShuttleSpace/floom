@@ -1,4 +1,3 @@
-
 use crate::{
     focus::FocusRing,
     state::{LayerShape, StateLayer},

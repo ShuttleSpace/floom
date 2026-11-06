@@ -9,12 +9,12 @@
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 
+use floom_core::error::{ErrorBoundary, Report, Severity};
 use floom_devtools::Inspector;
 use floom_devtools::panel::{
     DevtoolsState, DevtoolsTab, ReadoutRow, breadcrumb_rows, console_rows, elements_readout,
     layout_rows, performance_rows, style_rows, tree_rows,
 };
-use floom_core::error::{ErrorBoundary, Report, Severity};
 use floom_hot_reload::LiveTree;
 use floom_inspector::{AllocSummary, CacheStats, FrameSummary, PerformanceSnapshot, StageSpan};
 

@@ -4,8 +4,8 @@
 //! These assert the *shape* of the lowered `UiDocument`, not its exact byte
 //! layout, so they survive harmless formatting changes in the IR.
 
-use floom_tsx::compile;
 use floom_dsl::ui_ir::{EventName, NodeKind, PropValue, UiDocument};
+use floom_tsx::compile;
 
 fn doc(source: &str) -> UiDocument {
     compile(source).expect("compile should succeed")

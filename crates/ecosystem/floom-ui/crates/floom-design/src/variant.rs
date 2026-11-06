@@ -1,4 +1,3 @@
-
 use floom_style::StyleState;
 
 /// An emphasis level for a control.

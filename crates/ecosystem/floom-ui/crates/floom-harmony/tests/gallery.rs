@@ -1,4 +1,3 @@
-
 use floom_design::{
     CellPaint, ControlSize, GallerySample, InteractionState, Variant, contrast_ratio, gallery_size,
 };

@@ -1,4 +1,3 @@
-
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Rect, Widget, WidgetAny};
 use floom_types::{Color, Insets};
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
@@ -62,7 +61,6 @@ fn fill_of(ops: &[PaintOp]) -> Option<Color> {
     })
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -113,7 +111,6 @@ fn the_props_report_the_bar() {
     assert_eq!(kit.props().pad, Some(4.0));
 }
 
-
 #[test]
 fn the_bar_is_painted_v1_s_colour() {
     let resolved = kit().resolved_style();
@@ -159,7 +156,6 @@ fn the_content_keeps_the_colour_it_was_given() {
     );
 }
 
-
 /// The bar declares its own height and the full width of its parent.
 #[test]
 fn the_bar_declares_its_own_height_and_full_width() {
@@ -203,7 +199,6 @@ fn the_content_is_centred() {
     );
 }
 
-
 #[test]
 fn building_the_bar_publishes_its_height() {
     let _ = layout_signal().get().system_bar;
@@ -225,7 +220,6 @@ fn the_published_height_defaults_to_the_token() {
         "the material token for the default theme"
     );
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

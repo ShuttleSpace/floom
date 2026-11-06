@@ -3,7 +3,7 @@ use std::hint::black_box;
 use std::time::Duration;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use floom_signal::{store, SignalGet};
+use floom_signal::{SignalGet, store};
 
 #[derive(Clone)]
 struct BigState {

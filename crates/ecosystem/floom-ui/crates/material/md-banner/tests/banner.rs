@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext};
@@ -82,7 +81,6 @@ fn tap(pressable: &mut floom_widgets::Pressable) {
         pressable.event(&mut cx, id);
     }
 }
-
 
 /// The tokens and the colours reach the style.
 #[test]
@@ -180,7 +178,6 @@ fn the_strip_is_the_accent_at_26() {
     );
 }
 
-
 #[test]
 fn the_strip_is_painted_v1_s_tint() {
     let resolved = kit().resolved_style();
@@ -265,7 +262,6 @@ fn the_action_fires_the_callback() {
     );
 }
 
-
 #[test]
 fn a_banner_without_an_icon_or_an_action_has_one_child() {
     let row = row_of(kit().message("Sync failed"));
@@ -321,7 +317,6 @@ fn the_strip_is_padded_and_has_a_minimum_height() {
     );
 }
 
-
 #[test]
 fn the_props_report_the_message_and_the_callback() {
     let kit = kit()
@@ -348,7 +343,6 @@ fn single_line_is_carried_but_never_truncates() {
         "v1 did not truncate the message and neither does this"
     );
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

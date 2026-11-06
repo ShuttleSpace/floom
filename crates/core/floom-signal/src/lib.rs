@@ -37,7 +37,6 @@ pub use effect::{
 pub use id::Id as ReactiveId;
 pub use memo::{Memo, create_memo};
 pub use read::{ReadRef, SignalGet, SignalRead, SignalTrack, SignalWith};
-pub use task::{CancelToken, Resource, ResourceState, SyncExecutor, TaskExecutor, resource, refresh, spawn, ui_spawn};
 pub use runtime::Runtime;
 pub use scope::{
     Scope, as_child_of_current_scope, create_global_effect, create_global_local_rw_signal,
@@ -50,5 +49,9 @@ pub use signal::{
     create_rw_signal, create_signal,
 };
 pub use store::{Store, store};
+pub use task::{
+    CancelToken, Resource, ResourceState, SyncExecutor, TaskExecutor, refresh, resource, spawn,
+    ui_spawn,
+};
 pub use trigger::{Trigger, create_trigger};
 pub use write::{SignalUpdate, SignalWrite, WriteRef};

@@ -1,4 +1,3 @@
-
 use floom_core::Widget;
 use floom_types::{Insets, Rect};
 
@@ -27,7 +26,6 @@ fn three_rows() -> MdItemGroup {
         .row("Two", || Box::new(floom_widgets::Text::new("two")))
         .row("Three", || Box::new(floom_widgets::Text::new("three")))
 }
-
 
 /// The whole of this port: the theme's tokens and colours, in the engine's
 /// vocabulary, with no logic left over.
@@ -113,7 +111,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(group().resolved_style().design_system, "material");
 }
 
-
 #[test]
 fn one_widget_answers_both_accessors() {
     let widget = group()
@@ -151,7 +148,6 @@ fn the_initial_selection_is_readable_through_both_accessors() {
     assert_eq!(floom_widget_md_item_group::selected_multi(&widget), vec![2]);
 }
 
-
 #[test]
 fn every_declared_row_reaches_the_widget() {
     let widget = three_rows().view(None::<fn(usize)>, None::<fn(Vec<usize>)>);
@@ -176,7 +172,6 @@ fn an_empty_group_still_builds() {
     assert!(widget.children().is_empty());
     assert!(widget.layout_request().is_some(), "and it is still a stack");
 }
-
 
 #[test]
 fn both_callbacks_are_reported_and_agree() {

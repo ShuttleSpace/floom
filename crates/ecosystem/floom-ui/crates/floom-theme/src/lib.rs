@@ -1,4 +1,3 @@
-
 use floom_types::Color;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

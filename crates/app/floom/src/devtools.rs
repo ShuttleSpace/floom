@@ -322,9 +322,10 @@ impl Devtools {
     /// a stale answer is worse than none because it looks current.
     pub fn refresh_tree(&self, host: &WidgetHost) {
         if let Some(cell) = &self.tree_cell
-            && let Ok(mut nodes) = cell.lock() {
-                *nodes = host.tree_nodes();
-            }
+            && let Ok(mut nodes) = cell.lock()
+        {
+            *nodes = host.tree_nodes();
+        }
     }
 
     /// Pushes the panel's visibility into the host's overlay stack.

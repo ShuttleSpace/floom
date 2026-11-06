@@ -29,7 +29,6 @@ fn tokens() -> DividerTokens {
     }
 }
 
-
 #[test]
 fn a_horizontal_rule_sits_on_the_top_edge() {
     let rule = fluent().divider().resolve_bounds(TALL);
@@ -85,7 +84,6 @@ fn the_inset_shrinks_both_ends_and_leaves_the_start_edge_alone() {
     assert_eq!(inset.x1, TALL.x1 - 16.0);
 }
 
-
 #[test]
 fn the_thickness_is_the_tokens() {
     assert_eq!(fluent().resolved_style().thickness, tokens().thickness);
@@ -119,7 +117,6 @@ fn the_rule_is_painted_in_the_resolved_colour() {
         "painted: {painted}"
     );
 }
-
 
 #[test]
 fn the_props_are_kept() {

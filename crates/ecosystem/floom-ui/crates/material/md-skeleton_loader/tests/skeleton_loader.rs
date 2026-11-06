@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Length, Rect, Widget, WidgetAny};
 use floom_types::Color;
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
@@ -59,7 +58,6 @@ fn content_of(kit: MaterialSkeletonLoader) -> Box<dyn WidgetAny> {
     outer.children().remove(0).build()
 }
 
-
 /// The tokens reach the style.
 #[test]
 fn the_tokens_reach_the_style() {
@@ -112,7 +110,6 @@ fn an_explicit_width_wins() {
         .resolved_style();
     assert_eq!(style.outer_width, 300.0);
 }
-
 
 /// The circle is a circle of the avatar's size.
 #[test]
@@ -191,7 +188,6 @@ fn the_card_is_the_card_size() {
         .expect("the card is painted");
     assert_eq!(radius, style.card_radius, "the card's own radius");
 }
-
 
 /// The text placeholder is a column of lines.
 #[test]

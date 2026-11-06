@@ -57,7 +57,6 @@ fn content_of(kit: FluentSkeletonLoader) -> Box<dyn WidgetAny> {
     outer.children().remove(0).build()
 }
 
-
 #[test]
 fn the_tokens_reach_the_style() {
     let style: FluentSkeletonStyle = kit().resolved_style();
@@ -106,7 +105,6 @@ fn an_explicit_width_wins() {
         .resolved_style();
     assert_eq!(style.outer_width, 300.0);
 }
-
 
 #[test]
 fn the_circle_is_a_circle() {
@@ -182,7 +180,6 @@ fn the_card_is_the_card_size() {
         .expect("the card is painted");
     assert_eq!(radius, style.card_radius, "the card's own radius");
 }
-
 
 #[test]
 fn the_text_is_a_column_of_lines() {

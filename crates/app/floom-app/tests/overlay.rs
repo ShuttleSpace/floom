@@ -16,12 +16,12 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
-use floom_widgets::overlay::{OverlayHandle, OverlayKind};
 use floom_platform::KeyCode;
 use floom_scene::SceneNode;
 use floom_testkit::TestApp;
 use floom_types::{Point, Rect, Size};
 use floom_widgets::Button;
+use floom_widgets::overlay::{OverlayHandle, OverlayKind};
 
 /// Whether two rects share any area.
 fn overlaps(a: Rect, b: Rect) -> bool {
@@ -316,9 +316,11 @@ fn a_popup_fades_in_and_then_stops_damaging_the_scene() {
             })
             .min();
         if let Some(alpha) = alpha
-            && alpha > 0 && alpha < 255 {
-                seen_partial_alpha = true;
-            }
+            && alpha > 0
+            && alpha < 255
+        {
+            seen_partial_alpha = true;
+        }
         app.frame();
     }
 
@@ -362,9 +364,11 @@ fn an_image_in_a_fading_overlay_fades_with_it() {
             _ => None,
         });
         if let Some(alpha) = alpha
-            && alpha > 0 && alpha < 255 {
-                seen_partial = Some(alpha);
-            }
+            && alpha > 0
+            && alpha < 255
+        {
+            seen_partial = Some(alpha);
+        }
         app.frame();
     }
 

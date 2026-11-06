@@ -71,7 +71,6 @@ fn stack_of(surface: &dyn WidgetAny) -> Box<dyn WidgetAny> {
     children.remove(0).build()
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentColorPickerStyle = kit().resolved_style();
@@ -122,7 +121,6 @@ fn the_literals_v1_wrote_are_reported() {
     assert_eq!(style.hex_font_size, 14.0, "v1's field text");
     assert_eq!(style.thumb_border_width, 2.0, "v1's thumb border");
 }
-
 
 #[test]
 fn the_picker_is_painted_in_v1_s_colours() {
@@ -211,7 +209,6 @@ fn the_hex_field_spells_the_colour_out() {
     assert_eq!(texts[0].0, "#2196f3", "v1's hex spelling");
     assert_eq!(texts[0].1, style.hex_font_size);
 }
-
 
 #[test]
 fn the_alpha_strip_is_only_there_when_it_was_asked_for() {

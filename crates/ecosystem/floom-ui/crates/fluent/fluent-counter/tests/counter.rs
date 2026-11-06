@@ -31,7 +31,6 @@ fn fluent_tokens() -> CounterTokens {
     tokens_under(DesignSystem::Fluent)
 }
 
-
 #[test]
 fn the_sizes_come_from_the_token_table() {
     let tokens = fluent_tokens();
@@ -100,14 +99,12 @@ fn the_readout_is_drawn_in_on_surface_the_same_ink_as_the_glyphs() {
     assert_eq!(style.value_color, style.button_foreground);
 }
 
-
 #[test]
 fn the_readout_font_size_is_sixteen_and_is_not_a_token() {
     assert_eq!(READOUT_FONT_SIZE, 16.0);
     let style = counter().counter_style();
     assert_eq!(style.value_font_size, 16.0);
 }
-
 
 #[test]
 fn the_view_starts_at_the_requested_value() {

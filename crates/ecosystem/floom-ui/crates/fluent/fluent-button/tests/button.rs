@@ -84,7 +84,6 @@ fn painted_radius(b: &FluentButton) -> f32 {
         .expect("the button paints a rounded fill")
 }
 
-
 #[test]
 fn the_fill_is_the_background_and_the_label_is_the_foreground() {
     let b = button();
@@ -124,7 +123,6 @@ fn the_disabled_palette_reaches_the_pixels_at_v1s_alphas() {
         "the disabled label must land on v1's 38/255"
     );
 }
-
 
 #[test]
 fn the_fill_is_drawn_with_lg_radius() {

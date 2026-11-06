@@ -66,7 +66,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.ops().to_vec()
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentNavigationDrawerStyle = kit().resolved_style();
@@ -107,7 +106,6 @@ fn the_width_is_the_prop_s_and_there_is_no_token_fallback() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_layer_is_painted_the_scrim_colour() {
@@ -152,7 +150,6 @@ fn the_accent_is_a_band_on_the_edge_the_drawer_is_not_on() {
     assert_eq!(bounds.width(), 3.0, "v1's accent width");
     assert_eq!(color, paint(resolved.accent_color), "v1's accent colour");
 }
-
 
 #[test]
 fn the_row_is_the_panel_and_the_scrim() {

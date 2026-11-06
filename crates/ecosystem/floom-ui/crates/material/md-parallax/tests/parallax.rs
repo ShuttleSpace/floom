@@ -1,4 +1,3 @@
-
 use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Widget};
 use floom_types::CompositorProp;
 
@@ -31,7 +30,6 @@ fn token_factor() -> f32 {
     };
     tokens.factor
 }
-
 
 /// The factor is the caller's when it is above zero.
 #[test]
@@ -74,7 +72,6 @@ fn the_default_factor_never_reaches_the_token() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_layer_moves_the_content_by_the_scroll_times_the_factor() {
@@ -167,13 +164,11 @@ fn the_content_is_mounted_under_the_layer() {
     assert_eq!(layer.children().len(), 1, "the content");
 }
 
-
 /// The props report the factor.
 #[test]
 fn the_props_report_the_factor() {
     assert_eq!(kit().factor(0.4).props().factor, 0.4);
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

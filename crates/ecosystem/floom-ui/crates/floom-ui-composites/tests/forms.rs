@@ -1,6 +1,5 @@
-
-use floom_widgets::forms::{rules, FieldBinding, FormController};
 use floom_ui_composites::{Select, TextField};
+use floom_widgets::forms::{rules, FieldBinding, FormController};
 use floom_widgets::Switch;
 
 fn plan_binding() -> FieldBinding<Select> {

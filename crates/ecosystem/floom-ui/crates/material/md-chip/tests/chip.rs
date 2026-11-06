@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
 use floom_types::Color;
 use floom_ui_composites::Chip;
@@ -74,7 +73,6 @@ fn tap(chip: &mut Chip) {
     }
 }
 
-
 #[test]
 fn the_tokens_reach_the_engine_chip() {
     let style: MaterialChipStyle = chip().resolved_style();
@@ -100,7 +98,6 @@ fn the_tokens_reach_the_engine_chip() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(chip().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_three_appearances_are_the_ones_v1_drew() {
@@ -157,7 +154,6 @@ fn the_label_is_the_chips_own_text() {
     assert_eq!(text.0, "Hello");
     assert_eq!(text.1, chip().resolved_style().font_size);
 }
-
 
 /// A click calls the callback.
 #[test]

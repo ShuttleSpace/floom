@@ -1,4 +1,3 @@
-
 use floom_core::Widget;
 use floom_types::{Insets, Rect, Size};
 use floom_widgets::testkit::{paint_snapshot, AllocatingCreateContext, SceneRecorder};

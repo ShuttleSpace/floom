@@ -12,7 +12,6 @@ use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 
-
 fn resolve_icon(name: &str) -> Option<floom_widgets::VectorIcon> {
     Some(floom_widget_fluent_icon::fluent_icon(name))
 }

@@ -1,4 +1,3 @@
-
 use floom_style::{StyleProps, StyleSet};
 use floom_types::Color;
 

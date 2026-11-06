@@ -127,10 +127,11 @@ pub fn resolve(parsed: &Parsed) -> Result<Entry> {
     // If the resolved root is an `<App>` wrapper, its attributes describe the
     // window; the wrapper is not a widget, so the real root is its first child.
     if let Some(RootJsx::Element(el)) = &root
-        && jsx_tag_name(&el.opening.name) == "App" {
-            config = config_from_wrapper(el, config);
-            root = app_inner_root(el);
-        }
+        && jsx_tag_name(&el.opening.name) == "App"
+    {
+        config = config_from_wrapper(el, config);
+        root = app_inner_root(el);
+    }
 
     Ok(Entry { root, config })
 }
@@ -147,18 +148,20 @@ fn resolve_component(name: &str, parsed: &Parsed) -> Result<RootJsx> {
             }
             ast::ModuleItem::Stmt(ast::Stmt::Decl(ast::Decl::Fn(f))) => {
                 if f.ident.sym == name
-                    && let Some(jsx) = fn_return_jsx(&f.function) {
-                        return Ok(jsx);
-                    }
+                    && let Some(jsx) = fn_return_jsx(&f.function)
+                {
+                    return Ok(jsx);
+                }
             }
             ast::ModuleItem::Stmt(ast::Stmt::Decl(ast::Decl::Var(var))) => {
                 for d in &var.decls {
                     if let ast::Pat::Ident(binding) = &d.name
                         && binding.id.sym == name
-                            && let Some(init) = &d.init
-                                && let Some(jsx) = arrow_return_jsx(init) {
-                                    return Ok(jsx);
-                                }
+                        && let Some(init) = &d.init
+                        && let Some(jsx) = arrow_return_jsx(init)
+                    {
+                        return Ok(jsx);
+                    }
                 }
             }
             _ => {}
@@ -192,9 +195,10 @@ fn arrow_return_jsx(init: &ast::Expr) -> Option<RootJsx> {
 fn block_return_jsx(block: &ast::BlockStmt) -> Option<RootJsx> {
     for stmt in &block.stmts {
         if let ast::Stmt::Return(ret) = stmt
-            && let Some(arg) = &ret.arg {
-                return expr_to_jsx(arg);
-            }
+            && let Some(arg) = &ret.arg
+        {
+            return expr_to_jsx(arg);
+        }
     }
     None
 }
@@ -401,9 +405,10 @@ fn member_method(call: &ast::CallExpr) -> Option<String> {
         return None;
     };
     if let ast::Expr::Member(m) = callee.as_ref()
-        && let ast::MemberProp::Ident(id) = &m.prop {
-            return Some(id.sym.to_string());
-        }
+        && let ast::MemberProp::Ident(id) = &m.prop
+    {
+        return Some(id.sym.to_string());
+    }
     None
 }
 
@@ -509,10 +514,11 @@ fn config_from_wrapper(el: &ast::JSXElement, mut config: AppConfig) -> AppConfig
 
 fn parse_size(s: &str, app: &mut AppConfig) {
     if let Some((w, h)) = s.split_once('x')
-        && let (Ok(w), Ok(h)) = (w.trim().parse::<f64>(), h.trim().parse::<f64>()) {
-            app.width = w;
-            app.height = h;
-        }
+        && let (Ok(w), Ok(h)) = (w.trim().parse::<f64>(), h.trim().parse::<f64>())
+    {
+        app.width = w;
+        app.height = h;
+    }
 }
 
 #[cfg(test)]

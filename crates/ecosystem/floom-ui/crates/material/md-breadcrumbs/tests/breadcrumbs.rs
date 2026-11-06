@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget, WidgetAny};
 use floom_types::{Color, FontWeight};
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext};
@@ -97,7 +96,6 @@ fn tap(kit: MaterialBreadcrumbs, index: usize) {
     }
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -157,7 +155,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-
 /// The current item is painted in `on_surface`; the others are not.
 #[test]
 fn the_current_item_is_painted_in_on_surface_and_the_others_are_not() {
@@ -211,7 +208,6 @@ fn the_box_keeps_v1_s_padding() {
     assert_eq!(insets.bottom, 8.0);
 }
 
-
 /// The trail is the items and the dividers between them: three items, two
 /// dividers.
 #[test]
@@ -247,7 +243,6 @@ fn an_earlier_item_is_a_link() {
     );
 }
 
-
 /// Clicking an item reports its index.
 #[test]
 fn clicking_an_item_reports_its_index() {
@@ -275,7 +270,6 @@ fn clicking_the_current_item_reports_nothing() {
         "v1 gave the current item no listener"
     );
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

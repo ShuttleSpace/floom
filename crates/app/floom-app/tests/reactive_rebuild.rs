@@ -6,10 +6,10 @@
 use std::sync::Arc;
 
 use floom_app::WidgetHost;
+use floom_core::SemanticsHint;
 use floom_core::{
     Axis, Event, EventContext, LayoutRequest, Point, Size, Widget, WidgetAny, request_rebuild_root,
 };
-use floom_core::SemanticsHint;
 use floom_layout::LayoutStyle;
 use floom_signal::{Effect, SignalGet, SignalUpdate, SyncBaseSignal};
 use floom_types::{PointerButton, PointerPhase};
@@ -166,9 +166,9 @@ fn captured_widget_survives_reactive_rebuild() {
         bounds.x0 + bounds.width() / 2.0,
         bounds.y0 + bounds.height() / 2.0,
     );
-    host.dispatch(Event::Pointer(
-        floom_types::PointerEvent::primary_down(centre),
-    ));
+    host.dispatch(Event::Pointer(floom_types::PointerEvent::primary_down(
+        centre,
+    )));
     assert!(
         host.widget::<DragProbe>(probe).expect("probe").pressed,
         "press sets the captured widget's pressed flag"
@@ -184,9 +184,9 @@ fn captured_widget_survives_reactive_rebuild() {
     );
 
     // Releasing clears capture and the flag, even though the tree is rebuilt.
-    host.dispatch(Event::Pointer(
-        floom_types::PointerEvent::primary_up(centre),
-    ));
+    host.dispatch(Event::Pointer(floom_types::PointerEvent::primary_up(
+        centre,
+    )));
     assert!(
         !host.widget::<DragProbe>(probe).expect("probe").pressed,
         "release still ends the drag after the rebuild"

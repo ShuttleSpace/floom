@@ -14,13 +14,7 @@ use std::path::PathBuf;
 
 /// Compile `file` from `dir` with the given compiler flags, and link the listed
 /// Apple frameworks (ignored on non-Apple targets).
-fn compile_native(
-    manifest: &PathBuf,
-    dir: &str,
-    file: &str,
-    flags: &[&str],
-    frameworks: &[&str],
-) {
+fn compile_native(manifest: &PathBuf, dir: &str, file: &str, flags: &[&str], frameworks: &[&str]) {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR is set by cargo"));
 
     // The provider ABI header comes from the crate that owns it, so the two
@@ -88,9 +82,13 @@ fn main() {
             &["-fobjc-arc"],
             &["UIKit", "Foundation", "AVFoundation"],
         ),
-        "windows" => {
-            compile_native(&manifest, "windows", "floom_camera.cpp", &["/std:c++17"], &[])
-        }
+        "windows" => compile_native(
+            &manifest,
+            "windows",
+            "floom_camera.cpp",
+            &["/std:c++17"],
+            &[],
+        ),
         "linux" => compile_native(&manifest, "linux", "floom_camera.c", &[], &[]),
         "ohos" => compile_native(&manifest, "ohos", "floom_camera.cpp", &["-std=c++17"], &[]),
         // `android` builds its Java half via Gradle; `web` is pure Rust; `tui`

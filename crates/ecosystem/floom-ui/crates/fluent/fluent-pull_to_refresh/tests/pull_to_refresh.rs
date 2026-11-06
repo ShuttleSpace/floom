@@ -49,7 +49,6 @@ fn indicator(kit: FluentPullToRefresh) -> Box<dyn floom_core::WidgetAny> {
     column.children().remove(0).build()
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentPullToRefreshStyle = kit().resolved_style();
@@ -103,7 +102,6 @@ fn the_threshold_is_the_props_not_the_token() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_box_is_painted_v1_s_colour() {
@@ -169,7 +167,6 @@ fn the_refreshing_state_shows_v1_s_other_label() {
         .expect("the label is painted");
     assert_eq!(text, "↻ Refreshing…", "v1's label while refreshing");
 }
-
 
 #[test]
 fn the_indicator_is_absent_until_there_is_something_to_say() {

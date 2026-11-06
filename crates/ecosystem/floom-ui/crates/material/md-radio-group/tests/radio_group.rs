@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Rect, Widget};
 use floom_types::Color;
 use floom_ui_composites::SelectGroup;
@@ -56,7 +55,6 @@ fn ring_of(row: &dyn Widget) -> Box<dyn Widget> {
     row.children().remove(0).build()
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -89,7 +87,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_ring_and_the_dot_are_painted_in_v1_s_colours() {
@@ -174,7 +171,6 @@ fn the_label_is_painted_in_v1_s_ink() {
     assert_eq!(size, 14.0, "the engine's default text size");
     assert_eq!(ink, Color::BLACK, "and the engine's default ink");
 }
-
 
 /// The option chosen before mount is the chosen one.
 #[test]

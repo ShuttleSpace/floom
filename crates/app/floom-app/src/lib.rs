@@ -21,7 +21,10 @@ pub mod runner;
 pub mod services;
 
 pub use image_codec::{DecodedImage, decode_image};
-pub use persistence::{FileStore, KeyValueStore, MemoryStore, RestorationSnapshot, StoreError, get, get_string, set, set_string};
+pub use persistence::{
+    FileStore, KeyValueStore, MemoryStore, RestorationSnapshot, StoreError, get, get_string, set,
+    set_string,
+};
 pub use runner::{AppRunner, RunStats};
 pub use services::{Disposal, Scope, Services};
 
@@ -42,7 +45,6 @@ use floom_core::{
     UpdateContext,
 };
 pub use floom_core::{HostedKind, HostedNode};
-use floom_widgets::focus::{FocusDirection, FocusManager, FocusScopeId};
 use floom_layout::{
     AlignItems as LAlign, FlexDirection, JustifyContent, LayoutEngine, LayoutNode, LayoutStyle,
     MeasureFn, Position as LPosition,
@@ -52,7 +54,6 @@ use floom_native::{
     InputMode, NativeCompositionMode, NativeError, NativeSlot, NativeState, NativeViewId,
     NativeViewKind, NativeViewPool, NativeViewProvider,
 };
-use floom_widgets::overlay::{CompositorProp, OverlayManager};
 use floom_runtime_core::IdAllocator;
 use floom_runtime_core::{EventRouter, Hit, HitRegion, RouteStop};
 use floom_scene::{Resource, ResourceKind, ResourceRegistry, Scene, SceneNode, SceneNodeId};
@@ -61,6 +62,8 @@ use floom_types::NativeCapture;
 use floom_types::ScrollEvent;
 use floom_types::{ClipRegion, CursorStyle, StyledText, resolve_clip};
 use floom_widgets::WidgetAny;
+use floom_widgets::focus::{FocusDirection, FocusManager, FocusScopeId};
+use floom_widgets::overlay::{CompositorProp, OverlayManager};
 use smallvec::SmallVec;
 
 /// Stable handle to a mounted widget.

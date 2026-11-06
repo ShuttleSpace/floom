@@ -78,7 +78,6 @@ fn click(widget: &mut dyn WidgetAny) {
     );
 }
 
-
 #[test]
 fn the_tokens_reach_the_style() {
     let style: FluentConfirmEditStyle = kit().resolved_style();
@@ -131,7 +130,6 @@ fn the_props_report_the_value() {
     assert_eq!(kit.props().value, "Hello");
 }
 
-
 #[test]
 fn the_display_row_holds_the_value_and_the_edit_affordance() {
     let widget = kit().value("Hello").view();
@@ -166,7 +164,6 @@ fn the_editing_row_holds_the_field_and_the_two_buttons() {
     let row = row_of(&widget);
     assert_eq!(row.children().len(), 3, "the field, the tick and the cross");
 }
-
 
 #[test]
 fn the_display_row_shows_the_value() {
@@ -214,7 +211,6 @@ fn the_edit_affordance_is_a_glyph_in_on_surface_variant() {
         "v1 drew the edit affordance in `on_surface_variant`"
     );
 }
-
 
 #[test]
 fn the_edit_affordance_opens_the_field() {
@@ -298,7 +294,6 @@ fn a_change_of_mode_asks_for_the_other_row() {
         "the mode moved, so the other row is mounted"
     );
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

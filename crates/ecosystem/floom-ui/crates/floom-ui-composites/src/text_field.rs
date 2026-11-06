@@ -1,11 +1,10 @@
-
 use crate::focus::FocusRing;
 use floom_accessibility::SemanticsRole;
+use floom_core::ime::{CompositionState, ImeEvent, ImeState};
 use floom_core::{
     Color, CreateContext, ElementId, Event, EventContext, Key, KeyPhase, NamedKey, PaintContext,
     Point, Rect, SemanticsContext, Size, UpdateContext, Widget,
 };
-use floom_core::ime::{CompositionState, ImeEvent, ImeState};
 use floom_types::{FontWeight, ImeUpdate, PointerButton, PointerPhase};
 
 use floom_widgets::{

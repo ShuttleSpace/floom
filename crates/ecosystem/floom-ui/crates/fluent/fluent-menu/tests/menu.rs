@@ -56,7 +56,6 @@ fn open_menu(kit: FluentMenu) -> Menu {
     menu
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_engine_style() {
     let style: FluentMenuStyle = kit().resolved_style();
@@ -121,7 +120,6 @@ fn the_panel_radius_is_v1_s() {
     );
 }
 
-
 #[test]
 fn the_menu_paints_v1_s_appearance() {
     let resolved = kit().resolved_style();
@@ -176,7 +174,6 @@ fn the_hovered_row_is_filled_when_the_pointer_arrives() {
         "the hovered row's fill"
     );
 }
-
 
 #[test]
 fn choosing_a_row_runs_its_callback() {

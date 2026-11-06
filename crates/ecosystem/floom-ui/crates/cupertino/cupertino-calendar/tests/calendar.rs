@@ -328,7 +328,6 @@ fn the_props_report_the_date() {
     );
 }
 
-
 /// The theme: v1's Cupertino calendar took a *snapshot* of its own design
 /// system, so a change of the app-wide theme does not re-theme it.
 #[test]

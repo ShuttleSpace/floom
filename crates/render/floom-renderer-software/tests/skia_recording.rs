@@ -8,8 +8,8 @@
 //! instances. Here `SoftwareRenderer`, `render_once` and `SkiaRendererAdapter`
 //! all resolve against one `floom_renderer`, so the trait bounds line up.
 
-use floom_renderer::skia_abi::{SkiaCommand, SkiaRendererAdapter, SkiaRecording};
-use floom_renderer::{render_once, FrameInfo, Scene, SceneNode};
+use floom_renderer::skia_abi::{SkiaCommand, SkiaRecording, SkiaRendererAdapter};
+use floom_renderer::{FrameInfo, Scene, SceneNode, render_once};
 use floom_renderer_software::SoftwareRenderer;
 use floom_types::{Brush, Color, Filter, Point, Rect, Shader, Size, Transform};
 

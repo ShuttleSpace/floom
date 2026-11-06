@@ -26,11 +26,11 @@ use floom_native::{
     ClipSupport, FakeNativeProvider, InputMode, InputModes, NativeCapabilities, NativeCommandLog,
     NativeCompositionMode, NativeSlot, NativeViewKind,
 };
-use floom_widgets::overlay::OverlayKind;
 use floom_testkit::TestApp;
 use floom_types::{Point, Rect, ResourceId, Size};
 use floom_widgets::NativeSurface;
 use floom_widgets::controls::Button;
+use floom_widgets::overlay::OverlayKind;
 use floom_widgets::primitives::Container;
 
 // --- scaffolding -----------------------------------------------------------

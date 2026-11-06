@@ -1909,7 +1909,8 @@ pub fn ohos_build_profile(_name: &str) -> String {
     }
   ]
 }
-"#.to_string()
+"#
+    .to_string()
 }
 
 /// `ohos/entry/src/main/module.json5` — the HAP module manifest.
@@ -1944,7 +1945,8 @@ pub fn ohos_module_json(_name: &str) -> String {
     ]
   }
 }
-"#.to_string()
+"#
+    .to_string()
 }
 
 /// `ohos/entry/src/main/ets/entryability/EntryAbility.ets`.

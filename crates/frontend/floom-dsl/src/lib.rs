@@ -47,6 +47,7 @@ pub use lexer::{Span, Token, lex};
 pub use lower::{Bound, lower};
 pub use parser::parse;
 
+pub use codegen::fixtures;
 /// Native-component code generation (Phase 18): a declarative
 /// [`codegen::schema::ComponentSchema`] lowered to Swift/Kotlin/C/C++ glue, so a
 /// Rust-defined native participant can be driven from the framework and OS code
@@ -59,7 +60,6 @@ pub use codegen::{
         InputMode, Literal, Param, PropertySchema, SchemaError, TypeRef, ViewKind,
     },
 };
-pub use codegen::fixtures;
 
 use crate::ui_ir::{IrError, UiDocument};
 

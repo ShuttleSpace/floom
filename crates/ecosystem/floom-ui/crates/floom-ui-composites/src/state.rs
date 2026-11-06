@@ -1,4 +1,3 @@
-
 use floom_types::Color;
 
 /// How a [`StateLayer`] is drawn around the control it belongs to.

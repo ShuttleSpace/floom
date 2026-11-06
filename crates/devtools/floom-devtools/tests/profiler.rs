@@ -7,8 +7,8 @@
 //! got which span), *the budget verdict*, and *the counters' arithmetic* —
 //! not about nanoseconds observed.
 
-use floom_inspector::JsonSnapshot;
 use floom_devtools::profiler::{CacheTracker, Profiler, Stage};
+use floom_inspector::JsonSnapshot;
 
 /// A clock that replays a script of nanosecond readings.
 #[derive(Clone, Default)]

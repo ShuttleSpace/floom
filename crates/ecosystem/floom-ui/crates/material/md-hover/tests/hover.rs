@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
 use floom_types::{Color, PointerPhase};
 use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder, TestEventContext};
@@ -69,7 +68,6 @@ fn fill_painted(hover: &HoverBox) -> Option<Color> {
     })
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -100,7 +98,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_fill_is_painted_in_v1_s_colour() {
@@ -145,7 +142,6 @@ fn the_fill_covers_the_whole_box() {
         .expect("the fill is painted");
     assert_eq!(bounds, BOX);
 }
-
 
 /// The child is mounted inside the box.
 #[test]

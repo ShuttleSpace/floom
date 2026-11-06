@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Event, Point, Rect, Widget};
 use floom_types::{Color, PointerEvent};
 use floom_widgets::testkit::{dispatch, AllocatingCreateContext, PaintOp, SceneRecorder};
@@ -51,7 +50,6 @@ fn ops_of(widget: &dyn Widget) -> Vec<PaintOp> {
     recorder.finish();
     recorder.ops().to_vec()
 }
-
 
 /// The tokens reach the style.
 #[test]
@@ -122,7 +120,6 @@ fn the_props_report_the_range() {
     assert_eq!(kit.props().step, 2.0);
 }
 
-
 #[test]
 fn the_track_the_band_and_the_two_thumbs_are_painted() {
     let resolved = kit().resolved_style();
@@ -182,7 +179,6 @@ fn the_band_runs_between_the_two_thumbs() {
         band.x1
     );
 }
-
 
 /// A press moves the *nearer* thumb, and only that one.
 #[test]
@@ -297,7 +293,6 @@ fn the_two_values_are_shared_with_the_caller() {
         .cloned();
     assert_eq!(low.as_deref(), Some("10"), "the shared map holds the value");
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

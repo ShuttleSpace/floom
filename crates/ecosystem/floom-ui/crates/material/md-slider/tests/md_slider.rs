@@ -1,4 +1,3 @@
-
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -68,7 +67,6 @@ fn fills_of(ops: &[PaintOp]) -> Vec<PaintColor> {
         })
         .collect()
 }
-
 
 #[test]
 fn the_track_is_on_surface_variant_at_97() {
@@ -177,7 +175,6 @@ fn the_thumb_carries_no_drop_shadow() {
     assert_eq!(alpha_of(style.shadow_color), 0);
 }
 
-
 #[test]
 fn the_geometry_is_the_slider_tokens() {
     let tokens = match theme().component(ComponentId::Slider) {
@@ -208,7 +205,6 @@ fn the_three_design_systems_still_resolve_identical_tokens() {
     };
     assert_eq!(tokens.track_height, style().track_height);
 }
-
 
 /// The style the kit resolved is the style the engine paints: the recorded
 /// track, fill, halo and thumb carry this kit's colours, in `paint`'s order.

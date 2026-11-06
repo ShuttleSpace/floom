@@ -30,12 +30,12 @@ mod window;
 
 // OS-free stand-in backends. Feature-gated so the default build is the bare
 // ABI; see the crate docs for why they are not sibling crates (yet).
-#[cfg(feature = "ios")]
-pub mod ios;
 #[cfg(feature = "embedded")]
 pub mod embedded;
 #[cfg(feature = "harmony")]
 pub mod harmony;
+#[cfg(feature = "ios")]
+pub mod ios;
 
 pub use capabilities::{Capability, PlatformCapabilities};
 pub use event::{PlatformEvent, PointerButton};

@@ -1,4 +1,3 @@
-
 use floom_core::Widget;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::DesignSystem;
@@ -24,7 +23,6 @@ fn list_tokens(theme: &MultiTheme) -> floom_core_theme::component_tokens::ListIt
         _ => unreachable!("ComponentId::ListItem resolves to ListItemTokens"),
     }
 }
-
 
 #[test]
 fn material_reads_its_own_token_table() {
@@ -98,7 +96,6 @@ fn the_title_weight_comes_from_the_typography_scale() {
     );
 }
 
-
 /// A subtitle is an `Option`, and the props' own `Option<String>` is what decides.
 #[test]
 fn no_subtitle_leaves_the_engine_field_empty() {
@@ -111,7 +108,6 @@ fn no_subtitle_leaves_the_engine_field_empty() {
     let with = item().subtitle("Home network").view();
     assert!(with.has_subtitle(), "a subtitle makes two");
 }
-
 
 /// The composition, read through the kit: `Ripple(Pressable(Surface(row)))`.
 #[test]
@@ -146,7 +142,6 @@ fn the_title_and_subtitle_travel_into_the_row() {
     assert_eq!(item().subtitle("Home").view().title(), "Wi-Fi");
 }
 
-
 #[test]
 fn disabled_reaches_the_row_and_its_ripple() {
     let view = item().disabled(true).view();
@@ -159,7 +154,6 @@ fn disabled_reaches_the_row_and_its_ripple() {
         "and v1's `.disabled(disabled)` reached the ink"
     );
 }
-
 
 /// `nav` is stored and never read — v1 read it nowhere in `view()`.
 #[test]

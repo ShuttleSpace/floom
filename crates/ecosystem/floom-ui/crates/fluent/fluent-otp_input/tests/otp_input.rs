@@ -65,7 +65,6 @@ fn input_of(box_widget: &dyn WidgetAny) -> Box<dyn WidgetAny> {
     box_widget.children().remove(0).build()
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentOtpInputStyle = kit().resolved_style();
@@ -96,7 +95,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_boxes_are_painted_in_v1_s_colours() {
@@ -181,7 +179,6 @@ fn the_gap_between_the_boxes_is_the_token_s_gap() {
         .expect("the row asks for its own space");
     assert_eq!(request.gap, Some(resolved.gap), "the token's gap");
 }
-
 
 #[test]
 fn typing_writes_the_code() {

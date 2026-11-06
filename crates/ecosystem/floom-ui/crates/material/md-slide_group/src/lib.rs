@@ -1,4 +1,3 @@
-
 use std::sync::Arc;
 
 use floom_core::{Child, ChildKey, Inset, LayoutRequest, Position};
@@ -189,11 +188,7 @@ impl MaterialSlideGroup {
                 ));
 
             let box_ = Stack::new(Axis::Vertical)
-                .request(
-                    LayoutRequest::new()
-                        .height(height)
-                        .min_width(item_width),
-                )
+                .request(LayoutRequest::new().height(height).min_width(item_width))
                 .push(move || Box::new(content.clone()))
                 .push(move || Box::new(band.clone()));
 
@@ -316,9 +311,7 @@ fn indicator_of(flag: SharedFlag, chosen: bool, fill: PaintColor, height: f32) -
 }
 
 fn arrow_slot(width: f32, at_right: bool) -> LayoutRequest {
-    let mut slot = LayoutRequest::new()
-        .height_pct(100.0)
-        .width(width);
+    let mut slot = LayoutRequest::new().height_pct(100.0).width(width);
     slot.position = Some(Position::Absolute);
     slot.inset = Some(if at_right {
         Inset {

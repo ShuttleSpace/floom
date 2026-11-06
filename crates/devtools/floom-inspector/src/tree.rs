@@ -58,14 +58,15 @@ impl TreeSnapshot {
         }
         for node in &self.nodes {
             if let Some(parent) = node.parent
-                && !ids.contains_key(&parent) {
-                    return Err(ProtocolError::InvalidTree {
-                        reason: format!(
-                            "node {} names parent {parent}, which does not exist",
-                            node.id
-                        ),
-                    });
-                }
+                && !ids.contains_key(&parent)
+            {
+                return Err(ProtocolError::InvalidTree {
+                    reason: format!(
+                        "node {} names parent {parent}, which does not exist",
+                        node.id
+                    ),
+                });
+            }
             for child in &node.children {
                 let Some(info) = ids.get(child) else {
                     return Err(ProtocolError::InvalidTree {

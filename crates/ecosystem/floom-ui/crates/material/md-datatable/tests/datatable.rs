@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{Child, ElementId, Point, Rect, Widget, WidgetAny};
@@ -138,7 +137,6 @@ fn click(row: &mut Box<dyn WidgetAny>) -> bool {
     consumed
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -221,7 +219,6 @@ fn the_props_report_the_table() {
     );
 }
 
-
 #[test]
 fn the_frame_is_filled_and_outlined_in_v1_s_colours() {
     let style = table().resolved_style();
@@ -294,7 +291,6 @@ fn the_cells_are_painted_in_v1_s_ink() {
     assert_eq!(size, style.font_size, "v1's body size");
     assert_eq!(ink, paint(style.on_surface), "v1's body ink");
 }
-
 
 /// The header comes first and the last row is the last row.
 #[test]
@@ -411,7 +407,6 @@ fn a_table_with_no_callback_still_consumes_the_click() {
     assert!(click(&mut first), "the pressable consumes it");
     assert_eq!(rows.len(), 3, "and the table is still there");
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

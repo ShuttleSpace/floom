@@ -1,4 +1,3 @@
-
 use crate::shared::SharedNumber;
 use std::any::Any;
 

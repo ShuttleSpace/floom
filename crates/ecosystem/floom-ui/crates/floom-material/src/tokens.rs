@@ -1,4 +1,3 @@
-
 use floom_design::{readable_on, tonal_ramp};
 use floom_theme::{ColorScheme, Theme};
 use floom_types::Color;

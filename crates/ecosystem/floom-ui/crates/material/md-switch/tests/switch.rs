@@ -1,4 +1,3 @@
-
 use floom_core::{ElementId, Widget};
 use floom_types::{Point, Rect};
 
@@ -18,7 +17,6 @@ const ROW: Rect = Rect {
 fn material() -> MdSwitch {
     MdSwitch::new().with_theme(MultiTheme::new_for(DesignSystem::Material))
 }
-
 
 #[test]
 fn the_engine_default_would_have_drawn_a_different_switch() {
@@ -79,7 +77,6 @@ fn the_dead_thumb_offset_is_not_reproduced() {
     );
     assert_ne!(on.x0, ROW.x0 + 20.0, "the formula v1 never applied");
 }
-
 
 /// The resting colours are the theme's, which is the whole reason a kit has to
 /// be able to supply a palette at all.
@@ -163,7 +160,6 @@ fn a_disabled_switch_paints_the_explicit_disabled_colours() {
     );
     assert!(painted.contains(&track), "expected {track} in {painted}");
 }
-
 
 /// The checked flag reaches the engine, so the knob is on the right by default.
 #[test]

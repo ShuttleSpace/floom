@@ -17,7 +17,6 @@
 //!
 //! [`FrameStats::painted`]: floom_app::FrameStats::painted
 
-
 use floom_core::{Axis, Child, ChildKey, LayoutRequest, Size};
 use floom_testkit::TestApp;
 use floom_widgets::{Conditional, Grid, List, Stack, Text};

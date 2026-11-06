@@ -662,11 +662,12 @@ impl Widget for DevtoolsPanel {
         // Escape closes the panel, the way a devtools drawer does.
         if let floom_core::Event::Key(event) = cx.event()
             && event.phase == KeyPhase::Down
-                && event.key == Key::Named(floom_core::NamedKey::Escape)
-                && let Ok(mut state) = self.state.lock() {
-                    state.hide();
-                    return true;
-                }
+            && event.key == Key::Named(floom_core::NamedKey::Escape)
+            && let Ok(mut state) = self.state.lock()
+        {
+            state.hide();
+            return true;
+        }
         false
     }
 }

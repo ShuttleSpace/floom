@@ -1,4 +1,3 @@
-
 use floom_core::{LayoutRequest, WidgetAny};
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
@@ -179,8 +178,8 @@ fn content_of(props: &SkeletonLoaderProps, style: &MaterialSkeletonStyle) -> Box
         }
         SkeletonType::Text => {
             let lines = props.lines.max(1);
-            let mut column = Stack::new(Axis::Vertical)
-                .request(LayoutRequest::new().width_pct(100.0));
+            let mut column =
+                Stack::new(Axis::Vertical).request(LayoutRequest::new().width_pct(100.0));
             for _ in 0..lines {
                 column = column.push({
                     let fill = fill;

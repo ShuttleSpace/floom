@@ -30,7 +30,6 @@ fn alpha_of(color: floom_types::Color) -> u8 {
     color.a
 }
 
-
 #[test]
 fn the_hover_row_is_on_surface_at_eight() {
     let theme = theme();
@@ -74,7 +73,6 @@ fn the_panel_shadow_is_black_at_twenty() {
     assert_eq!(style().panel_shadow_blur, 12.0);
 }
 
-
 #[test]
 fn the_geometry_is_the_select_tokens() {
     let theme = theme();
@@ -97,7 +95,6 @@ fn a_disabled_trigger_keeps_the_surface() {
     assert_eq!(style().disabled_background, style().surface);
     assert_eq!(alpha_of(style().disabled_border), 38);
 }
-
 
 #[test]
 fn mounting_carries_the_options_the_selection_and_the_placeholder() {

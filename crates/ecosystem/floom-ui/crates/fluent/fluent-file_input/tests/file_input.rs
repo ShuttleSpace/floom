@@ -96,7 +96,6 @@ fn tap(pressable: &mut floom_widgets::Pressable) {
     }
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentFileInputStyle = kit().resolved_style();
@@ -163,7 +162,6 @@ fn the_trigger_label_takes_the_theme_s_label_weight() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_box_is_painted_with_v1_s_fill_and_rim() {
@@ -277,7 +275,6 @@ fn without_the_slot_the_row_is_v1_s() {
     assert_eq!(row.children().len(), 2, "v1's label and readout");
 }
 
-
 #[test]
 fn the_trigger_reports_the_current_path_when_it_is_clicked() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -327,7 +324,6 @@ fn a_disabled_trigger_does_not_answer() {
     );
 }
 
-
 #[test]
 fn the_props_report_the_shape_and_not_the_callback() {
     let kit = kit().label("Pick").accept(".pdf").multiple(true);
@@ -336,7 +332,6 @@ fn the_props_report_the_shape_and_not_the_callback() {
     assert!(kit.props().multiple);
     assert!(kit.props().on_change.is_none());
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

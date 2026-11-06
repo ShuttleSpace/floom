@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -114,7 +113,6 @@ fn press_action(surface: &Box<dyn WidgetAny>) {
     action.event(&mut up, id);
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -151,7 +149,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
 
-
 #[test]
 fn the_bar_is_painted_in_v1_s_colours() {
     let resolved = kit().resolved_style();
@@ -187,7 +184,6 @@ fn the_action_is_painted_in_v1_s_ink() {
         "the action's ink"
     );
 }
-
 
 /// The bar is only there while the snackbar is up.
 #[test]

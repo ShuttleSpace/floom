@@ -92,7 +92,6 @@ fn tap(kit: FluentBreadcrumbs, index: usize) {
     }
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentBreadcrumbsStyle = kit().resolved_style();
@@ -151,7 +150,6 @@ fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
 
-
 #[test]
 fn the_current_item_is_painted_in_on_surface_and_the_others_are_not() {
     let style = kit().resolved_style();
@@ -203,7 +201,6 @@ fn the_box_keeps_v1_s_padding() {
     assert_eq!(insets.bottom, 8.0);
 }
 
-
 #[test]
 fn the_trail_is_the_items_and_the_dividers_between_them() {
     let trail = trail_widget(trail_of(&["Home", "Docs", "Guide"]));
@@ -236,7 +233,6 @@ fn an_earlier_item_is_a_link() {
     );
 }
 
-
 #[test]
 fn clicking_an_item_reports_its_index() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -262,7 +258,6 @@ fn clicking_the_current_item_reports_nothing() {
         "v1 gave the current item no listener"
     );
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

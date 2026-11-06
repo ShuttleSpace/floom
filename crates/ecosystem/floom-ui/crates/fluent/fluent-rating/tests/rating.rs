@@ -81,7 +81,6 @@ fn tap(row: &Stack, index: usize) {
     star.event(&mut up, id);
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentRatingStyle = kit().resolved_style();
@@ -107,7 +106,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_filled_stars_are_painted_in_v1_s_ink() {
@@ -164,7 +162,6 @@ fn a_fractional_value_fills_the_stars_below_it() {
         "and not the fifth"
     );
 }
-
 
 #[test]
 fn a_tap_fills_the_stars_below_it() {

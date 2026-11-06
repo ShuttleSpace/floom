@@ -9,9 +9,7 @@
 
 pub mod accessibility;
 
-use crate::{
-    HostPlatform, Platform, PlatformCapabilities, PlatformEvent, Window, WindowConfig,
-};
+use crate::{HostPlatform, Platform, PlatformCapabilities, PlatformEvent, Window, WindowConfig};
 use floom_types::{PlatformId, Size};
 
 pub use crate::{Clipboard, Ime};

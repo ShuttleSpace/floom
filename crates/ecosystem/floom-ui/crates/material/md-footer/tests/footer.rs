@@ -1,4 +1,3 @@
-
 use floom_core::{Edges, Widget};
 use floom_types::{Insets, Rect};
 use floom_widgets::testkit::{paint_snapshot, AllocatingCreateContext, SceneRecorder};
@@ -27,7 +26,6 @@ fn tokens() -> floom_core_theme::component_tokens::FooterTokens {
         _ => panic!("the footer component must resolve to FooterTokens"),
     }
 }
-
 
 /// The line this whole port exists for: a rule along the **top** edge, at the
 /// theme's thickness, in the theme's outline colour.
@@ -74,7 +72,6 @@ fn an_unbordered_footer_has_no_separator_at_all() {
     );
 }
 
-
 #[test]
 fn the_bar_declares_its_own_height_and_full_width() {
     let request = footer().request();
@@ -116,7 +113,6 @@ fn the_padding_is_inside_the_box_not_on_the_child() {
     );
 }
 
-
 #[test]
 fn the_props_win_over_the_tokens_and_the_tokens_win_by_default() {
     assert_eq!(
@@ -137,7 +133,6 @@ fn the_props_win_over_the_tokens_and_the_tokens_win_by_default() {
     );
 }
 
-
 #[test]
 fn only_an_elevated_footer_casts_a_shadow() {
     assert_eq!(footer().shadow(), None, "v1: `if elevation > 0`");
@@ -154,7 +149,6 @@ fn only_an_elevated_footer_casts_a_shadow() {
         .drop_shadow()
         .is_some());
 }
-
 
 #[test]
 fn the_content_goes_inside_the_box() {
@@ -182,7 +176,6 @@ fn a_bordered_elevated_bar_with_content_still_declares_all_three() {
     assert_eq!(surface.child_count(), 1, "content");
 }
 
-
 #[test]
 fn building_the_footer_publishes_its_height() {
     let _ = layout_signal().get().footer;
@@ -208,7 +201,6 @@ fn the_published_height_defaults_to_the_token() {
     );
     let _ = LayoutSlot::Footer;
 }
-
 
 /// The whole translation in one snapshot: a filled bar, at the token's extent,
 /// with the separator band along its top edge.

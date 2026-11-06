@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 //! Overlay tree with z-order hit priority, focus scopes, and enter/exit animation.
 
-use floom_animation::{AnimId, AnimKind, AnimationScheduler, Easing, Tween};
 use crate::focus::{FocusManager, FocusScopeId};
+use floom_animation::{AnimId, AnimKind, AnimationScheduler, Easing, Tween};
 use floom_types::{ElementId, Point, Rect, Size};
 
 /// Re-exported so the painter can apply what the scheduler sampled without

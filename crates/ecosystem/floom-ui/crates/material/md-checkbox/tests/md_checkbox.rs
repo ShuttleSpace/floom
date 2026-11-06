@@ -1,4 +1,3 @@
-
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -217,7 +216,6 @@ fn click(checkbox: &mut Checkbox, id: ElementId) {
     dispatch(checkbox, id, ROW, PointerEvent::primary_up(at).into());
 }
 
-
 #[test]
 fn the_indicator_is_the_checkbox_tokens_with_a_two_point_rim() {
     let tokens = checkbox_tokens();
@@ -321,7 +319,6 @@ fn the_rim_is_primary_while_checked_and_outline_while_not() {
     );
 }
 
-
 #[test]
 fn the_mark_is_on_primary_at_seven_tenths_of_the_box() {
     let binding = theme();
@@ -398,7 +395,6 @@ fn an_unchecked_box_draws_no_mark() {
     );
 }
 
-
 /// The label is `on_surface` at `typography().body.medium.font_size`, eight
 /// points to the right of the indicator.
 #[test]
@@ -438,7 +434,6 @@ fn the_label_is_on_surface_at_the_body_size_eight_points_on() {
         "\n{snapshot}"
     );
 }
-
 
 #[test]
 fn the_disabled_palette_is_on_surface_at_38_and_12_and_not_97() {
@@ -537,7 +532,6 @@ fn an_enabled_box_carries_no_disabled_alpha() {
     assert_eq!(alpha_of(style.border_color), 255, "undimmed");
     assert_eq!(alpha_of(style.mark_color), 255, "undimmed");
 }
-
 
 /// The props cross into the widget, and both of the two places `disabled` lives
 /// are set from the same builder flag.
@@ -640,7 +634,6 @@ fn the_disabled_flag_does_not_move_the_style() {
         "`CheckboxStyle` names a colour per state; `Checkbox` picks"
     );
 }
-
 
 #[test]
 fn the_layer_is_a_flat_forty_circle() {
@@ -786,7 +779,6 @@ fn focus_paints_the_layer() {
     assert_eq!(layers[0].1, style.layer.color);
     assert_eq!(layers[0].0.width(), f64::from(style.layer.size));
 }
-
 
 #[test]
 fn material_never_carried_a_design_system_field() {

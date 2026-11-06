@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{ElementId, Event, Point, Rect, Widget, WidgetAny};
@@ -102,7 +101,6 @@ fn cell_paint(cell: &dyn WidgetAny) -> (Option<Color>, Option<(String, f32, Colo
     (fill, text_of(&*text))
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -159,7 +157,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 #[test]
 fn the_panel_is_painted_v1_s_colour() {
@@ -227,7 +224,6 @@ fn the_selected_day_is_filled_and_the_others_are_not() {
     let (_, _, ink) = painted.expect("the day is painted");
     assert_eq!(ink, paint(resolved.on_surface), "v1's day ink");
 }
-
 
 /// Clicking a day picks it: the callback is called with the date, and the
 /// date is the one the cell shows.
@@ -312,7 +308,6 @@ fn the_props_report_the_date() {
         "the props' callback slot stays empty; the kit holds its own handle"
     );
 }
-
 
 #[test]
 fn the_theme_is_the_app_wide_one() {

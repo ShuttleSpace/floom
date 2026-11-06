@@ -1,4 +1,3 @@
-
 use floom_core::{Length, Rect, Widget};
 use floom_ui_composites::Badge;
 use floom_widgets::testkit::{

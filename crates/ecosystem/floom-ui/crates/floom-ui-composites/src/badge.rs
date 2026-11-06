@@ -1,4 +1,3 @@
-
 use floom_accessibility::SemanticsRole;
 use floom_core::{
     Color, CreateContext, ElementId, FontWeight, LayoutRequest, PaintContext, Point,

@@ -34,8 +34,6 @@ fn fluent_theme_implements_theme_contract() {
     assert_eq!(button.height, 32.0);
 }
 
-
-
 /// The palette follows the global, and ignores the design system the theme was
 /// built for.
 #[test]

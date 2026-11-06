@@ -45,7 +45,6 @@ fn first_token(cell: &str) -> String {
     rest[..end].trim().to_string()
 }
 
-
 // ---------------------------------------------------------------------------
 // EXAMPLES.md <-> examples/ <-> scripts/run-golden-examples.sh
 // ---------------------------------------------------------------------------
@@ -359,9 +358,8 @@ fn the_bench_targets_named_by_the_policy_exist() {
                 }
             }
         }
-        let path = found.unwrap_or_else(|| {
-            root().join(format!("crates/{crate_name}/benches/{target}.rs"))
-        });
+        let path = found
+            .unwrap_or_else(|| root().join(format!("crates/{crate_name}/benches/{target}.rs")));
         assert!(
             path.exists(),
             "docs/2.0/RELEASE-POLICY.md names bench `{crate_name}::{target}`, \
@@ -370,5 +368,3 @@ fn the_bench_targets_named_by_the_policy_exist() {
         );
     }
 }
-
-

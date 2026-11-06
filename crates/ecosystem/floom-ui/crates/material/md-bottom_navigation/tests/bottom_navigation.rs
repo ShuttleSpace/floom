@@ -1,4 +1,3 @@
-
 use floom_core::{
     Child, ChildKey, ElementId, LayoutRequest, Point, PointerEvent, Rect, Widget, WidgetAny,
 };
@@ -111,7 +110,6 @@ fn tap(bar: &BottomNavigationBar, index: usize) {
     }
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -172,7 +170,6 @@ fn the_props_report_the_destinations_and_not_the_callback() {
     assert_eq!(kit.props().selected, 0);
     assert!(kit.props().on_change.is_none());
 }
-
 
 #[test]
 fn the_bar_paints_v1_s_fill_and_rule() {
@@ -258,7 +255,6 @@ fn the_icon_is_not_sized_as_v1_did_not_size_it() {
         "v1's Material destinations did not size the icon"
     );
 }
-
 
 /// The bar is a row, as tall as the token says and as wide as its parent.
 #[test]

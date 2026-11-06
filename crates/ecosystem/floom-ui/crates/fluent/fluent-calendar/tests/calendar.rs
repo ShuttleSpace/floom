@@ -96,7 +96,6 @@ fn cell_paint(cell: &dyn WidgetAny) -> (Option<Color>, Option<(String, f32, Colo
     (fill, text_of(&*text))
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentCalendarStyle = kit().resolved_style();
@@ -152,7 +151,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "fluent");
 }
-
 
 #[test]
 fn the_panel_is_painted_v1_s_colour() {
@@ -217,7 +215,6 @@ fn the_selected_day_is_filled_and_the_others_are_not() {
     let (_, _, ink) = painted.expect("the day is painted");
     assert_eq!(ink, paint(resolved.on_surface), "v1's day ink");
 }
-
 
 #[test]
 fn clicking_a_day_picks_it() {
@@ -298,7 +295,6 @@ fn the_props_report_the_date() {
         "the props' callback slot stays empty; the kit holds its own handle"
     );
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot() {

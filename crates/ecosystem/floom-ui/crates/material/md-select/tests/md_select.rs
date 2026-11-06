@@ -1,4 +1,3 @@
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -28,7 +27,6 @@ fn theme() -> MultiTheme {
 fn alpha_of(color: floom_types::Color) -> u8 {
     color.a
 }
-
 
 /// A hovered row is `on_surface`@8. Cupertino's is `primary`@12, so this
 /// assertion is on the *rgb* too, not just the alpha.
@@ -85,7 +83,6 @@ fn a_disabled_trigger_keeps_the_surface_and_dims_the_border() {
     assert_eq!(alpha_of(style().disabled_chevron), 97);
 }
 
-
 #[test]
 fn the_geometry_is_the_select_tokens() {
     let theme = theme();
@@ -122,7 +119,6 @@ fn the_three_design_systems_still_resolve_identical_tokens() {
     assert_eq!(cupertino.surface, material.surface);
     assert_eq!(cupertino.on_surface_variant, material.on_surface_variant);
 }
-
 
 #[test]
 fn mounting_carries_the_options_the_selection_and_the_placeholder() {

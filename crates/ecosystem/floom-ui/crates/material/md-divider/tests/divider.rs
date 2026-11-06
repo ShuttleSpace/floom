@@ -1,4 +1,3 @@
-
 use floom_types::Rect;
 use floom_widgets::{Divider, RuleAlignment};
 
@@ -27,7 +26,6 @@ fn tokens() -> DividerTokens {
         _ => unreachable!(),
     }
 }
-
 
 /// **Material's one styling opinion: the rule sits on the top edge.**
 #[test]
@@ -87,7 +85,6 @@ fn the_inset_shrinks_both_ends_and_leaves_the_start_edge_alone() {
     assert_eq!(inset.x1, TALL.x1 - 16.0);
 }
 
-
 /// The thickness is the token's, and the token is 1.0.
 #[test]
 fn the_thickness_is_the_tokens() {
@@ -123,7 +120,6 @@ fn the_rule_is_painted_in_the_resolved_colour() {
         "painted: {painted}"
     );
 }
-
 
 /// The props survive the round trip.
 #[test]

@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{ElementId, Length, Point, Rect, Widget, WidgetAny};
@@ -130,7 +129,6 @@ fn settle(conditional: &mut dyn WidgetAny) -> usize {
     conditional.children().len()
 }
 
-
 /// The tokens and the colours reach the style.
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
@@ -177,7 +175,6 @@ fn the_tokens_and_colours_reach_the_style() {
 fn the_design_system_is_named_in_the_style() {
     assert_eq!(kit().resolved_style().design_system, "material");
 }
-
 
 /// The chosen item carries a `primary` indicator along its bottom edge.
 #[test]
@@ -303,7 +300,6 @@ fn the_arrows_are_filled_and_inked() {
     assert_eq!(ink, paint(style.on_surface_variant), "and the arrows' ink");
 }
 
-
 /// With one item there are no arrows: v1 only drew them for more than one.
 #[test]
 fn there_are_no_arrows_for_one_item() {
@@ -342,7 +338,6 @@ fn the_items_touch() {
         "and the token's height"
     );
 }
-
 
 /// Tapping an item chooses it and says so.
 #[test]

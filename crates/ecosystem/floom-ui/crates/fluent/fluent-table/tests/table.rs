@@ -97,7 +97,6 @@ fn cell_text(cell: &Box<dyn WidgetAny>) -> Option<(String, f32, Color, FontWeigh
     })
 }
 
-
 #[test]
 fn the_tokens_and_colours_reach_the_style() {
     let style: FluentTableStyle = kit().resolved_style();
@@ -170,7 +169,6 @@ fn the_props_report_the_table() {
     assert!(kit.props().dense);
     assert!(kit.props().striped);
 }
-
 
 #[test]
 fn the_frame_is_outlined_in_v1_s_colour() {
@@ -271,7 +269,6 @@ fn the_cells_are_painted_in_v1_s_ink() {
     assert_eq!(ink, paint(style.on_surface_variant), "v1's body ink");
 }
 
-
 #[test]
 fn the_header_comes_first_and_the_last_row_is_the_last_row() {
     let rows = rows(&table().view());
@@ -313,7 +310,6 @@ fn the_rows_declare_v1_s_heights() {
     let body = rows[1].layout_request().expect("a request");
     assert_eq!(body.height.and_then(|h| h.px()), Some(style.row_height));
 }
-
 
 #[test]
 fn the_theme_is_a_snapshot_of_its_own_design_system() {

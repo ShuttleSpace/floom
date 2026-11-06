@@ -1,4 +1,3 @@
-
 use std::sync::{Arc, Mutex};
 
 use floom_core::{ElementId, Point, PointerEvent, Rect, Widget};
@@ -59,7 +58,6 @@ fn open_menu(kit: MaterialMenu) -> Menu {
     tick(&mut menu);
     menu
 }
-
 
 /// The tokens and the colours reach the engine's style.
 #[test]
@@ -126,7 +124,6 @@ fn the_panel_radius_is_v1_s() {
     );
 }
 
-
 #[test]
 fn the_menu_paints_v1_s_appearance() {
     let resolved = kit().resolved_style();
@@ -181,7 +178,6 @@ fn the_hovered_row_is_filled_when_the_pointer_arrives() {
         "the hovered row's fill"
     );
 }
-
 
 /// Choosing a row runs its callback.
 #[test]
