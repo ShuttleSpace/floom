@@ -9,7 +9,7 @@
 //! It is framework-agnostic: it consumes [`TouchSample`]s and emits neutral
 //! [`GestureEvent`]s. The platform backend is responsible for mapping those to
 //! Floom [`Event`]s (see [`GestureEvent::to_floom`]) and for feeding a fling
-//! velocity into a [`MomentumScroller`](crate::momentum::MomentumScroller).
+//! velocity into a [`MomentumScroller`](crate::gesture::momentum::MomentumScroller).
 //!
 //! # Usage
 //!

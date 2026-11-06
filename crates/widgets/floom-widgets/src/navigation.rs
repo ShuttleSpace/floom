@@ -10,9 +10,9 @@
 //! * [`Route`] — the typed route contract (`encode`/`decode`), so an app's
 //!   route enum is the single source of truth for URLs.
 //! * [`Router`] / [`Navigator`] — history + a page stack with transitions.
-//! * [`url`] — the deep-link boundary: `scheme://host/path?query` parsing,
+//! * [`navigation_url`] — the deep-link boundary: `scheme://host/path?query` parsing,
 //!   deliberately the only stringly-typed edge in the crate.
-//! * [`containers`] — `StackNav`/`TabNav`/`SplitNav` layout state machines.
+//! * [`navigation_containers`] — `StackNav`/`TabNav`/`SplitNav` layout state machines.
 
 pub mod navigation_containers;
 pub mod navigation_url;
