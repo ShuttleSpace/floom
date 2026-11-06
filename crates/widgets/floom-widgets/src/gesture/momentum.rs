@@ -1,42 +1,9 @@
 // SPDX-License-Identifier: MIT
 //! Momentum scrolling (inertia / fling) for touch and pen input.
 //!
-//! When a user drags a pointer across a surface and lifts it, native
-//! platforms continue scrolling with a decelerating velocity — this is
-//! "momentum scrolling" or "fling". Without it, scrolling feels sluggish
-//! and stops dead the moment the pointer lifts.
-//!
-//! This module is framework-agnostic: it deals only in logical pixels and
-//! seconds and emits plain `(dx, dy)` deltas. The consuming scroll widget is
-//! responsible for turning each [`MomentumDelta`] into a scroll offset update
-//! (e.g. by offsetting its own scroll position or emitting a scroll event).
-//!
-//! # Usage (with a scroll widget)
-//!
-//! ```ignore
-//! let mut tracker = VelocityTracker::new();
-//! let mut scroller = MomentumScroller::new();
-//!
-//! // On each pointer move at logical (x, y):
-//! tracker.record(x, y);
-//!
-//! // On pointer up:
-//! let (vx, vy) = tracker.velocity();
-//! scroller.fling(vx, vy, last_x, last_y);
-//! tracker.reset();
-//!
-//! // On each frame tick (rAF / vsync):
-//! if let Some(delta) = scroller.step() {
-//!     scroll_view.offset_by(delta.dx, delta.dy);
-//! }
-//! // When step() returns None the fling is finished.
-//! ```
-//!
-//! # Ported from
-//!
-//! Adapted from [`gpui-mobile`](https://github.com/itsbalamurali/gpui-mobile)
-//! (`src/momentum.rs`), which implements iOS `UIScrollView`-style fling for
-//! GPUI on iOS/Android. The physics are unchanged; only the surrounding
+//! Framework-agnostic: it deals only in logical pixels and seconds and emits
+//! plain [`MomentumDelta`]s; the consuming scroll widget turns each into a
+//! scroll offset update. Physics adapted from `gpui-mobile` (Apache-2.0); the
 //! framework hooks were removed so the module can live in `floom-gesture`.
 
 use std::time::Instant;
