@@ -1,40 +1,12 @@
 // SPDX-License-Identifier: MIT
 //! Touch gesture classifier — turn a raw touch stream into semantic gestures.
 //!
-//! Mobile platforms deliver a stream of low-level touch samples (finger down,
-//! move, up/cancel). Floom widgets want higher-level intent: "this was a tap"
-//! vs "this was a scroll/drag". This module classifies the two, mirroring the
-//! `TouchState` machine in gpui-mobile's `ios/window.rs`.
-//!
-//! It is framework-agnostic: it consumes [`TouchSample`]s and emits neutral
-//! [`GestureEvent`]s. The platform backend is responsible for mapping those to
-//! Floom [`Event`]s (see [`GestureEvent::to_floom`]) and for feeding a fling
-//! velocity into a [`MomentumScroller`](crate::gesture::momentum::MomentumScroller).
-//!
-//! # Usage
-//!
-//! ```ignore
-//! use floom_gesture::{TouchRecognizer, TouchSample, TouchPhase};
-//!
-//! let mut rec = TouchRecognizer::new();
-//! // On each native touch:
-//! for g in rec.handle(TouchSample { phase, x, y, tap_count: 1 }) {
-//!     for event in g.to_floom(modifiers) {
-//!         window.dispatch(event);
-//!     }
-//!     if let GestureEvent::Fling { vx, vy } = g {
-//!         scroller.fling(vx, vy, last_x, last_y);
-//!     }
-//! }
-//! ```
-//!
-//! # Ported from
-//!
-//! Adapted from [`gpui-mobile`](https://github.com/itsbalamurali/gpui-mobile)
-//! (`src/ios/window.rs`, the `TouchState` machine), used under its Apache-2.0
-//! option. The physics/tracking were removed so the module lives in
-//! `floom-gesture` and only depends on `floom-types` + the in-crate
-//! `VelocityTracker`.
+//! Mobile platforms deliver low-level touch samples; widgets want intent — a
+//! tap vs a scroll/drag. This module classifies the two, framework-agnostic: it
+//! consumes [`TouchSample`]s and emits [`GestureEvent`]s, and the backend maps
+//! those to Floom [`Event`]s and feeds a fling velocity into a
+//! [`MomentumScroller`](crate::gesture::momentum::MomentumScroller). The state
+//! machine mirrors `gpui-mobile`'s `TouchState` (Apache-2.0).
 
 use crate::gesture::momentum::VelocityTracker;
 use floom_types::{
