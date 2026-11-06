@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: MIT
 //! `.d.ts` generation from the IR schema (Task 8).
 
-use floom_tsx::compile;
+use floom_tsx::generate_dts;
+
+#[test]
+fn decl_exposes_module_and_jsx_namespaces() {
+    let dts = generate_dts();
+    assert!(dts.contains("declare module \"floom\""));
+    assert!(dts.contains("declare namespace JSX"));
+    assert!(dts.contains("interface IntrinsicElements"));
+}
 
 #[test]
 fn decl_generates_complete_types() {
-    // A single root with the kinds whose interfaces should be emitted.
-    let source = r#"<Stack><Text label="hi" /><Button label="ok" /></Stack>"#;
-    let doc = compile(source).expect("compile");
-    let dts = floom_tsx::generate_dts(&doc);
+    let dts = generate_dts();
 
     assert!(dts.contains("Text"), "missing Text interface:\n{dts}");
     assert!(dts.contains("Stack"), "missing Stack interface:\n{dts}");
