@@ -6,7 +6,7 @@
 //! * [`VelloRendererAdapter`] — a dependency-free recorder that turns a
 //!   [`Scene`] into a [`VelloCommand`] list. It freezes the ABI boundary and is
 //!   what the default build compiles.
-//! * [`VelloGpuPresenter`] (feature `gpu`) — the real thing: a wgpu
+//! * `VelloGpuPresenter` (feature `gpu`) — the real thing: a wgpu
 //!   swap-chain driven by vello, which is what actually puts pixels in a window.
 
 pub mod budget;

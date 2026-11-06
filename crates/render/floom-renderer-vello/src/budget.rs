@@ -13,7 +13,7 @@
 //! This module is the *policy*: what the budgets are per platform class, and
 //! what a trim at a given memory pressure drops. It is deliberately free of
 //! wgpu types so it can be unit-tested without a GPU adapter (CI machines and
-//! headless builds have none); the presenter ([`crate::gpu`] with the `gpu`
+//! headless builds have none); the presenter (`crate::gpu`, with the `gpu`
 //! feature) carries the mechanism and enforces the policy.
 
 /// Which class of device the budget is sized for. The defaults trade cache

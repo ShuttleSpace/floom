@@ -26,12 +26,6 @@
 //! turned into a live resource, and the invariant is enforced by
 //! [`VelloGpuPresenter::detach`] plus the app layer's drop order.
 //!
-//! ## Not yet implemented
-//!
-//! Nothing: rects, shaped text and images all render. Text goes through the
-//! glyph-run resource (see `floom-text`); image uploads are cached per
-//! resource id (see "Image texture caching" below).
-
 //! ## Image texture caching
 //!
 //! Vello keeps its own GPU-side image atlas keyed by `ImageData`'s blob id —

@@ -16,9 +16,9 @@
 //!
 //! Two things, both already there:
 //!
-//! * [`floom_app::WidgetHost::node_at_point`] — the same resolution a click
+//! * `floom_app::WidgetHost::node_at_point` — the same resolution a click
 //!   gets, overlays first, so a pick over an open dialog picks the dialog.
-//! * [`floom_app::WidgetHost::bounds`] — the node's box, for the highlight.
+//! * `floom_app::WidgetHost::bounds` — the node's box, for the highlight.
 //!
 //! ## What the panel draws
 //!
