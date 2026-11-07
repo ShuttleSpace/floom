@@ -6,8 +6,11 @@
 Network reachability and connection type.
 
 Adapted from `gpui-mobile` (Apache-2.0). The native arms read
-`SystemConfiguration` (iOS) and `ConnectivityManager` (Android). The host
-arm reports "no connection".
+`SystemConfiguration` (iOS) and `ConnectivityManager` (Android); the
+desktop arms measure through `std` (see `desktop.rs`). The Android/iOS arms
+report validated internet; the desktop arms report a usable route, which is
+the same question a phone answers through its platform API — see the desktop
+module for how the two stay comparable.
 
 A **capability plugin**: one capability, one crate, opt-in by
 dependency. The SDK does not carry it — an app that wants this
@@ -23,10 +26,10 @@ than returning a value that looks measured.
 |----------|---------|---------|
 | Android | ✅ Real | `src/android.rs` |
 | iOS | ✅ Real | `src/ios.rs` |
-| macOS | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
-| Windows | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
-| Linux | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
-| OpenHarmony | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| macOS | ✅ Real | `src/desktop.rs` |
+| Windows | ✅ Real | `src/desktop.rs` |
+| Linux | ✅ Real | `src/desktop.rs` |
+| OpenHarmony | ⚪ Inert fallback | `src/ohos.rs` returns the documented default (honest degrade) |
 | Web | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 
 Every target **compiles and runs** this plugin. Where a platform has no native

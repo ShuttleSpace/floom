@@ -1,8 +1,11 @@
 //! Network reachability and connection type.
 //!
 //! Adapted from `gpui-mobile` (Apache-2.0). The native arms read
-//! `SystemConfiguration` (iOS) and `ConnectivityManager` (Android). The host
-//! arm reports "no connection".
+//! `SystemConfiguration` (iOS) and `ConnectivityManager` (Android); the
+//! desktop arms measure through `std` (see `desktop.rs`). The Android/iOS arms
+//! report validated internet; the desktop arms report a usable route, which is
+//! the same question a phone answers through its platform API — see the desktop
+//! module for how the two stay comparable.
 //!
 //! A **capability plugin**: one capability, one crate, opt-in by
 //! dependency. The SDK does not carry it — an app that wants this
@@ -18,6 +21,15 @@ mod android;
 mod ios;
 #[cfg(target_env = "ohos")]
 mod ohos;
+// Desktop arms: macOS, Windows and Linux (Linux minus OHOS — see the OHOS
+// contract in `docs/ohos.md`, where OHOS is `target_os = "linux"`) share one
+// `std`-only implementation. Web (`wasm32`) has no `UdpSocket`, so it keeps the
+// inert fallback below rather than reaching for a browser API.
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    not(any(target_os = "android", target_os = "ios", target_env = "ohos"))
+))]
+mod desktop;
 
 /// The kind of network the device is using, if any.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -62,7 +74,14 @@ pub fn connection_type() -> ConnectionType {
     {
         ohos::connection_type()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(any(target_os = "android", target_os = "ios", target_env = "ohos"))
+    ))]
+    {
+        desktop::connection_type()
+    }
+    #[cfg(target_arch = "wasm32")]
     {
         ConnectionType::None
     }
@@ -82,7 +101,14 @@ pub fn connectivity_status() -> ConnectivityStatus {
     {
         ohos::connectivity_status()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(any(target_os = "android", target_os = "ios", target_env = "ohos"))
+    ))]
+    {
+        desktop::connectivity_status()
+    }
+    #[cfg(target_arch = "wasm32")]
     {
         ConnectivityStatus::default()
     }
@@ -102,7 +128,14 @@ pub fn is_connected() -> bool {
     {
         ohos::is_connected()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(any(target_os = "android", target_os = "ios", target_env = "ohos"))
+    ))]
+    {
+        desktop::is_connected()
+    }
+    #[cfg(target_arch = "wasm32")]
     {
         false
     }
@@ -122,7 +155,14 @@ pub fn is_metered() -> bool {
     {
         ohos::is_metered()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(any(target_os = "android", target_os = "ios", target_env = "ohos"))
+    ))]
+    {
+        desktop::is_metered()
+    }
+    #[cfg(target_arch = "wasm32")]
     {
         false
     }
@@ -133,10 +173,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn host_reports_no_connection() {
-        assert_eq!(connection_type(), ConnectionType::None);
-        assert!(!is_connected());
-        assert!(!is_metered());
-        assert_eq!(connectivity_status(), ConnectivityStatus::default());
+    fn the_desktop_answer_is_self_consistent() {
+        // Whatever the host's actual route state is, the crate's own story must
+        // cohere: a reported connection carries a non-None type, and the status
+        // mirrors the individual calls. A bare `cargo test` build runs on a host
+        // with a route, but the invariant holds whether or not one exists.
+        let connected = is_connected();
+        let status = connectivity_status();
+        assert_eq!(status.is_connected, connected);
+        if connected {
+            assert_ne!(connection_type(), ConnectionType::None);
+            assert!(!status.is_metered);
+        } else {
+            assert_eq!(connection_type(), ConnectionType::None);
+            assert_eq!(status, ConnectivityStatus::default());
+        }
     }
 }
