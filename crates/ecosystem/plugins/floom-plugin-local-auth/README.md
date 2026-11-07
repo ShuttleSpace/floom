@@ -23,7 +23,7 @@ than returning a value that looks measured.
 |----------|---------|---------|
 | Android | ✅ Real | `src/android.rs` |
 | iOS | ✅ Real | `src/ios.rs` |
-| macOS | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| macOS | ✅ Real | `src/macos.rs` |
 | Windows | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 | Linux | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 | OpenHarmony | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |

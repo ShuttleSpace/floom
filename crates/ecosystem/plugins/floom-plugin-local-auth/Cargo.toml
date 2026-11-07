@@ -27,5 +27,10 @@ jni = "0.22"
 [target.'cfg(target_os = "ios")'.dependencies]
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
 
+# The macOS half reads the same `LAContext` (Touch ID) through objc2 and links
+# LocalAuthentication.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+
 [build-dependencies]
 cc = "1"
