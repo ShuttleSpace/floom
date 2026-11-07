@@ -34,6 +34,8 @@
 mod android;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 mod apple;
+#[cfg(target_env = "ohos")]
+mod ohos;
 
 /// The identity of the running application.
 ///
@@ -71,7 +73,16 @@ pub fn app_info() -> AppInfo {
     {
         apple::app_info()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::app_info()
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_env = "ohos"
+    )))]
     {
         AppInfo::default()
     }

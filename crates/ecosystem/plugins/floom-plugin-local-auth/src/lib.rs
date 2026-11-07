@@ -16,6 +16,8 @@
 mod android;
 #[cfg(target_os = "ios")]
 mod ios;
+#[cfg(target_env = "ohos")]
+mod ohos;
 
 /// The strongest biometric the device can use for local auth.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -41,7 +43,11 @@ pub fn available_biometric() -> BiometricKind {
     {
         ios::available_biometric()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::available_biometric()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         BiometricKind::None
     }
@@ -60,7 +66,11 @@ pub fn authenticate(reason: &str) -> Result<(), String> {
     {
         ios::authenticate(reason)
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::authenticate(reason)
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         let _ = reason;
         Err("local authentication is only available on iOS and Android".into())

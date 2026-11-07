@@ -27,6 +27,8 @@
 mod android;
 #[cfg(target_os = "ios")]
 mod ios;
+#[cfg(target_env = "ohos")]
+mod ohos;
 
 /// A physical sensor the package can surface.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -76,7 +78,11 @@ pub fn available_sensors() -> Vec<SensorKind> {
     {
         ios::available_sensors()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::available_sensors()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         Vec::new()
     }
@@ -92,7 +98,11 @@ pub fn is_sensor_available(kind: SensorKind) -> bool {
     {
         ios::is_sensor_available(kind)
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::is_sensor_available(kind)
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         let _ = kind;
         false

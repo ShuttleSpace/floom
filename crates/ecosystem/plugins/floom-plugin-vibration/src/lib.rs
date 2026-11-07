@@ -14,6 +14,8 @@
 mod android;
 #[cfg(target_os = "ios")]
 mod ios;
+#[cfg(target_env = "ohos")]
+mod ohos;
 
 /// The type of haptic feedback to generate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,7 +46,11 @@ pub fn vibrate(duration_ms: u32) -> Result<(), String> {
     {
         android::vibrate(duration_ms)
     }
-    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::vibrate(duration_ms)
+    }
+    #[cfg(not(any(target_os = "ios", target_os = "android", target_env = "ohos")))]
     {
         let _ = duration_ms;
         Err("vibration is only available on iOS and Android".into())
@@ -61,7 +67,11 @@ pub fn haptic_feedback(feedback: HapticFeedback) -> Result<(), String> {
     {
         android::haptic_feedback(feedback)
     }
-    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::haptic_feedback(feedback)
+    }
+    #[cfg(not(any(target_os = "ios", target_os = "android", target_env = "ohos")))]
     {
         let _ = feedback;
         Err("vibration is only available on iOS and Android".into())
@@ -78,7 +88,11 @@ pub fn can_vibrate() -> bool {
     {
         android::can_vibrate()
     }
-    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::can_vibrate()
+    }
+    #[cfg(not(any(target_os = "ios", target_os = "android", target_env = "ohos")))]
     {
         false
     }

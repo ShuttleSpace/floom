@@ -50,11 +50,16 @@ pub fn keep_screen_on(on: bool) -> Result<(), String> {
     {
         windows::keep_screen_on(on)
     }
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::keep_screen_on(on)
+    }
     #[cfg(not(any(
         target_os = "android",
         target_os = "ios",
         target_os = "macos",
-        target_os = "windows"
+        target_os = "windows",
+        target_env = "ohos"
     )))]
     {
         // `false` is a no-op that is also *true* here: this crate never asked
@@ -96,11 +101,16 @@ pub fn is_keep_screen_on() -> bool {
     {
         windows::is_keep_screen_on()
     }
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::is_keep_screen_on()
+    }
     #[cfg(not(any(
         target_os = "android",
         target_os = "ios",
         target_os = "macos",
-        target_os = "windows"
+        target_os = "windows",
+        target_env = "ohos"
     )))]
     {
         false
@@ -113,6 +123,8 @@ mod android;
 mod ios;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(target_env = "ohos")]
+mod ohos;
 #[cfg(target_os = "windows")]
 mod windows;
 
@@ -197,7 +209,8 @@ mod tests {
         target_os = "android",
         target_os = "ios",
         target_os = "macos",
-        target_os = "windows"
+        target_os = "windows",
+        target_env = "ohos"
     )))]
     #[test]
     fn a_platform_without_the_api_says_so_and_reads_false() {

@@ -16,6 +16,8 @@
 mod android;
 #[cfg(target_os = "ios")]
 mod ios;
+#[cfg(target_env = "ohos")]
+mod ohos;
 
 /// The kind of network the device is using, if any.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -56,7 +58,11 @@ pub fn connection_type() -> ConnectionType {
     {
         ios::connection_type()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::connection_type()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         ConnectionType::None
     }
@@ -72,7 +78,11 @@ pub fn connectivity_status() -> ConnectivityStatus {
     {
         ios::connectivity_status()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::connectivity_status()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         ConnectivityStatus::default()
     }
@@ -88,7 +98,11 @@ pub fn is_connected() -> bool {
     {
         ios::is_connected()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::is_connected()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         false
     }
@@ -104,7 +118,11 @@ pub fn is_metered() -> bool {
     {
         ios::is_metered()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::is_metered()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         false
     }

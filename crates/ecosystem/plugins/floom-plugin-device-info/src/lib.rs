@@ -16,6 +16,8 @@
 mod android;
 #[cfg(target_os = "ios")]
 mod ios;
+#[cfg(target_env = "ohos")]
+mod ohos;
 
 /// Static-ish facts about the device the app is running on.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -46,7 +48,11 @@ pub fn device_info() -> DeviceInfo {
     {
         ios::device_info()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::device_info()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         DeviceInfo::default()
     }
@@ -62,7 +68,11 @@ pub fn device_name() -> String {
     {
         ios::device_name()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::device_name()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         "unknown".to_string()
     }

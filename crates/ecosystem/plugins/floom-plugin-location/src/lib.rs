@@ -22,6 +22,8 @@
 mod android;
 #[cfg(target_os = "ios")]
 mod ios;
+#[cfg(target_env = "ohos")]
+mod ohos;
 
 /// The app's location authorization status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -66,7 +68,11 @@ pub fn authorization_status() -> LocationAuthorization {
     {
         ios::authorization_status()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::authorization_status()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         LocationAuthorization::NotDetermined
     }
@@ -82,7 +88,11 @@ pub fn is_location_enabled() -> bool {
     {
         ios::is_location_enabled()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::is_location_enabled()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         false
     }
@@ -99,7 +109,11 @@ pub fn request_authorization() -> Result<(), String> {
     {
         ios::request_authorization()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::request_authorization()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         Err("location is only available on iOS and Android".into())
     }
@@ -121,7 +135,11 @@ pub fn current_location() -> Result<Location, String> {
     {
         ios::current_location()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::current_location()
+    }
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
     {
         Err("location is only available on iOS and Android".into())
     }

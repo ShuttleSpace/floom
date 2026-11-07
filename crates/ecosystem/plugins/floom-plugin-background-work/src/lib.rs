@@ -99,7 +99,10 @@ pub fn schedule_app_launch(at: SystemTime) -> Result<(), String> {
                       system decides when, and it cannot launch UI) and timers die with \
                       the process. The nearest capability is a user notification with a \
                       trigger, which is the notifications plugin's own scheduling arm";
-        #[cfg(not(target_os = "ios"))]
+        #[cfg(target_env = "ohos")]
+        let reason = "schedule_app_launch: OpenHarmony has no scheduled-launch bridge \
+                      in this crate yet";
+        #[cfg(not(any(target_os = "ios", target_env = "ohos")))]
         let reason = "schedule_app_launch: the session manager owns sleep and wake — \
                       work that must run while this app is closed is a system service \
                       (launchd, a systemd timer, Task Scheduler), which is the app's \
@@ -124,7 +127,10 @@ pub fn cancel_scheduled_app_launch() -> Result<(), String> {
         #[cfg(target_os = "ios")]
         let reason = "cancel_scheduled_app_launch: iOS has no scheduled-launch ask to \
                       withdraw (see schedule_app_launch)";
-        #[cfg(not(target_os = "ios"))]
+        #[cfg(target_env = "ohos")]
+        let reason = "cancel_scheduled_app_launch: OpenHarmony has no scheduled-launch \
+                      ask to withdraw (see schedule_app_launch)";
+        #[cfg(not(any(target_os = "ios", target_env = "ohos")))]
         let reason = "cancel_scheduled_app_launch: the desktops never accepted a \
                       scheduled-launch ask (see schedule_app_launch)";
         Err(reason.to_string())
@@ -145,7 +151,9 @@ mod tests {
         let err = schedule_app_launch(SystemTime::now()).unwrap_err();
         #[cfg(target_os = "ios")]
         assert!(err.contains("BGTaskScheduler"), "{err}");
-        #[cfg(not(target_os = "ios"))]
+        #[cfg(target_env = "ohos")]
+        assert!(err.contains("OpenHarmony"), "{err}");
+        #[cfg(not(any(target_os = "ios", target_env = "ohos")))]
         assert!(err.contains("system service"), "{err}");
     }
 

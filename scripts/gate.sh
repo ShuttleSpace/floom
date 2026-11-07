@@ -201,14 +201,25 @@ WINDOWS_CAPABILITY_PLUGINS=(
 # native `native/ohos/` halves and are device builds, not host checks.
 OHOS_CAPABILITY_PLUGINS=(
   floom-plugin-battery
+  floom-plugin-background-work
+  floom-plugin-connectivity
+  floom-plugin-device-info
+  floom-plugin-file-dialog
+  floom-plugin-local-auth
+  floom-plugin-location
+  floom-plugin-mdns
+  floom-plugin-network-info
   floom-plugin-notifications
-  floom-plugin-tray
   floom-plugin-open-url
-  floom-plugin-secure-storage
+  floom-plugin-package-info
   floom-plugin-paths
   floom-plugin-prefs
-  floom-plugin-file-dialog
-  floom-plugin-network-info
+  floom-plugin-secure-storage
+  floom-plugin-sensors
+  floom-plugin-share
+  floom-plugin-tray
+  floom-plugin-vibration
+  floom-plugin-wakelock
 )
 
 PASS=0

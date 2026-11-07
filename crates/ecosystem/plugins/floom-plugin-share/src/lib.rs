@@ -20,6 +20,8 @@ mod android;
 mod ios;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(target_env = "ohos")]
+mod ohos;
 
 /// Present the system share sheet for a block of text.
 pub fn share_text(text: &str) -> Result<(), String> {
@@ -35,7 +37,16 @@ pub fn share_text(text: &str) -> Result<(), String> {
     {
         macos::share_text(text)
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::share_text(text)
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_env = "ohos"
+    )))]
     {
         let _ = text;
         Err(unsupported())
@@ -56,7 +67,16 @@ pub fn share_files(paths: &[&str]) -> Result<(), String> {
     {
         macos::share_files(paths)
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::share_files(paths)
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_env = "ohos"
+    )))]
     {
         let _ = paths;
         Err(unsupported())
@@ -65,7 +85,12 @@ pub fn share_files(paths: &[&str]) -> Result<(), String> {
 
 /// The desktop half that is not written yet, named precisely: an arm that
 /// says "unsupported" without saying what would make it unsupported is a dead end.
-#[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
+#[cfg(not(any(
+    target_os = "android",
+    target_os = "ios",
+    target_os = "macos",
+    target_env = "ohos"
+)))]
 fn unsupported() -> String {
     if cfg!(target_os = "windows") {
         "share: Windows shares through WinRT's `DataTransferManager`, shown with \
