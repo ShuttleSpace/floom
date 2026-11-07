@@ -6,8 +6,11 @@
 Device identity and environment facts (model, OS, locale, …).
 
 Adapted from `gpui-mobile` (Apache-2.0). The native arms read
-`UIDevice` (iOS) and `Build` / `SystemProperty` (Android). The host arm
-returns an empty [`DeviceInfo`] so the crate stays a no-op on desktop/web.
+`UIDevice` (iOS) and `Build` / `SystemProperty` (Android); the desktop arms
+read what `std` already exposes (`/etc/os-release`, `SystemVersion.plist`,
+the locale and host-name environment) — see `desktop.rs`. Fields with no
+`std` door (`model`, `manufacturer` on a desktop) stay empty rather than
+being invented.
 
 A **capability plugin**: one capability, one crate, opt-in by
 dependency. The SDK does not carry it — an app that wants this
@@ -23,10 +26,10 @@ than returning a value that looks measured.
 |----------|---------|---------|
 | Android | ✅ Real | `src/android.rs` |
 | iOS | ✅ Real | `src/ios.rs` |
-| macOS | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
-| Windows | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
-| Linux | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
-| OpenHarmony | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| macOS | ✅ Real | `src/desktop.rs` |
+| Windows | ✅ Real | `src/desktop.rs` |
+| Linux | ✅ Real | `src/desktop.rs` |
+| OpenHarmony | ⚪ Inert fallback | `src/ohos.rs` returns the documented default (honest degrade) |
 | Web | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 
 Every target **compiles and runs** this plugin. Where a platform has no native
