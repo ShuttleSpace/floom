@@ -1,0 +1,8 @@
+{
+  "name": "@types/floom",
+  "version": "0.2.0",
+  "description": "TypeScript declarations for writing Floom apps in TSX. Editor completion only: not a runtime dependency.",
+  "types": "index.d.ts",
+  "files": ["index.d.ts"],
+  "license": "MIT"
+}

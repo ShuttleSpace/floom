@@ -33,6 +33,9 @@ OPTIONS (run):
 OPTIONS (create):
     --template <KIND>      app (default) or plugin
     --plugin               Shorthand for `--template plugin`
+    --style <STYLE>        App flavour: rust (default, a Cargo project) or
+                            tsx (one app.tsx; `floom run` builds it)
+    --tsx                  Shorthand for `--style tsx`
     --platforms <LIST>     Comma-separated subset of:
                             android,ios,ohos,web,windows,linux,macos,tui
                             (default: all)
@@ -46,6 +49,7 @@ EXAMPLES:
     floom run app.tsx
     floom run app.tsx --release
     floom create my_app
+    floom create my_app --style tsx
     floom create my_app --platforms android,ios
     floom create --plugin --platforms android,ios camera
     floom create --template plugin my_plugin --platforms ohos
@@ -123,9 +127,28 @@ impl Template {
     }
 }
 
+/// How an app is written: a Rust crate (the default) or a single TSX file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AppStyle {
+    Rust,
+    Tsx,
+}
+
+impl AppStyle {
+    fn parse(word: &str) -> Result<Self, String> {
+        match word {
+            "rust" => Ok(AppStyle::Rust),
+            "tsx" => Ok(AppStyle::Tsx),
+            other => Err(format!("unknown style `{other}`; known: rust, tsx")),
+        }
+    }
+}
+
+#[derive(Debug)]
 struct CreateOpts {
     name: String,
     template: Template,
+    style: AppStyle,
     platforms: Vec<String>,
     org: String,
     floom_crate: String,
@@ -137,7 +160,10 @@ struct CreateOpts {
 fn parse_create(args: &[String]) -> Result<CreateOpts, String> {
     let mut name: Option<String> = None;
     let mut template = Template::App;
+    let mut style = AppStyle::Rust;
+    let mut style_set = false;
     let mut platforms: Option<Vec<String>> = None;
+    let mut platforms_set = false;
     let mut org = String::from("com.example");
     let mut floom_crate = String::from("floom");
     let mut floom_path: Option<String> = None;
@@ -180,6 +206,7 @@ fn parse_create(args: &[String]) -> Result<CreateOpts, String> {
                     return Err("--platforms selected no platforms".into());
                 }
                 platforms = Some(list);
+                platforms_set = true;
             }
             "--template" | "-t" => {
                 let kind = take_value("--template")?;
@@ -190,6 +217,16 @@ fn parse_create(args: &[String]) -> Result<CreateOpts, String> {
             // is a mistake, and the last flag stated is the one honoured, which is
             // what every other CLI does.
             "--plugin" => template = Template::Plugin,
+            "--style" => {
+                style = AppStyle::parse(&take_value("--style")?)?;
+                style_set = true;
+            }
+            // Same last-one-wins rule as `--template`: an explicit `--style`
+            // stated later on the line overrides the shorthand.
+            "--tsx" => {
+                style = AppStyle::Tsx;
+                style_set = true;
+            }
             "--org" => org = take_value("--org")?,
             "--floom-crate" => floom_crate = take_value("--floom-crate")?,
             "--floom-path" => floom_path = Some(take_value("--floom-path")?),
@@ -210,9 +247,22 @@ fn parse_create(args: &[String]) -> Result<CreateOpts, String> {
 
     let name = name.ok_or_else(|| format!("`create` requires a project name\n\n{USAGE}"))?;
     check_name(&name)?;
+    if template == Template::Plugin && style_set {
+        return Err(
+            "`--style` applies to apps; a plugin is a Rust crate with an `index.d.ts` facade"
+                .into(),
+        );
+    }
+    if style == AppStyle::Tsx && platforms_set {
+        return Err(
+            "`--platforms` applies to the Rust scaffold; a TSX app runs on `floom run`'s default backend"
+                .into(),
+        );
+    }
     Ok(CreateOpts {
         name,
         template,
+        style,
         platforms: platforms
             .unwrap_or_else(|| templates::PLATFORMS.iter().map(|s| s.to_string()).collect()),
         org,
@@ -252,8 +302,44 @@ fn create(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-/// Scaffold an app: a widget tree, plus one directory per platform.
+/// Scaffold an app in the style the caller asked for.
 fn create_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
+    match opts.style {
+        AppStyle::Rust => create_rust_app(opts, root),
+        AppStyle::Tsx => create_tsx_app(opts, root),
+    }
+}
+
+/// Scaffold a TSX app: one `app.tsx`, the npm metadata an editor needs, and no
+/// Rust at all — `floom run` writes the throwaway crate.
+fn create_tsx_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
+    write(
+        &root.join("app.tsx"),
+        &templates::APP_TSX.replace("{{TITLE}}", &opts.name),
+    )?;
+    write(
+        &root.join("package.json"),
+        &templates::tsx_package_json(&opts.name),
+    )?;
+    write(&root.join("tsconfig.json"), templates::TSX_TSCONFIG)?;
+    write(&root.join(".gitignore"), templates::TSX_GITIGNORE)?;
+    write(
+        &root.join("README.md"),
+        &templates::tsx_root_readme(&opts.name),
+    )?;
+
+    println!("Created Floom TSX app `{}` in ./{}", opts.name, opts.name);
+    println!("  style: tsx (editor types from @types/floom)");
+    println!();
+    println!("Next:");
+    println!("  cd {}", opts.name);
+    println!("  npm install    # editor completion and `npm run typecheck`");
+    println!("  floom run app.tsx");
+    Ok(())
+}
+
+/// Scaffold a Rust app: a widget tree, plus one directory per platform.
+fn create_rust_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
     write(
         &root.join("Cargo.toml"),
         &templates::cargo_toml(&opts.name, &opts.floom_crate, opts.floom_path.as_deref()),
@@ -772,6 +858,7 @@ mod tests {
         let opts = CreateOpts {
             name: name.to_string(),
             template: Template::Plugin,
+            style: AppStyle::Rust,
             platforms: platforms.iter().map(|s| s.to_string()).collect(),
             org: "com.example".to_string(),
             floom_crate: "floom".to_string(),
@@ -1151,6 +1238,128 @@ mod tests {
         assert!(
             !android_dir.join("native/android").exists(),
             "there is no native/ directory for the java half"
+        );
+    }
+
+    fn args(list: &[&str]) -> Vec<String> {
+        list.iter().map(|s| s.to_string()).collect()
+    }
+
+    /// Scaffold an app of the given style into a scratch directory.
+    fn scaffold_app(name: &str, style: AppStyle) -> PathBuf {
+        let dir = repo_root()
+            .join("tests")
+            .join(format!("floom-cli-test-{name}"));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("scratch directory");
+        let opts = CreateOpts {
+            name: name.to_string(),
+            template: Template::App,
+            style,
+            platforms: vec!["macos".to_string()],
+            org: "com.example".to_string(),
+            floom_crate: "floom".to_string(),
+            floom_path: None,
+            platform_path: None,
+            force: true,
+        };
+        create_app(&opts, &dir).expect("scaffold the app");
+        dir
+    }
+
+    #[test]
+    fn style_defaults_to_rust_and_accepts_the_two_spellings() {
+        let default = parse_create(&args(&["demo"])).expect("default style");
+        assert_eq!(default.style, AppStyle::Rust);
+
+        let explicit = parse_create(&args(&["demo", "--style", "tsx"])).expect("style tsx");
+        assert_eq!(explicit.style, AppStyle::Tsx);
+
+        let shorthand = parse_create(&args(&["demo", "--tsx"])).expect("--tsx");
+        assert_eq!(shorthand.style, AppStyle::Tsx);
+    }
+
+    #[test]
+    fn unknown_style_is_rejected() {
+        let error = parse_create(&args(&["demo", "--style", "swift"])).expect_err("unknown style");
+        assert!(error.contains("unknown style `swift`"), "{error}");
+        assert!(error.contains("rust, tsx"), "{error}");
+    }
+
+    #[test]
+    fn style_is_rejected_for_plugins() {
+        let error = parse_create(&args(&["--plugin", "--style", "tsx", "cam"]))
+            .expect_err("style on a plugin");
+        assert!(error.contains("applies to apps"), "{error}");
+    }
+
+    #[test]
+    fn platforms_are_rejected_for_tsx_apps() {
+        let error = parse_create(&args(&["--tsx", "--platforms", "android", "app"]))
+            .expect_err("platforms on a tsx app");
+        assert!(error.contains("applies to the Rust scaffold"), "{error}");
+    }
+
+    #[test]
+    fn rust_style_writes_no_typescript_files() {
+        let dir = scaffold_app("rustapp", AppStyle::Rust);
+        assert!(dir.join("Cargo.toml").is_file());
+        assert!(dir.join("src/main.rs").is_file());
+        for absent in ["app.tsx", "package.json", "tsconfig.json"] {
+            assert!(
+                !dir.join(absent).exists(),
+                "a Rust-style app must not carry {absent}"
+            );
+        }
+        let readme = read(&dir, "README.md");
+        assert!(!readme.contains("@types/floom"), "{readme}");
+    }
+
+    #[test]
+    fn tsx_style_writes_only_the_typescript_app() {
+        let dir = scaffold_app("tsxapp", AppStyle::Tsx);
+        for present in [
+            "app.tsx",
+            "package.json",
+            "tsconfig.json",
+            ".gitignore",
+            "README.md",
+        ] {
+            assert!(dir.join(present).is_file(), "{present} must be scaffolded");
+        }
+        for absent in ["Cargo.toml", "src", "tests", "macos"] {
+            assert!(
+                !dir.join(absent).exists(),
+                "a TSX app must not carry {absent}"
+            );
+        }
+    }
+
+    #[test]
+    fn tsx_style_pins_the_editor_declarations() {
+        let dir = scaffold_app("tsxpins", AppStyle::Tsx);
+        let package = read(&dir, "package.json");
+        assert!(
+            package.contains(&format!(
+                "\"@types/floom\": \"^{}\"",
+                env!("CARGO_PKG_VERSION")
+            )),
+            "the declarations must track the toolchain version:\n{package}"
+        );
+        assert!(package.contains("\"typescript\""), "{package}");
+
+        let tsconfig = read(&dir, "tsconfig.json");
+        assert!(tsconfig.contains(r#""lib": ["ES2020"]"#), "{tsconfig}");
+
+        let gitignore = read(&dir, ".gitignore");
+        assert!(gitignore.contains(".floom/"), "{gitignore}");
+        assert!(gitignore.contains("node_modules/"), "{gitignore}");
+
+        let app = read(&dir, "app.tsx");
+        assert!(app.contains("mount(App)"), "{app}");
+        assert!(
+            !app.contains("{{TITLE}}"),
+            "the title placeholder must be filled"
         );
     }
 }

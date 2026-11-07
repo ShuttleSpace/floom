@@ -70,8 +70,8 @@ pub fn compile_project(paths: &[std::path::PathBuf]) -> Result<UiDocument> {
 
 /// Generate TypeScript declaration source (`.d.ts`) so TSX authors get editor
 /// completions for the widgets and props Floom exposes.
-pub fn generate_dts(doc: &UiDocument) -> String {
-    decl::generate(doc)
+pub fn generate_dts() -> String {
+    decl::generate()
 }
 
 /// Convenience: read a `.tsx` file and compile it.
