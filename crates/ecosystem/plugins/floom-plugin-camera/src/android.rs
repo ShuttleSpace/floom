@@ -19,6 +19,8 @@ use floom_native_ffi::floom_native::{
 };
 use floom_platform_mobile::jni as jni_helpers;
 
+use crate::common::PLUGIN_NAME;
+
 /// A camera provider: wraps a Java `FloomCameraView` instance and drives it
 /// through JNI.
 ///
@@ -294,6 +296,11 @@ pub fn enable() -> Result<(), String> {
 
 /// Releases whatever [`enable`] claimed.
 pub fn disable() {}
+
+/// Registers this plugin with the process-wide table.
+pub fn register() {
+    floom_platform::register_plugin(PLUGIN_NAME, enable);
+}
 
 /// The plugin's capability id.
 pub fn capability() -> i32 {
