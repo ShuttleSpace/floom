@@ -72,13 +72,17 @@ impl SecureStorage {
         {
             apple::get(&self.service, &key)
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(all(target_os = "linux", not(target_env = "ohos")))]
         {
             linux::get(&self.service, &key)
         }
         #[cfg(target_os = "windows")]
         {
             windows::get(&self.service, &key)
+        }
+        #[cfg(target_env = "ohos")]
+        {
+            ohos::get(&self.service, &key)
         }
         #[cfg(not(any(
             target_os = "android",
@@ -105,13 +109,17 @@ impl SecureStorage {
         {
             apple::set(&self.service, &key, &value)
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(all(target_os = "linux", not(target_env = "ohos")))]
         {
             linux::set(&self.service, &key, &value)
         }
         #[cfg(target_os = "windows")]
         {
             windows::set(&self.service, &key, &value)
+        }
+        #[cfg(target_env = "ohos")]
+        {
+            ohos::set(&self.service, &key, &value)
         }
         #[cfg(not(any(
             target_os = "android",
@@ -137,13 +145,17 @@ impl SecureStorage {
         {
             apple::remove(&self.service, &key)
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(all(target_os = "linux", not(target_env = "ohos")))]
         {
             linux::remove(&self.service, &key)
         }
         #[cfg(target_os = "windows")]
         {
             windows::remove(&self.service, &key)
+        }
+        #[cfg(target_env = "ohos")]
+        {
+            ohos::remove(&self.service, &key)
         }
         #[cfg(not(any(
             target_os = "android",
@@ -209,8 +221,10 @@ mod map;
 mod android;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 mod apple;
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", not(target_env = "ohos")))]
 mod linux;
+#[cfg(target_env = "ohos")]
+mod ohos;
 #[cfg(target_os = "windows")]
 mod windows;
 

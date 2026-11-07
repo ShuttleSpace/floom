@@ -70,13 +70,17 @@ pub fn open_url(url: &str) -> Result<(), String> {
     {
         macos::open_url(url)
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", not(target_env = "ohos")))]
     {
         linux::open_url(url)
     }
     #[cfg(target_os = "windows")]
     {
         windows::open_url(url)
+    }
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::open_url(url)
     }
     #[cfg(not(any(
         target_os = "android",
@@ -118,10 +122,12 @@ fn has_scheme(url: &str) -> bool {
 mod android;
 #[cfg(target_os = "ios")]
 mod ios;
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", not(target_env = "ohos")))]
 mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(target_env = "ohos")]
+mod ohos;
 #[cfg(target_os = "windows")]
 mod windows;
 

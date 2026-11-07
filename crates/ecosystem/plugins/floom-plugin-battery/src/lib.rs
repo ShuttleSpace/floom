@@ -26,10 +26,16 @@ mod ios;
 // Android is `target_os = "linux"` but served by `android.rs`, so the desktop
 // Linux arm is gated on Linux *minus* Android. OpenHarmony has no battery arm
 // yet and falls through to the inert default below.
-#[cfg(all(target_os = "linux", not(target_os = "android")))]
+#[cfg(all(
+    target_os = "linux",
+    not(target_os = "android"),
+    not(target_env = "ohos")
+))]
 mod linux;
 #[cfg(target_os = "macos")]
 mod macos;
+#[cfg(target_env = "ohos")]
+mod ohos;
 #[cfg(target_os = "windows")]
 mod windows;
 
@@ -74,13 +80,21 @@ pub fn battery_state() -> BatteryState {
     {
         ios::battery_state()
     }
-    #[cfg(all(target_os = "linux", not(target_os = "android")))]
+    #[cfg(all(
+        target_os = "linux",
+        not(target_os = "android"),
+        not(target_env = "ohos")
+    ))]
     {
         linux::battery_state()
     }
     #[cfg(target_os = "macos")]
     {
         macos::battery_state()
+    }
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::battery_state()
     }
     #[cfg(target_os = "windows")]
     {
@@ -108,13 +122,21 @@ pub fn is_low_power_mode() -> bool {
     {
         ios::is_low_power_mode()
     }
-    #[cfg(all(target_os = "linux", not(target_os = "android")))]
+    #[cfg(all(
+        target_os = "linux",
+        not(target_os = "android"),
+        not(target_env = "ohos")
+    ))]
     {
         linux::is_low_power_mode()
     }
     #[cfg(target_os = "macos")]
     {
         macos::is_low_power_mode()
+    }
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::is_low_power_mode()
     }
     #[cfg(target_os = "windows")]
     {

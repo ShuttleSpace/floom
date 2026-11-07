@@ -80,9 +80,16 @@ impl Preferences {
         {
             apple::get(&self.store, &key)
         }
-        #[cfg(any(target_os = "linux", target_os = "windows"))]
+        #[cfg(all(
+            any(target_os = "linux", target_os = "windows"),
+            not(target_env = "ohos")
+        ))]
         {
             file::get(&file_store_path(&self.store), &key)
+        }
+        #[cfg(target_env = "ohos")]
+        {
+            ohos::get(&self.store, &key)
         }
         #[cfg(not(any(
             target_os = "android",
@@ -111,9 +118,16 @@ impl Preferences {
         {
             apple::set(&self.store, &key, &value)
         }
-        #[cfg(any(target_os = "linux", target_os = "windows"))]
+        #[cfg(all(
+            any(target_os = "linux", target_os = "windows"),
+            not(target_env = "ohos")
+        ))]
         {
             file::set(&file_store_path(&self.store), &key, &value)
+        }
+        #[cfg(target_env = "ohos")]
+        {
+            ohos::set(&self.store, &key, &value)
         }
         #[cfg(not(any(
             target_os = "android",
@@ -145,9 +159,16 @@ impl Preferences {
         {
             apple::remove(&self.store, &key)
         }
-        #[cfg(any(target_os = "linux", target_os = "windows"))]
+        #[cfg(all(
+            any(target_os = "linux", target_os = "windows"),
+            not(target_env = "ohos")
+        ))]
         {
             file::remove(&file_store_path(&self.store), &key)
+        }
+        #[cfg(target_env = "ohos")]
+        {
+            ohos::remove(&self.store, &key)
         }
         #[cfg(not(any(
             target_os = "android",
@@ -195,7 +216,10 @@ fn validate_name(store: &str) -> Result<(), String> {
 
 /// The file arm's path for a store: the user's config directory, plus the
 /// store name with a suffix that names what the file is.
-#[cfg(any(target_os = "linux", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "linux", target_os = "windows"),
+    not(target_env = "ohos")
+))]
 fn file_store_path(store: &str) -> std::path::PathBuf {
     let mut path = dirs::config_dir().unwrap_or_else(std::env::temp_dir);
     path.push(format!("{store}.prefs"));
@@ -206,8 +230,13 @@ fn file_store_path(store: &str) -> std::path::PathBuf {
 mod android;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 mod apple;
-#[cfg(any(target_os = "linux", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "linux", target_os = "windows"),
+    not(target_env = "ohos")
+))]
 mod file;
+#[cfg(target_env = "ohos")]
+mod ohos;
 
 #[cfg(test)]
 mod tests {
@@ -249,7 +278,10 @@ mod tests {
         {
             apple::remove_domain(name);
         }
-        #[cfg(any(target_os = "linux", target_os = "windows"))]
+        #[cfg(all(
+            any(target_os = "linux", target_os = "windows"),
+            not(target_env = "ohos")
+        ))]
         {
             let _ = std::fs::remove_file(file_store_path(name));
         }
@@ -296,7 +328,10 @@ mod tests {
     /// same internal entry point `open` uses, pointed at a temp directory.
     /// The encoding, the roundtrip, and the absent-key contract all get real
     /// coverage this way, on any host with the arm.
-    #[cfg(any(target_os = "linux", target_os = "windows"))]
+    #[cfg(all(
+        any(target_os = "linux", target_os = "windows"),
+        not(target_env = "ohos")
+    ))]
     #[test]
     fn file_arm_roundtrip_including_the_characters_the_format_cares_about() {
         // The shared helper: a hand-rolled `pid + nanos` name is not unique

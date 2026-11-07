@@ -184,10 +184,15 @@ mod windows;
 #[cfg(target_os = "windows")]
 use windows as imp;
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", not(target_env = "ohos")))]
 mod linux;
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", not(target_env = "ohos")))]
 use linux as imp;
+
+#[cfg(target_env = "ohos")]
+mod ohos;
+#[cfg(target_env = "ohos")]
+use ohos as imp;
 
 #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
 mod unsupported;

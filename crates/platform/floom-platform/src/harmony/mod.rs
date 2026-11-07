@@ -12,6 +12,8 @@ pub fn harmony_platform() -> HostPlatform {
     // Distinct capability profile from Android: marks NATIVE_VIEW for ArkUI embedding hooks.
     let mut caps = PlatformCapabilities::unsupported_a11y_stub();
     caps.caps |= Capability::NATIVE_VIEW;
+    caps.caps |= Capability::IME;
+    caps.caps |= Capability::CLIPBOARD;
     HostPlatform::new()
         .with_id(PlatformId::new(12, 1))
         .with_capabilities(caps)

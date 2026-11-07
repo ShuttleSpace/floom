@@ -18,6 +18,8 @@
 mod android;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 mod apple;
+#[cfg(target_env = "ohos")]
+mod ohos;
 
 /// A local notification to display or schedule.
 #[derive(Debug, Clone, Default)]
@@ -45,7 +47,16 @@ pub fn are_notifications_enabled() -> bool {
     {
         apple::are_notifications_enabled()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::are_notifications_enabled()
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_env = "ohos"
+    )))]
     {
         false
     }
@@ -61,7 +72,16 @@ pub fn request_authorization() -> Result<(), String> {
     {
         apple::request_authorization()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::request_authorization()
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_env = "ohos"
+    )))]
     {
         Err(unsupported())
     }
@@ -77,14 +97,28 @@ pub fn schedule(notification: &Notification) -> Result<(), String> {
     {
         apple::schedule(notification)
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
+    #[cfg(target_env = "ohos")]
+    {
+        ohos::schedule(notification)
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_env = "ohos"
+    )))]
     {
         let _ = notification;
         Err(unsupported())
     }
 }
 
-#[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
+#[cfg(not(any(
+    target_os = "android",
+    target_os = "ios",
+    target_os = "macos",
+    target_env = "ohos"
+)))]
 fn unsupported() -> String {
     if cfg!(target_os = "windows") {
         "notifications: Windows toasts need an app identity (a Start-menu shortcut \

@@ -26,11 +26,11 @@ pub mod common;
 mod android;
 #[cfg(all(target_os = "ios", not(feature = "tui")))]
 mod ios;
-#[cfg(all(target_os = "linux", not(feature = "tui")))]
+#[cfg(all(target_os = "linux", not(target_env = "ohos"), not(feature = "tui")))]
 mod linux;
 #[cfg(all(target_os = "macos", not(feature = "tui")))]
 mod macos;
-#[cfg(all(target_os = "ohos", not(feature = "tui")))]
+#[cfg(all(target_env = "ohos", not(feature = "tui")))]
 mod ohos;
 #[cfg(feature = "tui")]
 mod tui;
@@ -45,7 +45,7 @@ mod windows;
     target_os = "macos",
     target_os = "windows",
     target_os = "linux",
-    target_os = "ohos",
+    target_env = "ohos",
     target_arch = "wasm32",
     feature = "tui",
 )))]
@@ -68,11 +68,11 @@ pub fn capability() -> i32 {
 pub use android::{disable, enable, provider, register};
 #[cfg(all(target_os = "ios", not(feature = "tui")))]
 pub use ios::{disable, enable, provider, register};
-#[cfg(all(target_os = "linux", not(feature = "tui")))]
+#[cfg(all(target_os = "linux", not(target_env = "ohos"), not(feature = "tui")))]
 pub use linux::{disable, enable, provider, register};
 #[cfg(all(target_os = "macos", not(feature = "tui")))]
 pub use macos::{disable, enable, provider, register};
-#[cfg(all(target_os = "ohos", not(feature = "tui")))]
+#[cfg(all(target_env = "ohos", not(feature = "tui")))]
 pub use ohos::{disable, enable, provider, register};
 #[cfg(feature = "tui")]
 pub use tui::{disable, enable, provider, register};
@@ -87,7 +87,7 @@ pub use windows::{disable, enable, provider, register};
     target_os = "macos",
     target_os = "windows",
     target_os = "linux",
-    target_os = "ohos",
+    target_env = "ohos",
     target_arch = "wasm32",
     feature = "tui",
 )))]

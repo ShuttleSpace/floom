@@ -43,8 +43,13 @@ use std::path::PathBuf;
 mod android;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 mod apple;
-#[cfg(any(target_os = "linux", target_os = "windows"))]
+#[cfg(all(
+    any(target_os = "linux", target_os = "windows"),
+    not(target_env = "ohos")
+))]
 mod desktop;
+#[cfg(target_env = "ohos")]
+mod ohos;
 
 /// One of the app's own directories.
 ///
@@ -123,9 +128,16 @@ pub fn app_dir(dir: AppDirectory) -> Option<PathBuf> {
         {
             apple::app_dir(dir)
         }
-        #[cfg(any(target_os = "linux", target_os = "windows"))]
+        #[cfg(all(
+            any(target_os = "linux", target_os = "windows"),
+            not(target_env = "ohos")
+        ))]
         {
             desktop::app_dir(dir)
+        }
+        #[cfg(target_env = "ohos")]
+        {
+            ohos::app_dir(dir)
         }
     }
     #[cfg(not(any(

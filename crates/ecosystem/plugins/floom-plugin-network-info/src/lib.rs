@@ -110,10 +110,13 @@ pub fn wifi_info() -> Result<WifiInfo, String> {
     }
     #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
     {
-        #[cfg(target_os = "linux")]
+        #[cfg(all(target_os = "linux", not(target_env = "ohos")))]
         let reason = "wifi_info: Linux names Wi-Fi networks through NetworkManager \
                       over D-Bus, and this arm does not start a system-service conversation. \
                       A NetworkManager-backed arm would be the follow-up";
+        #[cfg(target_env = "ohos")]
+        let reason = "wifi_info: OpenHarmony exposes Wi-Fi state through ArkTS \
+                      (@kit.ConnectivityKit), which this crate has not wired yet";
         #[cfg(not(target_os = "linux"))]
         let reason = "wifi_info: Windows names Wi-Fi networks through \
                       WlanQueryInterface (wlanapi) — a client handle, interface \
@@ -183,8 +186,10 @@ mod tests {
     #[test]
     fn the_desktop_refusal_names_the_door() {
         let err = wifi_info().unwrap_err();
-        #[cfg(target_os = "linux")]
+        #[cfg(all(target_os = "linux", not(target_env = "ohos")))]
         assert!(err.contains("NetworkManager"), "{err}");
+        #[cfg(target_env = "ohos")]
+        assert!(err.contains("ConnectivityKit"), "{err}");
         #[cfg(target_os = "windows")]
         assert!(err.contains("WlanQueryInterface"), "{err}");
     }

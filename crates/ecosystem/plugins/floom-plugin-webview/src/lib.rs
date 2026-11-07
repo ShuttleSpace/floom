@@ -60,11 +60,11 @@
 mod android;
 #[cfg(all(target_os = "ios", not(feature = "tui")))]
 mod ios;
-#[cfg(all(target_os = "linux", not(feature = "tui")))]
+#[cfg(all(target_os = "linux", not(target_env = "ohos"), not(feature = "tui")))]
 mod linux;
 #[cfg(all(target_os = "macos", not(feature = "tui")))]
 mod macos;
-#[cfg(all(target_os = "ohos", not(feature = "tui")))]
+#[cfg(all(target_env = "ohos", not(feature = "tui")))]
 mod ohos;
 #[cfg(all(target_os = "windows", not(feature = "tui")))]
 mod windows;
@@ -82,11 +82,11 @@ mod web;
 pub use android::*;
 #[cfg(all(target_os = "ios", not(feature = "tui")))]
 pub use ios::*;
-#[cfg(all(target_os = "linux", not(feature = "tui")))]
+#[cfg(all(target_os = "linux", not(target_env = "ohos"), not(feature = "tui")))]
 pub use linux::*;
 #[cfg(all(target_os = "macos", not(feature = "tui")))]
 pub use macos::*;
-#[cfg(all(target_os = "ohos", not(feature = "tui")))]
+#[cfg(all(target_env = "ohos", not(feature = "tui")))]
 pub use ohos::*;
 #[cfg(feature = "tui")]
 pub use tui::*;
@@ -104,7 +104,7 @@ pub use windows::*;
 pub fn register() {
     #[cfg(all(target_os = "macos", not(feature = "tui")))]
     floom_platform::register_plugin("webview", macos::enable);
-    #[cfg(all(target_os = "linux", not(feature = "tui")))]
+    #[cfg(all(target_os = "linux", not(target_env = "ohos"), not(feature = "tui")))]
     floom_platform::register_plugin("webview", linux::enable);
     #[cfg(all(target_os = "windows", not(feature = "tui")))]
     floom_platform::register_plugin("webview", windows::enable);
@@ -112,7 +112,7 @@ pub fn register() {
     floom_platform::register_plugin("webview", ios::enable);
     #[cfg(all(target_os = "android", not(feature = "tui")))]
     floom_platform::register_plugin("webview", android::enable);
-    #[cfg(all(target_os = "ohos", not(feature = "tui")))]
+    #[cfg(all(target_env = "ohos", not(feature = "tui")))]
     floom_platform::register_plugin("webview", ohos::enable);
     #[cfg(all(
         any(target_arch = "wasm32", target_os = "unknown"),

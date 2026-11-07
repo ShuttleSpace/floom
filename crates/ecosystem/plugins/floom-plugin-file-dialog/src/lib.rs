@@ -17,7 +17,7 @@ macro_rules! dialog_arms {
         phone: $($phone:literal),+ $(,)?;
     ) => {
         $(
-            #[cfg(target_os = $os)]
+            #[cfg(all(target_os = $os, not(target_env = "ohos")))]
             mod $module;
         )+
 
@@ -36,18 +36,24 @@ macro_rules! dialog_arms {
         /// see whether this plugin is linked (see `docs/plugin-catalog.md`
         /// §8.3). The compile-time form of the same question is "is this crate
         /// in the caller's `Cargo.toml`".
-        pub const SUPPORTED: bool = cfg!(any($(target_os = $os),+));
+        pub const SUPPORTED: bool =
+            cfg!(all(any($(target_os = $os),+), not(target_env = "ohos")));
 
         /// The arm for `pick_file`, or this target's refusal.
         fn pick_file_arm(options: &Options) -> Result<Option<PathBuf>, String> {
             $(
-                #[cfg(target_os = $os)]
+                #[cfg(all(target_os = $os, not(target_env = "ohos")))]
                 { return $module::pick_file(options); }
             )+
             $(
                 #[cfg(target_os = $phone)]
                 { let _ = options; return refused("pick_file"); }
             )+
+            #[cfg(target_env = "ohos")]
+            {
+                let _ = options;
+                return Err(no_dialog());
+            }
             #[cfg(not(any($(target_os = $os),+, $(target_os = $phone),+)))]
             {
                 let _ = options;
@@ -58,13 +64,18 @@ macro_rules! dialog_arms {
         /// The arm for `pick_save_file`, or this target's refusal.
         fn pick_save_file_arm(options: &Options) -> Result<Option<PathBuf>, String> {
             $(
-                #[cfg(target_os = $os)]
+                #[cfg(all(target_os = $os, not(target_env = "ohos")))]
                 { return $module::pick_save_file(options); }
             )+
             $(
                 #[cfg(target_os = $phone)]
                 { let _ = options; return refused("pick_save_file"); }
             )+
+            #[cfg(target_env = "ohos")]
+            {
+                let _ = options;
+                return Err(no_dialog());
+            }
             #[cfg(not(any($(target_os = $os),+, $(target_os = $phone),+)))]
             {
                 let _ = options;
@@ -75,13 +86,18 @@ macro_rules! dialog_arms {
         /// The arm for `pick_directory`, or this target's refusal.
         fn pick_directory_arm(options: &Options) -> Result<Option<PathBuf>, String> {
             $(
-                #[cfg(target_os = $os)]
+                #[cfg(all(target_os = $os, not(target_env = "ohos")))]
                 { return $module::pick_directory(options); }
             )+
             $(
                 #[cfg(target_os = $phone)]
                 { let _ = options; return refused("pick_directory"); }
             )+
+            #[cfg(target_env = "ohos")]
+            {
+                let _ = options;
+                return Err(no_dialog());
+            }
             #[cfg(not(any($(target_os = $os),+, $(target_os = $phone),+)))]
             {
                 let _ = options;
@@ -112,7 +128,10 @@ macro_rules! dialog_arms {
         }
 
         /// The refusal for a target with no dialog at all.
-        #[cfg(not(any($(target_os = $os),+, $(target_os = $phone),+)))]
+        #[cfg(any(
+            not(any($(target_os = $os),+, $(target_os = $phone),+)),
+            target_env = "ohos"
+        ))]
         fn no_dialog() -> String {
             format!(
                 "file dialogs need platform UI — macOS, Linux and Windows have it; \
@@ -214,10 +233,13 @@ mod tests {
     /// red assertion, never a dialog on someone's screen.
     #[test]
     fn the_flag_claims_a_dialog_exactly_where_the_crate_has_one() {
-        let has_an_arm = cfg!(any(
-            target_os = "linux",
-            target_os = "macos",
-            target_os = "windows"
+        let has_an_arm = cfg!(all(
+            any(
+                target_os = "linux",
+                target_os = "macos",
+                target_os = "windows"
+            ),
+            not(target_env = "ohos")
         ));
         assert_eq!(
             SUPPORTED, has_an_arm,

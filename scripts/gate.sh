@@ -196,6 +196,21 @@ WINDOWS_CAPABILITY_PLUGINS=(
   floom-plugin-tray
 )
 
+# The plugins whose OHOS arm is pure Rust, so `cargo check` can reach it without
+# the OHOS SDK. `target_env = "ohos"` is the arm; camera/webview need their
+# native `native/ohos/` halves and are device builds, not host checks.
+OHOS_CAPABILITY_PLUGINS=(
+  floom-plugin-battery
+  floom-plugin-notifications
+  floom-plugin-tray
+  floom-plugin-open-url
+  floom-plugin-secure-storage
+  floom-plugin-paths
+  floom-plugin-prefs
+  floom-plugin-file-dialog
+  floom-plugin-network-info
+)
+
 PASS=0
 FAIL=0
 SKIP=0
@@ -316,6 +331,7 @@ plugin-template  every plugin carries the documented template files
 android    the plugins compile for aarch64-linux-android
 ios        the plugins compile for aarch64-apple-ios
 windows    the plugins with real Windows arms compile for x86_64-pc-windows-msvc
+ohos       the plugins with OHOS arms compile for aarch64-linux-ohos
 golden     the pixel-golden examples
 EOF
   exit 0
@@ -557,6 +573,18 @@ windows_check() {
   done
 }
 run_cross_check windows x86_64-pc-windows-msvc windows_check
+
+# OHOS: the `target_env = "ohos"` arms are compiled only for this target, and a
+# host without the target's std skips with the target named. camera/webview are
+# absent on purpose: their OHOS halves are native and need the OHOS SDK.
+ohos_check() {
+  local p
+  for p in "${OHOS_CAPABILITY_PLUGINS[@]}"; do
+    cargo check --manifest-path "$PLUGIN_MANIFEST" \
+      --target aarch64-unknown-linux-ohos -p "$p" || return 1
+  done
+}
+run_cross_check ohos aarch64-unknown-linux-ohos ohos_check
 
 # --- goldens ----------------------------------------------------------------
 has_check golden && run_check golden "" ./scripts/run-golden-examples.sh
