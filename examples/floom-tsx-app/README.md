@@ -23,6 +23,24 @@ floom run app.tsx
 4. The binary runs in whichever backend the build enabled
    (`desktop,renderer-gpu` by default).
 
+## Editor support
+
+`.d.ts` support is not produced by `floom run`; it ships as the published
+[`@types/floom`](../../npm/@types-floom) package, which an editor loads from
+`node_modules/@types`. The example carries it as a `file:` devDependency so the
+checkout works offline:
+
+```sh
+npm install                    # links @types/floom into node_modules/@types
+npx -p typescript@5 tsc --noEmit -p tsconfig.json
+```
+
+`tsconfig.json` deliberately sets `lib: ["ES2020"]` and omits the DOM: the
+`Text` and `Image` widget globals would otherwise collide with the DOM
+constructors of the same name. A published app just adds `@types/floom` to its
+devDependencies; `floom run` still writes a `tsconfig.json` only when the app
+does not have one.
+
 ## Declaring the window
 
 The root `<App>` wrapper is not a widget: the compiler unwraps it and reads the

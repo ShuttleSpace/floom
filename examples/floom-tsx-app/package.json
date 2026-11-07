@@ -1,0 +1,9 @@
+{
+  "name": "floom-tsx-app-example",
+  "private": true,
+  "version": "0.0.0",
+  "description": "A Floom app written entirely in TSX; types come from @types/floom.",
+  "devDependencies": {
+    "@types/floom": "file:../../npm/@types-floom"
+  }
+}

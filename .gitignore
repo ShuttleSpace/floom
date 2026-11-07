@@ -23,6 +23,9 @@ examples/ios/Cargo.lock
 __pycache__/
 *.pyc
 
+# npm installs for the TypeScript examples and the @types packages
+node_modules/
+
 # Test-run and rustdoc output under `tests/`; nothing here is a source file.
 /tests/floom-cli-test-*/
 /tests/tmp/
