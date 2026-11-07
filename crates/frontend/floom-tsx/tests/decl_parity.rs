@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 //! Parser-parity contract for the generated declarations (Task 3).
 
-use floom_tsx::generate_dts;
 use floom_dsl::ui_ir::{EventName, NodeKind};
+use floom_tsx::generate_dts;
 
 /// Extract `IntrinsicElements { ... }` block内的 `Key: Floom.XxxProps;` 的 Key。
 fn intrinsic_tags(dts: &str) -> Vec<String> {
@@ -15,7 +15,9 @@ fn intrinsic_tags(dts: &str) -> Vec<String> {
         }
         if in_block {
             let t = line.trim();
-            if t == "}" { break; }
+            if t == "}" {
+                break;
+            }
             if let Some((key, _)) = t.split_once(':') {
                 out.push(key.trim().to_string());
             }
@@ -42,12 +44,18 @@ fn field_names(dts: &str, interface: &str) -> Vec<String> {
             if let Some((name, _)) = t.split_once(':') {
                 let name = name.trim().trim_end_matches('?');
                 if !name.is_empty()
-                    && name.chars().next().map(|c| c.is_alphabetic()).unwrap_or(false)
+                    && name
+                        .chars()
+                        .next()
+                        .map(|c| c.is_alphabetic())
+                        .unwrap_or(false)
                 {
                     out.push(name.to_string());
                 }
             }
-            if depth <= 0 { break; }
+            if depth <= 0 {
+                break;
+            }
         }
     }
     out
@@ -62,12 +70,11 @@ fn interface_names(dts: &str) -> Vec<String> {
         let rest = t
             .strip_prefix("export interface ")
             .or_else(|| t.strip_prefix("interface "));
-        if let Some(rest) = rest {
-            if let Some(name) = rest.split_whitespace().next() {
-                if name.ends_with("Props") {
-                    out.push(name.to_string());
-                }
-            }
+        if let Some(rest) = rest
+            && let Some(name) = rest.split_whitespace().next()
+            && name.ends_with("Props")
+        {
+            out.push(name.to_string());
         }
     }
     out
@@ -101,18 +108,25 @@ fn parity_tag_roundtrip() {
     let dts = generate_dts();
     let tags = intrinsic_tags(&dts);
     // spec 不变量：IntrinsicElements 覆盖每个 NodeKind（+ `<App>` 包装根）。
-    assert_eq!(tags.len(), NodeKind::ALL.len() + 1,
-        "IntrinsicElements must cover every NodeKind plus <App>");
+    assert_eq!(
+        tags.len(),
+        NodeKind::ALL.len() + 1,
+        "IntrinsicElements must cover every NodeKind plus <App>"
+    );
     for tag in &tags {
-        if tag == "App" { continue; }
-        assert!(NodeKind::parse(&tag.to_lowercase()).is_some(),
-            "declared tag <{tag}> is not accepted by the parser");
+        if tag == "App" {
+            continue;
+        }
+        assert!(
+            NodeKind::parse(&tag.to_lowercase()).is_some(),
+            "declared tag <{tag}> is not accepted by the parser"
+        );
     }
 }
 
 #[test]
 fn parity_prop_accepted() {
-    use floom_dsl::ui_ir::{all_prop_names, prop_spec};
+    use floom_dsl::ui_ir::prop_spec;
     let dts = generate_dts();
     for kind in NodeKind::ALL {
         let iface = format!("{}Props", ts_name(*kind));
@@ -120,8 +134,10 @@ fn parity_prop_accepted() {
             if field == "class" || field == "children" || field.starts_with("on") {
                 continue;
             }
-            assert!(prop_spec(*kind, &field).is_some(),
-                "{kind:?} prop {field} is declared but not accepted by the parser");
+            assert!(
+                prop_spec(*kind, &field).is_some(),
+                "{kind:?} prop {field} is declared but not accepted by the parser"
+            );
         }
     }
 }
@@ -133,10 +149,17 @@ fn parity_event_accepted() {
     for iface in interface_names(&dts) {
         for field in field_names(&dts, &iface) {
             if let Some(name) = field.strip_prefix("on") {
-                let ev = name.chars().next().unwrap().to_lowercase().collect::<String>()
+                let ev = name
+                    .chars()
+                    .next()
+                    .unwrap()
+                    .to_lowercase()
+                    .collect::<String>()
                     + &name[1..];
-                assert!(EventName::parse(&ev).is_some(),
-                    "declared handler on{name} does not resolve to a known event");
+                assert!(
+                    EventName::parse(&ev).is_some(),
+                    "declared handler on{name} does not resolve to a known event"
+                );
             }
         }
     }
@@ -191,7 +214,9 @@ fn parity_full_document_roundtrip() {
     let dts = generate_dts();
     let mut body = String::new();
     for tag in intrinsic_tags(&dts) {
-        if tag == "App" { continue; }
+        if tag == "App" {
+            continue;
+        }
         body += &format!("<{tag} />");
     }
     let src = format!(

@@ -185,17 +185,20 @@ fn workspace_root(start: &Path) -> Option<PathBuf> {
     }
 }
 
-/// TypeScript configuration for the generated project.
+/// TypeScript configuration for the generated project. `lib` excludes the DOM
+/// on purpose: the widget globals `Text` / `Image` would collide with the DOM
+/// constructors of the same name.
 const TS_CONFIG: &str = r#"{
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "preserve",
+    "lib": ["ES2020"],
     "strict": true,
     "noEmit": true
   },
-  "include": [".floom/types/**/*.d.ts", "*.tsx", "*.ts"]
+  "include": ["*.tsx", "*.ts"]
 }
 "#;
 
@@ -279,14 +282,6 @@ fn write_project(
          \x20   println!(\"cargo:rerun-if-changed={{app}}\");\n\
          \x20   println!(\"cargo:rerun-if-changed=build.rs\");\n\
          \x20   let source = std::fs::read_to_string(&app).expect(\"read the TSX app\");\n\
-         \x20   let types_dir = std::path::Path::new(&app)\n\
-         \x20       .parent()\n\
-         \x20       .unwrap_or_else(|| std::path::Path::new(\".\"))\n\
-         \x20       .join(\".floom\")\n\
-         \x20       .join(\"types\");\n\
-         \x20   std::fs::create_dir_all(&types_dir).expect(\"create .floom/types\");\n\
-         \x20   std::fs::write(types_dir.join(\"floom.d.ts\"), floom_tsx::generate_dts())\n\
-         \x20       .expect(\"write the .d.ts\");\n\
          \x20   let generated = floom_tsx::generate(&source)\n\
          \x20       .unwrap_or_else(|e| panic!(\"{{app}}: {{e}}\"));\n\
          \x20   let out = std::env::var(\"OUT_DIR\").expect(\"OUT_DIR\");\n\
@@ -402,10 +397,10 @@ mod tests {
     }
 
     #[test]
-    fn the_generated_build_script_emits_editor_declarations() {
-        // The TSX app is the source of truth, and the declarations are what an
-        // editor completes against. They are written under `.floom/types/`
-        // beside the app so the editor finds them without a path to configure.
+    fn declarations_are_not_generated_at_run_time() {
+        // Editor declarations ship as the published `@types/floom` package and
+        // are generated ahead of time; `floom run` must not regenerate them in
+        // the build script.
         let dir = std::env::temp_dir().join(format!("floom-run-dts-{}", std::process::id()));
         let app = dir.join("app.tsx");
         let crates = dir.join("crates");
@@ -423,16 +418,17 @@ mod tests {
         write_project(&dir.join("run"), &app, &crates, "").expect("write");
         let build_rs = fs::read_to_string(dir.join("run").join("build.rs")).expect("build.rs");
         assert!(
-            build_rs.contains("floom_tsx::generate_dts"),
-            "the build script must emit the declarations:\n{build_rs}"
+            build_rs.contains("floom_tsx::generate"),
+            "the build script must still compile the app:\n{build_rs}"
         );
         assert!(
-            build_rs.contains(".floom"),
-            "the declarations belong in .floom/types:\n{build_rs}"
+            !build_rs.contains("generate_dts"),
+            "declarations belong to the @types/floom package, not `floom run`:\n{build_rs}"
         );
+        let tsconfig = fs::read_to_string(dir.join("tsconfig.json")).expect("tsconfig.json");
         assert!(
-            build_rs.contains(r#"types_dir.join("floom.d.ts")"#),
-            "the declarations must be written to .floom/types/floom.d.ts:\n{build_rs}"
+            tsconfig.contains(r#""lib": ["ES2020"]"#),
+            "the DOM lib would collide with the Text/Image widget globals:\n{tsconfig}"
         );
         let _ = fs::remove_dir_all(&dir);
     }
@@ -440,8 +436,8 @@ mod tests {
     #[test]
     fn tsconfig_is_written_once_and_not_overwritten() {
         // `floom run` writes a tsconfig next to the app so an editor picks up
-        // the generated declarations with zero config. It must not clobber a
-        // tsconfig the author already owns.
+        // the `@types/floom` declarations without configuration. It must not
+        // clobber a tsconfig the author already owns.
         let dir = std::env::temp_dir().join(format!("floom-run-ts-{}", std::process::id()));
         let app = dir.join("app.tsx");
         let crates = dir.join("crates");
