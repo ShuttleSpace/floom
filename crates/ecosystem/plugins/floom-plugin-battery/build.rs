@@ -18,6 +18,10 @@ fn main() {
     // The Rust side gates its `extern` block on this flag, so it has to be
     // declared as an expected cfg or every build warns about an unknown one.
     println!("cargo:rustc-check-cfg=cfg(floom_plugin_native)");
+    // The OpenHarmony arm is gated on `target_os = "ohos"` in the Rust side
+    // (matching the other capability plugins), which is not a value rustc knows
+    // until it is declared here.
+    println!("cargo:rustc-check-cfg=cfg(target_os, values(\"ohos\"))");
 
     let manifest = PathBuf::from(
         std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by cargo"),

@@ -28,5 +28,9 @@ jni = "0.22"
 [target.'cfg(target_os = "ios")'.dependencies]
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
 
+# The macOS half calls IOKit/CoreFoundation through raw `extern "C"` bindings
+# (see `src/macos.rs`); no crate dependency is needed beyond linking the two
+# system frameworks, which `#[link]` does.
+
 [build-dependencies]
 cc = "1"

@@ -6,8 +6,12 @@
 Battery level and charging state.
 
 Adapted from `gpui-mobile` (Apache-2.0). The native arms read `UIDevice`
-(iOS) and `BatteryManager` (Android). The host arm reports "no reading":
-`level: None`, not charging, not full.
+(iOS), `BatteryManager` (Android), IOKit's `IOPS` API (macOS), sysfs
+`/sys/class/power_supply` (Linux), and Win32 `GetSystemPowerStatus`
+(Windows). Each is a real measurement on the platform that has it; a
+platform with no readable power supply (a desktop with no battery, a box
+without the sysfs node) reports "no reading": `level: None`, not charging,
+not full.
 
 A **capability plugin**: one capability, one crate, opt-in by
 dependency. The SDK does not carry it — an app that wants this
@@ -26,9 +30,9 @@ needs to be able to tell them apart.
 |----------|---------|---------|
 | Android | ✅ Real | `src/android.rs` |
 | iOS | ✅ Real | `src/ios.rs` |
-| macOS | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
-| Windows | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
-| Linux | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| macOS | ✅ Real | `src/macos.rs` |
+| Windows | ✅ Real | `src/windows.rs` |
+| Linux | ✅ Real | `src/linux.rs` |
 | OpenHarmony | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 | Web | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 

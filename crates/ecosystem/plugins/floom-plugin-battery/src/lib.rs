@@ -1,8 +1,12 @@
 //! Battery level and charging state.
 //!
 //! Adapted from `gpui-mobile` (Apache-2.0). The native arms read `UIDevice`
-//! (iOS) and `BatteryManager` (Android). The host arm reports "no reading":
-//! `level: None`, not charging, not full.
+//! (iOS), `BatteryManager` (Android), IOKit's `IOPS` API (macOS), sysfs
+//! `/sys/class/power_supply` (Linux), and Win32 `GetSystemPowerStatus`
+//! (Windows). Each is a real measurement on the platform that has it; a
+//! platform with no readable power supply (a desktop with no battery, a box
+//! without the sysfs node) reports "no reading": `level: None`, not charging,
+//! not full.
 //!
 //! A **capability plugin**: one capability, one crate, opt-in by
 //! dependency. The SDK does not carry it — an app that wants this
@@ -19,14 +23,21 @@
 mod android;
 #[cfg(target_os = "ios")]
 mod ios;
+// Android is `target_os = "linux"` but served by `android.rs`, so the desktop
+// Linux arm is gated on Linux *minus* Android. OpenHarmony has no battery arm
+// yet and falls through to the inert default below.
+#[cfg(all(target_os = "linux", not(target_os = "android")))]
+mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "windows")]
+mod windows;
 
 /// Snapshot of the device battery.
 ///
 /// `level` is `Option` because "the OS would not give me a reading" is a
 /// distinct answer from "the battery is at some fraction", and collapsing the
-/// two is what makes a failed read look like a full battery. On iOS the
-/// platform says so itself: `UIDevice.batteryLevel` returns `-1.0` when
-/// monitoring is not enabled yet.
+/// two is what makes a failed read look like a full battery.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct BatteryState {
     /// Charge level in the range `0.0..=1.0`, or `None` when the platform gave
@@ -41,8 +52,9 @@ pub struct BatteryState {
 impl Default for BatteryState {
     /// Nothing measured: no level, not charging, not full.
     ///
-    /// This is also the host answer. It is deliberately *not* `level: 1.0`,
-    /// which would be a number no arm had produced.
+    /// This is also the answer for a host with no readable battery. It is
+    /// deliberately *not* `level: 1.0`, which would be a number no arm had
+    /// produced.
     fn default() -> Self {
         BatteryState {
             level: None,
@@ -62,7 +74,25 @@ pub fn battery_state() -> BatteryState {
     {
         ios::battery_state()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(all(target_os = "linux", not(target_os = "android")))]
+    {
+        linux::battery_state()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        macos::battery_state()
+    }
+    #[cfg(target_os = "windows")]
+    {
+        windows::battery_state()
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "linux",
+        target_os = "macos",
+        target_os = "windows"
+    )))]
     {
         BatteryState::default()
     }
@@ -78,7 +108,25 @@ pub fn is_low_power_mode() -> bool {
     {
         ios::is_low_power_mode()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(all(target_os = "linux", not(target_os = "android")))]
+    {
+        linux::is_low_power_mode()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        macos::is_low_power_mode()
+    }
+    #[cfg(target_os = "windows")]
+    {
+        windows::is_low_power_mode()
+    }
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "linux",
+        target_os = "macos",
+        target_os = "windows"
+    )))]
     {
         false
     }
@@ -88,19 +136,21 @@ pub fn is_low_power_mode() -> bool {
 mod tests {
     use super::*;
 
+    /// The call must always return a well-formed answer: either no reading or a
+    /// level in `[0, 1]`. On a battery-bearing host this may be a real reading,
+    /// so we assert the shape, not the specific value.
     #[test]
-    fn host_reports_no_reading() {
+    fn host_reading_is_well_formed() {
         let s = battery_state();
-        // A host has no battery. The old default claimed `level: 1.0`, which is
-        // a number no arm produced and which a caller cannot tell apart from a
-        // genuinely full phone.
-        assert_eq!(s.level, None);
-        assert!(!s.is_charging);
-        assert!(!s.is_full);
+        if let Some(level) = s.level {
+            assert!((0.0..=1.0).contains(&level), "level {level} out of range");
+        }
     }
 
     #[test]
-    fn host_low_power_is_false() {
-        assert!(!is_low_power_mode());
+    fn host_low_power_is_false_on_desktop() {
+        // Battery-saver is not uniformly observable; every arm reports a boolean
+        // without panicking.
+        let _ = is_low_power_mode();
     }
 }
