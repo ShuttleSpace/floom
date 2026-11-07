@@ -185,6 +185,72 @@ cargo check -p floom --target aarch64-unknown-linux-ohos
 - `crates/platform/floom-platform/src` — N-API receive-files bridge
   (`set_shared_files_handler` + `on_shared_files`).
 
+## Capability plugins on OHOS
+
+The 22 capability plugins under `crates/ecosystem/plugins/` each decide, per
+platform, whether to implement a capability, refuse it, or degrade to a default.
+On OHOS they fall into four tiers. The matrix is the contract: an app linking a
+plugin can read off here what it will get on the device.
+
+### The `target_env` contract
+
+Every OHOS arm is gated on **`target_env = "ohos"`**, never `target_os = "ohos"`.
+This is the single most important rule for anyone adding an OHOS branch, and it
+is the one that was wrong for the longest.
+
+The OHOS standard target is `aarch64-unknown-linux-ohos`, and asking rustc what
+it knows about that target gives:
+
+```
+$ rustc --print cfg --target aarch64-unknown-linux-ohos | grep -E 'target_os|target_env'
+target_os="linux"
+target_env="ohos"
+```
+
+So `#[cfg(target_os = "ohos")]` is **never true on the real target** — an arm
+gated that way is dead code that compiles away silently, and the crate falls
+through to whatever `not(...)` fallback is left (often a desktop or host arm,
+which then fails for the wrong reason or, worse, builds). `target_env` is also
+what every existing OHOS bridge in this repo already uses (see the N-API and
+accessibility sections below), so the plugins now match the platform layer.
+
+Two consequences:
+
+- **A linux arm must exclude OHOS.** Because OHOS reports
+  `target_os = "linux"`, a plain `#[cfg(target_os = "linux")]` arm would compile
+  on OHOS too. Every plugin linux arm now also carries `not(target_env = "ohos")`
+  (e.g. `#[cfg(all(target_os = "linux", not(target_env = "ohos")))]`), so OHOS
+  does not pull in the xdg-open / zbus / GTK / sysfs implementations.
+- **Host builds never see the OHOS arm.** The gate's `ohos` check
+  (`scripts/gate.sh ohos`) cross-compiles the pure-Rust plugins for
+  `aarch64-unknown-linux-ohos`, which is the *only* place these `ohos.rs` files
+  are type-checked — a host `cargo check` / `clippy` never compiles them, so the
+  gate is load-bearing, not redundant.
+
+### Coverage matrix
+
+| Tier | Plugins | What an app gets on OHOS |
+| --- | --- | --- |
+| **Real implementation** | camera | The capability works, through the C-ABI provider bridge (`native/ohos/`). Needs the DevEco SDK to build the native half, so it is **not** covered by the host `ohos` gate — device-build only. |
+| **Honest refuse (native-view)** | webview | The provider ABI has no WebKit-style native-view surface to attach to on OHOS yet, so the arm reports the view is unavailable rather than handing back one that cannot exist. Like camera it needs the DevEco SDK for a device build, and is outside the host `ohos` gate. |
+| **Honest refuse** | notifications, tray, open-url, secure-storage, paths, prefs, file-dialog, network-info, vibration, location, local-auth, share, background-work | Every call returns `Err` and names the door — the `@kit.*` that exists on OHOS but is not wired into this crate yet. No silent fake success. |
+| **Honest degrade** | battery, connectivity, device-info, sensors, package-info | Returns the documented default (empty list, `ConnectionType::None`, `NotDetermined`, …) because the crate has nothing true to report yet. The type's docs already say a default can mean "no answer". |
+| **No platform arm (by design)** | mdns | One protocol implementation (RFC 6762/6763) compiled for every target; there is no `android.rs`/`ohos.rs` to add. See the `floom-plugin-mdns` crate doc. |
+
+`wakelock` straddles two tiers deliberately: `keep_screen_on(false)` is a no-op
+`Ok(())` (there is nothing to release), while `keep_screen_on(true)` refuses and
+names the missing bridge — so a caller never gets a false "the screen will stay
+on".
+
+### What "refuse" and "degrade" do *not* promise
+
+These arms make the crate compile and behave honestly on OHOS; they are **not**
+working implementations of the capability. A real read of the sensor, the GPS
+fix, or a posted notification needs the OHOS N-API bridge → ArkTS `@kit.*`
+route the platform layer already uses (see "N-API platform bridge"). That is the
+next phase, and it needs a device plus the DevEco SDK — the host gate cannot
+reach it.
+
 ## N-API platform bridge (unified)
 
 OpenHarmony exposes OS services (pasteboard, file picker, browser, share) only
