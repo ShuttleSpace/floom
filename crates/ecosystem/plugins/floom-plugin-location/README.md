@@ -6,14 +6,17 @@
 Geolocation — authorization, availability and a one-shot position read.
 
 Adapted from `gpui-mobile` (Apache-2.0). The native arms read
-`CLLocationManager` (iOS) and `LocationManager` (Android). The host arm
-refuses every call that needs a real position.
+`CLLocationManager` (iOS, macOS) and `LocationManager` (Android). On the two
+Apple platforms `authorization_status` and `is_location_enabled` are real
+synchronous reads; `current_location` has no synchronous route on either and
+says so.
 
 Note: continuous location streaming is a separate concern (a subscription
 with callbacks); this package only exposes the synchronous reads plus the
 permission gates an app must check first. What "synchronous" costs is
 documented per call: `current_location` on Android is the OS's last-known
-cached fix, not a fresh one, and on iOS there is no synchronous route at all.
+cached fix, not a fresh one, and on iOS/macOS there is no synchronous route at
+all.
 
 A **capability plugin**: one capability, one crate, opt-in by
 dependency. The SDK does not carry it — an app that wants this
@@ -29,7 +32,7 @@ than returning a value that looks measured.
 |----------|---------|---------|
 | Android | ✅ Real | `src/android.rs` |
 | iOS | ✅ Real | `src/ios.rs` |
-| macOS | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
+| macOS | ✅ Real | `src/macos.rs` |
 | Windows | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 | Linux | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
 | OpenHarmony | ⚪ Inert fallback | `src/lib.rs` returns an honest default / `Err` |
@@ -44,8 +47,9 @@ implementation versus the inert fallback.
 
 This plugin provides:
 
+- `authorization_status` — The app's current location authorization status.
 - `is_location_enabled` — Whether the device has any location provider enabled at the OS level.
-- `request_authorization` — Request location authorization. Returns `Err` if already denied or the
+- `request_authorization` — Request location authorization. Returns `Err` if already denied or the platform cannot prompt.
 - `current_location` — Best-effort one-shot position read.
 
 
@@ -72,6 +76,7 @@ The public Rust surface (mirrored by `index.d.ts`):
 
 - `pub enum LocationAuthorization {`
 - `pub struct Location {`
+- `pub fn authorization_status() -> LocationAuthorization {`
 - `pub fn is_location_enabled() -> bool {`
 - `pub fn request_authorization() -> Result<(), String> {`
 - `pub fn current_location() -> Result<Location, String> {`

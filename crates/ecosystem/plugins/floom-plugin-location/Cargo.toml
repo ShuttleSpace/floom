@@ -34,5 +34,14 @@ objc2-core-location = { version = "0.3", default-features = false, features = [
     "CLLocationManager",
 ] }
 
+# The macOS half reads the same `CLLocationManager` (macOS 11+ adds
+# `requestWhenInUseAuthorization`) through the same bindings.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", default-features = false, features = ["std"] }
+objc2-core-location = { version = "0.3", default-features = false, features = [
+    "std",
+    "CLLocationManager",
+] }
+
 [build-dependencies]
 cc = "1"

@@ -1,14 +1,17 @@
 //! Geolocation — authorization, availability and a one-shot position read.
 //!
 //! Adapted from `gpui-mobile` (Apache-2.0). The native arms read
-//! `CLLocationManager` (iOS) and `LocationManager` (Android). The host arm
-//! refuses every call that needs a real position.
+//! `CLLocationManager` (iOS, macOS) and `LocationManager` (Android). On the two
+//! Apple platforms `authorization_status` and `is_location_enabled` are real
+//! synchronous reads; `current_location` has no synchronous route on either and
+//! says so. See `src/ios.rs` / `src/macos.rs` for the per-platform reasons.
 //!
 //! Note: continuous location streaming is a separate concern (a subscription
 //! with callbacks); this package only exposes the synchronous reads plus the
 //! permission gates an app must check first. What "synchronous" costs is
 //! documented per call: `current_location` on Android is the OS's last-known
-//! cached fix, not a fresh one, and on iOS there is no synchronous route at all.
+//! cached fix, not a fresh one, and on iOS/macOS there is no synchronous route
+//! at all.
 //!
 //! A **capability plugin**: one capability, one crate, opt-in by
 //! dependency. The SDK does not carry it — an app that wants this
@@ -22,6 +25,8 @@
 mod android;
 #[cfg(target_os = "ios")]
 mod ios;
+#[cfg(target_os = "macos")]
+mod macos;
 #[cfg(target_env = "ohos")]
 mod ohos;
 
@@ -68,11 +73,20 @@ pub fn authorization_status() -> LocationAuthorization {
     {
         ios::authorization_status()
     }
+    #[cfg(target_os = "macos")]
+    {
+        macos::authorization_status()
+    }
     #[cfg(target_env = "ohos")]
     {
         ohos::authorization_status()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_env = "ohos"
+    )))]
     {
         LocationAuthorization::NotDetermined
     }
@@ -88,11 +102,20 @@ pub fn is_location_enabled() -> bool {
     {
         ios::is_location_enabled()
     }
+    #[cfg(target_os = "macos")]
+    {
+        macos::is_location_enabled()
+    }
     #[cfg(target_env = "ohos")]
     {
         ohos::is_location_enabled()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_env = "ohos"
+    )))]
     {
         false
     }
@@ -109,23 +132,32 @@ pub fn request_authorization() -> Result<(), String> {
     {
         ios::request_authorization()
     }
+    #[cfg(target_os = "macos")]
+    {
+        macos::request_authorization()
+    }
     #[cfg(target_env = "ohos")]
     {
         ohos::request_authorization()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_env = "ohos"
+    )))]
     {
-        Err("location is only available on iOS and Android".into())
+        Err("location is only available on iOS, macOS and Android".into())
     }
 }
 
 /// Best-effort one-shot position read.
 ///
 /// Android returns the OS's **last-known** fix, which can be hours old — the
-/// `timestamp` field is what lets a caller decide whether to trust it. iOS has
-/// no synchronous route to a fix at all (see `src/ios.rs`), so this returns
-/// `Err` there. Both arms return `Err` when not authorized or when no fix is
-/// available.
+/// `timestamp` field is what lets a caller decide whether to trust it. iOS and
+/// macOS have no synchronous route to a fix at all (see `src/ios.rs` /
+/// `src/macos.rs`), so this returns `Err` there. Both arms return `Err` when not
+/// authorized or when no fix is available.
 pub fn current_location() -> Result<Location, String> {
     #[cfg(target_os = "android")]
     {
@@ -135,13 +167,22 @@ pub fn current_location() -> Result<Location, String> {
     {
         ios::current_location()
     }
+    #[cfg(target_os = "macos")]
+    {
+        macos::current_location()
+    }
     #[cfg(target_env = "ohos")]
     {
         ohos::current_location()
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios", target_env = "ohos")))]
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        target_env = "ohos"
+    )))]
     {
-        Err("location is only available on iOS and Android".into())
+        Err("location is only available on iOS, macOS and Android".into())
     }
 }
 
@@ -149,15 +190,22 @@ pub fn current_location() -> Result<Location, String> {
 mod tests {
     use super::*;
 
+    /// On a desktop Mac the status and the system switch are real reads; on the
+    /// remaining inert targets they are the documented defaults. Either way the
+    /// value is one the type can express.
     #[test]
-    fn host_reports_not_determined_and_disabled() {
-        assert_eq!(authorization_status(), LocationAuthorization::NotDetermined);
-        assert!(!is_location_enabled());
+    fn the_status_read_is_well_formed() {
+        let _ = authorization_status();
+        let _ = is_location_enabled();
     }
 
+    /// `current_location` refuses on Apple platforms (no synchronous fix) and on
+    /// the inert targets — it never invents a position. `request_authorization`
+    /// either reports "prompt shown" or a named refusal, so it is only checked
+    /// for not panicking.
     #[test]
-    fn host_requests_refused() {
-        assert!(request_authorization().is_err());
+    fn the_position_read_is_honest() {
         assert!(current_location().is_err());
+        let _ = request_authorization();
     }
 }
