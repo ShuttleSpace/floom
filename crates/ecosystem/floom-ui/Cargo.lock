@@ -169,15 +169,12 @@ dependencies = [
  "floom-accessibility",
  "floom-animation",
  "floom-core",
- "floom-focus",
  "floom-layout",
  "floom-native",
- "floom-overlay",
  "floom-platform",
  "floom-renderer",
  "floom-runtime-core",
  "floom-scene",
- "floom-services",
  "floom-text",
  "floom-types",
  "floom-widgets",
@@ -238,17 +235,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "floom-focus"
-version = "0.2.0"
-dependencies = [
- "floom-types",
-]
-
-[[package]]
-name = "floom-forms"
-version = "0.2.0"
-
-[[package]]
 name = "floom-harmony"
 version = "0.2.0"
 dependencies = [
@@ -292,19 +278,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "floom-navigation"
-version = "0.2.0"
-
-[[package]]
-name = "floom-overlay"
-version = "0.2.0"
-dependencies = [
- "floom-animation",
- "floom-focus",
- "floom-types",
-]
-
-[[package]]
 name = "floom-platform"
 version = "0.2.0"
 dependencies = [
@@ -340,7 +313,6 @@ version = "0.2.0"
 dependencies = [
  "bitflags",
  "floom-core",
- "floom-scheduler",
  "floom-signal",
  "floom-types",
  "smallvec",
@@ -354,14 +326,6 @@ dependencies = [
  "floom-types",
  "smallvec",
 ]
-
-[[package]]
-name = "floom-scheduler"
-version = "0.2.0"
-
-[[package]]
-name = "floom-services"
-version = "0.2.0"
 
 [[package]]
 name = "floom-signal"
@@ -432,11 +396,8 @@ dependencies = [
  "floom-accessibility",
  "floom-app",
  "floom-core",
- "floom-forms",
  "floom-layout",
  "floom-native",
- "floom-navigation",
- "floom-overlay",
  "floom-platform",
  "floom-renderer-software",
  "floom-scene",
@@ -4019,8 +3980,8 @@ name = "floom-widgets"
 version = "0.2.0"
 dependencies = [
  "floom-accessibility",
+ "floom-animation",
  "floom-core",
- "floom-navigation",
  "floom-scene",
  "floom-signal",
  "floom-text",

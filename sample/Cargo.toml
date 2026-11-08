@@ -1,0 +1,33 @@
+[package]
+name = "floom-plugin-sample"
+version = "0.1.0"
+edition = "2024"
+description = "A Floom plugin: sample"
+build = "build.rs"
+
+# A plugin is developed on its own, like the example beside it: an
+# empty `[workspace]` keeps it out of whatever workspace happens to
+# contain it, so `cargo build` here builds the plugin and not the
+# directory it was generated into.
+[workspace]
+
+[dependencies]
+floom-platform = { path = "crates/platform/floom-platform" }
+# Re-point at the published crate once it ships:
+# floom-platform = { version = "0.2" }
+
+# `build.rs` compiles the native half's C sources with this. It is a
+# build dependency, not a runtime one: the native code is linked into
+# this crate, so the app never loads it by name.
+[build-dependencies]
+cc = "1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# The web's native half is JavaScript, and the wasm module imports it.
+# `wasm-bindgen` is what declares that import and what the bundler
+# processes, so it is a dependency of the wasm build only.
+wasm-bindgen = "0.2"
+[dev-dependencies]
+# A plugin is tested without a device: the pure-Rust half is an ordinary
+# crate, so `cargo test` covers it and the native half is covered by the
+# example app.
