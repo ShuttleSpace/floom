@@ -52,6 +52,15 @@ if ! command -v python3 >/dev/null; then
     exit 2
 fi
 
+# A missing baseline used to surface as a Python FileNotFoundError traceback
+# with exit 1 -- easy to misread as a failed benchmark rather than a gate that
+# never ran.  Say so plainly and exit 2 (setup error, not a regression).
+if [ ! -f "$BASELINE" ]; then
+    echo "perf budget baseline missing: $BASELINE" >&2
+    echo "restore with: git show 5f4cbcfd:docs/superpowers/benchmarks/floom-2-budget-baseline.json > $BASELINE" >&2
+    exit 2
+fi
+
 # The (package, bench) pairs the budgets name, in file order.
 PAIRS="$(python3 - "$BASELINE" <<'PY'
 import json, sys
