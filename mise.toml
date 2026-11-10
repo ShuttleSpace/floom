@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: The Floem Authors
+# Toolchain managed by mise (https://mise.jdx.dev).
+# Run `mise install` once to provision the pinned Rust toolchain; `mise` then
+# selects it automatically whenever you enter this repository.
+#
+# This version mirrors `channel` in rust-toolchain.toml — keep the two in sync.
+# rust-toolchain.toml stays the source of truth for CI and for plain `cargo`
+# invocations; mise owns provisioning on contributor machines.
+[tools]
+rust = "1.99.1"

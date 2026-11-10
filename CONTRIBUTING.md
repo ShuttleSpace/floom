@@ -38,10 +38,33 @@ own and Cargo matches them against an external source:
 - The legacy `floem-vger` renderer backend is the published `floem-vger` crate on
   crates.io, referenced with `package = "floem-vger"`.
 
+## Toolchain
+
+The dev toolchain is pinned and provisioned with [mise](https://mise.jdx.dev).
+Once mise is installed, run it once to fetch the exact Rust version the project
+targets:
+
+```bash
+mise install
+```
+
+`mise` then selects `rust@1.99.1` automatically whenever you enter this
+repository, so plain `cargo`/`rustup` invocations use the right compiler without
+manual switching. The version here mirrors `channel` in
+[`rust-toolchain.toml`](rust-toolchain.toml); the two must stay in sync.
+`rust-toolchain.toml` remains the authoritative pin for CI and for `cargo`
+invocations, while mise owns provisioning on contributor machines. (Other
+language runtimes such as Node/Python are provisioned by your global
+`~/.config/mise/config.toml` when a satellite crate needs them.)
+
+If mise complains that `mise.toml` is not trusted, run `mise trust mise.toml`
+once — mise refuses to read untrusted config files by design.
+
 ## Verifying your changes
 
-Before opening a PR, run the checks CI will run. A pinned toolchain is provided
-by `rust-toolchain.toml`, so `rustup` will fetch and select it automatically.
+Before opening a PR, run the checks CI will run. The toolchain is provisioned by
+mise (see above) and pinned in `rust-toolchain.toml`, so `cargo` uses
+`rust@1.99.1` automatically.
 
 ```bash
 cargo fmt --all --check
