@@ -5,12 +5,21 @@
 Command line tools for Floom. Ships the `floom` binary.
 
 ```sh
-floom create myapp
+floom create myapp     # scaffold a new project in ./myapp
+floom init myapp       # scaffold into the current directory
+floom run app.tsx      # build + launch a TSX app
+floom check            # type-check the project (cargo check)
+floom test             # run the project's tests (cargo test)
+floom package          # build a release binary
+floom package --platform macos   # + a platform artifact via scripts/build.sh
 ```
 
 `floom create` scaffolds a Flutter-style project: a Rust core under `src/` plus
 one directory per target platform (`android`, `ios`, `ohos`, `web`, `windows`,
-`linux`, `macos`, `tui`).
+`linux`, `macos`, `tui`). `floom init` is the same scaffold, but written into the
+current directory instead of a new subdirectory (it refuses to overwrite an
+existing `Cargo.toml` unless `--force`). `check`, `test`, and `package` are thin
+wrappers over `cargo` for the project lifecycle.
 
 ```
 myapp/

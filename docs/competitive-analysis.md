@@ -185,7 +185,7 @@
 | # | 动作 | 对标 | floom 落点 |
 |---|---|---|---|
 | P1-1 | 仓库根 `llms.txt`（+ 关键 docs 页 `.md` 版） | tauri 全套 llms、flutter 每页 .md + MCP、slint/freya/gpui-kit/nsh | 仓库根 + `docs/` |
-| P1-2 | CLI 补 `floom init` / `check` / `test` / `package` | nsh init/run/check/test/package/sign、tauri dev/build/info、dioxus `dx` | `crates/app/floom-cli/src/main.rs`（现仅 `run`/`create`） |
+| P1-2 | CLI 补 `floom init` / `check` / `test` / `package` | nsh init/run/check/test/package/sign、tauri dev/build/info、dioxus `dx` | **已完成**：`floom-cli` 现含 `init`（就地脚手架）/`check`/`test`（cargo 薄封装）/`package`（`cargo build --release` + `--platform` 转发 `scripts/build.sh`）；54 测试通过 |
 | P1-3 | TSX 收尾：接线占位 emitter + `floom run` 落地 `.d.ts`/`tsconfig.json` | leptos language server、nsh TSX 工具链、dioxus rsx | `docs/superpowers/plans/2026-11-06-floom-tsx-dts.md` — **主体已于 `58e24f70` / `948969e2` 提交**（`npm/@types-floom/index.d.ts` 898 行 + `dts_sync` 测试），不是"实现未提交" |
 | P1-4 | headless→PNG + 元素树 dump CLI；GPU 像素测试提为 PR 级可视化回归 | rune headless PNG、freya `render_to_file`、masonry `assert_render_snapshot!` | 复用 `floom-snapshot` + `floom-inspector` + `floom-accuracy::agent`；`gpu_pixels.rs` 去掉 `#[ignore]`（`FLOOM_REQUIRE_GPU` 于有卡 CI） |
 | P1-5 | `floom run` 文件监听热重载 + 量化延迟 | nsh ~120ms、dioxus 亚秒、flutter stateful hot reload、makepad live DSL | 外层接 `floom-hot-reload`（现仅进程内树补丁） |

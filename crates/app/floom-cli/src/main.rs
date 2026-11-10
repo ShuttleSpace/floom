@@ -10,7 +10,7 @@ mod templates;
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::ExitCode;
+use std::process::{Command, ExitCode};
 
 const USAGE: &str = "\
 floom — command line tools for Floom
@@ -24,6 +24,10 @@ COMMANDS:
     create --plugin  Scaffold a Floom plugin (Rust half + native halves + .d.ts)
     help             Show this message
 
+    init <NAME>      Scaffold a new Floom app in the current directory
+    check <DIR>      Type-check the project in <DIR> (default: .)
+    test <DIR>       Run the project's tests in <DIR> (default: .)
+    package <DIR>    Build a release binary (add --platform <P> for a platform artifact)
 OPTIONS (run):
     --release              Build the app in release mode
     --no-run               Compile the app without launching it
@@ -45,6 +49,10 @@ OPTIONS (create):
     --platform-path <PATH> Path to floom-platform, for a plugin's dependency
     --force                Overwrite an existing target directory
 
+OPTIONS (check / test / package):
+    --release              Release profile (package only)
+    --features <LIST>      Cargo features (repeatable)
+    --platform <NAME>      One platform to target (package only)
 EXAMPLES:
     floom run app.tsx
     floom run app.tsx --release
@@ -53,7 +61,11 @@ EXAMPLES:
     floom create my_app --platforms android,ios
     floom create --plugin --platforms android,ios camera
     floom create --template plugin my_plugin --platforms ohos
-";
+
+    floom init my_app
+    floom check
+    floom test
+    floom package";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -74,6 +86,10 @@ fn run(args: &[String]) -> Result<(), String> {
     match cmd.as_str() {
         "run" => run_app::run(&args[1..]),
         "create" => create(&args[1..]),
+        "init" => init(&args[1..]),
+        "check" => check(&args[1..]),
+        "test" => test(&args[1..]),
+        "package" => package(&args[1..]),
         "help" | "-h" | "--help" => {
             print!("{USAGE}");
             Ok(())
@@ -296,50 +312,71 @@ fn create(args: &[String]) -> Result<(), String> {
     fs::create_dir_all(&root).map_err(|e| format!("{}: {e}", root.display()))?;
 
     match opts.template {
-        Template::App => create_app(&opts, &root)?,
+        Template::App => create_app(&opts, &root, &opts.name)?,
         Template::Plugin => create_plugin(&opts, &root)?,
     }
     Ok(())
 }
 
-/// Scaffold an app in the style the caller asked for.
-fn create_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
+/// Scaffold an app in the current directory, named `name`. Shared by `create`
+/// (which points `root` at a fresh subdirectory) and `init` (which points it at
+/// `.`); the app's own name is passed separately so it can differ from the path.
+fn create_app(opts: &CreateOpts, root: &Path, name: &str) -> Result<(), String> {
     match opts.style {
-        AppStyle::Rust => create_rust_app(opts, root),
-        AppStyle::Tsx => create_tsx_app(opts, root),
+        AppStyle::Rust => create_rust_app(opts, root, name),
+        AppStyle::Tsx => create_tsx_app(opts, root, name),
     }
+}
+
+/// Scaffold a Floom app into `.`, reusing the same template `create` uses but
+/// without making a subdirectory. Fails if the directory already holds a
+/// `Cargo.toml` (unless `--force`), so it never clobbers an existing project.
+fn init(args: &[String]) -> Result<(), String> {
+    let opts = parse_create(args)?;
+    let root = PathBuf::from(".");
+    if root.join("Cargo.toml").exists() && !opts.force {
+        return Err(
+            "current directory already has a Cargo.toml (use --force to overwrite)".to_string(),
+        );
+    }
+    fs::create_dir_all(&root).map_err(|e| format!("{}: {e}", root.display()))?;
+    match opts.template {
+        Template::App => create_app(&opts, &root, &opts.name)?,
+        Template::Plugin => create_plugin(&opts, &root)?,
+    }
+    Ok(())
 }
 
 /// Scaffold a TSX app: one `app.tsx`, the npm metadata an editor needs, and no
 /// Rust at all — `floom run` writes the throwaway crate.
-fn create_tsx_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
+fn create_tsx_app(_opts: &CreateOpts, root: &Path, name: &str) -> Result<(), String> {
     write(
         &root.join("app.tsx"),
-        &templates::APP_TSX.replace("{{TITLE}}", &opts.name),
+        &templates::APP_TSX.replace("{{TITLE}}", name),
     )?;
     write(
         &root.join("package.json"),
-        &templates::tsx_package_json(&opts.name),
+        &templates::tsx_package_json(name),
     )?;
     write(&root.join("tsconfig.json"), templates::TSX_TSCONFIG)?;
     write(&root.join(".gitignore"), templates::TSX_GITIGNORE)?;
     write(
         &root.join("README.md"),
-        &templates::tsx_root_readme(&opts.name),
+        &templates::tsx_root_readme(name),
     )?;
 
-    println!("Created Floom TSX app `{}` in ./{}", opts.name, opts.name);
+    println!("Created Floom TSX app `{}` in `{}`", name, root.display());
     println!("  style: tsx (editor types from @types/floom)");
     println!();
     println!("Next:");
-    println!("  cd {}", opts.name);
+    println!("  cd {}", root.display());
     println!("  npm install    # editor completion and `npm run typecheck`");
     println!("  floom run app.tsx");
     Ok(())
 }
 
 /// Scaffold a Rust app: a widget tree, plus one directory per platform.
-fn create_rust_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
+fn create_rust_app(opts: &CreateOpts, root: &Path, name: &str) -> Result<(), String> {
     write(
         &root.join("Cargo.toml"),
         &templates::cargo_toml(&opts.name, &opts.floom_crate, opts.floom_path.as_deref()),
@@ -347,7 +384,7 @@ fn create_rust_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
     write(
         &root.join("src/main.rs"),
         &templates::MAIN_RS
-            .replace("{{TITLE}}", &opts.name)
+            .replace("{{TITLE}}", name)
             .replace("{{FLOOM}}", &opts.floom_crate),
     )?;
     write(
@@ -364,15 +401,15 @@ fn create_rust_app(opts: &CreateOpts, root: &Path) -> Result<(), String> {
 
     write(
         &root.join("README.md"),
-        &templates::root_readme(&opts.name, &opts.platforms),
+        &templates::root_readme(name, &opts.platforms),
     )?;
 
-    println!("Created Floom app `{}` in ./{}", opts.name, opts.name);
+    println!("Created Floom app `{}` in `{}`", name, root.display());
     println!("  organisation: {}", opts.org);
     println!("  platforms:    {}", opts.platforms.join(", "));
     println!();
     println!("Next:");
-    println!("  cd {}", opts.name);
+    println!("  cd {}", root.display());
     println!("  cargo run");
     Ok(())
 }
@@ -503,6 +540,175 @@ fn create_plugin(opts: &CreateOpts, root: &Path) -> Result<(), String> {
     println!("  floom_platform::plugin(\"{}\").enable()?;", opts.name);
     Ok(())
 }
+/// Run a cargo subcommand inside `dir`, forwarding `--features` when given.
+fn cargo_in(dir: &Path, subcmd: &str, features: &[String], release: bool) -> Result<(), String> {
+    let mut cmd = Command::new("cargo");
+    cmd.arg(subcmd).current_dir(dir);
+    if release {
+        cmd.arg("--release");
+    }
+    for f in features {
+        cmd.arg("--features").arg(f);
+    }
+    let status = cmd
+        .status()
+        .map_err(|e| format!("cannot run `cargo {subcmd}`: {e}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("`cargo {subcmd}` failed ({status})"))
+    }
+}
+
+/// Shared options for the project-lifecycle commands: a target directory plus
+/// the `--release` / `--features` / `--platform` flags `check`, `test`, and
+/// `package` all accept.
+struct LifecycleOpts {
+    dir: PathBuf,
+    release: bool,
+    features: Vec<String>,
+    platform: Option<String>,
+}
+
+fn parse_lifecycle(args: &[String]) -> Result<LifecycleOpts, String> {
+    let mut dir = PathBuf::from(".");
+    let mut release = false;
+    let mut features = Vec::new();
+    let mut platform = None;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--release" => release = true,
+            "--features" => {
+                i += 1;
+                let v = args
+                    .get(i)
+                    .ok_or("`--features` requires a value")?
+                    .to_string();
+                features.push(v);
+            }
+            "--platform" => {
+                i += 1;
+                platform = Some(
+                    args.get(i)
+                        .ok_or("`--platform` requires a value")?
+                        .to_string(),
+                );
+            }
+            flag if flag.starts_with('-') => {
+                return Err(format!("unknown option `{flag}` for this command"));
+            }
+            path => {
+                if dir != Path::new(".") {
+                    return Err("this command takes one directory argument".into());
+                }
+                dir = PathBuf::from(path);
+            }
+        }
+        i += 1;
+    }
+    Ok(LifecycleOpts {
+        dir,
+        release,
+        features,
+        platform,
+    })
+}
+
+/// `floom check <DIR>` — type-check the project without producing a binary.
+fn check(args: &[String]) -> Result<(), String> {
+    let opts = parse_lifecycle(args)?;
+    cargo_in(&opts.dir, "check", &opts.features, false)
+}
+
+/// `floom test <DIR>` — run the project's test suite.
+fn test(args: &[String]) -> Result<(), String> {
+    let opts = parse_lifecycle(args)?;
+    cargo_in(&opts.dir, "test", &opts.features, false)
+}
+
+/// Read the `[package] name = "..."` line from a Cargo.toml.
+fn crate_name(manifest: &Path) -> Result<String, String> {
+    let text = fs::read_to_string(manifest).map_err(|e| format!("{}: {e}", manifest.display()))?;
+    for line in text.lines() {
+        let line = line.trim_start();
+        if let Some(rest) = line.strip_prefix("name")
+            && let Some(stripped) = rest.trim_start_matches([' ', '=']).strip_prefix('"')
+            && let Some(end) = stripped.find('"')
+        {
+            return Ok(stripped[..end].to_string());
+        }
+    }
+    Err(format!("no `name` in {}", manifest.display()))
+}
+
+/// Walk up from `dir` looking for `scripts/build.sh` — the one-command-per-
+/// platform builder that only exists inside a Floom checkout.
+fn find_build_sh(dir: &Path) -> Option<PathBuf> {
+    let mut cur = if dir.is_absolute() {
+        dir.to_path_buf()
+    } else {
+        std::env::current_dir().ok()?.join(dir)
+    };
+    loop {
+        let candidate = cur.join("scripts").join("build.sh");
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+        if !cur.pop() {
+            return None;
+        }
+    }
+}
+
+/// `floom package <DIR>` — build a release binary, then hand a requested
+/// platform to `scripts/build.sh` when run from inside a Floom checkout.
+///
+/// Without `--platform` only the host release binary is built; per-platform
+/// artifacts are opt-in because the platform builder is a Floom-checkout tool,
+/// not something a standalone app ships.
+fn package(args: &[String]) -> Result<(), String> {
+    let opts = parse_lifecycle(args)?;
+    cargo_in(&opts.dir, "build", &opts.features, true)?;
+
+    let manifest = opts.dir.join("Cargo.toml");
+    if !manifest.is_file() {
+        return Err(format!("{} has no Cargo.toml", opts.dir.display()));
+    }
+    let name = crate_name(&manifest)?;
+
+    let Some(platform) = opts.platform.clone() else {
+        println!("built release binary for `{name}` (host).");
+        println!(
+            "  for a platform artifact, run `floom package --platform <macos|windows|linux|android|ios|ohos|web>`"
+        );
+        return Ok(());
+    };
+
+    let Some(build_sh) = find_build_sh(&opts.dir) else {
+        return Err(format!(
+            "per-platform packaging needs the Floom `scripts/build.sh`; `{name}` is not inside a Floom checkout"
+        ));
+    };
+
+    let mut cmd = Command::new("bash");
+    cmd.arg(&build_sh).arg(&name).arg(&platform);
+    if opts.release {
+        cmd.arg("--release");
+    }
+    for f in &opts.features {
+        cmd.arg("--features").arg(f);
+    }
+    let status = cmd
+        .status()
+        .map_err(|e| format!("cannot run {}: {e}", build_sh.display()))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("`floom package --platform {platform}` failed ({status})"))
+    }
+}
+
 /// Writes the native host project for one platform of an **app**.
 ///
 /// Each platform gets a directory the platform's own toolchain recognises, so
@@ -1263,7 +1469,7 @@ mod tests {
             platform_path: None,
             force: true,
         };
-        create_app(&opts, &dir).expect("scaffold the app");
+        create_app(&opts, &dir, &opts.name).expect("scaffold the app");
         dir
     }
 
@@ -1361,5 +1567,43 @@ mod tests {
             !app.contains("{{TITLE}}"),
             "the title placeholder must be filled"
         );
+    }
+
+    #[test]
+    fn crate_name_reads_the_package_name() {
+        let dir = repo_root().join("tests").join("floom-cli-test-cratename");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(
+            dir.join("Cargo.toml"),
+            "[package]\nname = \"my-cool-app\"\nversion = \"0.1.0\"\n",
+        )
+        .unwrap();
+        assert_eq!(
+            crate_name(&dir.join("Cargo.toml")).unwrap(),
+            "my-cool-app"
+        );
+    }
+
+    #[test]
+    fn lifecycle_options_parse_dir_and_flags() {
+        let opts = parse_lifecycle(&["../some/app".into(), "--release".into()]).unwrap();
+        assert_eq!(opts.dir, Path::new("../some/app"));
+        assert!(opts.release);
+
+        let opts = parse_lifecycle(&[
+            "--features".into(),
+            "desktop,renderer-gpu".into(),
+            "--platform".into(),
+            "ios".into(),
+        ])
+        .unwrap();
+        assert_eq!(opts.dir, Path::new("."));
+        assert_eq!(opts.features, vec!["desktop,renderer-gpu".to_string()]);
+        assert_eq!(opts.platform.as_deref(), Some("ios"));
+
+        // Two positional dirs, or an unknown flag, are rejected.
+        assert!(parse_lifecycle(&["a".into(), "b".into()]).is_err());
+        assert!(parse_lifecycle(&["--bogus".into()]).is_err());
     }
 }
