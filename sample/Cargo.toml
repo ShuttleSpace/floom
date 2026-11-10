@@ -12,7 +12,7 @@ build = "build.rs"
 [workspace]
 
 [dependencies]
-floom-platform = { path = "crates/platform/floom-platform" }
+floom-platform = { path = "../crates/platform/floom-platform" }
 # Re-point at the published crate once it ships:
 # floom-platform = { version = "0.2" }
 

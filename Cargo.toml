@@ -52,7 +52,10 @@ members = [
   "crates/widgets/floom-widgets",
   "crates/widgets/floom-widgets-data",
   "crates/app/floom",
-  "examples/*",
+  # Only the floom-* examples are crates. A bare `examples/*` made any stray
+  # non-crate directory (xcodeproj leftovers, scratch folders) break the whole
+  # workspace by being treated as a member with no Cargo.toml.
+  "examples/floom-*",
 ]
 default-members = [
   ".",

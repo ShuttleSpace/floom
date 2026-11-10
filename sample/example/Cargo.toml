@@ -9,12 +9,12 @@ floom-plugin-sample = { path = ".." }
 # The registry the plugin registers itself into. The example depends on
 # it directly because it calls `plugin("sample").enable()`, which a
 # plugin's own re-exports would otherwise hide.
-floom-platform = { path = "crates/platform/floom-platform" }
+floom-platform = { path = "../../crates/platform/floom-platform" }
 # `desktop` and `renderer-gpu` are what `run_desktop` needs: one picks
 # the winit-backed desktop platform adapter, the other the presenter
 # that paints into its window. Without both, `run_desktop` does not
 # exist and the example does not compile.
-floom = { path = "crates/floom", features = ["desktop", "renderer-gpu"] }
+floom = { path = "../../crates/app/floom", features = ["desktop", "renderer-gpu"] }
 
 # The example's own target directory, so building it does not fight
 # with a `cargo build` of the plugin above it.
