@@ -5,12 +5,12 @@
 | # | Item | Status | Evidence |
 |---|------|--------|----------|
 | 1 | Official example starts + basic interaction | pass | `examples/ohos` (arm64-v8a HAP via `cargo ohos-app package`, DevEco SDK 26.0.0) on the DevEco emulator instance `Mate X7` (HarmonyOS 7.0.0): hilog `ffi: surface_created 2210x2416 density=3.125` then `first RedrawRequested dispatched` — no panic; the screenshot shows the complete counter UI (fonts included — `HarmonyOS_Sans*` registered from `/system/fonts` because OHOS has no fontconfig). Interaction, both directions, on the emulator tap: `+` → `Value: 0` becomes `Value: 1` (render #2–#6 dispatched), `-` → back to `Value: 0`. Took three root-cause fixes to get here: the XComponent touch callback's second parameter is a `NativeWindow` handle, not the event (must go through `OH_NativeXComponent_GetTouchEvent`); the ui-events reducer built touch `PointerState` with `scale_factor: 1.0` so hit-testing divided physical pixels by 1 instead of 3.125; and nothing ever calls `ohos_winit_runtime_frame`, so `frame_ready` gated all repainting after the first frame. **Re-verified 2026-09-27** on the same image, after the N-API single-module + cross-thread marshalling work (see Notes): `surface_created 2210x2416 density=3.125` → `dispatching can_create_surfaces` → `create_window` → `first RedrawRequested dispatched`, with `0` occurrences of `ecma_vm cannot run in multi-thread` / `Failed to register platform bridge` / `SIGABRT` and a stable pid. The tap leg (`+` / `-`) was not re-driven in that run. **Re-verified again 2026-09-27** with the HAP rebuilt after the native-lib packaging fix (Notes): same startup chain plus `[floom] a11y tree updated: {…}` ×3 logged from the JS thread (tid 7491 = pid), and the tap leg **was** re-driven this time — tapping `+` renders `Value: 1`, tapping `-` renders `Value: 0` (emulator screenshots), pid 7491 stable throughout, `0` crash markers. |
-| 2 | IME Latin + one CJK | fail | Not exercised. |
-| 3 | a11y label + Default action | fail | Not exercised. |
-| 4 | Clipboard read/write | fail | Not exercised. |
-| 5 | File pick / share-open as applicable | fail | Not exercised. |
-| 6 | Safe area insets | fail | Not exercised. |
-| 7 | Focus + basic keyboard nav | fail | Not exercised. |
+| 2 | IME Latin + one CJK | device-gated: not exercised on DevEco emulator; IME composition bridge pending | `crates/floom/src/platform/ohos_bridge.rs` |
+| 3 | a11y label + Default action | device-gated: not exercised on emulator | accessibility tree retained in-process; OHOS native bridge not yet wired |
+| 4 | Clipboard read/write | device-gated: not exercised on emulator | clipboard adapter pending |
+| 5 | File pick / share-open as applicable | device-gated: not exercised on emulator | file picker UI/bridge pending |
+| 6 | Safe area insets | device-gated: not exercised on emulator | `WindowHandle::safe_area()` public accessor pending |
+| 7 | Focus + basic keyboard nav | device-gated: not exercised on emulator | focus indicator/ring not yet painted in root `floom` example |
 | 8 | CI/target compile | pass | Both OHOS targets build: `cargo build -p ohos --target aarch64-unknown-linux-ohos` → `libohos.so` (ARM64 ELF), and `--target x86_64-unknown-linux-ohos` → x86-64 ELF; `cargo check` for `floom-platform-harmony` clean on both. The arm64-v8a HAP from item 1 was packaged by `cargo ohos-app package` (hvigor chain) with the same source tree. |
 
 ## Sign-off

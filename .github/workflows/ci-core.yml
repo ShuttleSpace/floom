@@ -25,7 +25,8 @@ jobs:
       matrix:
         os:
           - macos-latest
-          - ubuntu-latest
+          - ubuntu-24.04
+          - windows-latest
     runs-on: ${{ matrix.os }}
     env:
       # Every core-workspace crate, as one shell word each, so all three cargo

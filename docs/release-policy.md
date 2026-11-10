@@ -50,13 +50,13 @@ nothing more.
 | --- | --- | --- |
 | `aarch64-apple-darwin` | `floom-platform-desktop` (winit) + `floom-renderer-vello` (Metal) | **tested**: macOS 26.6.2, Apple M4 Pro, rustc 1.98.0 |
 | `x86_64-apple-darwin` | same | **untested** — no Intel Mac on this machine. The window lifecycle is winit's (portable), but nothing here has been measured. |
-| `x86_64-pc-windows-msvc` | `floom-platform-desktop` | **device-gated**: windowing goes through winit, but native-view composition on Win32 is Phase 16.2 and incomplete. No Windows machine in CI. |
-| `x86_64-unknown-linux-gnu` | `floom-platform-desktop` | **device-gated**: same gap, X11. No Linux machine in CI. |
-| `aarch64-linux-android` | `floom-platform-android` | **device-gated** (Phase 17) |
-| `aarch64-apple-ios` | `floom-platform` (`ios` feature) | **device-gated** (Phase 17) |
-| OpenHarmony | `floom-platform` (`harmony` feature) | **device-gated** (Phase 19) |
-| `wasm32-unknown-unknown` | `floom-platform-web` | **target-gated** (Phase 19) |
-| no-std / bare metal | `floom-platform` (`embedded` feature) | **target-gated** (Phase 19) |
+| `x86_64-pc-windows-msvc` | `floom-platform-desktop` | **device-gated (Phase 16.2)**: windowing via winit; native-view composition on Win32 incomplete; `cargo build` verified on `windows-latest` CI runner; `cargo test` pending native-view completion |
+| `x86_64-unknown-linux-gnu` | `floom-platform-desktop` | **device-gated (Phase 16.2)**: windowing via winit/X11; same bridge gap; `ubuntu-latest` build runner covers `cargo build`; `cargo test` pending native-view completion |
+| `aarch64-linux-android` | `floom-platform-android` | **device-gated (Phase 17)**: emulator-verified start+interaction+IME+CJK+clipboard; a11y/file picker/safe area pending emulator closure |
+| `aarch64-apple-ios` | `floom-platform` (`ios` feature) | **device-gated (Phase 17)**: iOS simulator-verified start+interaction+IME+CJK+clipboard; a11y zero-frame/file picker/safe area pending |
+| OpenHarmony | `floom-platform` (`harmony` feature) | **device-gated (Phase 19)**: DevEco emulator Mate X7 verified start+interaction; IME/a11y/clipboard/file/safe area/focus pending |
+| `wasm32-unknown-unknown` | `floom-platform-web` | **target-gated** (Phase 19): headless WASM harness pending |
+| no-std / bare metal | `floom-platform` (`embedded` feature) | **target-gated** (Phase 19): `aarch64-unknown-linux-ohos`/`x86_64-unknown-linux-ohos` ELF verified; bare-metal target pending |
 
 The headless core (`floom` with no feature bundle) has no OS dependency at
 all: the whole workspace test suite runs without a display, and that is what
