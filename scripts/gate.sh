@@ -344,6 +344,7 @@ ios        the plugins compile for aarch64-apple-ios
 windows    the plugins with real Windows arms compile for x86_64-pc-windows-msvc
 ohos       the plugins with OHOS arms compile for aarch64-linux-ohos
 golden     the pixel-golden examples
+size       release binary sizes within 10% of the checked-in baseline
 EOF
   exit 0
 fi
@@ -599,6 +600,12 @@ run_cross_check ohos aarch64-unknown-linux-ohos ohos_check
 
 # --- goldens ----------------------------------------------------------------
 has_check golden && run_check golden "" ./scripts/run-golden-examples.sh
+
+# --- release binary sizes (WS-3.2) ------------------------------------------
+# The policy's three recorded sizes are now a check that can fail, not a number
+# someone may have read. Single-host baseline, so this runs locally rather than
+# as a PR merge gate — see docs/release-policy.md.
+has_check size && run_check size "" ./scripts/check-size-budgets.sh
 
 echo
 if [ "$FAIL" -eq 0 ]; then

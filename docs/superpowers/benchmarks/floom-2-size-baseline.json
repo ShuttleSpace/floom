@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "threshold_pct": 10.0,
+  "generated": "2026-11-09",
+  "host": "aarch64-apple-darwin — reference machine macOS 26.6.2 / M4 Pro",
+  "source": "The three per-release sizes recorded in docs/release-policy.md § Performance, size and scale gates, promoted to a failing gate by WS-3.2.",
+  "note": "Unstripped release binaries, one budget per feature bundle. Single-host discipline: this is a local `just gate size` check, not a PR merge gate. Tiers map 1:1 to the policy size table; keep the table and this file in sync. `scripts/check-size-budgets.sh --update` rebuilds and rewrites all numbers (update the policy table to match). A fourth 'desktop+software' tier is not yet measured: no example builds that bundle alone, and floom-window with/without --features real produce the same binary name; feature_graph.rs already guards the default dependency graph against linking window/GPU/tooling.",
+  "tiers": [
+    {
+      "id": "headless-floor",
+      "package": "floom-native-plugin",
+      "bin": "floom-native-plugin",
+      "features": [],
+      "baseline_bytes": 485904
+    },
+    {
+      "id": "desktop-gpu",
+      "package": "floom-window",
+      "bin": "floom-window",
+      "features": ["real"],
+      "baseline_bytes": 11626912
+    },
+    {
+      "id": "full-app",
+      "package": "floom-showcase",
+      "bin": "floom-showcase",
+      "features": [],
+      "baseline_bytes": 12488476
+    }
+  ]
+}
