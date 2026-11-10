@@ -1,0 +1,42 @@
+# Floom
+
+> Floom is a native Rust UI library with fine-grained reactivity and great ergonomics — the "Floom 2.0" workspace. It is a self-drawn, retained-mode, GPU-accelerated GUI framework with no browser dependency. Edition 2024, MSRV 1.91, workspace version 0.2.0 (pre-1.0). Licensed MIT. The 1.0 definition is gated by budgets and conformance suites, not by copying competitor feature counts.
+
+## Orientation (read in this order)
+- [README](README.md): 60-second overview and quickstart.
+- [Release policy](docs/release-policy.md): the gate a release must pass and the API/ABI promises it makes. Locked surfaces, tested targets, size/perf/idle gates, the 6-step release gate. The authoritative "what is locked" document.
+- [1.0 launch milestone](docs/1.0-launch-milestone.md): the WS-1..WS-6 workstream plan that turns the competitive bar into trackable tasks (G1–G13, with G11–G13 as the extra hard requirements for size/CPU·GPU/perf).
+- [Competitive analysis](docs/competitive-analysis.md): 20-project × 7-metric landscape plus the 13 "industrial-grade" gates. Source of the 1.0 readiness verdict (Chinese).
+- [Architecture](docs/architecture.md): workspace layout and module boundaries.
+
+## API surface & design systems
+- [Workspace conventions](docs/workspace-conventions.md): naming and structure rules.
+- [Plugin catalog](docs/plugin-catalog.md) and [plugin usage priority](docs/plugin-usage-priority.md): the 22 capability plugins and which to reach for.
+- [Platform & plugins](docs/platform-and-plugins.md): platform layers, native-view composition, the versioned provider ABI (`AbiMismatch` on major-version skew).
+- [Renderer backend support](docs/renderer-backend-support.md): the 4 concrete backends (software / vello / web / tui) plus the `floom-renderer` ABI and the `skia_abi` recorder.
+- [Devtools](docs/devtools.md): Chrome-style inspector, three-layer snapshot, the `floom-accuracy::agent` loop.
+- [Ecosystem](docs/ecosystem.md): satellite crates — the `floom-ui` 306-crate design-system kit (Material/Cupertino/Fluent/Harmony) and `floom-editor` — and the compatibility matrix.
+
+## Platforms & conformance
+- [Per-target gates](docs/gates/): macos/linux/windows/android/ios/ohos CI gate docs; most fail today.
+- [Cross-platform a11y/IME test](docs/cross_platform_a11y_ime_test.md).
+- [Host embedding](docs/host-embedding.md), [iOS](docs/ios.md), [OpenHarmony](docs/ohos.md), [Embedder](docs/embedder.md).
+- [Examples](docs/examples.md): the golden-example list.
+
+## Performance, size, correctness gates (the 1.0 hard requirement)
+- Size baseline: [floom-2-size-baseline.json](docs/superpowers/benchmarks/floom-2-size-baseline.json) — three tiers, 10% threshold — checked by `just gate size`.
+- Perf baseline: [floom-2-budget-baseline.json](docs/superpowers/benchmarks/floom-2-budget-baseline.json) — 9 Criterion budgets, 10% threshold — checked by `scripts/check-perf-budgets.sh`.
+- [Motion gap](docs/motion-gap.md): animation/motion primitive coverage vs competitors.
+- [Plugin & renderer audit](docs/plugin-and-renderer-audit.md).
+
+## Plans & specs (docs/superpowers/)
+- [Floom 2.0 implementation plan](docs/superpowers/plans/2026-09-02-floom-2-complete-implementation-plan.md): the master plan. Task 23.3 (Profiler) is PARTIAL — engine done, app wiring pending.
+- [TSX .d.ts plan](docs/superpowers/plans/2026-11-06-floom-tsx-dts.md): the shipped `@types/floom` declaration file (898 lines).
+- [API notes](docs/api/): component-specific write-ups (devtools tree rows, text-input limits, native-view placement, etc.).
+
+## Quick facts for an agent
+- Crate map: `crates/{core,system,widgets,platform,render,native,devtools,app,frontend}`; the public facade is `crates/app/floom`.
+- API/ABI surface tests that must keep compiling live in `crates/app/floom/tests/` (`prelude_surface.rs`, `feature_graph.rs`, `docs_parity.rs`).
+- Toolchain: `mise.toml` provisions rust 1.99.1; `rust-toolchain.toml` is the cargo-level pin. Run checks via the `just` recipes in `justfile` (e.g. `just gate`).
+- Platform reality: only `aarch64-apple-darwin` is "tested"; the other 8 targets are device-/target-gated (see the release-policy targets table).
+- TypeScript: `npm/@types-floom/index.d.ts` is the published TSX declaration surface.
