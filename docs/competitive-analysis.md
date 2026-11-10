@@ -17,12 +17,12 @@
    - `② 渲染成熟`：5 个后端 + `RendererCapabilities` 悲观默认 + `DegradationReport` 计数降级 + GPU 像素级回归测试（断言墨水位置而非计数器），是同类自绘框架里**证据最严**的。
    - `③ API 丰富度`：~120 引擎/数据控件 + 44 composites + 4 套设计系统（306 crate 卫星）+ 完整动画/运动原语，仅缺 BUI 式招牌交互。
    - `① 平台覆盖`：**只有 `aarch64-apple-darwin` 一个目标"tested"**，其余 8 个全部 device-gated / target-gated（`docs/release-policy.md:49-59`）。这是"正式工业级"与"玩具"之间唯一的大门槛。
-   - `④ 开发便利`：Chrome 式 devtools、三层 snapshot、accuracy/agent 闭环都在，但缺 `llms.txt`、缺 `init`/`package`、TSX `.d.ts` 半成品、热重载不是文件级。
+   - `④ 开发便利`：Chrome 式 devtools、三层 snapshot、accuracy/agent 闭环都在，但缺 `llms.txt`、缺 `init`/`package`、热重载不是文件级。TSX `.d.ts` **已随 `@types/floom` 发布**（`npm/@types-floom/index.d.ts`，898 行，见 §5④），剩余只是占位 emitter 接线。
    - `⑥ 生态地基`：release-policy 治理门禁比任何竞品都细，但全仓仍是 `0.2.0`、卫星未钉版、compat matrix 空白。
 
 2. **没有一家竞品在"Rust 原生自绘保留模式 GUI"这一格构成成熟 1.0 对手。** 最接近的 makepad 发过 `makepad-widgets 1.0.0`（2025-05-13）但官网/llms 不可达；slint 是三许可的 `.slint` DSL + 公司化 1.18.1；flutter 是 Dart 生态；tauri/dioxus 是系统 WebView；leptos 明确搁置了 native rendering；rinf 把渲染外包给 Flutter；xilem/masonry 自称 alpha / toolkit；egui 是即时模式且明说每次发版都有破坏性变更。**这说明 floom 的技术定位有空位，值得用"发布纪律"而非"补功能"去占。**
 
-3. **"工业级可用"的可执行定义**（由 5 分档竞品的共同做法反推，见 §8）：13 条门槛 = 10 条通用 + 3 条本库硬性要求（G11 SDK 体积 / G12 运行时 CPU·内存·GPU / G13 渲染·执行性能，见 §9）。floom 已具备其中 3、8、9 的**资产**，但 9 被 `#[ignore]` 关着、13 的预算脚本**当前因基线缺失直接崩**；1/2/4/5/6/10/11/12/13 是明确的待办。
+3. **"工业级可用"的可执行定义**（由 5 分档竞品的共同做法反推，见 §8）：13 条门槛 = 10 条通用 + 3 条本库硬性要求（G11 SDK 体积 / G12 运行时 CPU·内存·GPU / G13 渲染·执行性能，见 §9）。floom 已具备其中 3、8、9 的**资产**，但 9 被 `#[ignore]` 关着；13 的 10% 预算脚本**基线已恢复、能绿能红**（WS-3.1，2026-11-09），仍未进 CI 且整套 20% 靠人工；11 的 10% 体积门禁**已落地、能绿能红**（WS-3.2，2026-11-09），仍缺第 4 档；1/2/4/5/6/10/12/13 是明确的待办。
 
 ---
 
@@ -73,7 +73,7 @@
 
 | 项目 | 许可/版本/主体 | 平台 | 渲染 | API | 便利 | 扩展 | 生态/风险 |
 |---|---|---|---|---|---|---|---|
-| **floom(本地)** | MIT；**0.2.0**；edition 2024 / MSRV 1.91；本仓库 | **仅 1 个 tested** (macOS 26.6.2/M4 Pro)；其余 8 个 gated | 5 后端(software/vello/web/tui) + `skia_abi` 录音器；`RendererCapabilities` 悲观默认；`DegradationReport` 计数降级；`DamageRegion` ≥8 溢满帧；idle **frames=2/8s**；GPU 像素测试断言墨水位置 | ~60 引擎 + ~19 数据 + 44 composites + 4 设计系统(306 crate)；弹簧/关键帧/重定向/共享元素/WGSL | devtools(Chrome 式) + 三层 snapshot + `floom-accuracy::agent`；CLI 仅 `run`/`create`；TSX 能编译但 `.d.ts` 半成品；**无 llms.txt** | **22 插件独立工作区** + Renderer/Platform/Native provider 3 ABI + provider `AbiMismatch` 强制拒绝 + 机械架构门禁 | release-policy 锁定面 + 6 步发布门禁 + 符合性套件 + 体积/性能/空闲门禁；但全 pre-1.0、卫星未钉版、`flameo` 缺失、embedder 明确不稳定 |
+| **floom(本地)** | MIT；**0.2.0**；edition 2024 / MSRV 1.91；本仓库 | **仅 1 个 tested** (macOS 26.6.2/M4 Pro)；其余 8 个 gated | 5 后端(software/vello/web/tui) + `skia_abi` 录音器；`RendererCapabilities` 悲观默认；`DegradationReport` 计数降级；`DamageRegion` ≥8 溢满帧；idle **frames=2/8s**；GPU 像素测试断言墨水位置 | ~60 引擎 + ~19 数据 + 44 composites + 4 设计系统(306 crate)；弹簧/关键帧/重定向/共享元素/WGSL | devtools(Chrome 式) + 三层 snapshot + `floom-accuracy::agent`；CLI 仅 `run`/`create`；TSX `.d.ts` 已发布 `@types/floom`（898 行，`dts_sync` 校验生成器与发布物一致）；**无 llms.txt** | **22 插件独立工作区** + Renderer/Platform/Native provider 3 ABI + provider `AbiMismatch` 强制拒绝 + 机械架构门禁 | release-policy 锁定面 + 6 步发布门禁 + 符合性套件 + 体积/性能/空闲门禁；但全 pre-1.0、卫星未钉版、`flameo` 缺失、embedder 明确不稳定 |
 | **makepad** | MIT(repo) / **MIT OR Apache-2.0**(crates.io，口径不一致)；**`makepad-widgets 1.0.0` 2025-05-13**（A 路线唯一 1.0）；7.3k★；Makepad B.V. | wasm/WebGL, osx/Metal, win/DX11, linux/OpenGL；iOS/tvOS/Android/Quest 有构建命令 | 自研 GPU 2D/3D；live-editable design DSL；shader/渐变/阴影/模糊 | scriptable UI DSL；storybook 展示"每个 widget"；`makepad-widgets` ~31.9k LOC | **`cargo-makepad` 最强 CLI**(工具链/wasm/android/`--wasm-opt`/`--brotli`)；**Studio** 运行/检视/迭代 + AI 自动化；storybook；全篇 AI-accelerated 主线 | live DSL 自定义 widget；LLM/生成模型嵌入；运行时脚本 | 官网 `makepad.dev` 传输错误、`www` 仅 "Makepad is loading"、`llms.txt` 404；下载量小(2 万)；许可口径需尽调 |
 | **slint** | **三许可**：GPLv3 / **Royalty-free 2.0(专有桌面/移动/Web 免费，需 `AboutSlint` 署名，排除嵌入式)** / Commercial 3.0；**v1.18.1**(2026-09-21)；**SixtyFPS GmbH**；24.4k★ | 桌面三平台(Gallery 截图) + Web 5 个 wasm demo + **逐型号嵌入式板卡**(Toradex/NXP i.MX、ESP32-S3/C3、STM32H7/MP1、RPi 4/Pico、Renesas、Infineon)；<300KiB RAM；no-std；Android/iOS 仅声明 | `.slint` DSL **AOT 编译为机器码** + property 引擎；渲染期三选一 femtovg(OpenGL ES2)/**Skia**/纯 CPU；无 GPU 亦可；可选 Qt 原生风格 | `.slint` 声明式 DSL；`std-widgets`；编译期 codegen 到 Rust/C++/JS(Node Beta)/Python(Beta)；style/theme 非 CSS | **LSP(补全+live preview)** + VS Code 扩展 + `slint-viewer --auto-reload` + SlintPad + **Figma→Slint** + 4 语言模板 + **`slint.dev/llms.txt`** + "Slint and AI MCP" | 4 语言绑定；自定义 component；VST 音频插件嵌入 | **"stable 1.x API… evolve carefully without breaking your code"**；企业落地 SK Signet/WesAudio/OTIV/Viiri；板卡伙伴 Toradex/NXP/RPi；嵌入式专有需按台 royalty(起 $1.00) |
 | **freya** | MIT；**0.5.0**(2026-11-05)；3.3k★；**单人** Marc Espin | Linux/Win/mac/**Android**/Web（无 iOS）；官网与 `llms.txt` 平台口径不一致(后者只写 3 个) | **Skia**(Vulkan/OpenGL/Metal/software)；0.4 起自研 reactive core + 增量渲染；富文本(Rope+tree-sitter 代码编辑器)、动画、**shader/渐变/阴影/模糊 + AccessKit** | builder + hooks(`use_state`)；~20 内置组件 + 15+ feature crate(html/router/radio/i18n/markdown/code-editor/material-design/plotters/video/camera/webview/engine/sdk)；主题 token | **agent 友好最佳**：`llms.txt` + **`npx skills add marc2332/freya --skill freya`**；`devtools` feature(实时组件树)；`freya-testing` 无窗口 `render_to_file`；`freya-template` | 最系统的 feature 化；自定义 `Component`；`RenderCallback` 直画 Skia；自写 shader；Blitz HTML；WebView | 0.4 架构断代(弃 Dioxus core)；0.5 未 1.0；Polyfrost/Zerac 使用 |
@@ -156,7 +156,7 @@
 
 ### ④ 开发便利性 — floom **3 / 中游，最易提分**
 - **标杆**：nsh（单 CLI + ~120ms + TS7 tsc + `llms.txt`）、flutter（stateful hot reload + DevTools 全套 + 每页 `.md` + MCP）、tauri（最完整 `llms.txt` 体系 + 全平台 devtools + `create-tauri-app`）、dioxus（`dx --hotpatch` + devtools 默认开 + zero-config）、freya（`llms.txt` + `npx skills add`）、slint（LSP + live preview + Figma）、makepad（`cargo-makepad` + Studio 检视迭代 + AI 自动化）、gpui-kit（story gallery + AI skills + headless 测试）、rune（headless PNG 自验）。
-- **floom 现状**：Chrome 式 devtools（Elements/Style/Layout + Ctrl+Shift+C 拾取 + F12，隐藏启动）但 Style 行是"声明值非计算值"；三层 snapshot（Scene/Semantics/Pixel）；`floom-accuracy::agent`（screens/evaluate/benchmark/`AgentClient`/`ComponentSchema`）；TSX 能编译运行。**缺**：`llms.txt`（全仓无）、`init`/`package`、TSX `.d.ts` 仅 `doc.kinds()` 半成品、多处 emitter 占位未接线、热重载是进程内 id 保留树补丁而非文件监听、devtools 无 hover 高亮。
+- **floom 现状**：Chrome 式 devtools（Elements/Style/Layout + Ctrl+Shift+C 拾取 + F12，隐藏启动）但 Style 行是"声明值非计算值"；三层 snapshot（Scene/Semantics/Pixel）；`floom-accuracy::agent`（screens/evaluate/benchmark/`AgentClient`/`ComponentSchema`）；TSX 能编译运行。**缺**：`llms.txt`（全仓无）、`init`/`package`、多处 emitter 占位未接线、热重载是进程内 id 保留树补丁而非文件监听、devtools 无 hover 高亮。**已补齐（2026-11-07 核实）**：TSX `.d.ts` 主体已发布为 `npm/@types-floom/index.d.ts`（898 行），由 `floom_tsx::generate_dts` 生成，`dts_sync.rs` 校验发布物与生成器不漂移；`948969e2` 修了 component ambient values。P1-3 只剩 emitter 接线与 `floom run` 落地 `.d.ts`。
 - **可借鉴**：**补 `llms.txt`（+ 每页 `.md`）是零代码、最高 agent 杠杆**（对标 tauri/flutter/slint/freya/gpui-kit/nsh 全员）；CLI 补 `init`/`check`/`test`/`package`（对标 nsh/tauri/dx/rinf_cli）；`floom run` 文件监听热重载 + 量化延迟（对标 nsh 120ms / dioxus 亚秒）；TSX 按既有计划 `docs/superpowers/plans/2026-11-06-floom-tsx-dts.md` 收尾；Style 行补计算值。
 
 ### ⑤ 扩展能力 — floom **5 / 并列最强**
@@ -186,7 +186,7 @@
 |---|---|---|---|
 | P1-1 | 仓库根 `llms.txt`（+ 关键 docs 页 `.md` 版） | tauri 全套 llms、flutter 每页 .md + MCP、slint/freya/gpui-kit/nsh | 仓库根 + `docs/` |
 | P1-2 | CLI 补 `floom init` / `check` / `test` / `package` | nsh init/run/check/test/package/sign、tauri dev/build/info、dioxus `dx` | `crates/app/floom-cli/src/main.rs`（现仅 `run`/`create`） |
-| P1-3 | TSX 收尾：全 schema `.d.ts`（`JSX.IntrinsicElements`、`declare module`、`declared ⊆ parser`）+ 接线占位 emitter | leptos language server、nsh TSX 工具链、dioxus rsx | `docs/superpowers/plans/2026-11-06-floom-tsx-dts.md`（已批准，实现未提交） |
+| P1-3 | TSX 收尾：接线占位 emitter + `floom run` 落地 `.d.ts`/`tsconfig.json` | leptos language server、nsh TSX 工具链、dioxus rsx | `docs/superpowers/plans/2026-11-06-floom-tsx-dts.md` — **主体已于 `58e24f70` / `948969e2` 提交**（`npm/@types-floom/index.d.ts` 898 行 + `dts_sync` 测试），不是"实现未提交" |
 | P1-4 | headless→PNG + 元素树 dump CLI；GPU 像素测试提为 PR 级可视化回归 | rune headless PNG、freya `render_to_file`、masonry `assert_render_snapshot!` | 复用 `floom-snapshot` + `floom-inspector` + `floom-accuracy::agent`；`gpu_pixels.rs` 去掉 `#[ignore]`（`FLOOM_REQUIRE_GPU` 于有卡 CI） |
 | P1-5 | `floom run` 文件监听热重载 + 量化延迟 | nsh ~120ms、dioxus 亚秒、flutter stateful hot reload、makepad live DSL | 外层接 `floom-hot-reload`（现仅进程内树补丁） |
 | P1-6 | 交互质感：拖拽擦写数字字段 + 字段内数学求值 + 模糊搜索排序 | BUI（拖拽/`2*pi`/`"ad cu"`） | 叠在现有 `counter`/`stepper`/`TextInput`；`crates/ecosystem/floom-ui/crates/floom-ui-composites/src/combobox.rs:35` |
@@ -230,15 +230,15 @@
 8. √ 一等插件 + ABI 版本强制（floom **领先**；仅 per-plugin abi_version 与 webview JS→Rust 待补）
 9. △ 可视化回归进 CI（floom 资产最全但 GPU 测试 `#[ignore]`）—— rune/freya/masonry/dioxus
 10. ✗ 生态钉版（compat matrix / flameo / 文档索引）—— slint/tauri/flutter
-11. △ **SDK / 产物体积尽量小**（floom headless floor 0.5 MiB 已很优，但只记录不强制）—— BUI 6.3 MB 单文件 / nsh Web 1.1 MB / slint <300 KiB / tauri ~600 KB / makepad CLI 裁剪
+11. △ **SDK / 产物体积尽量小**（floom headless floor 0.5 MiB 已很优；`just gate size` 10% 门禁已落地、能绿能红（WS-3.2，2026-11-09），仍缺 desktop+software 第 4 档）—— BUI 6.3 MB 单文件 / nsh Web 1.1 MB / slint <300 KiB / tauri ~600 KB / makepad CLI 裁剪
 12. △ **运行时 CPU / 内存 / GPU 占用尽量少**（idle `frames=2`/8s 已守；无内存/GPU/逐帧分配预算）—— BUI 损伤渲染+稳定帧 0 分配 / nsh +3 MB 内存
-13. △ **渲染 / 执行性能尽量高**（11 bench + 10% 脚本 + GPU 像素回归证据最严，但基线 JSON 缺失致脚本崩、整套 20% 人工）—— nsh 120FPS/trace / BUI 逐帧基准 / freya 增量渲染
+13. △ **渲染 / 执行性能尽量高**（11 bench + 10% 脚本 + GPU 像素回归证据最严；基线已恢复、脚本能绿能红，但仍未进 CI、整套 20% 人工、GPU 测试 `#[ignore]`）—— nsh 120FPS/trace / BUI 逐帧基准 / freya 增量渲染
 
 > 第 11–13 条的可执行任务见 [`1.0-launch-milestone.md`](1.0-launch-milestone.md) §4 (WS-3)。**这三条是"把已有资产变成门禁"，不是重做引擎**。
 
 **推进路径**
 
-- **P0（硬门槛，直接决定能否称工业级）**：P0-1 平台实测 → P0-2 锁 ABI + tag 1.0 → P0-3/P0-4 文档与生态收口 → **WS-3.1 恢复 perf 基线 / WS-3.2 体积门禁 / WS-3.3 资源基线（第 11–13 条）**。
+- **P0（硬门槛，直接决定能否称工业级）**：P0-1 平台实测 → P0-2 锁 ABI + tag 1.0 → P0-3/P0-4 文档与生态收口 → **WS-3.1 恢复 perf 基线（已完成，2026-11-09）/ WS-3.2 体积门禁（已完成，2026-11-09）/ WS-3.3 资源基线（第 11–13 条）**。
 - **P1（体验/可验证性，多数低代码、见效快）**：P1-1 `llms.txt`（零代码、最高 agent 杠杆，**建议第一个做**）→ P1-2 CLI 补齐 → P1-4 headless-PNG + GPU 像素测试进 CI → P1-3 TSX 收尾 → P1-5 热重载 → P1-6 招牌交互 → P1-7/P1-8 补 ABI/devtools 细节。
 - **P2（1.1+ 差异化）**：P2-1 签名沙箱动态 UI → P2-2 样式糖层 → P2-3 生态钉版 + 参考应用。
 
@@ -254,10 +254,10 @@
 
 | 子面 | 具体指标 | floom 现状（本仓可核实） | 1.0 要求 |
 |---|---|---|---|
-| **SDK 体积** | 二进制/下载体积、按用量裁剪、默认 feature graph | headless floor **485,904 B (≈0.5 MiB)**；`floom-showcase` 11.9 MiB；`floom-window --features real` 11.1 MiB；`feature_graph.rs` 守"默认不链窗口/GPU/工具"；增长 >10% 即问——但**只记录不强制** | 变成可失败门禁 + per-feature-bundle 分档预算 |
+| **SDK 体积** | 二进制/下载体积、按用量裁剪、默认 feature graph | headless floor **485,904 B (≈0.5 MiB)**；`floom-showcase` 11.9 MiB；`floom-window --features real` 11.1 MiB；`feature_graph.rs` 守"默认不链窗口/GPU/工具"；增长 >10% 已由 `just gate size` **强制**（WS-3.2，3 档 10% 基线已签入、能绿能红） | 补 desktop+software 第 4 档 + 发布记录表 |
 | **运行时 CPU** | 空闲帧数、损伤渲染、脏矩形、事件循环 park | `frames=2`/8s、CPU `0.15 s`（0.5% 核）、`about_to_wait` ~75、`DamageRegion` ≥8 溢满帧、`SceneFrameQueue` 有界快照丢最旧帧 | 守住既有门禁，禁止回归；新增资源预算不得破坏 idle 测试 |
 | **内存 / GPU** | RSS/峰值、显存、GPU 时间、每帧分配 | `floom-devtools` 有逐帧 `budget_exceeded` + 分配计数 + `PerformanceSnapshot`，但 2.0 计划 §23.3 标 **PARTIAL（app wiring pending）**；`benches/memory_baseline.md` 缺失；**无内存/GPU 预算门禁** | 三类基线 + 阈值 + 强制门禁；接到真实 window loop |
-| **渲染 / 执行性能** | 帧时间、bench 回归、golden、按需重绘 | 11 个 Criterion bench；`check-perf-budgets.sh` 管 10% 热基准（best-of-N，能 fail）；整套 20% 人工；GPU 像素测试断言墨水位置。**但基线 JSON 不在本仓，脚本当前 `FileNotFoundError`** | 恢复基线 + hot-bench 进门禁（按单主机纪律）+ 记录帧预算 |
+| **渲染 / 执行性能** | 帧时间、bench 回归、golden、按需重绘 | 11 个 Criterion bench；`check-perf-budgets.sh` 管 10% 热基准（best-of-N，能 fail）；整套 20% 人工；GPU 像素测试断言墨水位置。**基线已于 2026-11-09 从 git 历史 `5f4cbcfd` 恢复**，实跑 9 条预算 best-of-2 全绿、改坏 median 能红 | hot-bench 进门禁（按单主机纪律）+ 记录帧预算 |
 
 ### 9.2 竞品横向对比（官方自报，未复测）
 
@@ -281,14 +281,14 @@
 
 **读法**：
 - **floom 的资产其实很强**：headless floor 0.5 MiB 与 nsh Web 1.1 MB / dioxus 桌面 <3 MB / BUI 6.3 MB 同一量级或更优；idle `frames=2`/8s + `DamageRegion` 是 BUI "idle 0% CPU" 的可测等价物；11 个 bench + 10% 预算脚本 + GPU 像素回归是**本清单里最严的性能证据**。
-- **floom 的缺口是"没把资产变成门禁"**：体积只记录不强制；内存/GPU/逐帧分配**没有预算**；`check-perf-budgets.sh` 因基线缺失**当前直接崩**；整套 20% 靠人工；`floom-devtools` 的性能画像停在 headless 协议未接真实窗口。**四条都是工程接线，不是重做引擎**。
+- **floom 的缺口是"没把资产变成门禁"**：体积已有 `just gate size`（WS-3.2），但**仍缺 desktop+software 第 4 档**且同样未进合并门禁（单主机纪律）；内存/GPU/逐帧分配**没有预算**；10% 热基准门禁虽已恢复（WS-3.1）但**未进合并门禁**；整套 20% 靠人工；`floom-devtools` 的性能画像停在 headless 协议未接真实窗口。**这些都是工程接线，不是重做引擎**。
 - **别抄错方向**：egui 的即时模式（无损伤渲染）、tauri/dioxus 的 WebView 体积（借系统 runtime）、lvgl 的 MCU 上限（不同量级）都不等价于 floom 的自绘桌面 App；可抄的是**预算化 + 按用量裁剪 + 数值化 trace**这三件事。
 
 ### 9.3 该维度的评分（1–5，推断）
 
 | 项目 | SDK 体积 | 运行时 CPU/内存/GPU | 渲染/执行性能 | 综合 |
 |---|---|---|---|---|
-| **floom(本地)** | **4**（0.5 MiB floor，但无门禁） | **3**（idle 已守，内存/GPU 无预算） | **4**（证据最严，但门禁当前坏） | **3.7** |
+| **floom(本地)** | **4**（0.5 MiB floor + 10% 门禁已落地，WS-3.2） | **3**（idle 已守，内存/GPU 无预算） | **4**（证据最严，10% 门禁已恢复但未进 CI） | **3.7** |
 | BUI | 4 | **5**（损伤渲染/0 分配/缓存预算） | **5**（逐帧基准齐全） | 4.7 |
 | nsh.dev | **5**（Web 1.1 MB + 分层体积表） | **5**（+3 MB 内存/120FPS/trace） | **5**（p95 <4ms） | **5.0** |
 | slint | **5**（<300 KiB RAM） | 4 | 3 | 4.0 |
@@ -300,14 +300,14 @@
 | egui | 3 | 2（即时模式每帧重建） | 3 | 2.7 |
 | xilem / masonry / gpui / gpui-kit / rune / leptos / relm4 / rinf / fui / gpuikit / lvgl.rs | 未核实（多数无可比数字） | 未核实 | 未核实 | n/a |
 
-> 综合分是把"已核实资产"与"是否形成门禁"一起算的：floom 3.7 与 makepad/freya/flutter 同档，**低于 nsh(5.0) 与 BUI(4.7) 的原因不是引擎弱，而是预算没接线**。这正好对应 `1.0-launch-milestone.md` WS-3 的六个任务：恢复基线、体积门禁、资源基线、接 window loop、CI 策略、发布记录表。
+> 综合分是把"已核实资产"与"是否形成门禁"一起算的：floom 3.7 与 makepad/freya/flutter 同档，**低于 nsh(5.0) 与 BUI(4.7) 的原因不是引擎弱，而是预算没接线**。这正好对应 `1.0-launch-milestone.md` WS-3 的六个任务：恢复基线（已完成）、体积门禁（已完成）、资源基线、接 window loop、CI 策略、发布记录表。
 
 ### 9.4 落地映射（→ milestone）
 
 | 本维度发现 | milestone 任务 |
 |---|---|
-| 基线 JSON 缺失、`check-perf-budgets.sh` 崩 | WS-3.1（当天可修） |
-| 体积只记录不强制、无 per-bundle 预算 | WS-3.2 `just gate size` |
+| 基线被归档移出仓库、`check-perf-budgets.sh` 曾直接崩 | **WS-3.1 已完成（2026-11-09）**：从 git 历史 `5f4cbcfd` 恢复 3,140 B 原文件 + `exit 2` 分支，实跑能绿能红 |
+| 体积曾只记录不强制、无 per-bundle 预算 | **WS-3.2 已完成（2026-11-09）**：`just gate size` + 已签入 3 档 10% 基线，能绿能红；第 4 档待补 |
 | 无内存/GPU/逐帧分配预算；`benches/memory_baseline.md` 缺失 | WS-3.3 `just gate resources` |
 | `floom-devtools` 性能画像 PARTIAL（app wiring pending） | WS-3.4 接 `floom-window --features real` |
 | "不进 CI 是有意的"单主机纪律 | WS-3.5 固定参考机 + SKIP≠PASS |

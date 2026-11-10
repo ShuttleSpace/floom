@@ -97,7 +97,16 @@ Facade and compatibility:
 | `floom-window` (`--features real`) | 11,626,912 (≈ 11.1 MiB) — desktop + GPU |
 
 A release that grows the headless floor by more than 10 % without a written
-reason is a question, not a merge.
+reason is a question, not a merge. Since WS-3.2 (2026-11-09) it is also a check:
+`just gate size` builds all three tiers in `target/release` and compares them
+against the checked-in
+`docs/superpowers/benchmarks/floom-2-size-baseline.json` (`threshold_pct 10`,
+one budget per feature bundle). A regression >10 % exits 1; a missing baseline
+or a failed build exits 2 (a gate that could not run, never a pass). The baseline
+takes its three numbers from the table above — keep the two in sync. Refresh
+both after a toolchain change with
+`bash scripts/check-size-budgets.sh --update`. Like the Criterion budgets these
+are single-host numbers, so this is a local check rather than a PR merge gate.
 
 **Benchmarks.** `cargo bench`, run on the reference machine (macOS 26.6.2,
 Apple M4 Pro). There is no workspace-root bench crate: each suite lives with the
@@ -138,6 +147,11 @@ Two different gates, and it matters which one is being quoted:
   It is **not wired into CI on purpose**: the baseline is one host's numbers, and
   a job that fails on someone else's runner is worse than a job that does not
   run. Widening the support matrix above is the prerequisite.
+
+  **2026-11-09 已恢复并复验**：基线从 git 历史 `5f4cbcfd` 恢复（sha256 与历史一致），
+  `scripts/check-perf-budgets.sh` 实跑 9 条预算 best-of-2 全绿（`exit 0`）；故意改坏
+  一条 median 时 `exit 1`，基线缺失时 `exit 2`。上面 "enforced by a script"
+  重新成立；步骤与证据见 [`1.0-launch-milestone.md`](1.0-launch-milestone.md) WS-3.1。
 
 **Idle.** An idle window must not burn a core:
 
