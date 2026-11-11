@@ -30,3 +30,10 @@ gate *CHECKS:
 #   just build ios ios
 build example platform *ARGS:
     ./scripts/build.sh {{example}} {{platform}} {{ARGS}}
+
+# One command to render a gallery screen headlessly to PNG + element-tree JSON:
+#   just snapshot settings              # snapshots/settings.{png,json}
+#   just snapshot --list                # list the nine screen names
+#   just snapshot --all ./out           # render every screen
+snapshot *ARGS:
+    cargo run -p floom-accuracy --example snapshot -- {{ARGS}}

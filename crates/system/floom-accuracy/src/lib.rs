@@ -21,6 +21,7 @@
 pub mod agent;
 mod benchmark;
 mod evaluate;
+pub mod headless;
 mod labeled;
 mod screens;
 mod tokens;

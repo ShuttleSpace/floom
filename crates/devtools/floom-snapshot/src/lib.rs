@@ -27,7 +27,9 @@ use floom_scene::{ResourceRegistry, Scene, SceneNode};
 use floom_types::{Color, Point, Rect, Size, SurfaceId, WindowId};
 
 pub mod frames;
+pub mod png;
 pub use frames::{FrameDiff, FrameDigest, GoldenFrames, parse_sequence};
+pub use png::{PngError, encode_png, write_png};
 
 // The golden-file machinery and the pixel snapshot type itself live in
 // `floom_renderer`: a backend can reach a golden through a dependency it

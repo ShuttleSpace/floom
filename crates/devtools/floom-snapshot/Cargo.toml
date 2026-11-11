@@ -19,6 +19,10 @@ floom-renderer = { path = "../../render/floom-renderer", version = "0.2.0" }
 floom-renderer-software = { path = "../../render/floom-renderer-software", version = "0.2.0" }
 
 [dev-dependencies]
+# Test-only: decode the PNG the hand-rolled encoder writes to prove it is a
+# real PNG, not just a self-consistent byte stream. This does NOT enter the
+# shipped dependency graph — `png.rs` itself is std-only.
+image = { workspace = true, features = ["png"] }
 # The engine itself builds scenes by hand; these are only for the integration
 # suite that points it at *real* mounted widgets (P1 acceptance: "snapshot
 # tests cover core widgets"). All three are lower layers, so no upward edge.

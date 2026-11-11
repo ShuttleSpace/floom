@@ -1371,6 +1371,7 @@ dependencies = [
  "floom-scene",
  "floom-types",
  "floom-widgets",
+ "image",
 ]
 
 [[package]]
