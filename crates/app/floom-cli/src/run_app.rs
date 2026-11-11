@@ -19,9 +19,18 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Child, Command};
+use std::time::{Duration, Instant};
+
+use crate::watch::{Watch, WatchError};
 
 const DEFAULT_FEATURES: &str = "desktop,renderer-gpu";
+
+/// Default poll period for `--watch`: a change is seen within one period.
+const DEFAULT_POLL_MS: u64 = 200;
+/// Default debounce for `--watch`: an editor's save burst collapses into one
+/// rebuild.
+const DEFAULT_DEBOUNCE_MS: u64 = 100;
 
 /// Every crate the generated app depends on, by package name. `floom run`
 /// looks each one up under the checkout's `crates/` directory, so the crate
@@ -48,6 +57,10 @@ struct RunOpts {
     build_only: bool,
     features: String,
     floom_path: Option<String>,
+    watch: bool,
+    poll_ms: u64,
+    debounce_ms: u64,
+    no_relaunch: bool,
 }
 
 /// Entry point for `floom run`.
@@ -78,18 +91,33 @@ pub fn run(args: &[String]) -> Result<(), String> {
 
     write_project(&crate_dir, &app, &crates, &opts.features, &patches)?;
 
+    // The target directory the generated crate builds into: reuse the enclosing
+    // workspace's `target/` when there is one, so the first run does not have to
+    // rebuild the whole Floom stack from scratch; otherwise the crate's own.
+    let target_dir = if let Some(workspace) = workspace_root(app_dir) {
+        workspace.join("target")
+    } else {
+        crate_dir.join("target")
+    };
+
+    if opts.watch {
+        return watch_run(&opts, &crate_dir, &target_dir, &app);
+    }
+
+    if opts.build_only {
+        build_app(&crate_dir, &target_dir, opts.release)?;
+        return Ok(());
+    }
+
+    // Non-watch launch: `cargo run` builds and runs in one shot.
     let mut cmd = Command::new("cargo");
-    cmd.arg(if opts.build_only { "build" } else { "run" })
+    cmd.arg("run")
         .arg("--manifest-path")
         .arg(crate_dir.join("Cargo.toml"));
     if opts.release {
         cmd.arg("--release");
     }
-    // Reuse the enclosing workspace's `target/` when there is one, so the first
-    // run does not have to rebuild the whole Floom stack from scratch.
-    if let Some(workspace) = workspace_root(app_dir) {
-        cmd.env("CARGO_TARGET_DIR", workspace.join("target"));
-    }
+    cmd.env("CARGO_TARGET_DIR", &target_dir);
     let status = cmd.status().map_err(|e| format!("cannot run cargo: {e}"))?;
     if status.success() {
         Ok(())
@@ -98,18 +126,161 @@ pub fn run(args: &[String]) -> Result<(), String> {
     }
 }
 
+/// Build the generated crate and answer the path of the produced binary.
+///
+/// Returns `<target_dir>/<debug|release>/app`; the crate's `[[bin]]` is named
+/// `app` and the enclosing `CARGO_TARGET_DIR` is the one we passed, so the
+/// artifact lands there regardless of which directory `cargo` runs in.
+fn binary_path(target_dir: &Path, release: bool) -> PathBuf {
+    target_dir
+        .join(if release { "release" } else { "debug" })
+        .join(if cfg!(windows) { "app.exe" } else { "app" })
+}
+
+/// `cargo build` the generated crate, forwarding `--release`. Used by both the
+/// `--no-run` path and the watch loop; errors carry the cargo failure.
+fn build_app(crate_dir: &Path, target_dir: &Path, release: bool) -> Result<PathBuf, String> {
+    let mut cmd = Command::new("cargo");
+    cmd.arg("build")
+        .arg("--manifest-path")
+        .arg(crate_dir.join("Cargo.toml"));
+    if release {
+        cmd.arg("--release");
+    }
+    cmd.env("CARGO_TARGET_DIR", target_dir);
+    let status = cmd.status().map_err(|e| format!("cannot run cargo: {e}"))?;
+    if status.success() {
+        Ok(binary_path(target_dir, release))
+    } else {
+        Err(format!("`floom run` build failed ({status})"))
+    }
+}
+
+/// `floom run --watch`: build once, launch the binary directly (so it is
+/// killable), then on every settled file change kill the running copy, rebuild,
+/// and relaunch — a hot *restart* (the window closes and reopens; app state is
+/// lost). This is honest about its boundary versus stateful in-window hot
+/// reload, which `floom-hot-reload`'s `UiPatch` does not yet bridge to a live
+/// host (see `docs/hot-reload.md`).
+///
+/// `--no-relaunch` keeps the watch loop but skips the spawn, so the latency
+/// harness measures save→rebuild without needing a display — the only part
+/// runnable on a headless machine.
+fn watch_run(
+    opts: &RunOpts,
+    crate_dir: &Path,
+    target_dir: &Path,
+    app: &Path,
+) -> Result<(), String> {
+    let bin = build_app(crate_dir, target_dir, opts.release)?;
+    println!(
+        "floom: watching {} for changes (poll {}ms, debounce {}ms)",
+        app.display(),
+        opts.poll_ms,
+        opts.debounce_ms
+    );
+
+    let mut child: Option<Child> = None;
+    if !opts.no_relaunch {
+        child = Some(spawn_binary(&bin)?);
+    }
+
+    let mut watch = Watch::new(
+        vec![app.parent().unwrap_or(Path::new(".")).to_path_buf()],
+        Duration::from_millis(opts.poll_ms),
+        Duration::from_millis(opts.debounce_ms),
+    )
+    .map_err(|e| match e {
+        WatchError::MissingRoot(p) => format!("watch root disappeared: {}", p.display()),
+        WatchError::Io(p, e) => format!("{}: {e}", p.display()),
+    })?;
+
+    loop {
+        let change = match watch.wait_for_change() {
+            Ok(c) => c,
+            Err(e) => return Err(e.to_string()),
+        };
+        println!(
+            "floom: change detected (+{:?}, {} source files)",
+            change.detected_after,
+            change.snapshot.len()
+        );
+
+        // Tear down the running copy before rebuilding.
+        if let Some(mut c) = child.take() {
+            let _ = c.kill();
+            let _ = c.wait();
+        }
+
+        let rebuild_start = Instant::now();
+        let bin = build_app(crate_dir, target_dir, opts.release)?;
+        let rebuild_ms = rebuild_start.elapsed();
+
+        let relaunch_ms = if opts.no_relaunch {
+            Duration::ZERO
+        } else {
+            let spawn_start = Instant::now();
+            child = Some(spawn_binary(&bin)?);
+            spawn_start.elapsed()
+        };
+
+        let total = change.first_seen.elapsed();
+        println!(
+            "floom: reloaded — detect +{:?}, debounce {}ms, rebuild {:?}, relaunch {:?} \
+             => save→running ~{:?} (detection bounded by poll {}ms)",
+            change.detected_after, opts.debounce_ms, rebuild_ms, relaunch_ms, total, opts.poll_ms
+        );
+    }
+}
+
+/// Spawn the built binary directly (not `cargo run`) so it can be killed and
+/// replaced on the next change. It shares this process's foreground process
+/// group, so a terminal Ctrl-C also terminates it — no orphaned windows.
+fn spawn_binary(bin: &Path) -> Result<Child, String> {
+    Command::new(bin)
+        .spawn()
+        .map_err(|e| format!("cannot launch {}: {e}", bin.display()))
+}
+
 fn parse(args: &[String]) -> Result<RunOpts, String> {
     let mut app = None;
     let mut release = false;
     let mut build_only = false;
     let mut features = DEFAULT_FEATURES.to_string();
     let mut floom_path = None;
+    let mut watch = false;
+    let mut poll_ms = DEFAULT_POLL_MS;
+    let mut debounce_ms = DEFAULT_DEBOUNCE_MS;
+    let mut no_relaunch = false;
 
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--release" => release = true,
             "--no-run" | "--build-only" => build_only = true,
+            "--watch" => watch = true,
+            // A measure-only latency harness still needs the watch loop, so this
+            // implies `--watch` even if it was not spelled out.
+            "--no-relaunch" => {
+                no_relaunch = true;
+                watch = true;
+            }
+            "--poll-ms" => {
+                i += 1;
+                poll_ms = args
+                    .get(i)
+                    .ok_or("`--poll-ms` requires a value")?
+                    .parse::<u64>()
+                    .map_err(|_| "`--poll-ms` must be a positive integer".to_string())?;
+            }
+            "--debounce-ms" => {
+                i += 1;
+                debounce_ms = args
+                    .get(i)
+                    .ok_or("`--debounce-ms` requires a value")?
+                    .parse::<u64>()
+                    .map_err(|_| "`--debounce-ms` must be a positive integer".to_string())?;
+            }
             "--features" => {
                 i += 1;
                 features = args
@@ -143,6 +314,10 @@ fn parse(args: &[String]) -> Result<RunOpts, String> {
         build_only,
         features,
         floom_path,
+        watch,
+        poll_ms,
+        debounce_ms,
+        no_relaunch,
     })
 }
 
@@ -521,6 +696,52 @@ mod tests {
         assert!(opts.build_only);
         assert_eq!(opts.features, "desktop");
         assert_eq!(opts.floom_path.as_deref(), Some("/tmp/floom"));
+        assert!(!opts.watch, "watch is opt-in");
+        assert_eq!(opts.poll_ms, DEFAULT_POLL_MS);
+        assert_eq!(opts.debounce_ms, DEFAULT_DEBOUNCE_MS);
+    }
+
+    #[test]
+    fn run_reads_the_watch_flags() {
+        let opts = parse(&args(&[
+            "app.tsx",
+            "--watch",
+            "--poll-ms",
+            "50",
+            "--debounce-ms",
+            "25",
+        ]))
+        .expect("parse");
+        assert!(opts.watch);
+        assert_eq!(opts.poll_ms, 50);
+        assert_eq!(opts.debounce_ms, 25);
+        assert!(!opts.no_relaunch);
+    }
+
+    #[test]
+    fn no_relaunch_implies_watch() {
+        // A measure-only harness still needs the watch loop; `--no-relaunch`
+        // must not silently fall back to a one-shot `cargo run`.
+        let opts = parse(&args(&["app.tsx", "--no-relaunch"])).expect("parse");
+        assert!(opts.watch);
+        assert!(opts.no_relaunch);
+    }
+
+    #[test]
+    fn bad_watch_durations_are_rejected() {
+        assert!(parse(&args(&["app.tsx", "--poll-ms", "abc"])).is_err());
+        assert!(parse(&args(&["app.tsx", "--debounce-ms", "-1"])).is_err());
+        assert!(parse(&args(&["app.tsx", "--poll-ms"])).is_err());
+    }
+
+    #[test]
+    fn the_binary_path_matches_the_profile_and_platform() {
+        let target = Path::new("/tmp/floom/target");
+        let debug = binary_path(target, false);
+        let release = binary_path(target, true);
+        assert!(debug.ends_with("debug/app") || debug.ends_with("debug/app.exe"));
+        assert!(release.ends_with("release/app") || release.ends_with("release/app.exe"));
+        assert_ne!(debug, release);
     }
 
     #[test]

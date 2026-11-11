@@ -7,6 +7,7 @@
 mod native_project;
 mod run_app;
 mod templates;
+mod watch;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -33,6 +34,10 @@ OPTIONS (run):
     --no-run               Compile the app without launching it
     --features <LIST>      Backend features (default: desktop,renderer-gpu)
     --floom-path <PATH>    Use a local Floom checkout instead of installed crates
+    --watch                Rebuild & relaunch on source changes (hot restart)
+    --poll-ms <N>          Watch poll period in ms (default: 200)
+    --debounce-ms <N>      Settle time before a rebuild fires (default: 100)
+    --no-relaunch          Watch + rebuild only, no window (latency harness)
 
 OPTIONS (create):
     --template <KIND>      app (default) or plugin
@@ -360,10 +365,7 @@ fn create_tsx_app(_opts: &CreateOpts, root: &Path, name: &str) -> Result<(), Str
     )?;
     write(&root.join("tsconfig.json"), templates::TSX_TSCONFIG)?;
     write(&root.join(".gitignore"), templates::TSX_GITIGNORE)?;
-    write(
-        &root.join("README.md"),
-        &templates::tsx_root_readme(name),
-    )?;
+    write(&root.join("README.md"), &templates::tsx_root_readme(name))?;
 
     println!("Created Floom TSX app `{}` in `{}`", name, root.display());
     println!("  style: tsx (editor types from @types/floom)");
@@ -705,7 +707,9 @@ fn package(args: &[String]) -> Result<(), String> {
     if status.success() {
         Ok(())
     } else {
-        Err(format!("`floom package --platform {platform}` failed ({status})"))
+        Err(format!(
+            "`floom package --platform {platform}` failed ({status})"
+        ))
     }
 }
 
@@ -1579,10 +1583,7 @@ mod tests {
             "[package]\nname = \"my-cool-app\"\nversion = \"0.1.0\"\n",
         )
         .unwrap();
-        assert_eq!(
-            crate_name(&dir.join("Cargo.toml")).unwrap(),
-            "my-cool-app"
-        );
+        assert_eq!(crate_name(&dir.join("Cargo.toml")).unwrap(), "my-cool-app");
     }
 
     #[test]

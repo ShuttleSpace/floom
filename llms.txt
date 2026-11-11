@@ -15,6 +15,7 @@
 - [Platform & plugins](docs/platform-and-plugins.md)
 - [Renderer backend support](docs/renderer-backend-support.md)
 - [Devtools](docs/devtools.md)
+- [Hot reload](docs/hot-reload.md) — `floom run --watch` file-level hot *restart* (not stateful in-window reload), latency harness
 - [Ecosystem](docs/ecosystem.md)
 
 ## Platforms & conformance
