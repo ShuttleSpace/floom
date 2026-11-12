@@ -989,28 +989,28 @@ than leaf controls. `Responsive` and `Hover` depend on pointer/scroll state;
 their samples show the resting state and say in the note what triggers the
 other.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   Add to `examples/floom-demo/tests/categories.rs` a test
   `every_layout_component_has_at_least_two_samples` over the 19 names.
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
   Run: `cargo test -p floom-demo --test categories`
 
   Expected: FAIL.
 
-- [ ] **Step 3: Write the samples and the API tables**
+- [x] **Step 3: Write the samples and the API tables**
 
   As Task 6 Step 3.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
   Run: `cargo test -p floom-demo --test categories`
 
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add examples/floom-demo

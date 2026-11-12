@@ -94,6 +94,30 @@ const FEEDBACK: &[&str] = &[
     "Tooltip",
 ];
 
+/// The components of the Navigation & layout category, by the name a reader
+/// sees.
+const LAYOUT: &[&str] = &[
+    "App",
+    "AppBar",
+    "BottomNavigation",
+    "Breadcrumbs",
+    "Container",
+    "Divider",
+    "Footer",
+    "Grid",
+    "Hover",
+    "Main",
+    "NavigationDrawer",
+    "Parallax",
+    "Responsive",
+    "SlideGroup",
+    "Spacer",
+    "SystemBar",
+    "Tabs",
+    "Toolbar",
+    "Window",
+];
+
 /// The components that fire no event at all.
 ///
 /// A button group arranges other buttons; a list subheader is a heading; a
@@ -123,6 +147,20 @@ const SILENT: &[&str] = &[
     "EmptyState",
     "Sheet",
     "Tooltip",
+    // Navigation & layout
+    "App",
+    "AppBar",
+    "Container",
+    "Divider",
+    "Footer",
+    "Grid",
+    "Main",
+    "NavigationDrawer",
+    "Parallax",
+    "Responsive",
+    "Spacer",
+    "SystemBar",
+    "Toolbar",
 ];
 
 /// The components that are overlays.
@@ -233,6 +271,21 @@ fn every_feedback_component_states_what_it_does() {
 #[test]
 fn every_feedback_page_mounts_and_paints() {
     assert_mounts_and_paints(FEEDBACK);
+}
+
+#[test]
+fn every_layout_component_has_at_least_two_samples() {
+    assert_two_samples_each(LAYOUT);
+}
+
+#[test]
+fn every_layout_component_states_what_it_does() {
+    assert_states_what_it_does(LAYOUT);
+}
+
+#[test]
+fn every_layout_page_mounts_and_paints() {
+    assert_mounts_and_paints(LAYOUT);
 }
 
 #[test]
