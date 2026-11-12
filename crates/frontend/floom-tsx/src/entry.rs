@@ -118,12 +118,13 @@ pub fn resolve(parsed: &Parsed) -> Result<Entry> {
     }
 
     // Resolve the root: an inline `mount(() => <Stack/>)` wins, then a named
-    // `mount(App)`, then the default-export / top-level JSX the parser found.
+    // `mount(App)`, then the default-export / top-level JSX the parser found,
+    // and finally the first component in the module.
     let mut root: Option<RootJsx> = match mounted_root {
         Some(r) => Some(r),
         None => match mounted_name {
             Some(name) => Some(resolve_component(&name, parsed)?),
-            None => parsed.root.clone(),
+            None => parsed.root.clone().or_else(|| first_component_root(parsed)),
         },
     };
 
@@ -173,6 +174,48 @@ fn resolve_component(name: &str, parsed: &Parsed) -> Result<RootJsx> {
     Err(TsxError::new(format!(
         "mount({name}): no component returning JSX named `{name}` was found in this module"
     )))
+}
+
+/// The root of the first component in the module that returns JSX.
+///
+/// A module can define a component without mounting it — `export function
+/// Counter() { … }` is the form `compile` documents — and with no `mount` call
+/// and no default export there is nothing else to be the root.
+///
+/// The parser's own scan is shallow: it looks at top-level expressions, so a
+/// named component was invisible to it and the module lowered to an *empty*
+/// tree. The app compiled, and rendered nothing — the worst kind of failure,
+/// because there was no error to read.
+fn first_component_root(parsed: &Parsed) -> Option<RootJsx> {
+    for item in &parsed.module.body {
+        let root = match item {
+            ast::ModuleItem::ModuleDecl(ast::ModuleDecl::ExportDecl(decl)) => {
+                decl_return_jsx(&decl.decl)
+            }
+            ast::ModuleItem::Stmt(ast::Stmt::Decl(ast::Decl::Fn(f))) => fn_return_jsx(&f.function),
+            ast::ModuleItem::Stmt(ast::Stmt::Decl(ast::Decl::Var(var))) => var
+                .decls
+                .iter()
+                .find_map(|decl| decl.init.as_deref().and_then(arrow_return_jsx)),
+            _ => None,
+        };
+        if root.is_some() {
+            return root;
+        }
+    }
+    None
+}
+
+/// The JSX a declaration returns, whatever it is called.
+fn decl_return_jsx(decl: &ast::Decl) -> Option<RootJsx> {
+    match decl {
+        ast::Decl::Fn(f) => fn_return_jsx(&f.function),
+        ast::Decl::Var(var) => var
+            .decls
+            .iter()
+            .find_map(|decl| decl.init.as_deref().and_then(arrow_return_jsx)),
+        _ => None,
+    }
 }
 
 /// JSX returned by a function or arrow declaration named `name`.

@@ -109,6 +109,47 @@ fn the_emitted_program_type_checks_against_the_real_widget_api() {
         .unwrap_or_else(|stderr| panic!("the generated program does not compile:\n{stderr}"));
 }
 
+/// The progress kinds compile against the real widget API.
+///
+/// The vocabulary grew a ring and a bar, because the satellite ships the
+/// circular indicator as its own component and one generic kind cannot stand
+/// for both. The proof that the two are real is that the emitted program
+/// type-checks against `floom-widgets`' actual builders — not that the
+/// emitter produces the right text.
+#[test]
+fn the_progress_kinds_compile_against_the_real_widget_api() {
+    let source = r#"
+root = stack axis=vertical gap=8 {
+    ring = progress_circular value=0.5 size=32
+    spin = progress_circular indeterminate=true
+    bar = progress_linear value=50
+}
+"#;
+    let compiled = floom_dsl::compile(source).expect("the sample is valid");
+    let emitted =
+        floom_dsl::emit(&compiled.document, &floom_dsl::EmitOptions::default()).expect("emits");
+    assert!(
+        emitted.code.contains("CircularProgress::determinate"),
+        "the ring is determinate:\n{}",
+        emitted.code
+    );
+    assert!(
+        emitted.code.contains("CircularProgress::indeterminate"),
+        "the spinning ring is indeterminate:\n{}",
+        emitted.code
+    );
+    assert!(
+        emitted.code.contains("LinearProgress::new"),
+        "the bar is a linear progress:\n{}",
+        emitted.code
+    );
+
+    let crate_dir = scratch_crate("progress", &emitted.code);
+    cargo_check(&crate_dir).unwrap_or_else(|stderr| {
+        panic!("the generated program does not compile:\n{stderr}");
+    });
+}
+
 #[test]
 fn a_program_emitted_against_the_primitives_alone_still_compiles() {
     // The other half of the widget-set choice: an app that depends only on

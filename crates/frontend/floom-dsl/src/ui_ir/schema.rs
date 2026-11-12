@@ -146,6 +146,20 @@ const WIDGET_PROPS: &[(NodeKind, Row)] = &[
     (NodeKind::Progress, row("value", ValueType::Number)),
     (NodeKind::Progress, row("min", ValueType::Number)),
     (NodeKind::Progress, row("max", ValueType::Number)),
+    // The ring and the bar take the same fraction and draw differently
+    // enough that the satellite ships them as separate components; the
+    // vocabulary says the same.
+    (NodeKind::ProgressCircular, row("value", ValueType::Number)),
+    (
+        NodeKind::ProgressCircular,
+        row("indeterminate", ValueType::Bool),
+    ),
+    (NodeKind::ProgressCircular, row("size", ValueType::Number)),
+    (NodeKind::ProgressLinear, row("value", ValueType::Number)),
+    (
+        NodeKind::ProgressLinear,
+        row("indeterminate", ValueType::Bool),
+    ),
     (NodeKind::Select, row("value", ValueType::Text)),
     (NodeKind::Select, row("placeholder", ValueType::Text)),
     (NodeKind::Select, row("disabled", ValueType::Bool)),

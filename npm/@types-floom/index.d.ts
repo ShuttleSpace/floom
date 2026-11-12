@@ -332,6 +332,59 @@ declare namespace Floom {
     max?: number;
     class?: string;
   }
+  export interface ProgressCircularProps {
+    background?: Floom.Color;
+    foreground?: Floom.Color;
+    font_size?: number;
+    opacity?: number;
+    padding?: number;
+    radius?: number;
+    border_width?: number;
+    border_color?: Floom.Color;
+    elevation?: number;
+    width?: number;
+    height?: number;
+    grow?: number;
+    position?: "relative" | "absolute";
+    inset_left?: number;
+    inset_top?: number;
+    inset_right?: number;
+    inset_bottom?: number;
+    axis?: "horizontal" | "vertical";
+    gap?: number;
+    main_align?: "stretch" | "start" | "center" | "end";
+    cross_align?: "stretch" | "start" | "center" | "end";
+    size?: number;
+    value?: number;
+    indeterminate?: boolean;
+    class?: string;
+  }
+  export interface ProgressLinearProps {
+    background?: Floom.Color;
+    foreground?: Floom.Color;
+    font_size?: number;
+    opacity?: number;
+    padding?: number;
+    radius?: number;
+    border_width?: number;
+    border_color?: Floom.Color;
+    elevation?: number;
+    width?: number;
+    height?: number;
+    grow?: number;
+    position?: "relative" | "absolute";
+    inset_left?: number;
+    inset_top?: number;
+    inset_right?: number;
+    inset_bottom?: number;
+    axis?: "horizontal" | "vertical";
+    gap?: number;
+    main_align?: "stretch" | "start" | "center" | "end";
+    cross_align?: "stretch" | "start" | "center" | "end";
+    value?: number;
+    indeterminate?: boolean;
+    class?: string;
+  }
   export interface SelectProps {
     background?: Floom.Color;
     foreground?: Floom.Color;
@@ -819,6 +872,8 @@ declare namespace JSX {
     Switch: Floom.SwitchProps;
     Slider: Floom.SliderProps;
     Progress: Floom.ProgressProps;
+    ProgressCircular: Floom.ProgressCircularProps;
+    ProgressLinear: Floom.ProgressLinearProps;
     Select: Floom.SelectProps;
     TextField: Floom.TextFieldProps;
     Stack: Floom.StackProps;
@@ -852,6 +907,8 @@ declare const Radio: (props: Floom.RadioProps) => JSX.Element;
 declare const Switch: (props: Floom.SwitchProps) => JSX.Element;
 declare const Slider: (props: Floom.SliderProps) => JSX.Element;
 declare const Progress: (props: Floom.ProgressProps) => JSX.Element;
+declare const ProgressCircular: (props: Floom.ProgressCircularProps) => JSX.Element;
+declare const ProgressLinear: (props: Floom.ProgressLinearProps) => JSX.Element;
 declare const Select: (props: Floom.SelectProps) => JSX.Element;
 declare const TextField: (props: Floom.TextFieldProps) => JSX.Element;
 declare const Stack: (props: Floom.StackProps) => JSX.Element;

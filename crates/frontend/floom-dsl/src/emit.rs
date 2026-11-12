@@ -162,8 +162,8 @@ fn header(source: WidgetSource) -> String {
          \x20   Color, InputMode, Insets, NativeCompositionMode, NativeViewKind,\n\
          };\n\
          use floom_widgets::{\n\
-         \x20   Button, Conditional, Container, Divider, Icon, NativeSurface, Progress,\n\
-         \x20   Spacer, Stack, Switch, Text,\n\
+         \x20   Button, CircularProgress, Conditional, Container, Divider, Icon, Indeterminate,\n\
+         \x20   LinearProgress, NativeSurface, Progress, Spacer, Stack, Switch, Text,\n\
          };\n",
     );
     let composites = source.composites();
@@ -250,6 +250,8 @@ fn seat(kind: NodeKind, source: WidgetSource) -> Option<Seat> {
         | NodeKind::Switch
         | NodeKind::Slider
         | NodeKind::Progress
+        | NodeKind::ProgressCircular
+        | NodeKind::ProgressLinear
         | NodeKind::Select
         | NodeKind::TextField
         | NodeKind::Container
@@ -906,33 +908,41 @@ impl<'a> Emitter<'a> {
                 out
             }
             NodeKind::Progress => {
-                // `Progress::determinate` takes a fraction in `0..=1`, while the
-                // IR carries a value in `min..=max`. Reading `value` alone made
-                // a `value=64 min=0 max=100` bar paint full — the domain was
-                // silently thrown away. Normalise here, at compile time for a
-                // literal and at run time for a signal.
-                let min = self.num(node, "min").unwrap_or(0.0);
-                let max = self.num(node, "max").unwrap_or(100.0);
-                let span = if max > min { max - min } else { 1.0 };
-                let value = if self.reactive {
-                    if let Some(read) = self.ref_num(node, "value") {
-                        format!("({read} as f64 - {}) / {}", num_lit(min), num_lit(span))
-                    } else {
-                        match self.num(node, "value") {
-                            Some(value) => num_lit(((value - min) / span).clamp(0.0, 1.0)),
-                            None => "0.0".to_string(),
-                        }
-                    }
-                } else {
-                    match self.num(node, "value") {
-                        Some(value) => num_lit(((value - min) / span).clamp(0.0, 1.0)),
-                        None => "0.0".to_string(),
-                    }
-                };
+                let value = self.progress_fraction(node);
                 let mut out = format!("Progress::determinate({value})");
                 if let Some(disabled) = self.boolean(node, "disabled") {
                     let _ =
                         std::fmt::Write::write_fmt(&mut out, format_args!(".disabled({disabled})"));
+                }
+                out
+            }
+            NodeKind::ProgressCircular => {
+                // The ring takes a fraction in `0..=1`, the same domain the
+                // generic bar is normalised into.
+                let mut out = if self.boolean(node, "indeterminate") == Some(true) {
+                    String::from("CircularProgress::indeterminate()")
+                } else {
+                    let value = self.progress_fraction(node);
+                    format!("CircularProgress::determinate({value})")
+                };
+                if let Some(size) = self.num(node, "size") {
+                    let _ = std::fmt::Write::write_fmt(
+                        &mut out,
+                        format_args!(".size({})", num_lit(size)),
+                    );
+                }
+                out
+            }
+            NodeKind::ProgressLinear => {
+                // The bar takes a percentage in `0..=100`, so the normalised
+                // fraction is scaled on the way in.
+                let value = self.progress_fraction(node);
+                let mut out = format!("LinearProgress::new(({value} * 100.0) as f32)");
+                if self.boolean(node, "indeterminate") == Some(true) {
+                    let _ = std::fmt::Write::write_fmt(
+                        &mut out,
+                        format_args!(".indeterminate_mode(Indeterminate::SlidingSegment)"),
+                    );
                 }
                 out
             }
@@ -1257,6 +1267,27 @@ impl<'a> Emitter<'a> {
         match self.prop(node, name) {
             Some(PropValue::Bool(value)) => Some(*value),
             _ => None,
+        }
+    }
+
+    /// A progress value as a fraction in `0..=1`, as a Rust expression.
+    ///
+    /// `Progress::determinate` takes a fraction, while the IR carries a value
+    /// in `min..=max`. Reading `value` alone made a `value=64 min=0 max=100`
+    /// bar paint full — the domain was silently thrown away. Normalise here,
+    /// at compile time for a literal and at run time for a signal.
+    fn progress_fraction(&mut self, node: &UiNode) -> String {
+        let min = self.num(node, "min").unwrap_or(0.0);
+        let max = self.num(node, "max").unwrap_or(100.0);
+        let span = if max > min { max - min } else { 1.0 };
+        if self.reactive {
+            if let Some(read) = self.ref_num(node, "value") {
+                return format!("({read} as f64 - {}) / {}", num_lit(min), num_lit(span));
+            }
+        }
+        match self.num(node, "value") {
+            Some(value) => num_lit(((value - min) / span).clamp(0.0, 1.0)),
+            None => "0.0".to_string(),
         }
     }
 

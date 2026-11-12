@@ -43,6 +43,14 @@ pub enum NodeKind {
     Switch,
     Slider,
     Progress,
+    /// A determinate or indeterminate ring.
+    ///
+    /// The satellite ships the circular indicator as its own component, and it
+    /// is not the generic bar: a ring and a bar take the same fraction and
+    /// draw differently enough that one kind cannot stand for both.
+    ProgressCircular,
+    /// A determinate or indeterminate bar.
+    ProgressLinear,
     Select,
     TextField,
     // Composition
@@ -76,6 +84,8 @@ impl NodeKind {
         Self::Switch,
         Self::Slider,
         Self::Progress,
+        Self::ProgressCircular,
+        Self::ProgressLinear,
         Self::Select,
         Self::TextField,
         Self::Stack,
@@ -356,6 +366,8 @@ impl NodeKind {
             Self::Switch => "switch",
             Self::Slider => "slider",
             Self::Progress => "progress",
+            Self::ProgressCircular => "progress_circular",
+            Self::ProgressLinear => "progress_linear",
             Self::Select => "select",
             Self::TextField => "text_field",
             Self::Stack => "stack",
@@ -393,6 +405,8 @@ impl NodeKind {
             "switch" => Self::Switch,
             "slider" => Self::Slider,
             "progress" => Self::Progress,
+            "progresscircular" => Self::ProgressCircular,
+            "progresslinear" => Self::ProgressLinear,
             "select" => Self::Select,
             "textfield" | "input" => Self::TextField,
             "stack" => Self::Stack,
