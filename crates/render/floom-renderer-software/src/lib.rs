@@ -1310,6 +1310,16 @@ impl SoftwareRenderer {
         damage: &DamageRegion,
         resources: Option<&ResourceRegistry>,
     ) {
+        // A full-frame damage clears the buffer itself, so it is checked
+        // first: the `needs_full_clear` memset below would be a second pass
+        // over the whole buffer for nothing, and at 800x600 that is 1.9 MB of
+        // memory traffic a frame does not need.
+        if damage.is_full_frame() {
+            self.pixels.fill(0);
+            self.needs_full_clear = false;
+            self.draw_all(scene, resources, None);
+            return;
+        }
         if self.needs_full_clear {
             // After creation/resize the buffer holds nothing trustworthy.
             self.pixels.fill(0);
@@ -1320,11 +1330,6 @@ impl SoftwareRenderer {
         if damage.is_empty() {
             // Nothing changed since the last present: leave the buffer alone.
             self.damage_skips += 1;
-            return;
-        }
-        if damage.is_full_frame() {
-            self.pixels.fill(0);
-            self.draw_all(scene, resources, None);
             return;
         }
         for region in damage.rects() {

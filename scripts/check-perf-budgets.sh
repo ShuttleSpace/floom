@@ -38,7 +38,13 @@ cd "$(dirname "$0")/.."
 
 BASELINE="docs/superpowers/benchmarks/floom-2-budget-baseline.json"
 UPDATE=0
-RUNS=2
+# Three runs, not two. The statistic is the *minimum* median over the runs,
+# because contention and thermal state only ever make a measurement slower --
+# but a minimum over two samples is still the minimum of two, and on a shared
+# host a session can be slow throughout: the same binary measured 1.996 ms
+# and then 2.440 ms in consecutive runs. A third sample is what makes the
+# minimum a clean measurement rather than the best of two bad ones.
+RUNS=3
 while [ $# -gt 0 ]; do
     case "$1" in
         --update) UPDATE=1; shift ;;

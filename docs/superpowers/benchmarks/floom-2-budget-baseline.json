@@ -9,69 +9,69 @@
       "id": "visible_range/1000",
       "package": "floom-virtual",
       "bench": "scroll",
-      "median_ns": 45.57385487632928,
-      "observed_spread_pct": 0.8
+      "median_ns": 45.68072453237535,
+      "observed_spread_pct": 0.3
     },
     {
       "id": "visible_range/10000",
       "package": "floom-virtual",
       "bench": "scroll",
-      "median_ns": 448.4262884423638,
-      "observed_spread_pct": 12.1
+      "median_ns": 447.27695841921104,
+      "observed_spread_pct": 0.5
     },
     {
       "id": "visible_range/100000",
       "package": "floom-virtual",
       "bench": "scroll",
-      "median_ns": 7927.743746983702,
-      "observed_spread_pct": 14.3
+      "median_ns": 7934.677561692417,
+      "observed_spread_pct": 0.7
     },
     {
       "id": "update_reuse/scroll_100k_recycle",
       "package": "floom-virtual",
       "bench": "scroll",
-      "median_ns": 1226444.4405354918,
+      "median_ns": 1220834.495522388,
       "comment": "The bench with no headroom: +9.9% against the pre-2.0 figure when this budget was written. A real regression here is the thing the budget exists to catch.",
-      "observed_spread_pct": 14.5
+      "observed_spread_pct": 1.7
     },
     {
       "id": "native_pool_10k_churn",
       "package": "floom-native",
       "bench": "rows",
-      "median_ns": 604032.357442348,
-      "observed_spread_pct": 19.2
+      "median_ns": 594705.2193274205,
+      "observed_spread_pct": 0.7
     },
     {
       "id": "self_draw/1000",
       "package": "floom-renderer-software",
       "bench": "self_draw",
-      "median_ns": 8831525.0,
+      "median_ns": 8365392.333333333,
       "comment": "MOTION-GAP A9: a 1000-segment self-drawn chart, full software frame (encode + flatten + stroke + scanline rasterise). This is the worst case the flat-scene walk absorbs with no damage to skip.",
-      "observed_spread_pct": 29.8
+      "observed_spread_pct": 0.9
     },
     {
       "id": "self_draw/10000",
       "package": "floom-renderer-software",
       "bench": "self_draw",
-      "median_ns": 85170313.0,
+      "median_ns": 83858791.5,
       "comment": "MOTION-GAP A9: the 10k-segment extreme. Scales linearly with the 1k figure (~8.4 us/segment), which is the shape evidence that nothing per-node is superlinear.",
-      "observed_spread_pct": 37.3
+      "observed_spread_pct": 3.2
     },
     {
       "id": "self_draw/circles_1k",
       "package": "floom-renderer-software",
       "bench": "self_draw",
-      "median_ns": 2078421.8958333335,
+      "median_ns": 1996379.1600000001,
       "comment": "MOTION-GAP A9: 1000 filled discs, area-dominated rasterisation, ~2 us per disc at r=6.",
-      "observed_spread_pct": 25.0
+      "observed_spread_pct": 3.6
     },
     {
       "id": "self_draw/rounded_rects_1k",
       "package": "floom-renderer-software",
       "bench": "self_draw",
-      "median_ns": 8580909.833333334,
+      "median_ns": 8517649.25,
       "comment": "MOTION-GAP A9: 1000 filled rounded rects (40x24, r=8) \u2014 the shape a card, button or list row is. Each is a small filled path; heavier than circles_1k because the rounded corners flatten to more segments.",
-      "observed_spread_pct": 25.7
+      "observed_spread_pct": 1.7
     }
   ]
 }

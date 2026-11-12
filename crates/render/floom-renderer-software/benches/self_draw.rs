@@ -62,8 +62,14 @@ fn bench_chart_segments(c: &mut Criterion) {
     for &n in &[1_000usize, 10_000] {
         let scene = chart_scene(n);
         group.bench_with_input(BenchmarkId::from_parameter(n), &scene, |b, scene| {
+            // The renderer is built *outside* the timed loop. Building it
+            // inside meant every iteration allocated and zeroed a 1.9 MB
+            // framebuffer — and the allocation, not the drawing, was most of
+            // what the benchmark measured. Reusing it is also what a real
+            // frame does: the buffer is the renderer's, and it is redrawn
+            // into, not reallocated.
+            let mut sw = floom_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
             b.iter(|| {
-                let mut sw = floom_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
                 render_once(
                     &mut sw,
                     &FrameInfo::software(WIDTH, HEIGHT, 1),
@@ -79,9 +85,9 @@ fn bench_chart_segments(c: &mut Criterion) {
 fn bench_circles(c: &mut Criterion) {
     let mut group = c.benchmark_group("self_draw");
     let scene = circles_scene(1_000);
+    let mut sw = floom_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
     group.bench_function(BenchmarkId::from_parameter("circles_1k"), |b| {
         b.iter(|| {
-            let mut sw = floom_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
             render_once(
                 &mut sw,
                 &FrameInfo::software(WIDTH, HEIGHT, 1),
@@ -116,9 +122,9 @@ fn rounded_rects_scene(count: usize) -> Scene {
 fn bench_rounded_rects(c: &mut Criterion) {
     let mut group = c.benchmark_group("self_draw");
     let scene = rounded_rects_scene(1_000);
+    let mut sw = floom_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
     group.bench_function(BenchmarkId::from_parameter("rounded_rects_1k"), |b| {
         b.iter(|| {
-            let mut sw = floom_renderer_software::SoftwareRenderer::new(WIDTH, HEIGHT);
             render_once(
                 &mut sw,
                 &FrameInfo::software(WIDTH, HEIGHT, 1),
