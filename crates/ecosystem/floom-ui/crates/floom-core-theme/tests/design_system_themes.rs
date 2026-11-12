@@ -61,6 +61,41 @@ fn multi_theme_reads_follow_the_process_global_not_its_own_argument() {
     );
 }
 
+/// A pinned theme reads its own design system regardless of the global.
+#[test]
+fn a_pinned_theme_ignores_the_process_global() {
+    design_system_signal().set(DesignSystem::Material);
+    let pinned_to_cupertino = MultiTheme::pinned(DesignSystem::Cupertino);
+
+    design_system_signal().set(DesignSystem::Material);
+    let while_global_is_material = pinned_to_cupertino.colors().surface_variant;
+
+    design_system_signal().set(DesignSystem::Fluent);
+    let while_global_is_fluent = pinned_to_cupertino.colors().surface_variant;
+
+    assert_eq!(
+        while_global_is_material,
+        Color::rgb(242, 242, 247),
+        "a Cupertino-pinned theme must stay Cupertino while the global says Material"
+    );
+    assert_eq!(
+        while_global_is_fluent,
+        Color::rgb(242, 242, 247),
+        "and must stay Cupertino while the global says Fluent"
+    );
+}
+
+/// Component tokens move with the pinned design system too.
+#[test]
+fn component_tokens_follow_a_pinned_theme_too() {
+    let pinned = MultiTheme::pinned(DesignSystem::Cupertino);
+    design_system_signal().set(DesignSystem::Fluent);
+    match pinned.component(ComponentId::Button) {
+        ComponentTokens::Button(button) => assert_eq!(button.height, 44.0),
+        _ => unreachable!("button tokens expected"),
+    }
+}
+
 /// Component tokens move the same way, which is the half a counter cares about.
 #[test]
 fn component_tokens_follow_the_process_global_too() {

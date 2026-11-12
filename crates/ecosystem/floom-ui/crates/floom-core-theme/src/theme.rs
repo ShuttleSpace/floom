@@ -491,6 +491,14 @@ fn text_style(font_size: f32, font_weight: FontWeight) -> TextStyle {
 /// running app can replace it via the global theme signal).
 #[derive(Debug, Clone)]
 pub struct MultiTheme {
+    /// The Design System this theme is pinned to, when it is pinned.
+    ///
+    /// `None` is the ordinary case: the theme follows the process-global
+    /// design system, which is how a running app switches every component at
+    /// once. `Some` pins this one theme to one Design System regardless of
+    /// the global — what a gallery needs to show two design systems side by
+    /// side in the same process.
+    pinned: Option<DesignSystem>,
     material: MaterialTheme,
     cupertino: CupertinoTheme,
     fluent: FluentTheme,
@@ -501,11 +509,32 @@ impl MultiTheme {
     /// System. Used when an app switches DS at runtime.
     pub fn new_for(ds: DesignSystem) -> Self {
         Self {
+            pinned: None,
             material: MaterialTheme::new(),
             cupertino: CupertinoTheme::new(),
             fluent: FluentTheme::new(),
         }
         .activate(ds)
+    }
+
+    /// Build a `MultiTheme` pinned to one Design System.
+    ///
+    /// Unlike [`Self::new_for`], this theme does **not** follow the
+    /// process-global design system: it reads the given Design System's tokens
+    /// whatever the global says. The global still decides dark mode, because
+    /// dark mode is an application-wide setting rather than a palette choice.
+    ///
+    /// This is additive. The kits that build their own theme with `new_for`
+    /// keep following the global exactly as before, so an app can still switch
+    /// every component at runtime; a theme that wants to be *one* design
+    /// system in a process showing several asks for it by name.
+    pub fn pinned(ds: DesignSystem) -> Self {
+        Self {
+            pinned: Some(ds),
+            material: MaterialTheme::new(),
+            cupertino: CupertinoTheme::new(),
+            fluent: FluentTheme::new(),
+        }
     }
 
     /// Record the active Design System. (The active variant is selected at read
@@ -516,7 +545,10 @@ impl MultiTheme {
     }
 
     fn ds(&self) -> DesignSystem {
-        current_design_system()
+        match self.pinned {
+            Some(ds) => ds,
+            None => current_design_system(),
+        }
     }
 }
 
