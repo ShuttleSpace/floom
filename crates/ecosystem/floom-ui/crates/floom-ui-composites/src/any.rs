@@ -119,4 +119,11 @@ impl_widget_any!(
     // It was missing here for the same reason `Counter` was -- it could be
     // built and returned from `view()`, and then not mounted.
     crate::icon_button::IconButton,
+    // The bottom navigation bar publishes nothing of its own: the
+    // destinations' `Pressable`s are what speak. It was missing here -- the
+    // same gap the others had -- so it could be built, returned from `view()`,
+    // and then not mounted. The gallery found it, because it has to mount every
+    // component it shows. (`TabsBar` and `WindowViewer` already implement
+    // `WidgetAny` by hand in their own modules, so they are not listed here.)
+    crate::bottom_navigation::BottomNavigationBar,
 );

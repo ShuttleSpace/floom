@@ -14,11 +14,21 @@
 use floom_core::WidgetAny;
 use floom_widgets::VectorIcon;
 
-use floom_ui_composites::{Badge, Chip, Counter, IconButton, Tooltip};
+use floom_ui_composites::{Badge, BottomNavigationBar, Chip, Counter, IconButton, Tooltip};
 
 /// A counter, boxed the way a caller boxes a component.
 fn boxed_counter() -> Box<dyn WidgetAny> {
     Box::new(Counter::new(1))
+}
+
+/// A bottom navigation bar, boxed the way a caller boxes a component.
+///
+/// `BottomNavigationBar` was the last of the decorative composites without a
+/// `WidgetAny` impl: it could be built, returned from `view()`, and then not
+/// mounted. The gallery found it, because it has to mount every component; this
+/// test holds the gap closed.
+fn boxed_bottom_navigation() -> Box<dyn WidgetAny> {
+    Box::new(BottomNavigationBar::new())
 }
 
 /// An icon button, boxed the way a caller boxes a component.
@@ -86,5 +96,17 @@ fn a_tooltip_can_be_boxed_as_a_widget() {
     assert!(
         widget.as_any().downcast_ref::<Tooltip>().is_some(),
         "the boxed tooltip reads back as a tooltip"
+    );
+}
+
+#[test]
+fn a_bottom_navigation_bar_can_be_boxed_as_a_widget() {
+    let widget = boxed_bottom_navigation();
+    assert!(
+        widget
+            .as_any()
+            .downcast_ref::<BottomNavigationBar>()
+            .is_some(),
+        "the boxed bottom navigation bar reads back as a bottom navigation bar"
     );
 }
