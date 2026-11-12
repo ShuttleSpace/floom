@@ -81,6 +81,19 @@ const DATA: &[&str] = &[
     "VirtualScroller",
 ];
 
+/// The components of the Feedback category, by the name a reader sees.
+const FEEDBACK: &[&str] = &[
+    "Alert",
+    "Banner",
+    "Dialog",
+    "EmptyState",
+    "Menu",
+    "Overlay",
+    "Sheet",
+    "Snackbar",
+    "Tooltip",
+];
+
 /// The components that fire no event at all.
 ///
 /// A button group arranges other buttons; a list subheader is a heading; a
@@ -106,7 +119,18 @@ const SILENT: &[&str] = &[
     "Table",
     "Text",
     "Timeline",
+    // Feedback
+    "EmptyState",
+    "Sheet",
+    "Tooltip",
 ];
+
+/// The components that are overlays.
+///
+/// An overlay that is not revealed paints nothing, which would make a
+/// headless "it painted" assertion vacuous. So each of these pages has to
+/// say how it is revealed.
+const OVERLAYS: &[&str] = &["Dialog", "Menu", "Overlay", "Sheet", "Snackbar", "Tooltip"];
 
 /// Every component in a category shows at least two samples.
 fn assert_two_samples_each(names: &[&str]) {
@@ -194,4 +218,30 @@ fn every_data_display_component_states_what_it_does() {
 #[test]
 fn every_data_display_page_mounts_and_paints() {
     assert_mounts_and_paints(DATA);
+}
+
+#[test]
+fn every_feedback_component_has_at_least_two_samples() {
+    assert_two_samples_each(FEEDBACK);
+}
+
+#[test]
+fn every_feedback_component_states_what_it_does() {
+    assert_states_what_it_does(FEEDBACK);
+}
+
+#[test]
+fn every_feedback_page_mounts_and_paints() {
+    assert_mounts_and_paints(FEEDBACK);
+}
+
+#[test]
+fn every_overlay_page_says_how_it_is_revealed() {
+    for name in OVERLAYS {
+        let page = registry::page_named(name).expect("page exists");
+        assert!(
+            page.samples.iter().any(|sample| sample.note.is_some()),
+            "{name} is an overlay, and says nothing about how it is revealed"
+        );
+    }
 }
