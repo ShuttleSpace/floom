@@ -98,6 +98,11 @@ impl_widget_any_labelled!(
     crate::slider::Slider,
     crate::tabs::Tabs,
     crate::text_field::TextField,
+    // The tooltip names itself once its bubble is up: until then it says
+    // nothing, because there is nothing to say. It was missing from this
+    // list, which meant it could be built, returned from `view()`, and then
+    // not mounted.
+    crate::tooltip::Tooltip,
 );
 
 // The leaves and rows are structural: they exist so a parent can hand the host

@@ -14,7 +14,7 @@
 use floom_core::WidgetAny;
 use floom_widgets::VectorIcon;
 
-use floom_ui_composites::{Badge, Chip, Counter, IconButton};
+use floom_ui_composites::{Badge, Chip, Counter, IconButton, Tooltip};
 
 /// A counter, boxed the way a caller boxes a component.
 fn boxed_counter() -> Box<dyn WidgetAny> {
@@ -77,5 +77,14 @@ fn a_chip_can_be_boxed_as_a_widget() {
     assert!(
         widget.as_any().downcast_ref::<Chip>().is_some(),
         "the boxed chip reads back as a chip"
+    );
+}
+
+#[test]
+fn a_tooltip_can_be_boxed_as_a_widget() {
+    let widget: Box<dyn WidgetAny> = Box::new(Tooltip::new());
+    assert!(
+        widget.as_any().downcast_ref::<Tooltip>().is_some(),
+        "the boxed tooltip reads back as a tooltip"
     );
 }
