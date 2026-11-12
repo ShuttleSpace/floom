@@ -1,0 +1,292 @@
+#!/usr/bin/env python3
+"""Generate the floom-demo crate from the floom-ui satellite.
+
+The gallery shows every component of the `floom-ui` satellite in all three of
+its design systems, so it needs a path dependency on every kit crate and a
+type alias for every component in each design system. Both lists are derived
+from the satellite rather than written by hand: a component added to the
+satellite should appear in the gallery without anyone editing a manifest.
+
+Three files are generated:
+
+    examples/floom-demo/Cargo.toml        the manifest and its path deps
+    examples/floom-demo/src/ds.rs         the per-design-system alias modules
+    examples/floom-demo/src/props_sources.rs  the props sources the tables parse
+
+Run it from anywhere:
+
+    python3 examples/floom-demo/tools/gen.py
+
+It is idempotent: running it twice changes nothing.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
+SATELLITE = os.path.join(REPO, "crates", "ecosystem", "floom-ui", "crates")
+PROPS_DIR = os.path.join(SATELLITE, "floom-core-theme", "src", "props")
+DEMO = os.path.join(REPO, "examples", "floom-demo")
+
+DESIGN_SYSTEMS = ("material", "cupertino", "fluent")
+
+# The design system's own prefix on a kit directory: `md-`, `cupertino-`,
+# `fluent-`. The part after the prefix is the component's name.
+PREFIX = {"material": "md-", "cupertino": "cupertino-", "fluent": "fluent-"}
+
+
+def fail(message: str) -> "None":
+    print(f"gen.py: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def brace_block(source: str, open_brace: int) -> str:
+    """The text between the brace at `open_brace` and its match."""
+    depth = 0
+    for index in range(open_brace, len(source)):
+        char = source[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return source[open_brace : index + 1]
+    return source[open_brace:]
+
+
+def main_type(path: str) -> str:
+    """The one public type in a kit crate a component is built from.
+
+    A kit crate holds the component type and, usually, a companion `…Style`
+    type. The component is the one whose `impl` block offers `with_theme` --
+    the hook that gives a widget a specific theme -- so the scan looks for
+    exactly that.
+    """
+    source = open(path, encoding="utf-8").read()
+    found = []
+    for match in re.finditer(r"impl\s+(\w+)\s*\{", source):
+        if "pub fn with_theme" in brace_block(source, match.end() - 1):
+            found.append(match.group(1))
+    found = sorted(set(found))
+    if len(found) != 1:
+        fail(
+            f"{path}: expected exactly one type with `with_theme`, found {found}"
+        )
+    return found[0]
+
+
+def package_name(path: str) -> str:
+    """The package name declared by a kit crate's manifest."""
+    manifest = os.path.join(path, "Cargo.toml")
+    for line in open(manifest, encoding="utf-8"):
+        match = re.match(r'^name\s*=\s*"([^"]+)"', line.strip())
+        if match:
+            return match.group(1)
+    fail(f"{manifest}: no package name")
+
+
+def alias_name(component: str) -> str:
+    """`text-field` -> `TextField`, `progress_linear` -> `ProgressLinear`."""
+    return "".join(part.capitalize() for part in re.split(r"[-_]", component))
+
+
+def scan_kits() -> dict:
+    """Every kit crate of every design system, keyed by component name.
+
+    The component type is found later, for the components every design system
+    shares: a crate that exists in only two of the three is not a component
+    the gallery can show, and one of them -- `cupertino-icon-paths` -- is a
+    crate of icon path data rather than a component at all.
+    """
+    kits: dict = {}
+    for system in DESIGN_SYSTEMS:
+        root = os.path.join(SATELLITE, system)
+        if not os.path.isdir(root):
+            fail(f"no {system} directory under {SATELLITE}")
+        found = {}
+        for entry in sorted(os.listdir(root)):
+            crate = os.path.join(root, entry)
+            if not os.path.isfile(os.path.join(crate, "src", "lib.rs")):
+                continue  # a data directory, not a crate
+            prefix = PREFIX[system]
+            if not entry.startswith(prefix):
+                fail(f"{crate}: does not start with {prefix!r}")
+            component = entry[len(prefix) :]
+            found[component] = {
+                "dir": crate,
+                "package": package_name(crate),
+            }
+        kits[system] = found
+    return kits
+
+
+def rust_path(package: str) -> str:
+    return package.replace("-", "_")
+
+
+def write(path: str, text: str) -> None:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(text)
+
+
+def emit_cargo_toml(kits: dict, components: list, deps: list) -> None:
+    lines = [
+        "# Generated by examples/floom-demo/tools/gen.py -- do not edit by hand.",
+        "# Run `python3 examples/floom-demo/tools/gen.py` to regenerate.",
+        "",
+        "[package]",
+        'name = "floom-demo"',
+        "version.workspace = true",
+        "edition.workspace = true",
+        "license.workspace = true",
+        "publish = false",
+        'description = "A runnable gallery of every floom-ui component, in all three design systems"',
+        "",
+        "[lib]",
+        'name = "floom_demo"',
+        'path = "src/lib.rs"',
+        "",
+        "[[bin]]",
+        'name = "floom-demo"',
+        'path = "src/main.rs"',
+        "",
+        "[dependencies]",
+        "floom = { path = \"../../crates/app/floom\", version = \"0.2.0\", features = [",
+        '    "desktop",',
+        '    "renderer-gpu",',
+        '    "devtools",',
+        "] }",
+        'floom-widgets = { path = "../../crates/widgets/floom-widgets", version = "0.2.0" }',
+        'floom-signal = { path = "../../crates/core/floom-signal", version = "0.2.0" }',
+        'floom-core-theme = { path = "../../crates/ecosystem/floom-ui/crates/floom-core-theme" }',
+        "",
+        "# The kit crates: every component of the floom-ui satellite, in every",
+        "# design system. Path deps, because the satellite is a separate",
+        "# workspace and the gallery needs the components, not the workspace.",
+    ]
+    for package, path in deps:
+        lines.append(f'{package} = {{ path = "{path}" }}')
+    lines += [
+        "",
+        "[dev-dependencies]",
+        'floom-testkit = { path = "../../crates/devtools/floom-testkit", version = "0.2.0" }',
+        "",
+    ]
+    write(os.path.join(DEMO, "Cargo.toml"), "\n".join(lines))
+
+
+def emit_ds_rs(kits: dict, components: list) -> None:
+    lines = [
+        "//! The per-design-system component types.",
+        "//!",
+        "//! Generated by examples/floom-demo/tools/gen.py -- do not edit by hand.",
+        "//!",
+        "//! Each design system has its own type for the same component --",
+        "//! `MdButton`, `CupertinoButton`, `FluentButton` -- with the same",
+        "//! builder methods and the same entry point. Aliasing them under one",
+        "//! name per design system lets a gallery page be written once.",
+        "",
+    ]
+    for system in DESIGN_SYSTEMS:
+        lines += [
+            f"/// The {system} components.",
+            f"pub mod {system} {{",
+        ]
+        for component in components:
+            kit = kits[system][component]
+            lines.append(
+                f"    pub use {rust_path(kit['package'])}::{kit['type']} as {alias_name(component)};"
+            )
+        names = ", ".join(f'"{alias_name(c)}"' for c in components)
+        lines += [
+            "",
+            "    /// Every component this design system provides.",
+            f"    pub const COMPONENTS: &[&str] = &[{names}];",
+            "}",
+            "",
+        ]
+    write(os.path.join(DEMO, "src", "ds.rs"), "\n".join(lines))
+
+
+def emit_props_sources(components: list, props_modules: list) -> None:
+    lines = [
+        "//! The props sources of the `floom-core-theme` crate.",
+        "//!",
+        "//! Generated by examples/floom-demo/tools/gen.py -- do not edit by hand.",
+        "//!",
+        "//! The gallery's props tables are parsed out of these at run time, so a",
+        "//! table cannot drift from the struct it describes.",
+        "",
+        "/// Each component with the props module that describes it.",
+        "pub const COMPONENT_PROPS: &[(&str, &str)] = &[",
+    ]
+    for component, module in zip(components, props_modules):
+        if module is None:
+            continue
+        lines.append(f'    ("{component}", "{module}"),')
+    lines += ["];", ""]
+    for module in props_modules:
+        if module is None:
+            continue
+        lines += [
+            f"/// The source of the `{module}` props module.",
+            "pub const "
+            f"{module.upper()}_PROPS: &str = include_str!(",
+            '    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/'
+            f'{module}.rs"',
+            ");",
+            "",
+        ]
+    write(os.path.join(DEMO, "src", "props_sources.rs"), "\n".join(lines))
+
+
+def main() -> None:
+    kits = scan_kits()
+    component_sets = [set(kits[system]) for system in DESIGN_SYSTEMS]
+    shared = set.intersection(*component_sets)
+    components = sorted(shared)
+
+    for system in DESIGN_SYSTEMS:
+        only_here = sorted(set(kits[system]) - shared)
+        if only_here:
+            print(
+                f"gen.py: note: {system} has {len(only_here)} crate(s) with no "
+                f"counterpart in every design system, skipped: {only_here}"
+            )
+
+    for system in DESIGN_SYSTEMS:
+        for component in components:
+            kit = kits[system][component]
+            kit["type"] = main_type(os.path.join(kit["dir"], "src", "lib.rs"))
+
+    props_modules = []
+    for component in components:
+        module = component.replace("-", "_")
+        if not os.path.isfile(os.path.join(PROPS_DIR, f"{module}.rs")):
+            module = None
+        props_modules.append(module)
+
+    deps = []
+    for component in components:
+        for system in DESIGN_SYSTEMS:
+            kit = kits[system][component]
+            relative = os.path.relpath(kit["dir"], DEMO)
+            deps.append((kit["package"], relative.replace(os.sep, "/")))
+
+    emit_cargo_toml(kits, components, deps)
+    emit_ds_rs(kits, components)
+    emit_props_sources(components, props_modules)
+
+    print(
+        f"{len(components)} components, {len(deps)} kit deps, "
+        f"{sum(1 for m in props_modules if m)} props modules"
+    )
+
+
+if __name__ == "__main__":
+    main()
