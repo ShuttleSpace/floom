@@ -4,7 +4,7 @@
 //! the rail shows them, so the order of the pages here is the order a reader
 //! meets them.
 
-use crate::pages::{actions, data, feedback, forms, layout, motion, ComponentPage};
+use crate::pages::{ComponentPage, actions, data, feedback, forms, layout, motion};
 
 /// Every page of the gallery, grouped by category.
 pub fn pages() -> Vec<ComponentPage> {

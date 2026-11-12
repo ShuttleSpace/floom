@@ -47,6 +47,8 @@ fn the_aliases_are_camel_case_component_names() {
     assert!(ds::material::COMPONENTS.contains(&"TextField"));
     assert!(ds::material::COMPONENTS.contains(&"RadioGroup"));
     assert!(ds::material::COMPONENTS.contains(&"FloatingActionButton"));
-    assert!(ds::material::COMPONENTS.contains(&"OTPInput")
-        || ds::material::COMPONENTS.contains(&"OtpInput"));
+    assert!(
+        ds::material::COMPONENTS.contains(&"OTPInput")
+            || ds::material::COMPONENTS.contains(&"OtpInput")
+    );
 }

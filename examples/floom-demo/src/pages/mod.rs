@@ -15,7 +15,7 @@ pub mod forms;
 pub mod layout;
 pub mod motion;
 
-use floom::floom_core::Child;
+use floom::floom_core::WidgetAny;
 
 use crate::api::ApiDoc;
 
@@ -79,16 +79,18 @@ impl Category {
 /// The builder is a plain function so a page can be built from a table; the
 /// state a sample needs is created inside it and lives as long as the child
 /// closures it hands to the host.
+#[derive(Clone)]
 pub struct Sample {
     /// What the sample is called.
     pub title: &'static str,
     /// A caveat worth reading next to the sample.
     pub note: Option<&'static str>,
     /// The widget tree the sample shows.
-    pub build: fn() -> Child,
+    pub build: fn() -> Box<dyn WidgetAny>,
 }
 
 /// One component's page.
+#[derive(Clone)]
 pub struct ComponentPage {
     /// The key the satellite names this component after -- `text-field`,
     /// `datatable`. This is what a page module looks its component up by.
@@ -105,15 +107,26 @@ pub struct ComponentPage {
     pub samples: Vec<Sample>,
 }
 
+impl ComponentPage {
+    /// A shell showing the catalogue with this page selected.
+    ///
+    /// The page finds itself in the catalogue by name, so a test can show one
+    /// page without the test having to know its index.
+    pub fn build_shell(&self) -> crate::shell::GalleryShell {
+        let pages = crate::registry::pages();
+        let selected = pages
+            .iter()
+            .position(|page| page.name == self.name)
+            .unwrap_or(0);
+        crate::shell::GalleryShell::showing(pages, selected)
+    }
+}
+
 /// A page for a component that has no samples yet.
 ///
 /// The category modules build their pages through this until each component's
 /// samples are written.
-pub fn page(
-    component: &'static str,
-    name: &'static str,
-    category: Category,
-) -> ComponentPage {
+pub fn page(component: &'static str, name: &'static str, category: Category) -> ComponentPage {
     ComponentPage {
         component,
         name,

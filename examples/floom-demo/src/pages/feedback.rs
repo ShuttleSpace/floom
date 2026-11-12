@@ -1,6 +1,6 @@
 //! The components that tell a reader something happened.
 
-use crate::pages::{page, Category, ComponentPage};
+use crate::pages::{Category, ComponentPage, page};
 
 /// This category's components, as the key the satellite names them after and
 /// the name a reader sees.

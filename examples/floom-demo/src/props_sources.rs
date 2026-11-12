@@ -106,14 +106,12 @@ pub const COMPONENT_PROPS: &[(&str, &str)] = &[
 ];
 
 /// The source of the `alert` props module.
-pub const ALERT_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/alert.rs"
-);
+pub const ALERT_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/alert.rs");
 
 /// The source of the `app_bar` props module.
-pub const APP_BAR_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/app_bar.rs"
-);
+pub const APP_BAR_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/app_bar.rs");
 
 /// The source of the `autocomplete` props module.
 pub const AUTOCOMPLETE_PROPS: &str = include_str!(
@@ -121,19 +119,16 @@ pub const AUTOCOMPLETE_PROPS: &str = include_str!(
 );
 
 /// The source of the `avatar` props module.
-pub const AVATAR_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/avatar.rs"
-);
+pub const AVATAR_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/avatar.rs");
 
 /// The source of the `badge` props module.
-pub const BADGE_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/badge.rs"
-);
+pub const BADGE_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/badge.rs");
 
 /// The source of the `banner` props module.
-pub const BANNER_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/banner.rs"
-);
+pub const BANNER_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/banner.rs");
 
 /// The source of the `bottom_navigation` props module.
 pub const BOTTOM_NAVIGATION_PROPS: &str = include_str!(
@@ -146,9 +141,8 @@ pub const BREADCRUMBS_PROPS: &str = include_str!(
 );
 
 /// The source of the `button` props module.
-pub const BUTTON_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/button.rs"
-);
+pub const BUTTON_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/button.rs");
 
 /// The source of the `button_group` props module.
 pub const BUTTON_GROUP_PROPS: &str = include_str!(
@@ -161,9 +155,8 @@ pub const CALENDAR_PROPS: &str = include_str!(
 );
 
 /// The source of the `card` props module.
-pub const CARD_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/card.rs"
-);
+pub const CARD_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/card.rs");
 
 /// The source of the `carousel` props module.
 pub const CAROUSEL_PROPS: &str = include_str!(
@@ -181,9 +174,8 @@ pub const CHECKBOX_BTN_PROPS: &str = include_str!(
 );
 
 /// The source of the `chip` props module.
-pub const CHIP_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/chip.rs"
-);
+pub const CHIP_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/chip.rs");
 
 /// The source of the `chip_group` props module.
 pub const CHIP_GROUP_PROPS: &str = include_str!(
@@ -191,9 +183,8 @@ pub const CHIP_GROUP_PROPS: &str = include_str!(
 );
 
 /// The source of the `code` props module.
-pub const CODE_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/code.rs"
-);
+pub const CODE_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/code.rs");
 
 /// The source of the `color_picker` props module.
 pub const COLOR_PICKER_PROPS: &str = include_str!(
@@ -216,9 +207,8 @@ pub const CONTAINER_PROPS: &str = include_str!(
 );
 
 /// The source of the `counter` props module.
-pub const COUNTER_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/counter.rs"
-);
+pub const COUNTER_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/counter.rs");
 
 /// The source of the `data_iterator` props module.
 pub const DATA_ITERATOR_PROPS: &str = include_str!(
@@ -246,9 +236,8 @@ pub const DEFAULTS_PROVIDER_PROPS: &str = include_str!(
 );
 
 /// The source of the `dialog` props module.
-pub const DIALOG_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/dialog.rs"
-);
+pub const DIALOG_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/dialog.rs");
 
 /// The source of the `display_provider` props module.
 pub const DISPLAY_PROVIDER_PROPS: &str = include_str!(
@@ -256,9 +245,8 @@ pub const DISPLAY_PROVIDER_PROPS: &str = include_str!(
 );
 
 /// The source of the `divider` props module.
-pub const DIVIDER_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/divider.rs"
-);
+pub const DIVIDER_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/divider.rs");
 
 /// The source of the `empty_state` props module.
 pub const EMPTY_STATE_PROPS: &str = include_str!(
@@ -291,29 +279,24 @@ pub const FLOATING_ACTION_BUTTON_PROPS: &str = include_str!(
 );
 
 /// The source of the `footer` props module.
-pub const FOOTER_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/footer.rs"
-);
+pub const FOOTER_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/footer.rs");
 
 /// The source of the `form` props module.
-pub const FORM_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/form.rs"
-);
+pub const FORM_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/form.rs");
 
 /// The source of the `grid` props module.
-pub const GRID_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/grid.rs"
-);
+pub const GRID_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/grid.rs");
 
 /// The source of the `hover` props module.
-pub const HOVER_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/hover.rs"
-);
+pub const HOVER_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/hover.rs");
 
 /// The source of the `icon` props module.
-pub const ICON_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/icon.rs"
-);
+pub const ICON_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/icon.rs");
 
 /// The source of the `icon_button` props module.
 pub const ICON_BUTTON_PROPS: &str = include_str!(
@@ -326,9 +309,8 @@ pub const ICONS_PROVIDER_PROPS: &str = include_str!(
 );
 
 /// The source of the `image` props module.
-pub const IMAGE_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/image.rs"
-);
+pub const IMAGE_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/image.rs");
 
 /// The source of the `infinite_scroller` props module.
 pub const INFINITE_SCROLLER_PROPS: &str = include_str!(
@@ -341,14 +323,12 @@ pub const ITEM_GROUP_PROPS: &str = include_str!(
 );
 
 /// The source of the `kbd` props module.
-pub const KBD_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/kbd.rs"
-);
+pub const KBD_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/kbd.rs");
 
 /// The source of the `list` props module.
-pub const LIST_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/list.rs"
-);
+pub const LIST_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/list.rs");
 
 /// The source of the `list_group` props module.
 pub const LIST_GROUP_PROPS: &str = include_str!(
@@ -371,9 +351,8 @@ pub const LOCALE_PROVIDER_PROPS: &str = include_str!(
 );
 
 /// The source of the `menu` props module.
-pub const MENU_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/menu.rs"
-);
+pub const MENU_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/menu.rs");
 
 /// The source of the `navigation_drawer` props module.
 pub const NAVIGATION_DRAWER_PROPS: &str = include_str!(
@@ -391,9 +370,8 @@ pub const OTP_INPUT_PROPS: &str = include_str!(
 );
 
 /// The source of the `overlay` props module.
-pub const OVERLAY_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/overlay.rs"
-);
+pub const OVERLAY_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/overlay.rs");
 
 /// The source of the `pagination` props module.
 pub const PAGINATION_PROPS: &str = include_str!(
@@ -421,9 +399,8 @@ pub const PULL_TO_REFRESH_PROPS: &str = include_str!(
 );
 
 /// The source of the `radio` props module.
-pub const RADIO_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/radio.rs"
-);
+pub const RADIO_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/radio.rs");
 
 /// The source of the `radio_group` props module.
 pub const RADIO_GROUP_PROPS: &str = include_str!(
@@ -436,9 +413,8 @@ pub const RANGE_SLIDER_PROPS: &str = include_str!(
 );
 
 /// The source of the `rating` props module.
-pub const RATING_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/rating.rs"
-);
+pub const RATING_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/rating.rs");
 
 /// The source of the `responsive` props module.
 pub const RESPONSIVE_PROPS: &str = include_str!(
@@ -451,14 +427,12 @@ pub const SCALE_TRANSITION_PROPS: &str = include_str!(
 );
 
 /// The source of the `select` props module.
-pub const SELECT_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/select.rs"
-);
+pub const SELECT_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/select.rs");
 
 /// The source of the `sheet` props module.
-pub const SHEET_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/sheet.rs"
-);
+pub const SHEET_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/sheet.rs");
 
 /// The source of the `skeleton_loader` props module.
 pub const SKELETON_LOADER_PROPS: &str = include_str!(
@@ -476,9 +450,8 @@ pub const SLIDE_TRANSITION_PROPS: &str = include_str!(
 );
 
 /// The source of the `slider` props module.
-pub const SLIDER_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/slider.rs"
-);
+pub const SLIDER_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/slider.rs");
 
 /// The source of the `snackbar` props module.
 pub const SNACKBAR_PROPS: &str = include_str!(
@@ -486,9 +459,8 @@ pub const SNACKBAR_PROPS: &str = include_str!(
 );
 
 /// The source of the `spacer` props module.
-pub const SPACER_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/spacer.rs"
-);
+pub const SPACER_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/spacer.rs");
 
 /// The source of the `sparkline` props module.
 pub const SPARKLINE_PROPS: &str = include_str!(
@@ -501,14 +473,12 @@ pub const SPEED_DIAL_PROPS: &str = include_str!(
 );
 
 /// The source of the `stepper` props module.
-pub const STEPPER_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/stepper.rs"
-);
+pub const STEPPER_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/stepper.rs");
 
 /// The source of the `switch` props module.
-pub const SWITCH_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/switch.rs"
-);
+pub const SWITCH_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/switch.rs");
 
 /// The source of the `system_bar` props module.
 pub const SYSTEM_BAR_PROPS: &str = include_str!(
@@ -516,19 +486,16 @@ pub const SYSTEM_BAR_PROPS: &str = include_str!(
 );
 
 /// The source of the `table` props module.
-pub const TABLE_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/table.rs"
-);
+pub const TABLE_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/table.rs");
 
 /// The source of the `tabs` props module.
-pub const TABS_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/tabs.rs"
-);
+pub const TABS_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/tabs.rs");
 
 /// The source of the `text` props module.
-pub const TEXT_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/text.rs"
-);
+pub const TEXT_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/text.rs");
 
 /// The source of the `text_field` props module.
 pub const TEXT_FIELD_PROPS: &str = include_str!(
@@ -556,14 +523,12 @@ pub const TIMELINE_PROPS: &str = include_str!(
 );
 
 /// The source of the `toolbar` props module.
-pub const TOOLBAR_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/toolbar.rs"
-);
+pub const TOOLBAR_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/toolbar.rs");
 
 /// The source of the `tooltip` props module.
-pub const TOOLTIP_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/tooltip.rs"
-);
+pub const TOOLTIP_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/tooltip.rs");
 
 /// The source of the `treeview` props module.
 pub const TREEVIEW_PROPS: &str = include_str!(
@@ -581,6 +546,5 @@ pub const VIRTUAL_SCROLLER_PROPS: &str = include_str!(
 );
 
 /// The source of the `window` props module.
-pub const WINDOW_PROPS: &str = include_str!(
-    "../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/window.rs"
-);
+pub const WINDOW_PROPS: &str =
+    include_str!("../../../crates/ecosystem/floom-ui/crates/floom-core-theme/src/props/window.rs");

@@ -17,3 +17,5 @@ pub mod ds;
 pub mod pages;
 pub mod props_sources;
 pub mod registry;
+pub mod shell;
+pub mod widgets;
