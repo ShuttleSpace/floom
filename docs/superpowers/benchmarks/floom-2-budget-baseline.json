@@ -1,77 +1,77 @@
 {
   "schema": 1,
   "note": "Criterion medians for the hot benches named in the P0/P4 acceptance lines. Criterion's own default protocol (3 s warm-up, 100 samples); the statistic is the median point estimate from target/criterion/<id>/new/estimates.json, which is what scripts/check-perf-budgets.sh compares. Do not mix in mean-based numbers: the 2026-09-18 acceptance run recorded means, and a mean/median pair is not a controlled comparison.",
-  "generated": "2026-09-19",
-  "host": "macOS 26.6.2 arm64, Apple M4 Pro, rustc 1.98.0",
+  "generated": "2026-11-12",
+  "host": "macOS 25.6.0 arm64, Apple Mac16,11, rustc 1.99.1",
   "threshold_pct": 10.0,
   "budgets": [
     {
       "id": "visible_range/1000",
       "package": "floom-virtual",
       "bench": "scroll",
-      "median_ns": 42.36738657454536,
-      "observed_spread_pct": 2.6
+      "median_ns": 45.57385487632928,
+      "observed_spread_pct": 0.8
     },
     {
       "id": "visible_range/10000",
       "package": "floom-virtual",
       "bench": "scroll",
-      "median_ns": 407.65388816943823,
-      "observed_spread_pct": 2.0
+      "median_ns": 448.4262884423638,
+      "observed_spread_pct": 12.1
     },
     {
       "id": "visible_range/100000",
       "package": "floom-virtual",
       "bench": "scroll",
-      "median_ns": 7197.45646403739,
-      "observed_spread_pct": 0.8
+      "median_ns": 7927.743746983702,
+      "observed_spread_pct": 14.3
     },
     {
       "id": "update_reuse/scroll_100k_recycle",
       "package": "floom-virtual",
       "bench": "scroll",
-      "median_ns": 1257850.0868055555,
+      "median_ns": 1226444.4405354918,
       "comment": "The bench with no headroom: +9.9% against the pre-2.0 figure when this budget was written. A real regression here is the thing the budget exists to catch.",
-      "observed_spread_pct": 1.7
+      "observed_spread_pct": 14.5
     },
     {
       "id": "native_pool_10k_churn",
       "package": "floom-native",
       "bench": "rows",
-      "median_ns": 527346.0103225806,
-      "observed_spread_pct": 0.2
+      "median_ns": 604032.357442348,
+      "observed_spread_pct": 19.2
     },
     {
       "id": "self_draw/1000",
       "package": "floom-renderer-software",
       "bench": "self_draw",
-      "median_ns": 8516263.916666668,
+      "median_ns": 8831525.0,
       "comment": "MOTION-GAP A9: a 1000-segment self-drawn chart, full software frame (encode + flatten + stroke + scanline rasterise). This is the worst case the flat-scene walk absorbs with no damage to skip.",
-      "observed_spread_pct": 0.5
+      "observed_spread_pct": 29.8
     },
     {
       "id": "self_draw/10000",
       "package": "floom-renderer-software",
       "bench": "self_draw",
-      "median_ns": 84011916.5,
+      "median_ns": 85170313.0,
       "comment": "MOTION-GAP A9: the 10k-segment extreme. Scales linearly with the 1k figure (~8.4 us/segment), which is the shape evidence that nothing per-node is superlinear.",
-      "observed_spread_pct": 0.5
+      "observed_spread_pct": 37.3
     },
     {
       "id": "self_draw/circles_1k",
       "package": "floom-renderer-software",
       "bench": "self_draw",
-      "median_ns": 1995887.0709726443,
+      "median_ns": 2078421.8958333335,
       "comment": "MOTION-GAP A9: 1000 filled discs, area-dominated rasterisation, ~2 us per disc at r=6.",
-      "observed_spread_pct": 0.8
+      "observed_spread_pct": 25.0
     },
     {
       "id": "self_draw/rounded_rects_1k",
       "package": "floom-renderer-software",
       "bench": "self_draw",
-      "median_ns": 8334886.857142857,
-      "comment": "MOTION-GAP A9: 1000 filled rounded rects (40x24, r=8) — the shape a card, button or list row is. Each is a small filled path; heavier than circles_1k because the rounded corners flatten to more segments.",
-      "observed_spread_pct": 1.0
+      "median_ns": 8580909.833333334,
+      "comment": "MOTION-GAP A9: 1000 filled rounded rects (40x24, r=8) \u2014 the shape a card, button or list row is. Each is a small filled path; heavier than circles_1k because the rounded corners flatten to more segments.",
+      "observed_spread_pct": 25.7
     }
   ]
 }

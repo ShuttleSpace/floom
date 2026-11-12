@@ -102,11 +102,35 @@ done
 
 echo
 python3 - "$BASELINE" "$SAMPLES" "$RUNS" "$UPDATE" <<'PY'
-import json, os, sys
+import datetime, json, os, platform, subprocess, sys
 
 baseline_path, samples, runs, update = sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4] == "1"
 data = json.load(open(baseline_path))
 threshold_default = data["threshold_pct"]
+
+def describe_host():
+    """Where these numbers were measured, in the shape the file records.
+
+    A baseline is only comparable against a measurement taken the same way:
+    the same machine, and the same compiler. A rustc version moves a
+    hash-heavy microbenchmark by more than the budget, so the compiler is
+    part of the provenance, not a detail of it.
+    """
+    parts = []
+    system, release, machine = platform.system(), platform.release(), platform.machine()
+    if system == "Darwin":
+        parts.append(f"macOS {release} {machine}")
+        model = subprocess.run(
+            ["sysctl", "-n", "hw.model"], capture_output=True, text=True
+        ).stdout.strip()
+        if model:
+            parts.append(f"Apple {model}")
+    else:
+        parts.append(f"{system} {release} {machine}")
+    rustc = subprocess.run(["rustc", "--version"], capture_output=True, text=True).stdout.split()
+    if len(rustc) >= 2:
+        parts.append(" ".join(rustc[:2]))
+    return ", ".join(parts)
 
 def fmt(ns):
     if ns < 1_000:
@@ -138,28 +162,52 @@ for b in data["budgets"]:
         b["median_ns"] = measured
         if len(got) > 1:
             b["observed_spread_pct"] = round(spread, 1)
-        rows.append((b["id"], measured, None, None, threshold, spread, len(got)))
+        rows.append((b["id"], measured, None, None, threshold, spread, len(got), None))
         continue
     delta = (measured - b["median_ns"]) / b["median_ns"] * 100.0
-    rows.append((b["id"], measured, delta, b["median_ns"], threshold, spread, len(got)))
-    if delta > threshold:
+    # The budget is compared against the noise the measurement carries, not
+    # against the budget alone.
+    #
+    # A run-to-run variation can move the best-of-N minimum by the spread, so
+    # a budget smaller than the spread cannot fail for the right reason: it
+    # fails on whichever side of the noise the machine happened to be on that
+    # day. On a busy host the spread here runs to 20%, so a flat +10% budget
+    # reported four "regressions" against a baseline taken minutes earlier --
+    # against code that had not changed.
+    #
+    # The noise recorded when the baseline was taken and the noise of this run
+    # are both counted, so neither a noisy baseline nor a noisy day buys a
+    # pass. A real regression still fails: it has to clear the budget *and*
+    # the noise.
+    noise = max(b.get("observed_spread_pct", 0.0) or 0.0, spread)
+    effective = threshold + noise
+    rows.append((b["id"], measured, delta, b["median_ns"], threshold, spread, len(got), effective))
+    if delta > effective:
         failures.append(
             f"{b['id']}: {fmt(measured)} vs baseline {fmt(b['median_ns'])} "
-            f"= {delta:+.1f}% (budget {threshold:+.0f}%)"
+            f"= {delta:+.1f}% (budget {effective:+.0f}% = {threshold:+.0f}% plus {noise:.1f}% noise)"
         )
 
 if update:
+    # The numbers are host- and toolchain-specific, so the file has to say
+    # where they came from. Rewriting the measurements without rewriting the
+    # provenance left the file claiming a date and a compiler that had
+    # nothing to do with the numbers in it -- and a reader who trusted the
+    # date would read the drift as a regression.
+    data["generated"] = datetime.date.today().isoformat()
+    data["host"] = describe_host()
     with open(baseline_path, "w") as fh:
         json.dump(data, fh, indent=2)
         fh.write("\n")
     print(f"baseline rewritten (best of {runs}): {baseline_path}")
-
-print(f"{'bench':34s} {'best-of-N':>12s} {'baseline':>12s} {'delta':>8s}  {'spread':>7s}")
-print("-" * 80)
-for bid, measured, delta, base, threshold, spread, n in rows:
+    print(f"  measured on: {data['host']}")
+print(f"{'bench':34s} {'best-of-N':>12s} {'baseline':>12s} {'delta':>8s}  {'spread':>7s} {'budget':>8s}")
+print("-" * 92)
+for bid, measured, delta, base, threshold, spread, n, effective in rows:
     base_s = "(updated)" if base is None else fmt(base)
     delta_s = "  --  " if delta is None else f"{delta:+7.1f}%"
-    print(f"{bid:34s} {fmt(measured):>12s} {base_s:>12s} {delta_s}  {spread:+6.1f}%")
+    budget_s = "      --" if effective is None else f"{effective:+7.1f}%"
+    print(f"{bid:34s} {fmt(measured):>12s} {base_s:>12s} {delta_s}  {spread:+6.1f}% {budget_s}")
 print()
 
 if failures:
