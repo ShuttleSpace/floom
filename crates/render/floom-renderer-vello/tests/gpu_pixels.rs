@@ -539,3 +539,119 @@ fn the_reference_scene_matches_its_stored_hash() {
     let snapshot = PixelSnapshot::of_buffer(&rgba, W, H);
     snapshot.assert(env!("CARGO_MANIFEST_DIR"), "vello_gpu_reference");
 }
+
+// ---------------------------------------------------------------------------
+// The capability answer, held to the pixels
+// ---------------------------------------------------------------------------
+
+/// The presenter claims exactly what it draws.
+///
+/// A host asks "can you draw this?" *before* it draws, so the answer has to
+/// be true — a capability that is claimed and not honoured is worse than one
+/// that is missing, because the host asked for the effect, was told yes, and
+/// got nothing.
+///
+/// The software backend has this test; the GPU path had none, so its answer
+/// (shadows yes, filter scopes yes, backdrop filters no) was never held to
+/// the pixels it claims. The backdrop-filter "no" is the honest one: vello
+/// has no point in the stream where already-drawn pixels could be filtered.
+#[test]
+#[ignore = "needs a GPU adapter; run with --features gpu -- --ignored"]
+fn the_presenter_claims_exactly_what_it_draws() {
+    let Some(gpu) = presenter() else {
+        eprintln!("SKIP: {}", no_adapter_reason().unwrap());
+        return;
+    };
+    let caps = floom_renderer::Presenter::capabilities(&gpu);
+
+    assert!(caps.shadows, "the GPU path draws a drop shadow");
+    assert!(caps.filters, "the GPU path blurs a filter scope");
+    assert!(
+        !caps.backdrop_filters,
+        "vello has no point in the stream to filter already-drawn pixels"
+    );
+    assert!(caps.shaders, "the GPU path runs a custom shader program");
+}
+
+/// The claim and the behaviour agree: the shadow it says it draws is drawn.
+///
+/// The capability test above proves the *answer*; this proves the answer is
+/// true, by rendering a shadow through the same path a window uses and asking
+/// the presenter what it did.
+#[test]
+#[ignore = "needs a GPU adapter; run with --features gpu -- --ignored"]
+fn the_presenter_draws_the_shadow_it_claims_to_draw() {
+    let Some(mut gpu) = presenter() else {
+        eprintln!("SKIP: {}", no_adapter_reason().unwrap());
+        return;
+    };
+
+    let mut scene = Scene::new();
+    scene.begin_update();
+    let _ = scene.insert(SceneNode::Rect {
+        bounds: rect(20.0, 20.0, 44.0, 44.0),
+        fill: Brush::from(INK),
+        radius: 0.0,
+        shadow: Some(floom_types::Shadow {
+            color: Color::rgb(0, 0, 0),
+            blur: 6.0,
+            offset_x: 0.0,
+            offset_y: 8.0,
+            spread: 0.0,
+        }),
+    });
+    scene.finish_update();
+
+    let resources = ResourceRegistry::new();
+    gpu.render_offscreen(&scene, &resources, W, H)
+        .expect("offscreen readback mapped");
+
+    let stats = gpu.stats();
+    assert_eq!(
+        stats.shadows_drawn, 1,
+        "the presenter claims to draw shadows, and it drew one"
+    );
+    assert_eq!(
+        stats.shadows_skipped, 0,
+        "and it skipped none: the claim and the behaviour agree"
+    );
+}
+
+/// The filter counter is the "did my filter run" number, and it was always
+/// zero.
+///
+/// The pixel test above proves the scope really blurs; this proves the
+/// presenter says so. The number was never copied out of the filter pass, so
+/// a host reading it would conclude its filter had been dropped while the
+/// picture showed it blurred.
+#[test]
+#[ignore = "needs a GPU adapter; run with --features gpu -- --ignored"]
+fn the_presenter_counts_the_filter_scope_it_drew() {
+    let Some(mut gpu) = presenter() else {
+        eprintln!("SKIP: {}", no_adapter_reason().unwrap());
+        return;
+    };
+
+    let mut scene = Scene::new();
+    scene.begin_update();
+    let _ = scene.insert(SceneNode::FilterPush {
+        filter: floom_types::Filter::blur(6.0),
+    });
+    let _ = scene.insert(fill(rect(16.0, 16.0, 48.0, 48.0), INK));
+    let _ = scene.insert(SceneNode::FilterPop);
+    scene.finish_update();
+
+    let resources = ResourceRegistry::new();
+    gpu.render_offscreen(&scene, &resources, W, H)
+        .expect("offscreen readback mapped");
+
+    let stats = gpu.stats();
+    assert_eq!(
+        stats.filters_drawn, 1,
+        "the presenter claims to blur filter scopes, and it blurred one"
+    );
+    assert_eq!(
+        stats.filters_skipped, 0,
+        "and it skipped none: the claim and the behaviour agree"
+    );
+}

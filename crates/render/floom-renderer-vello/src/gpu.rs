@@ -1306,11 +1306,30 @@ impl VelloGpuPresenter {
         // shadows and the display scale are applied. Reusing it verbatim is
         // what makes this a regression net for the real path rather than for a
         // second implementation that could drift.
-        let _ = self.encode(scene, resources, (0.0, 0.0));
+        //
+        // The stats it returns are kept, because the offscreen path is a
+        // *rendering* path like any other: a caller that renders a snapshot
+        // asks the presenter what it drew, and the answer has to be the one
+        // this frame produced rather than the last window frame's.
+        let encoded = self.encode(scene, resources, (0.0, 0.0));
+        self.stats.rects = encoded.rects;
+        self.stats.glyph_runs = encoded.glyph_runs;
+        self.stats.images = encoded.images;
+        self.stats.unsupported_nodes = encoded.unsupported_nodes;
+        self.stats.texture_cache_hits = encoded.texture_cache_hits;
+        self.stats.texture_cache_misses = encoded.texture_cache_misses;
+        self.stats.fragments_reused = encoded.fragments_reused;
+        self.stats.fragments_encoded = encoded.fragments_encoded;
+        self.stats.shadows_skipped = encoded.shadows_skipped;
+        self.stats.shadows_drawn = encoded.shadows_drawn;
+        self.stats.shaders_drawn = encoded.shaders_drawn;
+        self.stats.shaders_skipped = encoded.shaders_skipped;
         // The offscreen path runs the same filter pass a window does, so a
         // golden taken here covers filters too.
         let mut filter_stats = GpuFrameStats::default();
         self.render_filter_scopes(scene, resources, width, height, &mut filter_stats);
+        self.stats.filters_skipped = encoded.filters_skipped + filter_stats.filters_skipped;
+        self.stats.filters_drawn = encoded.filters_drawn + filter_stats.filters_drawn;
         self.rasterize_offscreen(width, height)
     }
 
@@ -2694,6 +2713,7 @@ impl Presenter for VelloGpuPresenter {
             self.stats.shadows_skipped = 0;
             self.stats.shadows_drawn = 0;
             self.stats.filters_skipped = 0;
+            self.stats.filters_drawn = 0;
             self.stats.shaders_drawn = 0;
             self.stats.shaders_skipped = 0;
             return;
@@ -2763,6 +2783,11 @@ impl Presenter for VelloGpuPresenter {
         self.stats.shadows_skipped = encoded.shadows_skipped;
         self.stats.shadows_drawn = encoded.shadows_drawn;
         self.stats.filters_skipped = encoded.filters_skipped;
+        // The filter pass runs separately from the encoding and counts into the
+        // same stats, so the "did my filter run" number has to come across too.
+        // Without this it stayed zero on every frame: a host reading it would
+        // conclude the filter was dropped, while the picture showed it blurred.
+        self.stats.filters_drawn = encoded.filters_drawn;
         self.stats.shaders_drawn = encoded.shaders_drawn;
         self.stats.shaders_skipped = encoded.shaders_skipped;
         // Prepare the scratch view up front: both it and the surface live on
