@@ -117,6 +117,8 @@ pub fn panel(key: &'static str, body: Stack) -> Child {
 
 /// One entry in the rail.
 ///
+/// One entry in the rail.
+///
 /// The entry is the page's own name, so a reader -- and a test -- finds a
 /// component by the name they know it by.
 pub fn nav_item(
@@ -224,4 +226,35 @@ pub fn table(key: &'static str, title: &str, rows: &[ApiRow]) -> Stack {
     }
 
     stack
+}
+
+/// One column of a compare row: a caption above the component.
+///
+/// `child` is cloned for each build call because a `Child`'s closure may run
+/// more than once; cloning keeps every rebuild independent.
+pub fn column(caption: &'static str, child: Child) -> Child {
+    Child::new(
+        ChildKey::from(caption),
+        LayoutRequest::new().fill(),
+        move || {
+            let child = child.clone();
+            Box::new(
+                Stack::new(Axis::Vertical)
+                    .gap(6.0)
+                    .child(label("caption", caption, 11.0, FontWeight::SemiBold, FAINT))
+                    .child(child),
+            )
+        },
+    )
+}
+
+/// Lay three children out as the three columns of a compare row, captioned by
+/// the design system each shows.
+pub fn compare_row(children: (Child, Child, Child)) -> Stack {
+    let (material, cupertino, fluent) = children;
+    Stack::new(Axis::Horizontal)
+        .gap(28.0)
+        .child(column("Material", material))
+        .child(column("Cupertino", cupertino))
+        .child(column("Fluent", fluent))
 }
