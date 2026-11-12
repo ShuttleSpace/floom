@@ -345,6 +345,7 @@ arch       scripts/check-architecture-deps.sh
 probe      the device probe compiles with `--features real`
 plugins    the capability plugins compile on the host
 plugin-template  every plugin carries the documented template files
+plugin-facades  every plugin's TypeScript facade mirrors its Rust API
 android    the plugins compile for aarch64-linux-android
 ios        the plugins compile for aarch64-apple-ios
 windows    the plugins with real Windows arms compile for x86_64-pc-windows-msvc
@@ -549,6 +550,14 @@ has_check plugins && run_check plugins "" plugins_check
 # README, example, TypeScript facade or ABI header.
 plugin_template_check() { ./scripts/check-plugin-templates.sh; }
 has_check plugin-template && run_check plugin-template "" plugin_template_check
+
+# The TypeScript facade is the plugin's public contract for a TS author, and
+# the crate's Rust API is the contract for a Rust author. They have to be the
+# same API: a facade that has drifted offers an editor a function the crate
+# does not have, and hides one that it does. The template check above asks
+# whether the facade is *there*; this asks whether it is *true*.
+plugin_facades_check() { python3 ./scripts/check-plugin-facades.py; }
+has_check plugin-facades && run_check plugin-facades "" plugin_facades_check
 
 # Android: `cargo check --target`, exactly what the CI job runs. No NDK and no
 # `cargo ndk` — `check` does not link, so the target's std is the only thing

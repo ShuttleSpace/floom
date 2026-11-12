@@ -35,4 +35,13 @@ declare module "floom-plugin-webview" {
    * an `ANativeWindow *` on Android); the caller keeps it alive.
    */
   export function provider(hostWindow: unknown): unknown;
+
+  /**
+   * The same provider, as the boxed trait object a Rust host holds. A
+   * TypeScript caller cannot hold a trait object, so this is the same
+   * opaque handle `provider` returns — declared because the crate's public
+   * API has it, and a facade that hid it would be a facade that lies about
+   * what the plugin can do.
+   */
+  export function boxed_provider(hostWindow: unknown): unknown;
 }
