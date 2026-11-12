@@ -20,3 +20,9 @@ pub mod props_sources;
 pub mod registry;
 pub mod shell;
 pub mod widgets;
+
+/// The type-erased widget the engine mounts.
+///
+/// Re-exported so a macro in this crate can name it without depending on
+/// which of the `floom` crates the caller has in scope.
+pub use floom::floom_core::WidgetAny;

@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use floom::floom_core::{Align, Axis, Child, ChildKey, LayoutRequest};
+use floom::floom_core::{Align, Axis, Child, ChildKey, LayoutRequest, WidgetAny};
 use floom::floom_types::{Color, FontWeight};
 use floom::floom_widgets::{Button, Stack, Surface, Text};
 
@@ -226,6 +226,18 @@ pub fn table(key: &'static str, title: &str, rows: &[ApiRow]) -> Stack {
     }
 
     stack
+}
+
+/// A child that builds its widget when the host asks for it.
+///
+/// The engine widgets are not `Send + Sync`, so they are never captured across
+/// the closure boundary: the closure captures only `Send + Sync` inputs (a
+/// theme, a label) and rebuilds the widget each time the host asks.
+pub fn widget(
+    key: &'static str,
+    build: impl Fn() -> Box<dyn WidgetAny> + Send + Sync + 'static,
+) -> Child {
+    Child::new(ChildKey::from(key), LayoutRequest::new(), build)
 }
 
 /// One column of a compare row: a caption above the component.
