@@ -49,8 +49,11 @@ crates/ecosystem/floom-ui（satellite，306 members）
   "the `floom-elements` re-export layer went with it"）。每个 kit crate 直接依赖
   `floom-core-theme` / `floom-widget-runtime`，不再经一个统一 contract crate。
   因此旧计划"应用只依赖 `floom-elements`、靠 Cargo feature 切换 DS"的用法**当前不成立**。
-- **没有 `examples/` 目录，也没有 `floom-demo` crate**。`justfile` 的三个目标
-  （`cargo ... run -p floom-demo`）全部**已断**。
+- **`floom-demo` crate 现在存在了**（2026-11-12）：在**根 workspace** 的 `examples/floom-demo`，
+  不是本 workspace。它把 98 个组件在 Material/Cupertino/Fluent **三列并排**渲染，
+  props 表在运行期从 `floom-core-theme` 自己的 props 源解析，headless 测试覆盖
+  全部 98 页与每一个 sample。`justfile` 的目标已接通（`just demo` / `just demo-headless`）。
+  Harmony 没有 per-component kit crate，所以不在三列之内（见下文 P1）。
 - **Harmony 只有 consolidated crate**（`floom-harmony`），没有像 material/cupertino/fluent 那样的
   per-component kit 子 crate。
 - 每 DS 的 per-component crate **是薄适配器**；行为共享在 `floom-ui-composites` + engine `floom-widgets`，
@@ -67,7 +70,7 @@ crates/ecosystem/floom-ui（satellite，306 members）
 | Phase 1 MVP：8 个 Material 组件 | 远超：98 material + 99 cupertino + 99 fluent（+ harmony kit） |
 | Phase 2：Cupertino ×8、Fluent ×8 | 远超：各约 99 个 kit crate |
 | Phase 3 高级组件：Table/Tree/VirtualList/Chart/Navigation | 大部分已有：`md-table`、`md-treeview`、`md-virtual_scroller`、`md-sparkline`、`md-navigation_drawer`、`md-datatable`、`md-timeline`、`md-calendar` |
-| `examples/demo` + `floom-demo` | **不存在**；`justfile` 目标已断 |
+| `examples/demo` + `floom-demo` | **已建**：`examples/floom-demo`（根 workspace），98 组件 × 3 DS 并排；见 P1 |
 | `floom-testing` | 已存在 |
 | Phase 4：Theme Builder / Figma Import / CLI Generator / docs site | **未开工** |
 
@@ -85,16 +88,25 @@ crates/ecosystem/floom-ui（satellite，306 members）
       保留其中仍有效的记录（`Transition::child` vs `Overlay::child` 的 API 不一致）。
 - [ ] `docs/superpowers/plans/2026-07-31-floom-elements.md`（1586 行，全 v1、复选框未勾、路径指向别的机器）：标注 superseded。
 - [ ] `Cargo.toml` 顶部过期注释改写为准确描述（306 members、`exclude = []`、kit 已适配）。
-- [ ] `justfile`：`floom-demo` 三目标已断 —— 见 P1。
+- [x] `justfile`：接通 `floom-demo` —— 三个断目标换成 `just demo` / `just demo-headless`（2026-11-12）。
 
 ### P1 — 恢复可运行 gallery/demo（组件要可见、可测、可迭代）
 
-- [ ] 在 floom-ui workspace 新建 demo/gallery crate（`floom-demo` 或 `examples/`），
-      渲染 4 套 DS 的 gallery；接通 `just material|cupertino|fluent`（并考虑 harmony）。
-  - 退出：`cargo run -p <demo> --features <ds>` 能起窗；`cargo test -p <demo>` headless 快照绿。
-  - 说明：这是旧文档反复引用、但磁盘上不存在的那个 crate；不建它，`COMPONENT_PARITY`/`demo-gallery-plan` 的"已完成"都无法验证。
+- [x] 建 demo/gallery crate（2026-11-12）：`examples/floom-demo`，在**根 workspace**（本 workspace 保持 headless）。
+      渲染 **3 套 DS** 的 gallery —— Material/Cupertino/Fluent **并排三列、一个二进制**；
+      `justfile` 目标接通（`just demo` / `just demo-headless`）。
+  - 退出条件（实测）：`cargo run -p floom-demo` 起窗；`cargo run -p floom-demo -- --headless`
+    逐页打印 painted 计数并退出（98 页 / 23045 painted）；`cargo test -p floom-demo` 全绿
+    —— 98 页逐页 mount+paint、每个 sample 单独 mount、props 表逐字段对齐库自己的 props struct、
+    按钮/复选框的交互真的走通 handler。
+  - **与计划的两处偏差**（有意为之）：
+    1. **不是每 DS 一个 build**，而是一个二进制三列并排 —— 三列同屏比较才是这个 gallery 的价值；
+    2. **只有 3 套 DS**，不是 4 套 —— Harmony 只有 consolidated crate，没有 per-component kit crate，
+       凑不出第三列（见 P2 的 Harmony 策略）。
 - [ ] `demo-gallery-plan.md` 的 A–D 阶段（Props 面板 / API 表 / method demo / 代码片段）在 demo 落地后再排。
-- [ ] `justfile` 接通后，把 `just gate ecosystem` 的 demo 测试纳入。
+  - 已完成的部分：Props/API 表（props 表已从库自己的 props 源解析，不手写）、每组件 ≥2 个实况示例、notes。
+  - 未完成：可交互的属性面板、把组件方法做成可点按的演示、源码片段。
+- [x] `justfile` 接通后，把 demo 测试纳入 gate（根 workspace 的 `cargo test -p floom-demo`）。
 
 ### P2 — 组件 / 引擎缺口（真实、已在文档中点名，非推测）
 
@@ -132,6 +144,10 @@ crates/ecosystem/floom-ui（satellite，306 members）
 - `cargo metadata --no-deps` → 306 packages / 306 workspace members（本文件所据）。
 - `just gate ecosystem`（根仓库）或 CI `ecosystem-check` → `cargo test --workspace`（satellite 全量）。
   **本次 reconcile 未重跑 306 crate 测试**，只做了结构与元数据核对；P0/P1 的"绿"以实际跑通为准。
+- **gallery（2026-11-12）**：`cargo test -p floom-demo` 全绿 —— 98 页逐页 mount+paint、
+  全部 sample 单独 mount、props 表与库自己的 props struct 逐字段对齐、按钮/复选框交互走通 handler；
+  `cargo run -p floom-demo -- --headless` 逐页打印 painted 计数（98 页 / 23045 painted）。
+  代价：gallery 落地时给 6 个 composites + 2 个 engine widget 补了 `WidgetAny`（之前能建不能挂）。
 
 ## 6. History（2026-07-31 旧计划摘要，superseded）
 

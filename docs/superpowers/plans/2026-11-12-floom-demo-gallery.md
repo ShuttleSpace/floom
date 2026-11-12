@@ -36,6 +36,14 @@ every decision below).
 - The **only** change to the satellite is Task 1's additive
   `MultiTheme::pinned`. No other file under `crates/ecosystem/` may change,
   except the `justfile` repair in Task 14.
+  - **As it turned out, the gallery found more.** A composite that implements
+    `Widget` but not `WidgetAny` can be built and returned from `view()`, and
+    then not mounted — the gallery has to mount every component it shows, so it
+    found six of them (`Counter`, `IconButton`, `Badge`, `Chip`, `Tooltip`,
+    `BottomNavigationBar`) and the engine's `CircularProgress` and
+    `LinearProgress`. Each got a `WidgetAny` impl and a boxability test. These
+    are additive and change no behaviour, but they are satellite changes, and
+    they are the reason the gallery could be finished at all.
 - Rust edition 2024, `rust-version = "1.91"`, toolchain pinned to 1.99.1 by
   `rust-toolchain.toml`.
 - Clippy must run on the pinned toolchain: the bare `cargo`/`rustc` on this
@@ -1294,8 +1302,11 @@ root workspace:
 
 ```make
 demo:
-    cargo run --manifest-path ../../../../Cargo.toml -p floom-demo
+    cargo run --manifest-path ../../../Cargo.toml -p floom-demo
 ```
+
+(The path is three levels up, not four: `crates/ecosystem/floom-ui` → `crates`
+→ the repository root.)
 
 and remove the stale broken-target note added during the P0 doc sweep. The
 `material` / `cupertino` / `fluent` targets go away: all three design systems
@@ -1308,33 +1319,42 @@ is unimplemented with what was actually built and where it diverged from the
 plan (one binary with all three design systems side by side, rather than one
 build per design system).
 
-- [ ] **Step 1: Repair the satellite justfile**
+- [x] **Step 1: Repair the satellite justfile**
 
   Edit `crates/ecosystem/floom-ui/justfile` as described.
 
-  Run: `cargo run --manifest-path ../../../../Cargo.toml -p floom-demo -- --headless`
+  Run: `cargo run --manifest-path ../../../Cargo.toml -p floom-demo -- --headless`
   from `crates/ecosystem/floom-ui`.
 
-  Expected: prints the painted count and exits.
+  Expected: prints the painted count and exits. (It does: 98 pages, 23045 painted.)
 
-- [ ] **Step 2: Write the README**
+- [x] **Step 2: Write the README**
 
   `examples/floom-demo/README.md`: what the gallery is, how to run it, what
   the three columns mean, and how to add a component (the three-step recipe:
   regenerate the deps, write the page, register it).
 
-- [ ] **Step 3: Update the three docs**
+- [x] **Step 3: Update the three docs**
 
   As described in the notes.
 
-- [ ] **Step 4: Run the whole gate**
+- [x] **Step 4: Run the whole gate**
 
   Run: `just gate`
 
   Expected: PASS — fmt, clippy, tests, ecosystem, docs, architecture, probe,
   plugins, goldens. The demo is covered by the `test` check.
 
-- [ ] **Step 5: Commit**
+  **The gate was broken before this task**: its clippy check named sixteen
+  crates that the layered restructure deleted (`floom-error`, `floom-focus`,
+  `floom-scheduler`, `floom-renderer-skia-abi`, `floom-platform-ios`,
+  `floom-platform-harmony`, `floom-platform-embedded`, `floom-ime`,
+  `floom-gesture`, `floom-overlay`, `floom-store`, `floom-task`,
+  `floom-forms`, `floom-navigation`, `floom-persistence`, `floom-services`),
+  and `cargo clippy -p` on a package that does not exist fails the whole
+  command — so the check could not run at all. They are removed from the list.
+
+- [x] **Step 5: Commit**
 
   ```bash
   git add examples/floom-demo crates/ecosystem/floom-ui

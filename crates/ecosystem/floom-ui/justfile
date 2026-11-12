@@ -1,14 +1,16 @@
-# NOTE: these targets are BROKEN until the demo crate exists. There is no
-# `floom-demo` / `examples/` crate in this tree today (it was a v1 artifact and
-# the `floom-elements` facade it depended on was removed in "Stage D"). Building a
-# runnable gallery is tracked as P1 in `docs/PLAN.md`; once that crate exists,
-# point these at it (and add a `harmony` target).
+# The gallery: every component of this satellite, in all three of its design
+# systems, side by side, in one binary.
+#
+# It lives in the root workspace -- `examples/floom-demo` -- not in this one,
+# so the manifest path points up out of this directory. The three old targets
+# (`material`, `cupertino`, `fluent`) pointed at a `floom-demo` crate that did
+# not exist and were broken; there is one gallery now, not one per design
+# system, because it shows all three at once.
 
-material:
-    cargo watch -c -d 1 -x 'run -p floom-demo'
+demo:
+    cargo run --manifest-path ../../../Cargo.toml -p floom-demo
 
-cupertino:
-    cargo watch -c -d 1 -x 'run -p floom-demo --no-default-features --features cupertino'
-
-fluent:
-    cargo watch -c -d 1 -x 'run -p floom-demo --no-default-features --features fluent'
+# The same gallery without a window: it mounts every page, prints how many
+# widgets each painted, and exits. A health check to run by hand.
+demo-headless:
+    cargo run --manifest-path ../../../Cargo.toml -p floom-demo -- --headless

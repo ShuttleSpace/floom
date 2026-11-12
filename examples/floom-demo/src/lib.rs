@@ -8,7 +8,9 @@
 //!   satellite by `tools/gen.py`.
 //! - [`props_sources`] holds the library's own props sources, which the
 //!   gallery parses at run time so a props table cannot drift from the struct
-//!   it describes.
+//!   it describes; [`props_src`] is the parser that turns them into tables.
+//! - [`probe`] is the read-out the interactive samples write to, so a test can
+//!   prove that a press reached the component.
 //!
 //! Run it with `cargo run -p floom-demo`.
 

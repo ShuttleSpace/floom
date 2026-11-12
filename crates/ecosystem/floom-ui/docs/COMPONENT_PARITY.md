@@ -12,9 +12,11 @@ This project targets a Floom component library with a Vuetify-like out-of-the-bo
 > kit crates (98 material + 99 cupertino + 99 fluent). The **`floom-elements` re-export
 > facade no longer exists** (removed in "Stage D", `Cargo.toml:361-365`); each kit crate
 > re-exports its own neutral builder directly over `floom-ui-composites` + the engine
-> `floom-widgets` primitives. There is **no `floom-demo` / `examples/demo` crate** today
-> (the `justfile` targets that point at it are broken; a gallery demo is a P1 task in
-> `PLAN.md`). `floom-harmony` is consolidated-only (no per-component kit crates).
+> `floom-widgets` primitives. A **`floom-demo` gallery crate does exist** (2026-11-12), at
+> `examples/floom-demo` in the **root** workspace — it mounts all 98 components in Material,
+> Cupertino and Fluent side by side, and its headless tests cover every page and every
+> sample. `floom-harmony` is consolidated-only (no per-component kit crates), so Harmony is
+> not one of the gallery's three columns.
 >
 > The batch narratives below are **history**: they describe the v1 pipeline
 > ("→ floom-elements facade → demo → verify") and were true when each batch shipped. Read
@@ -37,7 +39,8 @@ Phase 1 has a cross-design-system implementation for these 98 components. All th
 systems ship a real, renderable, interactive `view()` (composes the engine `floom-widgets`
 primitives + `floom-ui-composites` + token-first theme styling). Those crates are exercised
 headlessly by `cargo test --workspace` in the satellite (CI `ecosystem-check` / `just gate
-ecosystem`); a single runnable gallery binary does not exist today (see the current-state
+ecosystem`); a single runnable gallery binary now exists as well — `examples/floom-demo`
+in the root workspace, showing the three design systems side by side (see the current-state
 note above and `PLAN.md` P1). The batch narratives below record the v1 pipeline that built
 them.
 
@@ -355,7 +358,11 @@ them.
 
 ### Cross-design-system API contract (must hold for all three)
 
-The gallery demo uses a design-system-neutral API; every implementation must satisfy it:
+The gallery uses a design-system-neutral API, and it is now the thing that
+enforces the contract: a sample is written once and instantiated three times,
+once per design system, so a builder one of them spells differently fails to
+compile instead of quietly leaving a column empty. Every implementation must
+satisfy it:
 
 - `Card::child(impl IntoView)` — sets the card's content (`Option<AnyView>`).
 - `Dialog::open_signal() -> RwSignal<bool>` / `Menu::open_signal() -> RwSignal<bool>`
@@ -522,8 +529,8 @@ Neutral builder API shared by all three design systems (verify in the kit crates
 ## `view()` status (reconciled 2026-11-11)
 
 All 98 components implement a real, renderable, interactive `view()` in **all three**
-design systems. There is **no single `floom-demo` binary** in this tree; the crates are
-exercised headlessly by the satellite test suite:
+design systems. They are exercised headlessly by the satellite test suite, and by the
+gallery, which mounts every one of them:
 
 | Design system | How it is verified today | Status |
 | --- | --- | --- |
@@ -532,9 +539,11 @@ exercised headlessly by the satellite test suite:
 | Fluent | same | ✅ headless tests |
 | Harmony | consolidated `floom-harmony` gallery tests | ✅ headless tests (no kit crates) |
 
-> A runnable gallery window (`floom-demo` / `examples/`) is **planned, not present** — see
-> `PLAN.md` P1. The old "✅ compiles + runs" rows referred to the v1 demo crate, which has
-> since been removed.
+> A runnable gallery window **is** present — `examples/floom-demo`, in the root workspace
+> (`cargo run -p floom-demo`; `just demo` from the satellite). It shows all 98 components
+> in Material, Cupertino and Fluent side by side, and `cargo test -p floom-demo` mounts
+> every page and every sample headlessly. The old "✅ compiles + runs" rows referred to the
+> v1 demo crate, which has since been removed.
 
 Components with working `view()` in all systems:
 `button`, `text`, `text-field`, `checkbox`, `switch`, `dialog`, `menu`, `card`, `icon`,
@@ -816,14 +825,18 @@ Neutral builder API shared by all three design systems (verify in the kit crates
   `FontWeight::Medium`; earlier items are `on_surface_variant` and clickable (`cursor:
   Pointer`), firing `on_click(index)`. Also rendered inside a `dyn_view` for reactivity.
 
-### Form / ValidationMessages demo wiring (kit crates; gallery planned)
+### Form / ValidationMessages demo wiring (kit crates; gallery built)
 
-The gallery section shows a `Form` wrapping two `TextField`s (Name, Email) plus a
-`ValidationMessages`. A `create_effect` derives `valid` + the error `Vec` from the field
-value signals (obtained via each `TextField`'s `on_change`): empty Name/Email and a missing
-`@` in Email produce messages; the submit button is disabled until the list is empty, and a
-"Registered!" line appears on submit. This exercises both the gated submit and the reactive
-error list.
+The gallery has a `Form` page and a `ValidationMessages` page. The `Form` page
+shows a form with a submit button and one without; the `ValidationMessages`
+page shows the error list it collects. The richer v1 wiring — a `Form` wrapping
+two `TextField`s (Name, Email) plus a `ValidationMessages`, a `create_effect`
+deriving `valid` + the error `Vec` from the field value signals (obtained via
+each `TextField`'s `on_change`), empty Name/Email and a missing `@` in Email
+producing messages, the submit button disabled until the list is empty, and a
+"Registered!" line appearing on submit — is still **planned**: it belongs to
+the demo-gallery-plan.md A–D stage, and it exercises both the gated submit and
+the reactive error list.
 
 ### Batch 16 API contract (Radio / Overlay)
 

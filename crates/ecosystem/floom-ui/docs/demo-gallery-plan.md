@@ -4,11 +4,21 @@
 > 把当前“98 个单一静态示例”的 Demo 升级为**可上手的交互式组件展示库**——每个组件清晰呈现
 > 它的**属性（Props）、方法（Methods）、实用示例**并配以必要说明，使开发者一看即会。
 
-> **现状校正（2026-11-11，reconcile）**：本文是 **P1 demo crate 的设计稿**，当前**尚未实现**。
-> 文中出现的 `floom-demo` / `examples/demo/src/{gallery,showcase}.rs` 在今天的树里**不存在**
-> （`justfile` 的 `floom-demo` 三个目标也因此是断的）；`floom-elements` facade 已在 "Stage D"
-> 移除，组件改由各 kit crate 直接 re-export。阅读时把 `floom-demo` 当作“待建的 demo crate”，
-> 把 `floom-elements` 当作“kit crate 的 neutral builder”。建 crate 的进度见 `PLAN.md` P1。
+> **现状校正（2026-11-12）**：本文是 **P1 demo crate 的设计稿**，其中的 crate **已经建好了**：
+> `examples/floom-demo`（**根 workspace**，不是本 workspace），把 98 个组件在
+> **Material / Cupertino / Fluent 三列并排**渲染，`props`/API 表在**运行期从
+> `floom-core-theme` 自己的 props 源解析**（不手写，因此不会与库漂移），
+> 每个组件 ≥2 个实况示例 + notes，`cargo test -p floom-demo` headless 覆盖
+> 全部 98 页、每一个 sample 与交互。`justfile` 的目标已接通（`just demo` /
+> `just demo-headless`）。
+>
+> **与本文的两处偏差（有意为之）**：
+> 1. **一个二进制三列并排**，不是每 DS 一个 build —— 三列同屏比较才是这个 gallery 的价值；
+> 2. **3 套 DS 而不是 4 套** —— Harmony 只有 consolidated crate，没有 per-component kit crate。
+>
+> 本文 A–D 阶段里**仍然未做**的部分：可交互的属性面板、把组件方法做成可点按的演示、源码片段。
+> 进度见 `PLAN.md` P1。`floom-elements` facade 仍在 "Stage D" 被移除后不存在，
+> 组件由各 kit crate 直接 re-export。
 
 ---
 
@@ -21,14 +31,16 @@
    **方法**做成可点按的演示（如 `Dialog::open()`、`Form::reset()`、聚焦、步进），并显示可观察结果。
 3. **说明到位。** 对平台/DS 差异、浮动层渲染约束、易错点给出 inline 提示（notes）。
 4. **复用计划中的 demo crate 架构，不引入新依赖。** 沿用该 crate 的 master/detail 双栏壳、DS 切换器、
-   Dark 切换器，以及窗口根 overlay 机制；仅扩展 `showcase` 辅助模块（crate 尚未创建，见 `PLAN.md` P1）。
+   Dark 切换器，以及窗口根 overlay 机制；仅扩展 `showcase` 辅助模块（crate 已建，见 `PLAN.md` P1）。
 
 ---
 
 ## 2. 基线（v1 历史；相关文件现已不存在）
 
-> 下面列出的 `examples/demo/src/{gallery,showcase}.rs` 是 v1 的目录，今天的树里**没有** `examples/`
-> 也没有 `floom-demo`（见 `PLAN.md` P1）。P1 建 crate 时需从零重建这些结构，而非在旧文件上改。
+> 下面列出的 `examples/demo/src/{gallery,showcase}.rs` 是 v1 的目录，今天的树里**没有** `examples/demo`，
+> 也没有 v1 那个 `floom-demo`（见 `PLAN.md` P1）。2026-11-12 建的是 `examples/floom-demo`，
+> 结构与其不同：双栏壳在 `src/shell.rs`，六类页面在 `src/pages/`，compare 行在 `src/macros.rs`。
+> 本文说的 `showcase` 辅助模块（可交互属性面板、方法演示）**仍未做**。
 
 - `examples/demo/src/gallery.rs`（v1）：98 个 `pages.push(...)`，两栏 master/detail；约 90% 是单一静态示例。
 - `examples/demo/src/showcase.rs`：已提供 Vant 风格能力
