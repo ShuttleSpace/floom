@@ -27,6 +27,13 @@ floom-widgets = { path = "../../crates/widgets/floom-widgets", version = "0.2.0"
 floom-signal = { path = "../../crates/core/floom-signal", version = "0.2.0" }
 floom-core-theme = { path = "../../crates/ecosystem/floom-ui/crates/floom-core-theme" }
 
+# The composite controls the kits build their widgets from. The `floom`
+# umbrella deliberately does not re-export these -- a crate that ships in
+# an app binary does not get to depend on a satellite workspace -- so a
+# gallery that shows a date picker has to name `DateValue` and
+# `TimeValue` itself.
+floom-ui-composites = { path = "../../crates/ecosystem/floom-ui/crates/floom-ui-composites" }
+
 # The kit crates: every component of the floom-ui satellite, in every
 # design system. Path deps, because the satellite is a separate
 # workspace and the gallery needs the components, not the workspace.
