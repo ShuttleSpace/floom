@@ -189,7 +189,13 @@ pub fn table(key: &'static str, title: &str, rows: &[ApiRow]) -> Stack {
         let name = row.name.clone();
         let type_ = row.type_.clone();
         let default = row.default.clone();
-        let description = row.description.clone();
+        // A cell the library did not fill in reads as an em dash rather than as
+        // a blank, so a reader can tell "no description" from "not shown".
+        let description = if row.description.is_empty() {
+            "—".to_string()
+        } else {
+            row.description.clone()
+        };
 
         let mut line = Stack::new(Axis::Horizontal)
             .gap(14.0)

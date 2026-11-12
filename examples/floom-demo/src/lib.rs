@@ -17,6 +17,7 @@ pub mod ds;
 pub mod macros;
 pub mod pages;
 pub mod props_sources;
+pub mod props_src;
 pub mod registry;
 pub mod shell;
 pub mod widgets;

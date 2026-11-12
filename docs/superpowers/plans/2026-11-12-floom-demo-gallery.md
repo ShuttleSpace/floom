@@ -1123,7 +1123,7 @@ row comes from a hand-written side table in the same page module; a prop with
 no side-table entry keeps an empty description, and the table renders an empty
 cell as `—`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   Create `examples/floom-demo/tests/props.rs`:
 
@@ -1149,23 +1149,23 @@ cell as `—`.
   }
   ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
   Run: `cargo test -p floom-demo --test props`
 
   Expected: FAIL — `props_src::props_for` does not exist.
 
-- [ ] **Step 3: Implement the parser and wire it into the pages**
+- [x] **Step 3: Implement the parser and wire it into the pages**
 
   Write the parser in `props_src.rs` and set every page's `api.props`.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
   Run: `cargo test -p floom-demo --test props`
 
   Expected: PASS.
 
-- [ ] **Step 5: Verify the tables are complete**
+- [x] **Step 5: Verify the tables are complete**
 
   Add to `examples/floom-demo/tests/props.rs`:
 
@@ -1191,7 +1191,7 @@ cell as `—`.
   drops a field fails the test. A component whose table is missing a prop is
   a drift bug.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
   ```bash
   git add examples/floom-demo

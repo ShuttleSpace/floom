@@ -74,6 +74,9 @@ fn motion_page(
     page.intro = intro;
     page.samples = samples;
     page.api = api;
+    // The props table is parsed out of the library's own props source, so it
+    // cannot drift from the struct it describes.
+    page.api.props = crate::props_src::props_for_component(component);
     page
 }
 

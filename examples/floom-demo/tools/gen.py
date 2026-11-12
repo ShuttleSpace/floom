@@ -275,6 +275,26 @@ def emit_props_sources(components: list, props_modules: list) -> None:
             ");",
             "",
         ]
+    lines += [
+        "/// The source of the props module named `module`, if there is one.",
+        "///",
+        "/// The name is matched after normalising the satellite's own directory",
+        "/// names: the satellite spells some of them with a hyphen and some with",
+        "/// an underscore, and both spell the same module.",
+        "pub fn source_for(module: &str) -> Option<&'static str> {",
+        "    let module = module.replace('-', \"_\");",
+        "    Some(match module.as_str() {",
+    ]
+    for module in props_modules:
+        if module is None:
+            continue
+        lines.append(f'        "{module}" => {module.upper()}_PROPS,')
+    lines += [
+        "        _ => return None,",
+        "    })",
+        "}",
+        "",
+    ]
     path = os.path.join(DEMO, "src", "props_sources.rs")
     write(path, "\n".join(lines))
     format_rust(path)
