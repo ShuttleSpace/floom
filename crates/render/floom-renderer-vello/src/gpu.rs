@@ -1322,10 +1322,20 @@ impl VelloGpuPresenter {
     /// *same* texture would not compose — vello clears the target per call, a
     /// fact worth stating because the obvious "just render the next segment
     /// again" is exactly what does not work.
+    ///
+    /// The base is **transparent**, and that is the opposite of the window's.
+    /// A window is opaque, so the area the scene does not cover has to be
+    /// white or black text on it is invisible — that is why the present path
+    /// below clears white. This path is a *readback*: the pixels it returns
+    /// are read back and compared against what a scene should have drawn, and
+    /// "nothing was drawn" has to read as alpha 0 rather than as opaque
+    /// white. Clearing white here made every pixel-absence assertion
+    /// vacuous — an empty scene read back as a sheet of white paper, and the
+    /// clip, shadow and filter-scope tests failed on it.
     fn rasterize_offscreen(&mut self, width: u32, height: u32) -> Option<Vec<u8>> {
         let (texture, view) = create_offscreen_target(&self.device, width, height);
         let params = RenderParams {
-            base_color: PenikoColor::WHITE,
+            base_color: PenikoColor::TRANSPARENT,
             width,
             height,
             antialiasing_method: AaConfig::Msaa16,
