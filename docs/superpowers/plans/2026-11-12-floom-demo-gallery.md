@@ -1045,30 +1045,30 @@ observable; their samples wrap a child and set the flag true. `InfiniteScroller`
 and `PullToRefresh` depend on scroll and pointer state; show the resting
 state and say what triggers the other.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   Add to `examples/floom-demo/tests/categories.rs` a test
   `every_motion_component_has_at_least_two_samples` over the 15 names, and a
   test asserting each provider page's samples all carry a `note` (Review
   Focus #4).
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
   Run: `cargo test -p floom-demo --test categories`
 
   Expected: FAIL.
 
-- [ ] **Step 3: Write the samples and the API tables**
+- [x] **Step 3: Write the samples and the API tables**
 
   As Task 6 Step 3, plus the provider and transition rules above.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
   Run: `cargo test -p floom-demo --test categories`
 
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
   ```bash
   git add examples/floom-demo

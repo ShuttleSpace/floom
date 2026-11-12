@@ -118,6 +118,37 @@ const LAYOUT: &[&str] = &[
     "Window",
 ];
 
+/// The components of the Motion, progress & providers category, by the name a
+/// reader sees.
+const MOTION: &[&str] = &[
+    "DateAdapterProvider",
+    "DefaultsProvider",
+    "DisplayProvider",
+    "ExpandTransition",
+    "FadeTransition",
+    "IconsProvider",
+    "InfiniteScroller",
+    "LocaleProvider",
+    "ProgressCircular",
+    "ProgressLinear",
+    "PullToRefresh",
+    "ScaleTransition",
+    "SkeletonLoader",
+    "SlideTransition",
+    "ThemeProvider",
+];
+
+/// The provider components: pure service layers with no visual output of their
+/// own, whose samples must say so in a note.
+const MOTION_PROVIDERS: &[&str] = &[
+    "DateAdapterProvider",
+    "DefaultsProvider",
+    "DisplayProvider",
+    "IconsProvider",
+    "LocaleProvider",
+    "ThemeProvider",
+];
+
 /// The components that fire no event at all.
 ///
 /// A button group arranges other buttons; a list subheader is a heading; a
@@ -161,6 +192,20 @@ const SILENT: &[&str] = &[
     "Spacer",
     "SystemBar",
     "Toolbar",
+    // Motion, progress & providers
+    "DateAdapterProvider",
+    "DefaultsProvider",
+    "DisplayProvider",
+    "ExpandTransition",
+    "FadeTransition",
+    "IconsProvider",
+    "LocaleProvider",
+    "ProgressCircular",
+    "ProgressLinear",
+    "ScaleTransition",
+    "SkeletonLoader",
+    "SlideTransition",
+    "ThemeProvider",
 ];
 
 /// The components that are overlays.
@@ -286,6 +331,32 @@ fn every_layout_component_states_what_it_does() {
 #[test]
 fn every_layout_page_mounts_and_paints() {
     assert_mounts_and_paints(LAYOUT);
+}
+
+#[test]
+fn every_motion_component_has_at_least_two_samples() {
+    assert_two_samples_each(MOTION);
+}
+
+#[test]
+fn every_motion_component_states_what_it_does() {
+    assert_states_what_it_does(MOTION);
+}
+
+#[test]
+fn every_motion_page_mounts_and_paints() {
+    assert_mounts_and_paints(MOTION);
+}
+
+#[test]
+fn every_provider_page_says_it_has_no_visual_of_its_own() {
+    for name in MOTION_PROVIDERS {
+        let page = registry::page_named(name).expect("page exists");
+        assert!(
+            page.samples.iter().all(|sample| sample.note.is_some()),
+            "{name} is a provider and says nothing about having no visual of its own"
+        );
+    }
 }
 
 #[test]
