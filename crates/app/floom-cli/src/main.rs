@@ -1412,6 +1412,51 @@ mod tests {
     }
 
     #[test]
+    fn the_generated_facade_mirrors_the_generated_rust_api() {
+        // The facade claims to mirror the crate's public Rust API name for
+        // name. A scaffold that breaks the claim hands every new plugin a
+        // facade that is already wrong on the day it is written: the API a
+        // TypeScript author sees is not the API the crate has.
+        //
+        // The names are taken from the scaffold's own Rust half rather than
+        // written out here, so the check follows the scaffold when it grows.
+        let dir = scaffold("mirror", &["macos"]);
+        let rust = read(&dir, "src/lib.rs");
+        let dts = read(&dir, "index.d.ts");
+
+        let mut declared = 0usize;
+        for line in rust.lines() {
+            // Only the crate root is the API. A `pub` item inside a module --
+            // the scaffold's private `ffi` block, its `extern` declarations --
+            // is not something a caller can reach, so it is not part of what
+            // the facade has to name.
+            if !line.starts_with("pub ") {
+                continue;
+            }
+            let name = if let Some(rest) = line.strip_prefix("pub fn ") {
+                rest.split(['(', ' ']).next().unwrap_or_default()
+            } else if let Some(rest) = line.strip_prefix("pub const ") {
+                rest.split([':', ' ']).next().unwrap_or_default()
+            } else {
+                continue;
+            };
+            if name.is_empty() {
+                continue;
+            }
+            declared += 1;
+            assert!(
+                dts.contains(&format!("export function {name}("))
+                    || dts.contains(&format!("export const {name}:")),
+                "the scaffold's facade does not name the crate's `{name}`:\n{dts}"
+            );
+        }
+        assert!(
+            declared >= 5,
+            "the scaffold's Rust half should publish a real API, found {declared}"
+        );
+    }
+
+    #[test]
     fn the_native_half_lives_where_build_rs_looks_for_it() {
         // `build.rs` reads `native/<platform>/` for the platforms whose half is
         // C, Swift or ArkTS; Android is the exception, written into `build.rs`

@@ -39,6 +39,7 @@ from __future__ import annotations
 import os
 import re
 import sys
+from pathlib import Path
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 PLUGINS = os.path.join(ROOT, "crates", "ecosystem", "plugins")
@@ -56,6 +57,8 @@ TYPE_RE = re.compile(r"^pub\s+(?:struct|enum|trait)\s+([A-Z][A-Za-z0-9_]*)", re.
 REEXPORT_RE = re.compile(r"^pub\s+use\s+([a-z_][a-z0-9_]*)::\{([^}]*)\}", re.M)
 # `pub use platform::*` — the whole module's public surface is public API.
 GLOB_RE = re.compile(r"^pub\s+use\s+([a-z_][a-z0-9_]*)\s*::\s*\*", re.M)
+# A public constant: part of the API, and part of what the facade has to name.
+CONST_RE = re.compile(r"^pub\s+const\s+([A-Z][A-Z0-9_]*)\s*:", re.M)
 
 
 def read(path: str) -> str:
@@ -99,6 +102,13 @@ def public_functions(src: str) -> set[str]:
     return set(FN_RE.findall(src)) - set(ABI_RE.findall(src))
 
 
+def public_consts(src: str) -> set[str]:
+    """Every public constant. A constant is part of the API: a capability id
+    that the crate publishes and the facade does not name is an id a TypeScript
+    author cannot read."""
+    return set(CONST_RE.findall(src))
+
+
 def public_types(src: str) -> dict[str, dict[str, set[str]]]:
     """Every public type, with its variants, fields and methods."""
     types: dict[str, dict[str, set[str]]] = {}
@@ -138,32 +148,59 @@ def public_types(src: str) -> dict[str, dict[str, set[str]]]:
     return types
 
 
-def crate_api(src_dir: str) -> tuple[set[str], dict[str, dict[str, set[str]]]]:
-    """The plugin crate's public API: free functions and public types."""
+def wide_names(src: str) -> set[str]:
+    """Every public-looking name in a source, at any indentation.
+
+    A macro body can declare a `pub` item at any depth: the file-dialog
+    plugin's `SUPPORTED` is written inside a `macro_rules!` body, and it is
+    part of the crate's API. A source scanner that only reads column zero
+    cannot see those, so this wider scan is what the *phantom* check asks --
+    "does this name appear anywhere in the crate at all?". The narrower,
+    crate-root scan is what the *missing* check asks, because a private
+    module's item is not something the facade has to name.
+    """
+    names = set(re.findall(r"\bpub\s+(?:(?:default|const|async|unsafe)\s+)*fn\s+([a-z_][a-z0-9_]*)", src))
+    names |= set(re.findall(r"\bpub\s+const\s+([A-Z][A-Z0-9_]*)\s*:", src))
+    names |= set(re.findall(r"\bpub\s+(?:struct|enum|trait)\s+([A-Z][A-Za-z0-9_]*)", src))
+    return names
+
+
+def crate_api(src_dir: str) -> tuple[set[str], set[str], dict[str, dict[str, set[str]]], set[str]]:
+    """The plugin crate's public API: free functions, constants and types.
+
+    The last set is the wider "is this name anywhere in the crate" scan.
+    """
     lib = read(os.path.join(src_dir, "lib.rs"))
     functions = public_functions(lib)
+    consts = public_consts(lib)
     types = public_types(lib)
+    anywhere = wide_names(lib)
 
     for match in REEXPORT_RE.finditer(lib):
         for part in match.group(2).split(","):
             part = part.strip().split(" as ")[0].strip()
             if part:
                 functions.add(part)
+                anywhere.add(part)
     for match in GLOB_RE.finditer(lib):
         module = read(os.path.join(src_dir, match.group(1) + ".rs"))
         functions |= public_functions(module)
+        consts |= public_consts(module)
+        anywhere |= wide_names(module)
         for name, info in public_types(module).items():
             for key in ("variants", "fields", "methods"):
                 types.setdefault(name, {"variants": set(), "fields": set(), "methods": set()})[
                     key
                 ] |= info[key]
-    return functions, types
+    return functions, consts, types, anywhere
 
 
 def dts_api(source: str) -> dict[str, object]:
     """The facade's API: exported functions, constants, classes, interfaces, aliases."""
     functions = set(re.findall(r"export\s+function\s+([a-z_][A-Za-z0-9_]*)", source))
-    constants = set(re.findall(r"export\s+const\s+([a-z_][A-Za-z0-9_]*)", source))
+    # A constant's name is usually SCREAMING_CASE, so it does not have to start
+    # lower like a function's.
+    constants = set(re.findall(r"export\s+const\s+([A-Za-z_][A-Za-z0-9_]*)", source))
     classes: dict[str, set[str]] = {}
     for match in re.finditer(r"export\s+class\s+([A-Z][A-Za-z0-9_]*)\s*\{", source):
         body, _ = brace_body(source, match.end() - 1)
@@ -195,15 +232,26 @@ def report(entry: str, message: str) -> None:
 
 def main() -> int:
     verbose = "--verbose" in sys.argv
+    args = [a for a in sys.argv[1:] if not a.startswith("-")]
+    # An optional directory: the plugin root to check. The default is the
+    # repository's own plugin workspace; a scaffolded plugin can be pointed at
+    # to check that what `floom create --plugin` writes is already conforming.
+    root = Path(args[0]) if args else Path(PLUGINS)
     failures = 0
     checked = 0
 
-    for entry in sorted(os.listdir(PLUGINS)):
-        directory = os.path.join(PLUGINS, entry)
-        if not entry.startswith("floom-plugin-") or not os.path.isdir(directory):
+    for entry in sorted(os.listdir(root)):
+        directory = os.path.join(root, entry)
+        if not os.path.isdir(directory):
+            continue
+        if not args and not entry.startswith("floom-plugin-"):
+            continue
+        if not os.path.isfile(os.path.join(directory, "src", "lib.rs")):
             continue
         checked += 1
-        rust_fns, rust_types = crate_api(os.path.join(directory, "src"))
+        rust_fns, rust_consts, rust_types, anywhere = crate_api(
+            os.path.join(directory, "src")
+        )
         source = read(os.path.join(directory, "index.d.ts"))
         facade = dts_api(source)
         dts_fns: set[str] = facade["functions"]
@@ -212,10 +260,11 @@ def main() -> int:
         interfaces: dict[str, set[str]] = facade["interfaces"]
         aliases: dict[str, set[str]] = facade["aliases"]
 
-        # The names the facade offers, against the names the crate offers. A
-        # crate-root function answers for itself; an associated function
-        # answers for its type, so the facade may expose it at module level.
-        crate_names = set(rust_fns)
+        # The names the facade offers, against the names the crate has
+        # somewhere. A crate-root function answers for itself; an associated
+        # function answers for its type, so the facade may expose it at module
+        # level.
+        crate_names = set(rust_fns) | set(rust_consts) | anywhere
         for info in rust_types.values():
             crate_names |= info["methods"]
         phantom = sorted((dts_fns | dts_consts) - crate_names)
@@ -230,6 +279,15 @@ def main() -> int:
             report(
                 entry,
                 f"index.d.ts does not declare the Rust API function(s) {', '.join(missing)}",
+            )
+
+        # A crate-root constant the facade does not mention.
+        missing_consts = sorted(rust_consts - dts_consts)
+        if missing_consts:
+            failures += 1
+            report(
+                entry,
+                f"index.d.ts does not declare the Rust API constant(s) {', '.join(missing_consts)}",
             )
 
         for name, info in sorted(rust_types.items()):

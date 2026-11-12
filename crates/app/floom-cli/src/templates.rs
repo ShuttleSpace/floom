@@ -1232,6 +1232,12 @@ pub fn plugin_dts(name: &str) -> String {
 // crate, not by JavaScript.
 
 declare module "floom-plugin-{name}" {{
+  /** The capability id this plugin answers with. Stable across releases. */
+  export const CAPABILITY_ID: number;
+
+  /** The ABI version this Rust half was compiled against. */
+  export const ABI_VERSION: number;
+
   export function version(): string;
 
   /** Claims the plugin's platform state. Throws when the native half refuses. */
