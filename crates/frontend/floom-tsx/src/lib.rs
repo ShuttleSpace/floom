@@ -17,11 +17,13 @@ pub mod decl;
 pub mod entry;
 pub mod error;
 pub mod lower;
+pub mod module;
 pub mod parser;
 
 pub use app::{CompiledApp, Generated, generate};
 pub use entry::{AppConfig, Requirement};
 pub use error::{Result, TsxError};
+pub use module::ModuleExport;
 
 use std::path::Path;
 

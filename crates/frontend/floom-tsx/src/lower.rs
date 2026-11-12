@@ -21,6 +21,7 @@ use swc_common::{Span, Spanned};
 use swc_ecma_ast as ast;
 
 use crate::error::{Result, TsxError};
+use crate::module::ModuleExport;
 use crate::parser::{Parsed, RootJsx};
 
 /// State threaded through a single `compile` call.
@@ -455,7 +456,10 @@ impl<'a> Lower<'a> {
             && let ast::Expr::Ident(id) = e.as_ref()
         {
             let callee = id.sym.as_str().to_string();
-            if callee == "createSignal" || callee == "createMemo" {
+            if matches!(
+                ModuleExport::from_name(&callee),
+                Some(ModuleExport::CreateSignal) | Some(ModuleExport::CreateMemo)
+            ) {
                 return Err(self.err(
                     call.span,
                     format!("{callee} must be bound with `const [name] = ...` at module scope"),
@@ -789,8 +793,8 @@ fn var_decl_signal(decl: &ast::VarDeclarator) -> Option<Binding> {
         _ => return None,
     };
     let callee = call_name(call)?;
-    match callee.as_str() {
-        "createSignal" | "createMemo" => {
+    match ModuleExport::from_name(&callee) {
+        Some(ModuleExport::CreateSignal) | Some(ModuleExport::CreateMemo) => {
             // `[count, setCount]` or `double`.
             let name = array_first_name(&decl.name).or_else(|| pat_ident_name(&decl.name))?;
             let first = call.args.first();
@@ -804,7 +808,7 @@ fn var_decl_signal(decl: &ast::VarDeclarator) -> Option<Binding> {
             let init = first.and_then(|a| expr_lit_value(a.expr.as_ref(), ty));
             Some(Binding::value_with_init(name, ty, init))
         }
-        "useContext" => {
+        Some(ModuleExport::UseContext) => {
             let name = pat_ident_name(&decl.name)?;
             Some(Binding::value(name, ValueType::Text))
         }
@@ -819,10 +823,10 @@ fn expr_stmt_signal(expr: &ast::Expr) -> Option<Binding> {
         _ => return None,
     };
     let callee = call_name(call)?;
-    match callee.as_str() {
+    match ModuleExport::from_name(&callee) {
         // Recognized but emits no binding: its body runs as an effect.
-        "createEffect" => None,
-        "provideContext" => {
+        Some(ModuleExport::CreateEffect) => None,
+        Some(ModuleExport::ProvideContext) => {
             let name = {
                 let a = call.args.first()?;
                 match a.expr.as_ref() {
@@ -917,7 +921,10 @@ fn var_decl_signal_setter(decl: &ast::VarDeclarator) -> Option<(String, String)>
         _ => return None,
     };
     let callee = call_name(call)?;
-    if callee != "createSignal" && callee != "createMemo" {
+    if !matches!(
+        ModuleExport::from_name(&callee),
+        Some(ModuleExport::CreateSignal) | Some(ModuleExport::CreateMemo)
+    ) {
         return None;
     }
     let ast::Pat::Array(arr) = &decl.name else {

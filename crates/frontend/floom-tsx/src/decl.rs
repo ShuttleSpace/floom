@@ -7,6 +7,8 @@ use floom_dsl::ui_ir::{
     EventName, NodeKind, PropSpec, ValueType, all_prop_names, events_for, prop_spec,
 };
 
+use crate::module::ModuleExport;
+
 /// Emit the full declaration source; called by `floom_tsx::generate_dts()`.
 pub fn generate() -> String {
     let mut out = format!(
@@ -34,7 +36,23 @@ pub fn generate() -> String {
     out.push_str("  }\n}\n\n");
 
     out.push_str(&component_values());
-    out.push_str(FLOOM_MODULE);
+    out.push_str(&floom_module());
+    out
+}
+
+/// The `declare module "floom"` block.
+///
+/// Every line comes from [`ModuleExport`], which is the same list the
+/// compiler lowers a TSX file against — so a name the runtime implements is
+/// declared here, and a name declared here is one the runtime implements.
+fn floom_module() -> String {
+    let mut out = String::from("\ndeclare module \"floom\" {\n");
+    for export in ModuleExport::ALL {
+        out.push_str("  ");
+        out.push_str(export.declaration());
+        out.push('\n');
+    }
+    out.push_str("}\n");
     out
 }
 
@@ -210,28 +228,3 @@ fn is_placeholder(kind: NodeKind) -> bool {
             | NodeKind::Image
     )
 }
-
-const FLOOM_MODULE: &str = r#"
-declare module "floom" {
-  export function createSignal<T>(value: T): [Floom.Accessor<T>, Floom.Setter<T>];
-  export function createMemo<T>(fn: () => T): Floom.Accessor<T>;
-  export function createEffect(fn: () => void): void;
-  export function provideContext<T>(name: string, value: T): void;
-  export function useContext<T = string>(name: string): T;
-  export type Component = Floom.Component;
-  export function mount(component: Component): void;
-  export const app: { setName(name: string): void };
-  export const window: {
-    setTitle(title: string): void;
-    setSize(width: number, height: number): void;
-    setSize(size: string): void;
-    setResizable(resizable: boolean): void;
-  };
-  export const platform: {
-    /** @param capability windowing | clipboard | ime | accessibility | webgpu | software_render | touch | native_view */
-    require(capability: Capability, onUnsupported: Policy): void;
-  };
-  export type Capability = "windowing" | "clipboard" | "ime" | "accessibility" | "webgpu" | "software_render" | "touch" | "native_view";
-  export type Policy = "warn" | "fail" | "exit";
-}
-"#;

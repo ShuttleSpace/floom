@@ -34,6 +34,7 @@ use swc_common::{Span, Spanned};
 use swc_ecma_ast as ast;
 
 use crate::error::{Result, TsxError};
+use crate::module::ModuleExport;
 use crate::parser::{Parsed, RootJsx};
 
 /// Build a span-located error from `Parsed`.
@@ -99,7 +100,9 @@ pub fn resolve(parsed: &Parsed) -> Result<Entry> {
             continue;
         };
         match callee.as_ref() {
-            ast::Expr::Ident(id) if id.sym == "mount" => {
+            ast::Expr::Ident(id)
+                if ModuleExport::from_name(&id.sym) == Some(ModuleExport::Mount) =>
+            {
                 let (name, root) = mount_target(call, parsed)?;
                 mounted_name = name;
                 mounted_root = root;
@@ -256,10 +259,10 @@ fn apply_surface_call(
     config: &mut AppConfig,
     parsed: &Parsed,
 ) -> Result<()> {
-    match object {
-        "window" => apply_window(call, config, parsed),
-        "app" => apply_app(call, config, parsed),
-        "platform" => apply_platform(call, config, parsed),
+    match ModuleExport::from_name(object) {
+        Some(ModuleExport::Window) => apply_window(call, config, parsed),
+        Some(ModuleExport::App) => apply_app(call, config, parsed),
+        Some(ModuleExport::Platform) => apply_platform(call, config, parsed),
         // Not part of the floem surface; leave it to the app's own runtime.
         _ => Ok(()),
     }
