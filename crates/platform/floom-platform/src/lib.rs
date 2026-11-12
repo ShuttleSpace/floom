@@ -43,7 +43,8 @@ pub use fake::{FakePlatform, HostPlatform};
 pub use floom_types::{DisplayInfo, Modifiers, Point, ScaleFactor, Size, SurfaceId, WindowId};
 pub use keymap::KeyCode;
 pub use plugins::{
-    Plugin, PluginError, plugin, register_plugin, registered_plugins, unregister_plugin,
+    Plugin, PluginError, plugin, register_plugin, registered_plugins, table_accesses,
+    unregister_plugin,
 };
 pub use surface::{Surface, SurfaceConfig, SurfaceTarget};
 pub use window::{Window, WindowCommand, WindowConfig, WindowState};

@@ -40,6 +40,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 /// A plugin failed to enable.
@@ -109,6 +110,23 @@ fn table() -> &'static Mutex<BTreeMap<String, Entry>> {
     TABLE.get_or_init(|| Mutex::new(BTreeMap::new()))
 }
 
+/// How many times the table has been locked.
+///
+/// A counter rather than a claim. The table is behind a mutex, so the only
+/// way to know that the frame path does not consult it is to count the
+/// consultations: "the registry is setup-only" is a claim about code that is
+/// not there, and a counter is the evidence.
+static TABLE_ACCESSES: AtomicU64 = AtomicU64::new(0);
+
+/// How many times the plugin table has been locked.
+///
+/// A diagnostic that answers one question: does the frame path touch the
+/// registry? A host that registers its plugins at startup and never asks
+/// again leaves this still. A host that asks per frame does not.
+pub fn table_accesses() -> u64 {
+    TABLE_ACCESSES.load(Ordering::Relaxed)
+}
+
 /// Locks the table.
 ///
 /// A poisoned lock means a plugin's `enable` panicked. Propagating the poison
@@ -118,6 +136,7 @@ fn table() -> &'static Mutex<BTreeMap<String, Entry>> {
 /// runs, so a poisoned entry is one that has already refused — skipping it is
 /// the same outcome it would have had.
 fn locked() -> MutexGuard<'static, BTreeMap<String, Entry>> {
+    TABLE_ACCESSES.fetch_add(1, Ordering::Relaxed);
     match table().lock() {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
