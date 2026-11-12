@@ -203,10 +203,16 @@ def emit_ds_rs(kits: dict, components: list) -> None:
                 f"    pub use {rust_path(kit['package'])}::{kit['type']} as {alias_name(component)};"
             )
         names = ", ".join(f'"{alias_name(c)}"' for c in components)
+        keys = ", ".join(f'"{c}"' for c in components)
         lines += [
             "",
             "    /// Every component this design system provides.",
             f"    pub const COMPONENTS: &[&str] = &[{names}];",
+            "",
+            "    /// The same components, by the key the satellite names them",
+            "    /// after -- `text-field`, `datatable` -- which is what a page",
+            "    /// module looks a component up by.",
+            f"    pub const COMPONENT_KEYS: &[&str] = &[{keys}];",
             "}",
             "",
         ]

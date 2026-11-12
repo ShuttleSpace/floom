@@ -12,5 +12,8 @@
 //!
 //! Run it with `cargo run -p floom-demo`.
 
+pub mod api;
 pub mod ds;
+pub mod pages;
 pub mod props_sources;
+pub mod registry;
