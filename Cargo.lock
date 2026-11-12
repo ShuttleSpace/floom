@@ -1053,6 +1053,7 @@ dependencies = [
  "floom-core-theme",
  "floom-signal",
  "floom-testkit",
+ "floom-ui-composites",
  "floom-widget-cupertino-alert",
  "floom-widget-cupertino-app",
  "floom-widget-cupertino-app_bar",
