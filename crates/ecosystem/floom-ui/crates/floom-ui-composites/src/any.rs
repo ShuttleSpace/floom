@@ -69,6 +69,13 @@ impl_widget_any_labelled!(
     crate::accordion::SelectGroup,
     crate::bottom_sheet::BottomSheet,
     crate::checkbox::Checkbox,
+    // The counter names itself as a group, so it publishes its own role rather
+    // than leaving it to the `Pressable`s inside it. It was missing from this
+    // list entirely, which meant `Counter` could be built, returned from
+    // `view()`, and then not mounted -- `Box::new(Counter::new(1))` failed with
+    // "not a Floom 2.0 `Widget`". Found by the component gallery, which has to
+    // mount every component.
+    crate::counter::Counter,
     crate::dialog::Dialog,
     // The three navigation surfaces each publish their own role: a bar and a
     // rail are `Navigation`, a drawer is a `Dialog` once it is open and
@@ -95,4 +102,9 @@ impl_widget_any!(
     crate::accordion::AccordionPanelLeaf,
     crate::accordion::AccordionIndicatorSlot,
     crate::accordion::SelectGroupRow,
+    // The icon button publishes nothing of its own: the `Pressable` inside it
+    // carries the button role and the icon inside *that* carries the label.
+    // It was missing here for the same reason `Counter` was -- it could be
+    // built and returned from `view()`, and then not mounted.
+    crate::icon_button::IconButton,
 );
