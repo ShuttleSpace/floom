@@ -56,13 +56,57 @@ const FORMS: &[&str] = &[
     "ValidationMessages",
 ];
 
+/// The components of the Data display category, by the name a reader sees.
+const DATA: &[&str] = &[
+    "Avatar",
+    "Badge",
+    "Calendar",
+    "Card",
+    "Carousel",
+    "Chip",
+    "Code",
+    "DataIterator",
+    "DataTable",
+    "Icon",
+    "Image",
+    "Kbd",
+    "List",
+    "ListItem",
+    "Pagination",
+    "Sparkline",
+    "Table",
+    "Text",
+    "Timeline",
+    "Treeview",
+    "VirtualScroller",
+];
+
 /// The components that fire no event at all.
 ///
 /// A button group arranges other buttons; a list subheader is a heading; a
 /// validation-message list is told what to show rather than reporting that
 /// something went wrong. None of them has anything to report, so their pages
 /// say so by listing no events rather than by inventing one.
-const SILENT: &[&str] = &["ButtonGroup", "ListSubheader", "ValidationMessages"];
+const SILENT: &[&str] = &[
+    // Actions
+    "ButtonGroup",
+    "ListSubheader",
+    // Forms
+    "ValidationMessages",
+    // Data display
+    "Avatar",
+    "Badge",
+    "Card",
+    "Code",
+    "DataIterator",
+    "Icon",
+    "Image",
+    "Kbd",
+    "Sparkline",
+    "Table",
+    "Text",
+    "Timeline",
+];
 
 /// Every component in a category shows at least two samples.
 fn assert_two_samples_each(names: &[&str]) {
@@ -135,4 +179,19 @@ fn every_forms_component_states_what_it_does() {
 #[test]
 fn every_forms_page_mounts_and_paints() {
     assert_mounts_and_paints(FORMS);
+}
+
+#[test]
+fn every_data_display_component_has_at_least_two_samples() {
+    assert_two_samples_each(DATA);
+}
+
+#[test]
+fn every_data_display_component_states_what_it_does() {
+    assert_states_what_it_does(DATA);
+}
+
+#[test]
+fn every_data_display_page_mounts_and_paints() {
+    assert_mounts_and_paints(DATA);
 }
