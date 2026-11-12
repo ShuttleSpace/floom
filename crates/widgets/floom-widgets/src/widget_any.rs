@@ -155,6 +155,13 @@ impl_widget_any!(
     crate::compose::PresenceLeaf,
     crate::compose::Opacity,
     crate::native::NativeSurface,
+    // The progress indicators publish nothing of their own: the track and the
+    // fill are what the reader sees, and neither names itself. They were missing
+    // from this list, which meant `CircularProgress` / `LinearProgress` could be
+    // built, returned from `view()`, and then not mounted. The gallery found
+    // them, because it has to mount every component it shows.
+    crate::circular_progress::CircularProgress,
+    crate::progress_linear::LinearProgress,
 );
 
 // The internals of `Accordion` and `SelectGroup`: decorative composites with no
