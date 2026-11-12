@@ -1,5 +1,11 @@
 # floom-elements Phase 1 Implementation Plan
 
+> **现状校正（2026-11-11，reconcile）：本计划是 v1 时代的 `floom-elements` 三层层架构设计稿，
+> 今天已**不适用**。`floom-elements` facade 在 "Stage D" 已移除（`crates/ecosystem/floom-ui/Cargo.toml:361-365`），
+> 组件框架改为 engine `floom-widgets` → `floom-ui-composites` → per-DS kit crates（见 `docs/PLAN.md` 的
+> v2 架构与任务清单）。本文件保留为历史计划；其 checkbox **从未勾选**，路径也指向其他机器
+> （`/Users/ahs/...`）。新的工作依据 `docs/PLAN.md`（2026-11-11 版）。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the floom-elements MVP: 8 Material Design components on a cross-design-system component framework with token-based theming, compile-time Design System dispatch, and per-component tree-shaking.

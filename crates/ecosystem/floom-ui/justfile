@@ -1,3 +1,9 @@
+# NOTE: these targets are BROKEN until the demo crate exists. There is no
+# `floom-demo` / `examples/` crate in this tree today (it was a v1 artifact and
+# the `floom-elements` facade it depended on was removed in "Stage D"). Building a
+# runnable gallery is tracked as P1 in `docs/PLAN.md`; once that crate exists,
+# point these at it (and add a `harmony` target).
+
 material:
     cargo watch -c -d 1 -x 'run -p floom-demo'
 

@@ -1,432 +1,143 @@
 <!--
-Last updated: 2026-07-31
-Status: Design doc — brainstorming complete, awaiting user review
-Source: .agents/floom-ui/skills/SKILL.md
+Reconciled: 2026-11-11 — supersedes the 2026-07-31 v1 architecture plan.
+Status: working task list for today's `crates/ecosystem/floom-ui`.
+Why replaced: the 2026-07-31 plan assumed v1 (`floom-elements` three-layer facade +
+per-component crates that held the implementation + `examples/demo`). None of that
+architecture exists in this tree any more. §1–§2 record the real v2 architecture and
+what changed; §3 is the actual remaining work. The old plan survives in git history and,
+in more detail, in `docs/superpowers/plans/2026-07-31-floom-elements.md` (itself v1-era).
+Conventions (naming / token-first / a11y / testing) are still valid — see §4.
 -->
 
-# floom-elements 架构与实施计划
+# floom-ui 架构与任务清单（Reconciled 2026-11-11）
 
-Version: 0.1.0
+Version: 0.2.0 (workspace shows root's `0.2.0`)
 
-## 1. 项目使命
+## 1. 当前架构（准确）
 
-在 Floom（Rust UI framework）之上构建跨 Design System 的 UI Component Framework。
+`crates/ecosystem/floom-ui` 是一个**独立的 satellite workspace**（自有 `Cargo.toml`、`justfile`、`Cargo.lock`），
+根仓库的 `crates/ecosystem` 被 root manifest exclude，所以根 `cargo test --workspace` **不会**跑到它。
+它由 `just gate ecosystem` 与 CI `ecosystem-check`（`.github/workflows/ci-plugins.yml`）用
+`cargo test --workspace` 覆盖（每个 member 都是 headless 测试，渲染进 buffer，无窗口/无 GPU）。
 
-目标：类似 Vue + Vuetify / React + Radix + Material UI / Flutter Widget + Theme 的开发体验。
-
-```rust
-use floom_elements::*;
-
-Button::new("Save")
-    .variant(ButtonVariant::Primary)
-    .size(ButtonSize::Medium)
-    .on_click(|| println!("clicked"));
-```
-
-应用通过 Cargo feature 切换 Design System，业务代码零修改：
-
-```toml
-# Material (default)
-floom-elements = { version = "0.1", features = ["material"] }
-
-# 或 Cupertino
-floom-elements = { version = "0.1", default-features = false, features = ["cupertino"] }
-```
-
----
-
-## 2. 架构：三层 + Per-Component Crate
-
-### 2.1 架构图
+**306 个 workspace member，全部能解析**（`cargo metadata`: packages=306, workspace_members=306）：
 
 ```
-                          Application
-                               |
-                       floom-elements API
-                       (Component Contract)
-                       compile-time cfg re-export
-                               |
-          +--------------------+--------------------+
-          |                    |                    |
-   material/             cupertino/           fluent/
-   (Design System)       (Design System)     (Design System)
-          |                    |                    |
-   Per-component:        Per-component:     Per-component:
-   md-button             cupertino-button   fluent-button
-   md-text               cupertino-text     fluent-text
-   md-text-field         ...                ...
-   ...
-          |                    |                    |
-          +------- floom-core-theme ---------------+
-          |                    |                    |
-          +---- floom-widget-runtime (utils) ------+
-          |                    |                    |
-          +--------------------+--------------------+
-                               |
-                          Floom Core
+应用
+  │
+根 engine：crates/widgets/floom-widgets（盒子/文本等原语）、floom-core、floom-scene、floom-app …
+  │
+crates/ecosystem/floom-ui（satellite，306 members）
+  ├─ floom-widget-runtime      运行时状态：主题 / DesignSystem / dark signals、布局注册、ripple
+  ├─ floom-core-theme          Theme trait + tokens + 每组件 tokens/props + 全局主题状态
+  ├─ floom-theme               跨 DS token 结构（Color/Typography/Spacing/Radius/Elevation/Motion、ColorScheme、ThemeScope）
+  ├─ floom-design              DS 样式原语（Variant、ControlSize、InteractionState、Props/StyleSet）+ 颜色数学
+  ├─ floom-ui-composites       47 个源文件（约 40 个组件）：dialog/popup/overlay/menu/tabs/tree/pickers…
+  │                            基于根 engine `floom-widgets` 组合而来，DS 无关
+  ├─ floom-material            Material 3 kit：MaterialRoles/MaterialTheme、button 指标/样式、M3 scale、gallery
+  ├─ floom-cupertino           Cupertino/HIG kit：CupertinoColors/CupertinoTheme、button、touch target、gallery
+  ├─ floom-fluent              Fluent kit：FluentColors/FluentTheme、button、gallery
+  ├─ floom-harmony             HarmonyOS kit：HarmonyColors/HarmonyTheme（brand/warning/error/success）、button、gallery
+  ├─ floom-testing             snapshot 测试助手（Snapshot、component_snapshot）
+  └─ 296 个 per-component kit crate：98 material + 99 cupertino + 99 fluent
+                                （薄 token 适配层，import `floom_ui_composites`）
 ```
 
-### 2.2 Layer 1: Component Contract (`floom-elements`)
-
-- 定义 Props、Events、State 类型
-- 通过 `cfg(feature = "material")` 等条件编译 re-export 具体实现
-- 禁止硬编码视觉属性（颜色、间距、动画、字体），这些由 `floom-core-theme` 提供
-- 应用层只依赖 `floom-elements`，不直接依赖任何 `floom-widget-*` crate
-
-### 2.3 Layer 2: Design System Implementation
-
-- 每组件一 crate：`floom-widget-<ds>-<component>`
-- 编译隔离、真正的 tree-shaking
-- 每个 crate 内部引用 `floom-core-theme` 获取设计令牌
-- 可独立编译、测试、发布
-
-### 2.4 Layer 3: Runtime Renderer
-
-- Floom Core 负责 layout、paint、event、accessibility
-- 组件 crate 通过 Floom 公开 API（`View` trait、`RwSignal`、事件系统）与 core 交互
-
----
-
-## 3. Theme System: Token-First Design
-
-### 3.1 原则
-
-**禁止：** `Color::rgb(255, 0, 0)` 或 `padding: 16.0`
-**必须：** `theme.colors().primary` 或 `theme.component(ComponentId::Button).height`
-
-### 3.2 `floom-core-theme` crate 结构
-
-```
-floom-core-theme/
-├── Cargo.toml
-├── src/
-│   ├── lib.rs
-│   ├── tokens/
-│   │   ├── color.rs       # ColorTokens: primary, secondary, surface, error, on_*
-│   │   ├── spacing.rs     # SpacingTokens: xs(4), sm(8), md(16), lg(24), xl(32)
-│   │   ├── typography.rs  # TypographyTokens: display, headline, title, body, label
-│   │   ├── radius.rs      # RadiusTokens: none(0), sm(4), md(8), lg(16), full
-│   │   ├── shadow.rs      # ElevationTokens: level_0..24
-│   │   └── motion.rs      # MotionTokens: duration_short(150ms), medium(300ms), long(500ms)
-│   ├── theme.rs           # Theme trait
-│   └── component_tokens/
-│       ├── mod.rs         # ComponentId enum + ComponentTokens registry
-│       ├── button.rs      # ButtonTokens: height, padding_h, padding_v, icon_size, gap
-│       ├── text_field.rs  # TextFieldTokens: height, padding, border_radius
-│       └── ...
-```
-
-### 3.3 Theme trait
-
-```rust
-pub trait Theme: Clone + Send + Sync + 'static {
-    fn colors(&self) -> &ColorTokens;
-    fn spacing(&self) -> &SpacingTokens;
-    fn typography(&self) -> &TypographyTokens;
-    fn radius(&self) -> &RadiusTokens;
-    fn shadow(&self) -> &ElevationTokens;
-    fn motion(&self) -> &MotionTokens;
-    fn component(&self, id: ComponentId) -> ComponentTokens;
-}
-```
-
-### 3.4 Material 3 Theme
-
-```rust
-pub struct MaterialTheme {
-    colors: MaterialColors,       // M3 Dynamic Color scheme
-    spacing: M3Spacing,           // 4dp grid
-    typography: M3Typography,     // Roboto type scale
-    radius: M3Radius,
-    shadow: M3Elevation,
-    motion: M3Motion,
-    component_tokens: M3ComponentTokens,
-}
-
-impl Theme for MaterialTheme { /* ... */ }
-```
-
----
-
-## 4. 编译期分发设计
-
-### 4.1 决策
-
-Phase 1 采用 **`cfg(feature)` compile-time re-export**，零运行时开销。
-Phase 2+ 可扩展 `WidgetFactory` trait + global `OnceLock` 实现 runtime 切换。
-
-### 4.2 Re-export 模式
-
-```rust
-// crates/floom-elements/src/button.rs
-
-pub use floom_core_theme::button::{ButtonProps, ButtonSize, ButtonVariant};
-
-// Compile-time dispatch: only one feature is ever active
-#[cfg(feature = "material")]
-pub use floom_widget_md_button::MdButton as Button;
-
-#[cfg(feature = "cupertino")]
-pub use floom_widget_cupertino_button::CupertinoButton as Button;
-
-#[cfg(not(any(feature = "material", feature = "cupertino")))]
-compile_error!("At least one Design System feature must be enabled");
-```
-
-### 4.3 Cargo.toml features
-
-```toml
-[features]
-default = ["material"]
-material = [
-    "floom-widget-md-button",
-    "floom-widget-md-text",
-    "floom-widget-md-text-field",
-    "floom-widget-md-checkbox",
-    "floom-widget-md-switch",
-    "floom-widget-md-dialog",
-    "floom-widget-md-menu",
-    "floom-widget-md-card",
-]
-cupertino = [
-    "floom-widget-cupertino-button",
-    # ...
-]
-```
-
-### 4.4 业务层使用
-
-```rust
-// cargo build 时通过 RUSTFLAGS / Cargo.toml feature 控制
-// 业务代码完全不变
-use floom_elements::{Button, TextField, Dialog};
-```
-
----
-
-## 5. State Management
-
-### 5.1 原则
-
-- 基于 Floom 的 `RwSignal<T>` reactive 原语
-- 禁止 `Rc<RefCell<State>>`
-- 禁止 `Arc<Mutex<State>>`（除跨线程场景）
-
-### 5.2 组件内部状态
-
-```rust
-// crates/material/md-button/src/state.rs
-
-pub struct ButtonState {
-    pub disabled: RwSignal<bool>,
-    pub loading: RwSignal<bool>,
-    pub pressed: RwSignal<bool>,
-    pub hovered: RwSignal<bool>,
-    pub focused: RwSignal<bool>,
-}
-
-impl ButtonState {
-    pub fn from_props(props: &ButtonProps) -> Self {
-        Self {
-            disabled: RwSignal::new(props.disabled),
-            loading: RwSignal::new(props.loading),
-            pressed: RwSignal::new(false),
-            hovered: RwSignal::new(false),
-            focused: RwSignal::new(false),
-        }
-    }
-}
-```
-
----
-
-## 6. Phase 1 Workspace 结构
-
-### 6.1 目录树
-
-```
-floom-ui/
-├── Cargo.toml                  # workspace root
-├── docs/
-│   └── PLAN.md
-├── crates/
-│   ├── floom-core-theme/       # Theme trait + tokens（Round 1）
-│   ├── floom-widget-runtime/   # 共享工具、context helpers（Round 1）
-│   ├── floom-elements/         # Contract + cfg re-exports（Round 2）
-│   ├── floom-icons/            # Icon 类型（Round 3，与其他并行）
-│   ├── floom-testing/          # Snapshot / visual regression（Round 4）
-│   └── material/               # Material Design System（Round 3）
-│       ├── md-button/
-│       ├── md-text/
-│       ├── md-text-field/
-│       ├── md-checkbox/
-│       ├── md-switch/
-│       ├── md-dialog/
-│       ├── md-menu/
-│       └── md-card/
-└── examples/
-    └── demo/                   # 全组件验证 demo（Round 4）
-```
-
-### 6.2 依赖图与构建顺序
-
-```
-Round 1: floom-core-theme ─┬─> floom-widget-runtime
-                            │
-Round 2:                    └─> floom-elements
-                                    │
-Round 3:    +-----------------------+-----------------------+
-            |       |       |       |       |       |       |
-         md-button md-text md-text  md-    md-    md-    md-
-                          -field   checkbox switch dialog menu card
-            |       |       |       |       |       |       |
-Round 4:    +--------------+-------+-------+-------+-------+
-                            |
-                    floom-testing
-                    examples/demo
-```
-
-Round 3 的 8 个组件 crate 相互独立，可并行开发。Round 4 依赖 Round 3 全部完成。
-
----
-
-## 7. 单个组件 crate 内部结构
-
-以 `md-button` 为例：
-
-```
-crates/material/md-button/
-├── Cargo.toml
-├── src/
-│   ├── lib.rs          # MdButton struct, builder API, View impl
-│   ├── spec.rs         # ButtonSpec trait impl（对接 floom-elements 契约）
-│   ├── props.rs        # ButtonProps 构造器
-│   ├── state.rs        # ButtonState（RwSignal 状态机）
-│   └── style.rs        # Material 样式（仅引用 Theme trait）
-└── tests/
-    ├── unit.rs         # Props/state 单元测试
-    └── snapshots/
-        └── button_default.snap   # snapshot regression
-```
-
-### 7.1 `lib.rs` API 示例
-
-```rust
-use floom::prelude::*;
-use floom_core_theme::prelude::*;
-
-pub struct MdButton {
-    props: ButtonProps,
-    state: ButtonState,
-    theme: RwSignal<MaterialTheme>,
-}
-
-impl MdButton {
-    pub fn new(label: impl Into<String>) -> Self { /* ... */ }
-    pub fn variant(mut self, v: ButtonVariant) -> Self { /* ... */ }
-    pub fn size(mut self, s: ButtonSize) -> Self { /* ... */ }
-    pub fn disabled(mut self, d: bool) -> Self { /* ... */ }
-    pub fn loading(mut self, l: bool) -> Self { /* ... */ }
-    pub fn on_click(mut self, cb: impl Fn() + 'static) -> Self { /* ... */ }
-}
-
-impl View for MdButton {
-    fn view(&self) -> impl View {
-        // Reference self.theme.get() for all visual tokens
-        // ...
-    }
-}
-```
-
----
-
-## 8. Per-Component Crate 策略
-
-| 组件 | Material crate | Cupertino crate (Phase 2) | Fluent crate (Phase 2) |
-|------|--------------|--------------------------|------------------------|
-| Button | `floom-widget-md-button` | `floom-widget-cupertino-button` | `floom-widget-fluent-button` |
-| Text | `floom-widget-md-text` | `floom-widget-cupertino-text` | `floom-widget-fluent-text` |
-| TextField | `floom-widget-md-text-field` | `floom-widget-cupertino-text-field` | `floom-widget-fluent-text-field` |
-| Checkbox | `floom-widget-md-checkbox` | `floom-widget-cupertino-checkbox` | `floom-widget-fluent-checkbox` |
-| Switch | `floom-widget-md-switch` | `floom-widget-cupertino-switch` | `floom-widget-fluent-switch` |
-| Dialog | `floom-widget-md-dialog` | `floom-widget-cupertino-dialog` | `floom-widget-fluent-dialog` |
-| Menu | `floom-widget-md-menu` | `floom-widget-cupertino-menu` | `floom-widget-fluent-menu` |
-| Card | `floom-widget-md-card` | `floom-widget-cupertino-card` | `floom-widget-fluent-card` |
-
----
-
-## 9. 开发路线图
-
-### Phase 1 — MVP（Material only）
-
-**目标：** 基础组件可用，架构验证通过
-
-| 交付物 | 说明 |
-|--------|------|
-| `floom-core-theme` | Theme trait + Color/Spacing/Typography/Radius/Shadow/Motion tokens |
-| `floom-widget-runtime` | 通用 context helpers、layout 工具 |
-| `floom-elements` | 8 个组件的 Props/Events 定义 + cfg re-export |
-| Material 组件 x8 | Button, Text, TextField, Checkbox, Switch, Dialog, Menu, Card |
-| `floom-testing` | Snapshot testing 基础设施 |
-| `examples/demo` | 全组件交互 demo |
-
-### Phase 2 — 多设计系统
-
-- Cupertino 组件 x8
-- Fluent 组件 x8
-- Theme 切换 demo
-
-### Phase 3 — 高级组件
-
-- Table, Tree, VirtualList, Chart, Navigation
-- 每组件 3 个 Design System 实现
-
-### Phase 4 — 生态
-
-- Theme Builder（可视化编辑 tokens）
-- Figma Token Import（从 Figma 导入设计令牌）
-- CLI Generator（`floom generate button` 自动生成组件模板）
-- 文档站点
-
----
-
-## 10. 约束与规范
-
-### 10.1 组件 API 规则
-
-- 组件名：`PascalCase`（`Button`, `TextField`）
-- Props 字段：`snake_case`（`on_click`, `max_length`）
-- 文件名：`snake_case`（`button.rs`, `text_field.rs`）
-- 禁止在 API 层暴露 Design System 名称（不要 `MdButton`, `CupertinoButton`）
-
-### 10.2 Accessibility
-
-每个组件必须支持：
-- `aria_label()`
-- `keyboard_navigation()`
-- `focus()` 管理
-- Button：Space / Enter / Tab
-
-### 10.3 Testing 要求
-
-- Props 单元测试覆盖率 ≥80%
-- State 状态机测试覆盖率 ≥90%
-- Snapshot 测试：每个 variant + size 组合
-- Integration test：每个 Design System `examples/` 目录
-
-### 10.4 Code Style
-
-```bash
-cargo fmt --check
-cargo clippy -- -D warnings
-cargo test
-```
-
----
-
-## 11. 技术参考
-
-- Floom: https://github.com/lapce/floom
-- Material Design 3: https://m3.material.io/
-- Radix UI (headless component pattern): https://www.radix-ui.com/
-- Flutter Widget Catalog (API style reference): https://api.flutter.dev/
+**关键点（旧文档都写错了）：**
+
+- **没有 `floom-elements` facade**。它在 "Stage D" 被移除（`Cargo.toml:361-365` 原话：
+  "the `floom-elements` re-export layer went with it"）。每个 kit crate 直接依赖
+  `floom-core-theme` / `floom-widget-runtime`，不再经一个统一 contract crate。
+  因此旧计划"应用只依赖 `floom-elements`、靠 Cargo feature 切换 DS"的用法**当前不成立**。
+- **没有 `examples/` 目录，也没有 `floom-demo` crate**。`justfile` 的三个目标
+  （`cargo ... run -p floom-demo`）全部**已断**。
+- **Harmony 只有 consolidated crate**（`floom-harmony`），没有像 material/cupertino/fluent 那样的
+  per-component kit 子 crate。
+- 每 DS 的 per-component crate **是薄适配器**；行为共享在 `floom-ui-composites` + engine `floom-widgets`，
+  不是旧计划设想的"每组件 crate 自带 spec/props/state/style 实现"。
+- `Cargo.toml` 顶部那段注释（"8 有 engine widget、90 待 promote、member 列表是 32"）**整体过期**：
+  现在 306 members、`exclude = []`、kit crates 已适配。
+
+## 2. 旧计划 vs 现实
+
+| 2026-07-31 旧计划 | 今天（2026-11-11） |
+|---|---|
+| 三层：`floom-elements` contract / per-kit adapters / core | 已改为 engine `floom-widgets` → `floom-ui-composites` → per-DS kits；`floom-elements` 已删 |
+| 每组件一 crate，内含实现（`spec/props/event/state/tests`） | 296 个 kit crate 仍存在，但是**薄 token 适配器**；共享逻辑在 composites + engine |
+| Phase 1 MVP：8 个 Material 组件 | 远超：98 material + 99 cupertino + 99 fluent（+ harmony kit） |
+| Phase 2：Cupertino ×8、Fluent ×8 | 远超：各约 99 个 kit crate |
+| Phase 3 高级组件：Table/Tree/VirtualList/Chart/Navigation | 大部分已有：`md-table`、`md-treeview`、`md-virtual_scroller`、`md-sparkline`、`md-navigation_drawer`、`md-datatable`、`md-timeline`、`md-calendar` |
+| `examples/demo` + `floom-demo` | **不存在**；`justfile` 目标已断 |
+| `floom-testing` | 已存在 |
+| Phase 4：Theme Builder / Figma Import / CLI Generator / docs site | **未开工** |
+
+## 3. 真实剩余任务（按优先级）
+
+### P0 — 让文档与磁盘一致（否则所有任务列表都在描述不存在的 crate）
+
+- [x] 重写本 `PLAN.md` 为 v2 现状 + 本任务清单（2026-11-11）
+- [ ] `docs/COMPONENT_PARITY.md`（77KB）改为 v2：清理 `floom-elements`/`floom-demo`/`examples/demo` 的残留引用
+      （约 32 行）；补 `floom-harmony` 与 `floom-ui-composites` 的说明；补 Batch-14 的 5 行
+      （ButtonGroup/FAB/RangeSlider/FileInput/OTPInput）进 contract 表；修 `:969-978` 过期的 implementation-order 复选框。
+  - 退出：文档不再出现已删除 crate 的可执行引用；数与 `cargo metadata`（306）一致。
+- [ ] `docs/demo-gallery-plan.md`：按新架构重写（去掉 `examples/demo` 路径），或明确标为 superseded。
+- [ ] `docs/AUDIT_2026-08-12_...md`：标注其前提（`floom-elements`/`floom-demo` 可编译）已不成立；
+      保留其中仍有效的记录（`Transition::child` vs `Overlay::child` 的 API 不一致）。
+- [ ] `docs/superpowers/plans/2026-07-31-floom-elements.md`（1586 行，全 v1、复选框未勾、路径指向别的机器）：标注 superseded。
+- [ ] `Cargo.toml` 顶部过期注释改写为准确描述（306 members、`exclude = []`、kit 已适配）。
+- [ ] `justfile`：`floom-demo` 三目标已断 —— 见 P1。
+
+### P1 — 恢复可运行 gallery/demo（组件要可见、可测、可迭代）
+
+- [ ] 在 floom-ui workspace 新建 demo/gallery crate（`floom-demo` 或 `examples/`），
+      渲染 4 套 DS 的 gallery；接通 `just material|cupertino|fluent`（并考虑 harmony）。
+  - 退出：`cargo run -p <demo> --features <ds>` 能起窗；`cargo test -p <demo>` headless 快照绿。
+  - 说明：这是旧文档反复引用、但磁盘上不存在的那个 crate；不建它，`COMPONENT_PARITY`/`demo-gallery-plan` 的"已完成"都无法验证。
+- [ ] `demo-gallery-plan.md` 的 A–D 阶段（Props 面板 / API 表 / method demo / 代码片段）在 demo 落地后再排。
+- [ ] `justfile` 接通后，把 `just gate ecosystem` 的 demo 测试纳入。
+
+### P2 — 组件 / 引擎缺口（真实、已在文档中点名，非推测）
+
+- [ ] **headless primitives**：把可复用 component 行为抽成无样式原语（`COMPONENT_PARITY.md:666`）。
+- [ ] **Row/Col 一等公民**：目前只有 `Grid`，Row/Col 不是独立原语（`COMPONENT_PARITY.md:537`）。
+- [ ] **Batch-14 contract 表 5 行补齐**（同上 P0 文档任务的具体子项）。
+- [ ] **Harmony 策略**：是否像另三套一样补 per-component kit 子 crate，还是保持 consolidated sample？写清楚并落文档。
+- [ ] **警告债**：`h_stack`/`v_stack`/`text`/`label`/`empty` 弃用调用 + unused imports（`AUDIT:107-109`，
+      "historical debt, not addressed"；本次未重新验证数量）。
+- [ ] **10 个 consolidated crate 补 `//!` 模块文档**（当前 0 个有）。
+
+### P3 — 旧计划 Phase 4 生态工具（1.1+，未开工）
+
+- [ ] Theme Builder（可视化编辑 tokens）
+- [ ] Figma Token Import（从 Figma 导入设计令牌）
+- [ ] `floom generate` CLI generator（自动生成组件模板）
+- [ ] 文档站点
+
+> 以上 P3 属差异化/生态，非 1.0 阻塞项；按 `docs/competitive-analysis.md` 的 P2 批次口径是 1.1+。
+
+## 4. 仍然有效的约定（沿用 `SKILL.md` / 旧计划，与架构无关的部分）
+
+- 组件名 `PascalCase`（`Button`、`TextField`），**API 层不暴露 `MdButton`/`CupertinoButton`** 这类 DS 名。
+- Props 字段 `snake_case`（`on_click`、`max_length`）；文件名 `snake_case`。
+- **token-first**：禁止硬编码 `Color::rgb(...)` / magic padding，一律走 `floom-core-theme` / `floom-theme` 的 token。
+- 每个组件至少支持 `aria_label()`、键盘导航、focus 管理；Button 支持 Space/Enter/Tab。
+- 测试：props/state 单测、每 variant×size 的 snapshot、每 DS 的 integration demo。
+- `cargo fmt --check`、`cargo clippy -- -D warnings`、`cargo test`（satellite 内）。
+
+> 旧计划"每组件 crate 内含 `spec.rs/props.rs/event.rs/state.rs/tests.rs`"的文件布局是 v1 形态；
+> v2 下 kit crate 是薄适配器，该布局**不再强制**。上面的跨架构约定仍适用。
+
+## 5. 验证口径
+
+- `cargo metadata --no-deps` → 306 packages / 306 workspace members（本文件所据）。
+- `just gate ecosystem`（根仓库）或 CI `ecosystem-check` → `cargo test --workspace`（satellite 全量）。
+  **本次 reconcile 未重跑 306 crate 测试**，只做了结构与元数据核对；P0/P1 的"绿"以实际跑通为准。
+
+## 6. History（2026-07-31 旧计划摘要，superseded）
+
+旧 PLAN.md 描述：在 Floom 上建跨 Design System 的组件框架，三层架构
+（`floom-elements` contract / per-component 实现 crate / Floom core），
+`cfg(feature)` 编译期分发 DS，token-first 主题，Phase 1 Material 8 组件 MVP，
+Phase 2 Cupertino/Fluent，Phase 3 高级组件，Phase 4 生态工具（Theme Builder / Figma Import / CLI / docs）。
+其源码依据 `SKILL.md` 与 `superpowers/plans/2026-07-31-floom-elements.md` 记录的是 v1 世界；
+今天的代码已用 v2 engine-widget 架构取代，但命名/token/a11y/testing 等约定仍成立（§4）。

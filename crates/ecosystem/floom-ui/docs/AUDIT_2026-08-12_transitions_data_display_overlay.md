@@ -4,6 +4,14 @@
 **范围**：用户清单中的 16 个组件（Data display 6 + Feedback/overlays 1 + Media/motion 7 + 用户标注"已有"的 DataTable/VirtualScroller 2）
 **结论**：16 个组件此前已在 Batches 9/15/16/17/18 完整实现、公开暴露并通过编译。本次审计发现并修复了 **Batch 18 demo 段的 4 个编译错误**（此前被错误的"0 错误"结论掩盖），现全量编译绿灯。
 
+> **现状校正（2026-11-11，reconcile）**：本文是 **v1 审计**（2026-08-12），当时 `floom-elements` /
+> `floom-demo` / `examples/demo/src/main.rs` 均存在。今天这些 crate 都已不存在（`floom-elements`
+> 在 "Stage D" 移除，`floom-demo` 从未在 v2 树里出现），所以第 2 节"全量编译验证"与第 3 节
+> "修复 `floom-demo` 4× E0277"**无法在当前树里复现**——demo 段代码已随 `examples/demo` 消失，
+> 第 2 节的 `floom-elements` / `floom-demo` 编译命令同理失效。但第 3/4 节记录的 **API 不一致**
+> （`Transition::child` 是闭包工厂 vs `Overlay::child` 接受值，见 :83）仍是有效约束：新 demo crate
+> （`PLAN.md` P1）写 Transition 子内容时必须传 `|| { … }` 闭包。
+
 ---
 
 ## 1. 组件接线 / facade / demo 状态表

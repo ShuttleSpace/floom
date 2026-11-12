@@ -4,6 +4,12 @@
 > 把当前“98 个单一静态示例”的 Demo 升级为**可上手的交互式组件展示库**——每个组件清晰呈现
 > 它的**属性（Props）、方法（Methods）、实用示例**并配以必要说明，使开发者一看即会。
 
+> **现状校正（2026-11-11，reconcile）**：本文是 **P1 demo crate 的设计稿**，当前**尚未实现**。
+> 文中出现的 `floom-demo` / `examples/demo/src/{gallery,showcase}.rs` 在今天的树里**不存在**
+> （`justfile` 的 `floom-demo` 三个目标也因此是断的）；`floom-elements` facade 已在 "Stage D"
+> 移除，组件改由各 kit crate 直接 re-export。阅读时把 `floom-demo` 当作“待建的 demo crate”，
+> 把 `floom-elements` 当作“kit crate 的 neutral builder”。建 crate 的进度见 `PLAN.md` P1。
+
 ---
 
 ## 1. 设计原则
@@ -14,14 +20,17 @@
 2. **“直接上手”优先。** 每个组件页都提供可交互的属性面板（改即所见），并把组件对外暴露的
    **方法**做成可点按的演示（如 `Dialog::open()`、`Form::reset()`、聚焦、步进），并显示可观察结果。
 3. **说明到位。** 对平台/DS 差异、浮动层渲染约束、易错点给出 inline 提示（notes）。
-4. **复用现有架构，不引入新依赖。** 沿用 `examples/demo` 的 master/detail 双栏壳、DS 切换器、
-   Dark 切换器，以及窗口根 overlay 机制；仅扩展 `showcase` 辅助模块。
+4. **复用计划中的 demo crate 架构，不引入新依赖。** 沿用该 crate 的 master/detail 双栏壳、DS 切换器、
+   Dark 切换器，以及窗口根 overlay 机制；仅扩展 `showcase` 辅助模块（crate 尚未创建，见 `PLAN.md` P1）。
 
 ---
 
-## 2. 现状基线（已确认）
+## 2. 基线（v1 历史；相关文件现已不存在）
 
-- `examples/demo/src/gallery.rs`：98 个 `pages.push(...)`，两栏 master/detail；约 90% 是单一静态示例。
+> 下面列出的 `examples/demo/src/{gallery,showcase}.rs` 是 v1 的目录，今天的树里**没有** `examples/`
+> 也没有 `floom-demo`（见 `PLAN.md` P1）。P1 建 crate 时需从零重建这些结构，而非在旧文件上改。
+
+- `examples/demo/src/gallery.rs`（v1）：98 个 `pages.push(...)`，两栏 master/detail；约 90% 是单一静态示例。
 - `examples/demo/src/showcase.rs`：已提供 Vant 风格能力
   - `Demo` / `demo()` / `demo_note()` / `demo_ctl()`：静态变体 + 交互变体（组件 + 控件面板）。
   - `showcase(name, intro, demos)`：把一组 demo 渲染为卡片。
@@ -106,7 +115,7 @@
 ## 7. 验证方式
 
 - 编译：`cargo check -p floom-demo` 三种 feature 配置（material 默认 / cupertino / fluent / multi）。
-- 不引入新依赖；纯 `floom-elements` 既有 API。
+- 不引入新依赖；纯 kit crate 既有 API（`floom-elements` facade 已移除，组件由各 kit crate 直接 re-export）。
 - 交互自检：DS 切换、Dark 切换、浮动层方法演示在窗口根正常开合。
 
 ---

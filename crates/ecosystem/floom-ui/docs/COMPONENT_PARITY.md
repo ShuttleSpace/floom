@@ -1,9 +1,27 @@
 # Component Parity Roadmap
 
-Status: working roadmap  
-Last updated: 2026-08-12 (Batch 20: inputs & interaction — NumberInput + PullToRefresh + ConfirmEdit — 98 components × 3 design systems = 294 crates; Batch 19: tier-2 components — IconButton + ExpansionPanels + SpeedDial + ChipGroup + ListGroup + Counter + Responsive + CheckboxBtn + ListSubheader — 95 components × 3 design systems = 285 crates; Batch 18: Transitions — Fade + Scale + Expand + Slide — 86 components × 3 design systems = 258 crates; Batch 17: Media and motion — Parallax + InfiniteScroller + Hover — 82 components × 3 design systems = 246 crates; Batch 16: Radio + Overlay = 237 crates; Batch 15 Data display = 231 crates; Batch 14 Actions/controls = 213 crates; Batch 13 Providers service layer = 198 crates)
+Status: working roadmap — reconciled to the v2 tree 2026-11-11  
+Last updated (batch history): 2026-08-12 (Batch 20: inputs & interaction — NumberInput + PullToRefresh + ConfirmEdit — 98 components × 3 design systems = 294 crates; Batch 19: tier-2 components — IconButton + ExpansionPanels + SpeedDial + ChipGroup + ListGroup + Counter + Responsive + CheckboxBtn + ListSubheader — 95 components × 3 design systems = 285 crates; Batch 18: Transitions — Fade + Scale + Expand + Slide — 86 components × 3 design systems = 258 crates; Batch 17: Media and motion — Parallax + InfiniteScroller + Hover — 82 components × 3 design systems = 246 crates; Batch 16: Radio + Overlay = 237 crates; Batch 15 Data display = 231 crates; Batch 14 Actions/controls = 213 crates; Batch 13 Providers service layer = 198 crates)
 
 This project targets a Floom component library with a Vuetify-like out-of-the-box developer experience across Material, Cupertino, and Fluent design systems.
+
+> **Current state (reconciled 2026-11-11).** The tree now has **306 workspace members**
+> (verified via `cargo metadata`): 10 consolidated crates (`floom-widget-runtime`,
+> `floom-core-theme`, `floom-theme`, `floom-design`, `floom-ui-composites`, `floom-material`,
+> `floom-cupertino`, `floom-fluent`, `floom-harmony`, `floom-testing`) + 296 per-component
+> kit crates (98 material + 99 cupertino + 99 fluent). The **`floom-elements` re-export
+> facade no longer exists** (removed in "Stage D", `Cargo.toml:361-365`); each kit crate
+> re-exports its own neutral builder directly over `floom-ui-composites` + the engine
+> `floom-widgets` primitives. There is **no `floom-demo` / `examples/demo` crate** today
+> (the `justfile` targets that point at it are broken; a gallery demo is a P1 task in
+> `PLAN.md`). `floom-harmony` is consolidated-only (no per-component kit crates).
+>
+> The batch narratives below are **history**: they describe the v1 pipeline
+> ("→ floom-elements facade → demo → verify") and were true when each batch shipped. Read
+> them as the build record, not as the current wiring — where they say `floom-elements` /
+> `facade` read *per-kit neutral re-export*, and where they say `demo` read *planned gallery
+> (PLAN.md P1)*. The current-state sections (`view()` status, implementation order, acceptance
+> criteria) are corrected to today's tree.
 
 Primary references:
 
@@ -16,9 +34,12 @@ The Vuetify documentation page is the source of truth for component inventory. I
 ## Current implemented contract
 
 Phase 1 has a cross-design-system implementation for these 98 components. All three design
-systems now ship a real, renderable, interactive `view()` (composes Floom primitives +
-token-first theme styling). The single `floom-demo` binary renders the same gallery for
-Material, Cupertino, or Fluent via `--features material|cupertino|fluent`.
+systems ship a real, renderable, interactive `view()` (composes the engine `floom-widgets`
+primitives + `floom-ui-composites` + token-first theme styling). Those crates are exercised
+headlessly by `cargo test --workspace` in the satellite (CI `ecosystem-check` / `just gate
+ecosystem`); a single runnable gallery binary does not exist today (see the current-state
+note above and `PLAN.md` P1). The batch narratives below record the v1 pipeline that built
+them.
 
 - The first 10 (Button, Text, TextField, Checkbox, Switch, Dialog, Menu, Card, Icon, Divider)
   were the Phase-1 parity milestone.
@@ -299,6 +320,11 @@ Material, Cupertino, or Fluent via `--features material|cupertino|fluent`.
 | DefaultsProvider | `md-defaults_provider` | `cupertino-defaults_provider` | `fluent-defaults_provider` | ✅ service layer — `child(impl IntoView)` + `defaults(HashMap<String,String>)` + `defaults_signal()` |
 | IconsProvider | `md-icons_provider` | `cupertino-icons_provider` | `fluent-icons_provider` | ✅ service layer — `child(impl IntoView)` + `icons(HashMap<String,String>)` + `icons_signal()` |
 | DateAdapterProvider | `md-date_adapter_provider` | `cupertino-date_adapter_provider` | `fluent-date_adapter_provider` | ✅ service layer — `child(impl IntoView)` + `adapter(String)` + `adapter_signal() -> RwSignal<String>` |
+| ButtonGroup | `md-button_group` | `cupertino-button_group` | `fluent-button_group` | ✅ `view()` + `joined`/`vertical` segmented layout of child views |
+| FloatingActionButton | `md-floating_action_button` | `cupertino-floating_action_button` | `fluent-floating_action_button` | ✅ `view()` + circular/elevated (or extended) primary action |
+| RangeSlider | `md-range_slider` | `cupertino-range_slider` | `fluent-range_slider` | ✅ `view()` + `values`/`on_change((f32, f32))` two-thumb track (guarantees low ≤ high) |
+| FileInput | `md-file_input` | `cupertino-file_input` | `fluent-file_input` | ✅ `view()` + trigger + path readout; `on_change(Option<String>)` on click, writes back via `path_signal()` (no OS dialog) |
+| OTPInput | `md-otp_input` | `cupertino-otp_input` | `fluent-otp_input` | ✅ `view()` + `length` single-char `TextInput` boxes bound to a master `code` string; optional `masked` (•) |
 | ListItem | `md-list_item` | `cupertino-list_item` | `fluent-list_item` | ✅ `view()` + `title(String)/subtitle(Option<String>)/leading(AnyView)/trailing(AnyView)/nav(bool)/disabled(bool)/on_click(impl Fn())` clickable row; `Container.action()` handler guarded by `disabled` |
 | Table | `md-table` | `cupertino-table` | `fluent-table` | ✅ `view()` + `headers(Vec<String>)/rows(Vec<Vec<String>>)/dense(bool)/striped(bool)` simple bordered body (no `AnyView`, `Clone`-free); odd rows tinted `surface_variant` when `striped` |
 | DataIterator | `md-data_iterator` | `cupertino-data_iterator` | `fluent-data_iterator` | ✅ `view()` + `item(AnyView)/header(AnyView)/footer(AnyView)/divided(bool)` stack with 1px `divided` separators between items |
@@ -352,7 +378,7 @@ The gallery demo uses a design-system-neutral API; every implementation must sat
 
 ### Batch 5 API contract (Avatar / Alert / Rating / Pagination / Timeline)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `Avatar::content(impl Into<String>)` + `Avatar::size(f32)` — circular avatar; Cupertino
   uses a neutral `surface_variant` fill, Material/Fluent use the `primary_container` role.
@@ -373,7 +399,7 @@ Neutral builder API shared by all three design systems (verify in `floom-demo`):
 
 ### Batch 6 API contract (Image / Banner / SkeletonLoader / Toolbar / Sheet)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `Image::src(String)` + `Image::alt(String)` (+ optional `width(f32)` / `height(f32)` /
   `rounded(bool)`) — renders raster bytes via `img(move || bytes.clone())`. Local file paths
@@ -410,7 +436,7 @@ Neutral builder API shared by all three design systems (verify in `floom-demo`):
 
 ### Batch 7 API contract (Container / Grid / Spacer / Footer / SystemBar)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `Container::max_width(f32)` + `Container::padding(f32)` + `Container::fluid(bool)` +
   `Container::child(impl IntoView)` — a centered content box. `max_width` caps the inner
@@ -438,7 +464,7 @@ Neutral builder API shared by all three design systems (verify in `floom-demo`):
 
 ### Batch 8 API contract (Combobox / Autocomplete / DatePicker / TimePicker / EmptyState)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `Combobox::options(Vec<String>)` + `Combobox::selected(Option<usize>)` +
   `Combobox::placeholder(String)` + `Combobox::disabled(bool)` +
@@ -493,16 +519,22 @@ Neutral builder API shared by all three design systems (verify in `floom-demo`):
   a stored `RwSignal<bool>` with reactive `apply_if(!open.get(), …)` and close-on-select,
   matching Material/Cupertino.
 
-## `view()` status (2026-08-12)
+## `view()` status (reconciled 2026-11-11)
 
 All 98 components implement a real, renderable, interactive `view()` in **all three**
-design systems, and `floom-demo` compiles and runs a gallery window for each:
+design systems. There is **no single `floom-demo` binary** in this tree; the crates are
+exercised headlessly by the satellite test suite:
 
-| Design system | Build command | Status |
+| Design system | How it is verified today | Status |
 | --- | --- | --- |
-| Material 3 | `cargo run -p floom-demo` (default) | ✅ compiles + runs |
-| Cupertino | `cargo run -p floom-demo --no-default-features --features cupertino` | ✅ compiles |
-| Fluent | `cargo run -p floom-demo --no-default-features --features fluent` | ✅ compiles |
+| Material 3 | `cargo test --workspace` in `crates/ecosystem/floom-ui` | ✅ headless tests |
+| Cupertino | same | ✅ headless tests |
+| Fluent | same | ✅ headless tests |
+| Harmony | consolidated `floom-harmony` gallery tests | ✅ headless tests (no kit crates) |
+
+> A runnable gallery window (`floom-demo` / `examples/`) is **planned, not present** — see
+> `PLAN.md` P1. The old "✅ compiles + runs" rows referred to the v1 demo crate, which has
+> since been removed.
 
 Components with working `view()` in all systems:
 `button`, `text`, `text-field`, `checkbox`, `switch`, `dialog`, `menu`, `card`, `icon`,
@@ -667,7 +699,7 @@ Vuetify 0 is treated as a capability reference for a lower-level, composable UI 
 
 ### Batch 9 API contract (DataTable / Treeview / Calendar / Carousel / VirtualScroller)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `DataTable::columns(Vec<DataTableColumn>)` (`DataTableColumn { title: String, align: ColumnAlign }`,
   `ColumnAlign::Start | Center | End`) + `DataTable::rows(Vec<Vec<String>>)` +
@@ -742,7 +774,7 @@ sizes into the signal even when wrapped, so `Main` insets correctly. Opening the
 
 ### Batch 10 API contract (Form / ValidationMessages)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `Form::child(impl IntoView)` — a grouping surface (surface bg, rounded, padded) that stacks
   its children vertically and, when `show_submit` is set, renders a submit button. The submit
@@ -765,7 +797,7 @@ Neutral builder API shared by all three design systems (verify in `floom-demo`):
 
 ### Batch 11 API contract (Stepper / Breadcrumbs)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `Stepper::items(Vec<String>)` + `Stepper::selected(usize)` + `Stepper::editable(bool)` +
   `Stepper::non_linear(bool)` + `Stepper::on_change(impl Fn(usize))` — an ordered horizontal
@@ -784,7 +816,7 @@ Neutral builder API shared by all three design systems (verify in `floom-demo`):
   `FontWeight::Medium`; earlier items are `on_surface_variant` and clickable (`cursor:
   Pointer`), firing `on_click(index)`. Also rendered inside a `dyn_view` for reactivity.
 
-### Form / ValidationMessages demo wiring (floom-demo)
+### Form / ValidationMessages demo wiring (kit crates; gallery planned)
 
 The gallery section shows a `Form` wrapping two `TextField`s (Name, Email) plus a
 `ValidationMessages`. A `create_effect` derives `valid` + the error `Vec` from the field
@@ -795,7 +827,7 @@ error list.
 
 ### Batch 16 API contract (Radio / Overlay)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `Radio::new(label)` + `Radio::value(String)` + `Radio::checked(bool)` +
   `Radio::disabled(bool)` + `Radio::on_change(impl Fn(bool))` — an **independent** single
@@ -821,7 +853,7 @@ Neutral builder API shared by all three design systems (verify in `floom-demo`):
 
 ### Batch 17 API contract (Parallax / InfiniteScroller / Hover)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `Parallax::new()` + `Parallax::child(impl IntoView)` + `Parallax::factor(f32)` (default 0.3)
   + `Parallax::scroll_signal(RwSignal<f32>)` — a host-scroll-driven translate layer. The host
@@ -852,7 +884,7 @@ Neutral builder API shared by all three design systems (verify in `floom-demo`):
 
 ### Batch 18 API contract (Fade / Scale / Expand / Slide Transitions)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `FadeTransition::new()` + `FadeTransition::child(impl Fn() -> impl IntoView)` (factory
   closure) + `FadeTransition::show_signal() -> RwSignal<bool>` — a zero-dependency enter/leave
@@ -884,7 +916,7 @@ each transition to a "Toggle …" button.
 
 ### Batch 19 API contract (IconButton / ExpansionPanels / SpeedDial / ChipGroup / ListGroup / Counter / Responsive / CheckboxBtn / ListSubheader)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `IconButton::new(icon: impl Into<String>)` + `IconButton::size(f32)` +
   `IconButton::variant(IconButtonVariant)` (`Text`/`Contained`/`Outlined`, default `Text`) +
@@ -932,7 +964,7 @@ Neutral builder API shared by all three design systems (verify in `floom-demo`):
 
 ### Batch 20 API contract (NumberInput / PullToRefresh / ConfirmEdit)
 
-Neutral builder API shared by all three design systems (verify in `floom-demo`):
+Neutral builder API shared by all three design systems (verify in the kit crates):
 
 - `NumberInput::new()` + `NumberInput::value(i64)` + `NumberInput::min(i64)` +
   `NumberInput::max(i64)` + `NumberInput::step(i64)` + `NumberInput::label(impl Into<String>)` +
@@ -974,8 +1006,13 @@ Neutral builder API shared by all three design systems (verify in `floom-demo`):
    `Toolbar` ✅, `Footer` ✅, `SystemBar` ✅, `AppBar` ✅, `NavigationDrawer` ✅,
    `BottomNavigation` ✅, and `App`/`Main` + the layout provider (auto-insets via the
    shared `LayoutState` signal) ✅ (done 2026-08-11).
-4. Add data-heavy components: `DataTable`, `Treeview`, `Timeline`, virtual scrolling.
-5. Add providers and defaults system so app-level theme, locale, display, and icon settings can flow into every component.
+4. Add data-heavy components: `DataTable` ✅, `Treeview` ✅, `Calendar` ✅, `Carousel` ✅,
+   `Timeline` ✅, `VirtualScroller` ✅, `Table` ✅, `DataIterator` ✅ (Batch 9 / Batch 15, done 2026-08-11).
+5. Add providers and defaults system so app-level theme, locale, display, and icon settings can
+   flow into every component: `ThemeProvider` ✅, `LocaleProvider` ✅, `DisplayProvider` ✅,
+   `DefaultsProvider` ✅, `IconsProvider` ✅, `DateAdapterProvider` ✅ (Batch 13, done 2026-08-11).
+6. Batches 14–20 (actions/controls, media/motion, transitions, tier-2, inputs & interaction)
+   ✅ — 98 components × 3 design systems (2026-08-11/12).
 
 ## Acceptance criteria for a new component
 
@@ -983,7 +1020,8 @@ Every new contract component must include:
 
 - neutral props in `floom-core-theme/src/props/`;
 - component tokens in `floom-core-theme/src/component_tokens/`;
-- Material, Cupertino, and Fluent crates, even if non-Material starts as a skeleton;
-- `floom-elements` feature re-exports with neutral names;
-- tests for Material behavior and feature compilation for all design systems;
+- Material, Cupertino, and Fluent kit crates (Harmony is consolidated-only today);
+- neutral re-exports from each kit crate (there is no `floom-elements` facade);
+- tests for Material behavior and compilation for all design systems (satellite
+  `cargo test --workspace`, headless);
 - no hard-coded visual values in public component contracts.

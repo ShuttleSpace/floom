@@ -1,30 +1,18 @@
 [workspace]
 
-# --- Components not yet ported -------------------------------------------
+# --- floom-ui satellite workspace ---------------------------------------
 #
-# These crates still carry v1 source (`use floom::prelude::*`, `impl View`,
-# `Container::new(...).style(...)`) while their manifests no longer declare a
-# `floom` dependency, so they cannot compile. They are excluded, not deleted:
-# the sources are the only record of what each kit's variant looked like.
+# Independent Cargo workspace (own Cargo.lock + justfile). The root manifest
+# excludes crates/ecosystem, so root `cargo test --workspace` does NOT reach it;
+# it runs via `just gate ecosystem` / CI `ecosystem-check` (cargo test
+# --workspace here, all headless).
 #
-# Why they are not ported in bulk, measured rather than assumed: v1's `View` is
-# a closure — a component builds and returns another — while 2.0's `Widget` is an
-# explicit tree with `create`/`update`/`layout_request`/`paint` over a
-# parent-owned arena. There is no mechanical rewrite between the two, and a
-# codegen that emitted 2.0-shaped code would still have to invent the layout for
-# each component.
+# Layout: engine floom-widgets (root) -> floom-ui-composites (cross-DS
+# components) -> per-DS kit crates. All 306 members resolve; exclude = []
+# (no excluded crates). There is no floom-elements facade (removed in Stage D),
+# and each kit crate is a thin token adapter over floom-ui-composites.
 #
-# The real shape of the work: 98 v1 components exist, 8 have an engine widget
-# today, so 90 need promoting into `floom-widgets` first — after which each
-# kit's crate is a thin token adapter, the way `floom-widget-md-counter` is.
-#
-# Note that exclusion is transitive. A crate that depends on an excluded one
-# cannot be a member either, because a `{ workspace = true }` dependency cannot
-# resolve to a path that is not a member. That is why the member list is 32
-# rather than the 55 crates that contain no v1 source of their own.
-#
-# Re-admitting a component is two steps: delete it from this list, then add it
-# back to `members`.
+# See docs/PLAN.md for the current architecture and task list.
 
 exclude = [
 ]
