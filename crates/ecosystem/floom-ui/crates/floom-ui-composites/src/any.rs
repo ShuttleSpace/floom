@@ -67,8 +67,15 @@ impl_widget_any_labelled!(crate::select::Select, crate::select::SelectPopup);
 impl_widget_any_labelled!(
     crate::accordion::Accordion,
     crate::accordion::SelectGroup,
+    // The badge names itself: it is the count, and that is what a reader
+    // hears. It was missing from this list, which meant it could be built,
+    // returned from `view()`, and then not mounted.
+    crate::badge::Badge,
     crate::bottom_sheet::BottomSheet,
     crate::checkbox::Checkbox,
+    // The chip names itself too: it is a button when it can be pressed, and
+    // static text when it cannot.
+    crate::chip::Chip,
     // The counter names itself as a group, so it publishes its own role rather
     // than leaving it to the `Pressable`s inside it. It was missing from this
     // list entirely, which meant `Counter` could be built, returned from
