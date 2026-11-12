@@ -1232,31 +1232,31 @@ tap and assert the checked flag changed. Use `floom_testkit::TestApp`'s
 `app.tap(app.node(Selector::label("…")))` as
 `examples/floom-showcase/src/tests.rs` does.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
   Create `examples/floom-demo/tests/pages.rs` as above and
   `examples/floom-demo/tests/interaction.rs` with the two interaction tests.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
   Run: `cargo test -p floom-demo --test pages --test interaction`
 
   Expected: FAIL — the pages currently have no samples to render, so the
   per-page loop paints nothing.
 
-- [ ] **Step 3: Make the interaction tests pass**
+- [x] **Step 3: Make the interaction tests pass**
 
   Adjust the interactive samples so a tap is observable: the Button sample
   increments a counter held in an `Arc<AtomicUsize>` the test can read, and
   the Checkbox sample toggles a flag the test can read.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
   Run: `cargo test -p floom-demo`
 
   Expected: PASS — every test, including the 98-page loop.
 
-- [ ] **Step 5: Run the three design systems' builds**
+- [x] **Step 5: Run the three design systems' builds**
 
   Run:
   `cargo test -p floom-demo --no-default-features` and
@@ -1264,7 +1264,7 @@ tap and assert the checked flag changed. Use `floom_testkit::TestApp`'s
 
   Expected: PASS (the crate has no features, so this is the same build).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
   ```bash
   git add examples/floom-demo

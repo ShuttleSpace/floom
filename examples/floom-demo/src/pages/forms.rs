@@ -197,6 +197,13 @@ fn checkbox_page() -> ComponentPage {
                 note: Some("A disabled checkbox keeps its tick; it just stops responding."),
                 build: checkbox_disabled,
             },
+            Sample {
+                title: "Tappable",
+                note: Some(
+                    "This checkbox records its ticked state, so a test can prove a press reached the component.",
+                ),
+                build: checkbox_tappable,
+            },
         ],
         ApiDoc {
             events: vec![change_event(
@@ -256,6 +263,28 @@ fn checkbox_disabled() -> Box<dyn WidgetAny> {
                         .disabled(true)
                         .view()),
                 ))
+        }
+    );
+    Box::new(compare_row((m, c, f)))
+}
+
+/// The checkbox, with a handler that records its ticked state.
+///
+/// The state lives in [`crate::probe`], so a test can prove that a press
+/// reached the component rather than only that something was painted.
+fn checkbox_tappable() -> Box<dyn WidgetAny> {
+    let (m, c, f) = compare_children!(
+        ds::material::Checkbox,
+        ds::cupertino::Checkbox,
+        ds::fluent::Checkbox,
+        |b, theme| {
+            Stack::new(Axis::Vertical).gap(10.0).child(widget(
+                "tappable",
+                themed_widget!(b, theme, "Tick me", |c| c
+                    .checked(false)
+                    .on_change(crate::probe::checkbox_changed)
+                    .view()),
+            ))
         }
     );
     Box::new(compare_row((m, c, f)))

@@ -1011,7 +1011,7 @@ fn spacer_page() -> ComponentPage {
         vec![
             Sample {
                 title: "Default",
-                note: None,
+                note: Some("A spacer paints nothing; the space it holds is the whole of it."),
                 build: spacer_default,
             },
             Sample {

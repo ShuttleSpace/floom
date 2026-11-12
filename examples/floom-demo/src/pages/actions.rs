@@ -106,6 +106,13 @@ fn button_page() -> ComponentPage {
                 note: Some("A disabled button still paints; it just stops responding."),
                 build: button_states,
             },
+            Sample {
+                title: "Tappable",
+                note: Some(
+                    "This button counts its taps, so a test can prove a press reached the component.",
+                ),
+                build: button_tappable,
+            },
         ],
         ApiDoc {
             events: vec![ApiRow::new(
@@ -220,6 +227,28 @@ fn button_states() -> Box<dyn WidgetAny> {
                     "loading",
                     themed_widget!(b, theme, |c| c.label("Loading").loading(true).view()),
                 ))
+        }
+    );
+    Box::new(compare_row((m, c, f)))
+}
+
+/// The button, with a handler that counts its taps.
+///
+/// The count lives in [`crate::probe`], so a test can prove that a press
+/// reached the component rather than only that something was painted.
+fn button_tappable() -> Box<dyn WidgetAny> {
+    let (m, c, f) = compare_children!(
+        ds::material::Button,
+        ds::cupertino::Button,
+        ds::fluent::Button,
+        |b, theme| {
+            Stack::new(Axis::Horizontal).gap(8.0).child(widget(
+                "tap-me",
+                themed_widget!(b, theme, |c| c
+                    .label("Tap me")
+                    .on_click(crate::probe::button_tapped)
+                    .view()),
+            ))
         }
     );
     Box::new(compare_row((m, c, f)))

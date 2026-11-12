@@ -149,6 +149,29 @@ const MOTION_PROVIDERS: &[&str] = &[
     "ThemeProvider",
 ];
 
+/// The components a sample may show nothing of.
+///
+/// A spacer is empty space; a transition with its flag down has no child to
+/// show; a provider is a service layer with no visual of its own. A reader
+/// looking at such a sample needs to be told what they are looking at, so
+/// every one of these samples carries a note. Without one, the sample is an
+/// empty column with no explanation.
+const MAY_SHOW_NOTHING: &[&str] = &[
+    // Navigation & layout
+    "Spacer",
+    // Motion, progress & providers
+    "DateAdapterProvider",
+    "DefaultsProvider",
+    "DisplayProvider",
+    "ExpandTransition",
+    "FadeTransition",
+    "IconsProvider",
+    "LocaleProvider",
+    "ScaleTransition",
+    "SlideTransition",
+    "ThemeProvider",
+];
+
 /// The components that fire no event at all.
 ///
 /// A button group arranges other buttons; a list subheader is a heading; a
@@ -356,6 +379,20 @@ fn every_provider_page_says_it_has_no_visual_of_its_own() {
             page.samples.iter().all(|sample| sample.note.is_some()),
             "{name} is a provider and says nothing about having no visual of its own"
         );
+    }
+}
+
+#[test]
+fn every_sample_that_may_show_nothing_says_so() {
+    for name in MAY_SHOW_NOTHING {
+        let page = registry::page_named(name).expect("page exists");
+        for sample in &page.samples {
+            assert!(
+                sample.note.is_some(),
+                "{name}'s {} sample may show nothing and says nothing about it",
+                sample.title
+            );
+        }
     }
 }
 

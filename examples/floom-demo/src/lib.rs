@@ -16,6 +16,7 @@ pub mod api;
 pub mod ds;
 pub mod macros;
 pub mod pages;
+pub mod probe;
 pub mod props_sources;
 pub mod props_src;
 pub mod registry;
