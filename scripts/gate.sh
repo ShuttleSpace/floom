@@ -88,19 +88,27 @@ PLUGIN_MANIFEST="$PLUGIN_WORKSPACE/Cargo.toml"
 
 # The 2.0 track, as the CI job spells it. A v1 regression must not red the
 # signal for work that never touches it, and vice versa.
+#
+# Crates the layered restructure deleted (`floom-error`, `floom-focus`,
+# `floom-scheduler`, `floom-renderer-skia-abi`, `floom-platform-ios`,
+# `floom-platform-harmony`, `floom-platform-embedded`, `floom-ime`,
+# `floom-gesture`, `floom-overlay`, `floom-store`, `floom-task`,
+# `floom-forms`, `floom-navigation`, `floom-persistence`, `floom-services`) are
+# no longer here: `cargo clippy -p` on a package that does not exist fails the
+# whole command, so one stale name left the check unable to run at all. Their
+# code lives in crates that are listed, or was removed with them.
 FLOOM2_PACKAGES=(
   --package=floom-types --package=floom-core
-  --package=floom-runtime-core --package=floom-scheduler
+  --package=floom-runtime-core
   --package=floom-scene
   --package=floom-renderer --package=floom-renderer-vello
-  --package=floom-renderer-software --package=floom-renderer-skia-abi
+  --package=floom-renderer-software
   --package=floom-renderer-tui --package=floom-renderer-web
   --package=floom-platform --package=floom-platform-desktop
   --package=floom-platform-android
-  --package=floom-platform-ios --package=floom-platform-harmony
   --package=floom-platform-web
-  --package=floom-platform-embedded --package=floom-platform-mobile
-  --package=floom-text --package=floom-editor --package=floom-ime
+  --package=floom-platform-mobile
+  --package=floom-text --package=floom-editor
   --package=floom-layout --package=floom-style --package=floom-virtual
   --package=floom-native --package=floom-native-ffi
   # No plugins here: they are a separate workspace (`$PLUGIN_WORKSPACE`), and
@@ -109,10 +117,8 @@ FLOOM2_PACKAGES=(
   # without an `unsafe` signature while the gate stayed green.
   # The framework tail of the track. It was missing here while CI listed it, so
   # the gate could go green with `floom-app` and `floom-widgets` unclipped.
-  --package=floom-accessibility --package=floom-focus --package=floom-gesture
-  --package=floom-animation --package=floom-overlay --package=floom-store
-  --package=floom-task --package=floom-forms --package=floom-navigation
-  --package=floom-persistence --package=floom-services --package=floom-error
+  --package=floom-accessibility
+  --package=floom-animation
   --package=floom-widgets --package=floom-app --package=floom-testkit
 )
 
