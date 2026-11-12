@@ -33,7 +33,11 @@ mobile = [
     "floom-platform/harmony",
 ]
 web = ["dep:floom-platform-web", "dep:floom-renderer-web"]
-embedded = ["floom-platform/embedded"]
+embedded = [
+    "dep:floom-platform-embedded",
+    "dep:floom-renderer-software",
+    "floom-platform/embedded",
+]
 # Terminal (character-grid) backend: the L4 platform + renderer that turn a
 # terminal into a live Floom window. Off by default so a default build stays
 # headless; `--features tui` adds exactly these two crates.
@@ -71,6 +75,7 @@ floom-platform-web = { path = "../../platform/floom-platform-web", version = "0.
 floom-renderer-web = { path = "../../render/floom-renderer-web", version = "0.2.0", optional = true }
 floom-platform-tui = { path = "../../platform/floom-platform-tui", version = "0.2.0", optional = true }
 floom-renderer-tui = { path = "../../render/floom-renderer-tui", version = "0.2.0", optional = true }
+floom-platform-embedded = { path = "../../platform/floom-platform-embedded", version = "0.2.0", optional = true }
 floom-renderer-vello = { path = "../../render/floom-renderer-vello", version = "0.2.0", optional = true }
 floom-renderer-software = { path = "../../render/floom-renderer-software", version = "0.2.0", optional = true }
 floom-devtools = { path = "../../devtools/floom-devtools", version = "0.2.0", optional = true }

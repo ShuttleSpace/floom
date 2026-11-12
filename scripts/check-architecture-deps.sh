@@ -297,6 +297,11 @@ for _names, _level in [
             "floom-platform", "floom-platform-desktop", "floom-platform-android",
             "floom-platform-web",
             "floom-platform-tui", "floom-platform-mobile",
+            # The embedded backend: a framebuffer and a window, no OS behind
+            # it. It sits with the other platform backends and owns no
+            # renderer edge -- the software rasteriser reaches *up* to its
+            # surface, never the other way round.
+            "floom-platform-embedded",
             "floom-native",
             "floom-native-ffi",
             # winit event-loop adapter; no internal floom deps, consumed by the

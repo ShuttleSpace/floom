@@ -1,0 +1,22 @@
+[package]
+name = "floom-platform-embedded"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Embedded (framebuffer) platform backend for Floom 2.0"
+rust-version.workspace = true
+
+[dependencies]
+floom-platform = { path = "../floom-platform" }
+floom-types = { path = "../../core/floom-types" }
+
+# The software rasteriser is the only thing that can draw into a framebuffer,
+# and the end-to-end test needs it to prove the path works. It is a
+# dev-dependency so the platform crate never ships a renderer edge: the
+# layering is platform (L4) below renderer (L5), and the renderer is what
+# reaches *up* to the platform's surface, never the other way round.
+[dev-dependencies]
+floom-renderer = { path = "../../render/floom-renderer" }
+floom-renderer-software = { path = "../../render/floom-renderer-software" }
+floom-scene = { path = "../../core/floom-scene" }

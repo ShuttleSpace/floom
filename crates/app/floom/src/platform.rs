@@ -167,8 +167,21 @@ pub fn current() -> &'static dyn PlatformBackend {
     {
         return &tui::TuiBackend;
     }
+    // An embedded board: a framebuffer and the software rasteriser. It is
+    // last in the cascade because it is the one backend that runs anywhere --
+    // it needs no window manager and no GPU -- so it is the right answer
+    // whenever no more specific backend applies.
+    #[cfg(all(
+        feature = "embedded",
+        not(target_arch = "wasm32"),
+        not(target_os = "android")
+    ))]
+    #[allow(unreachable_code)]
+    {
+        return &embedded::EmbeddedBackend;
+    }
     // No backend matches this build: either the right feature bundle is off, or
-    // the target (iOS, Harmony, embedded) has no run loop wired in yet.
+    // the target (iOS, Harmony) has no run loop wired in yet.
     #[allow(unreachable_code)]
     {
         &NO_BACKEND
@@ -337,6 +350,81 @@ mod tui {
                 runner: None,
             })
         }
+    }
+}
+
+/// Embedded backend: a framebuffer and the software rasteriser.
+///
+/// The board has no window manager and no GPU: it has a rectangle of memory
+/// and a way to receive input. The platform half owns the memory, the
+/// software presenter draws into it, and the frame is copied across — which
+/// is the embedded equivalent of a swap-chain present.
+///
+/// Unlike the other backends this one is not driven by an operating system
+/// event source, so the loop ends when the board asks it to: the platform
+/// counts frames, and the board stops it by closing the window or by asking
+/// for an exit.
+#[cfg(feature = "embedded")]
+pub mod embedded {
+    use floom_app::{AppRunner, WidgetHost};
+    use floom_platform::{Platform, WindowConfig};
+    use floom_platform_embedded::EmbeddedPlatform;
+    use floom_renderer_software::SoftwarePresenter;
+
+    use super::{AppRequest, BuildFn, PlatformBackend, PlatformCapabilities};
+
+    /// The embedded backend: a framebuffer and the software rasteriser.
+    pub struct EmbeddedBackend;
+
+    impl PlatformBackend for EmbeddedBackend {
+        fn name(&self) -> &'static str {
+            "embedded (framebuffer)"
+        }
+
+        fn capabilities(&self) -> PlatformCapabilities {
+            PlatformCapabilities::embedded_default()
+        }
+
+        fn run(&self, request: AppRequest, build: BuildFn) -> Result<(), String> {
+            let mut platform = EmbeddedPlatform::new();
+            platform.create_window(WindowConfig {
+                title: request.title,
+                size: request.size,
+                resizable: request.resizable,
+            });
+            run_frames(&mut platform, build);
+            Ok(())
+        }
+    }
+
+    /// Run the embedded loop against `platform`, and report the frames served.
+    ///
+    /// The loop ends when the platform says so: the board closes the window,
+    /// asks for an exit, or the frame limit it was given is reached. A board
+    /// that has nothing left to show says so with
+    /// [`EmbeddedPlatform::request_exit`].
+    ///
+    /// The frame is copied into the platform's framebuffer after every frame,
+    /// which is the embedded equivalent of a swap-chain present: the software
+    /// presenter owns a CPU buffer, and this is the step that puts it on the
+    /// "screen".
+    pub fn run_frames(platform: &mut EmbeddedPlatform, build: BuildFn) -> u64 {
+        let mut host = WidgetHost::new();
+        build(&mut host);
+        // The presenter sizes its buffer when it attaches to the window,
+        // which the runner does on the first pump.
+        let mut runner = AppRunner::new(host, SoftwarePresenter::new());
+
+        let mut frames = 0u64;
+        while platform.count_frame() {
+            runner.pump(platform);
+            let frame = runner.presenter().pixels();
+            if let Some(surface) = platform.framebuffer_mut() {
+                surface.present(frame);
+            }
+            frames += 1;
+        }
+        frames
     }
 }
 
