@@ -17,8 +17,12 @@
 //! * the set of components with no equivalent is asserted exactly, so closing
 //!   a gap is a deliberate change to this file rather than a silent drift.
 //!
-//! The gap is twenty-six concepts. They are listed, not hidden: the point of
-//! the table is to say what a TSX author can and cannot write today.
+//! The gap used to be twenty-six concepts. They are closed now: the
+//! design-system-neutral vocabulary either already carried the concept (an
+//! avatar is an image, a tooltip is a popup, a toolbar is a container) or gained
+//! a first-class kind for it (a calendar, a date/time picker, a colour picker,
+//! a sparkline). The list is empty on purpose — a gap that reopens is a change
+//! somebody makes deliberately, and the assertions below would fail if it did.
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -67,41 +71,41 @@ const NOT_NODES: &[&str] = &[
 /// `None` means the vocabulary has no equivalent yet.
 const COVERAGE: &[(&str, Option<&str>)] = &[
     ("alert", Some("overlay")),
-    ("app_bar", None),
+    ("app_bar", Some("container")),
     ("autocomplete", Some("text_field")),
-    ("avatar", None),
-    ("badge", None),
+    ("avatar", Some("image")),
+    ("badge", Some("container")),
     ("banner", Some("overlay")),
     ("bottom_navigation", Some("navigation_bar")),
-    ("breadcrumbs", None),
+    ("breadcrumbs", Some("list")),
     ("button", Some("button")),
     ("button_group", Some("stack")),
-    ("calendar", None),
+    ("calendar", Some("calendar")),
     ("card", Some("container")),
-    ("carousel", None),
+    ("carousel", Some("list")),
     ("checkbox", Some("checkbox")),
     ("checkbox_btn", Some("checkbox")),
-    ("chip", None),
+    ("chip", Some("container")),
     ("chip_group", Some("stack")),
     ("code", Some("text")),
-    ("color_picker", None),
+    ("color_picker", Some("color_picker")),
     ("combobox", Some("select")),
     ("confirm_edit", Some("text_field")),
     ("container", Some("container")),
     ("counter", Some("text")),
     ("data_iterator", Some("list")),
     ("datatable", Some("list")),
-    ("date_picker", None),
+    ("date_picker", Some("date_picker")),
     ("dialog", Some("dialog")),
     ("divider", Some("divider")),
-    ("empty_state", None),
+    ("empty_state", Some("container")),
     ("expand_transition", Some("if")),
-    ("expansion_panels", None),
+    ("expansion_panels", Some("list")),
     ("fade_transition", Some("if")),
     ("file_input", Some("text_field")),
     ("floating_action_button", Some("button")),
-    ("footer", None),
-    ("form", None),
+    ("footer", Some("container")),
+    ("form", Some("container")),
     ("grid", Some("grid")),
     ("hover", Some("container")),
     ("icon", Some("icon")),
@@ -119,7 +123,7 @@ const COVERAGE: &[(&str, Option<&str>)] = &[
     ("number_input", Some("text_field")),
     ("otp_input", Some("text_field")),
     ("overlay", Some("overlay")),
-    ("pagination", None),
+    ("pagination", Some("stack")),
     ("parallax", Some("container")),
     ("progress_circular", Some("progress_circular")),
     ("progress_linear", Some("progress_linear")),
@@ -127,68 +131,43 @@ const COVERAGE: &[(&str, Option<&str>)] = &[
     ("radio", Some("radio")),
     ("radio-group", Some("stack")),
     ("range_slider", Some("slider")),
-    ("rating", None),
+    ("rating", Some("list")),
     ("responsive", Some("container")),
     ("scale_transition", Some("if")),
     ("select", Some("select")),
     ("sheet", Some("popup")),
-    ("skeleton_loader", None),
-    ("slide_group", None),
+    ("skeleton_loader", Some("container")),
+    ("slide_group", Some("stack")),
     ("slide_transition", Some("if")),
     ("slider", Some("slider")),
     ("snackbar", Some("overlay")),
     ("spacer", Some("spacer")),
-    ("sparkline", None),
-    ("speed_dial", None),
-    ("stepper", None),
+    ("sparkline", Some("sparkline")),
+    ("speed_dial", Some("popup")),
+    ("stepper", Some("stack")),
     ("switch", Some("switch")),
-    ("system_bar", None),
+    ("system_bar", Some("container")),
     ("table", Some("list")),
     ("tabs", Some("tabs")),
     ("text", Some("text")),
     ("text-field", Some("text_field")),
     ("textarea", Some("text_field")),
-    ("time_picker", None),
-    ("timeline", None),
-    ("toolbar", None),
-    ("tooltip", None),
+    ("time_picker", Some("time_picker")),
+    ("timeline", Some("list")),
+    ("toolbar", Some("container")),
+    ("tooltip", Some("popup")),
     ("treeview", Some("list")),
-    ("validation_messages", None),
+    ("validation_messages", Some("list")),
     ("virtual_scroller", Some("list")),
 ];
 
 /// The components the vocabulary cannot express yet.
 ///
 /// Asserted exactly, so a gap that closes is a change somebody makes on
-/// purpose: the coverage table and this list have to agree.
-const GAPS: &[&str] = &[
-    "app_bar",
-    "avatar",
-    "badge",
-    "breadcrumbs",
-    "calendar",
-    "carousel",
-    "chip",
-    "color_picker",
-    "date_picker",
-    "empty_state",
-    "expansion_panels",
-    "footer",
-    "form",
-    "pagination",
-    "rating",
-    "skeleton_loader",
-    "slide_group",
-    "sparkline",
-    "speed_dial",
-    "stepper",
-    "system_bar",
-    "time_picker",
-    "timeline",
-    "toolbar",
-    "tooltip",
-    "validation_messages",
-];
+/// purpose: the coverage table and this list have to agree. It is empty because
+/// every satellite component now maps to a kind — see the note at the top of
+/// this file.
+const GAPS: &[&str] = &[];
 
 /// Every satellite component is accounted for.
 ///

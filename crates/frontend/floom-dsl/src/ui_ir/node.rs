@@ -51,6 +51,19 @@ pub enum NodeKind {
     ProgressCircular,
     /// A determinate or indeterminate bar.
     ProgressLinear,
+    /// A month grid the user navigates and picks a day from.
+    ///
+    /// A date grid is its own neutral concept: the satellite ships it as a
+    /// component, and a ring/bar it is not. It carries a value and a range.
+    Calendar,
+    /// A text field with a calendar popover for picking a day.
+    DatePicker,
+    /// A wheel or list of hours and minutes the user picks from.
+    TimePicker,
+    /// A palette or spectrum the user picks a colour from.
+    ColorPicker,
+    /// A compact trend line drawn from a series of values.
+    Sparkline,
     Select,
     TextField,
     // Composition
@@ -86,6 +99,11 @@ impl NodeKind {
         Self::Progress,
         Self::ProgressCircular,
         Self::ProgressLinear,
+        Self::Calendar,
+        Self::DatePicker,
+        Self::TimePicker,
+        Self::ColorPicker,
+        Self::Sparkline,
         Self::Select,
         Self::TextField,
         Self::Stack,
@@ -368,6 +386,11 @@ impl NodeKind {
             Self::Progress => "progress",
             Self::ProgressCircular => "progress_circular",
             Self::ProgressLinear => "progress_linear",
+            Self::Calendar => "calendar",
+            Self::DatePicker => "date_picker",
+            Self::TimePicker => "time_picker",
+            Self::ColorPicker => "color_picker",
+            Self::Sparkline => "sparkline",
             Self::Select => "select",
             Self::TextField => "text_field",
             Self::Stack => "stack",
@@ -407,6 +430,11 @@ impl NodeKind {
             "progress" => Self::Progress,
             "progresscircular" => Self::ProgressCircular,
             "progresslinear" => Self::ProgressLinear,
+            "calendar" => Self::Calendar,
+            "datepicker" => Self::DatePicker,
+            "timepicker" => Self::TimePicker,
+            "colorpicker" => Self::ColorPicker,
+            "sparkline" => Self::Sparkline,
             "select" => Self::Select,
             "textfield" | "input" => Self::TextField,
             "stack" => Self::Stack,
@@ -491,7 +519,7 @@ mod tests {
         assert_eq!(NodeKind::parse("TextField"), Some(NodeKind::TextField));
         assert_eq!(NodeKind::parse("text-field"), Some(NodeKind::TextField));
         assert_eq!(NodeKind::parse("TEXT_FIELD"), Some(NodeKind::TextField));
-        assert_eq!(NodeKind::parse("carousel"), None);
+        assert_eq!(NodeKind::parse("notakind"), None);
     }
 
     #[test]

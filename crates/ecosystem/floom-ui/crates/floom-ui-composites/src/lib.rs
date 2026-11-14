@@ -33,6 +33,7 @@ pub mod range_slider;
 pub mod select;
 pub mod shared;
 pub mod slider;
+pub mod sparkline;
 pub mod state;
 pub mod stepper;
 pub mod tabs;
@@ -102,6 +103,7 @@ pub use range_slider::{RangeSlider, RangeSliderStyle};
 pub use select::{popup_height, IndexCallback, Select, SelectPopup, SelectStyle};
 pub use shared::{read_number, shared_number, write_number, SharedNumber};
 pub use slider::{Slider, SliderStyle};
+pub use sparkline::Sparkline;
 pub use stepper::{Stepper, StepperStyle, StepperTick};
 pub use text_field::{TextCallback, TextField, TextFieldStyle};
 pub use time_picker::{

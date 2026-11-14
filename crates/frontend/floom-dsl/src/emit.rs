@@ -90,7 +90,12 @@ impl WidgetSource {
             | NodeKind::Radio
             | NodeKind::Select
             | NodeKind::Slider
-            | NodeKind::TextField => matches!(self, Self::WithComposites),
+            | NodeKind::TextField
+            | NodeKind::Calendar
+            | NodeKind::DatePicker
+            | NodeKind::TimePicker
+            | NodeKind::ColorPicker
+            | NodeKind::Sparkline => matches!(self, Self::WithComposites),
             _ => true,
         }
     }
@@ -99,7 +104,18 @@ impl WidgetSource {
     fn composites(self) -> &'static [&'static str] {
         match self {
             Self::Primitives => &[],
-            Self::WithComposites => &["Checkbox", "Radio", "Select", "Slider", "TextField"],
+            Self::WithComposites => &[
+                "Checkbox",
+                "Radio",
+                "Select",
+                "Slider",
+                "TextField",
+                "Calendar",
+                "DatePicker",
+                "TimePicker",
+                "ColorPicker",
+                "Sparkline",
+            ],
         }
     }
 }
@@ -254,6 +270,11 @@ fn seat(kind: NodeKind, source: WidgetSource) -> Option<Seat> {
         | NodeKind::ProgressLinear
         | NodeKind::Select
         | NodeKind::TextField
+        | NodeKind::Calendar
+        | NodeKind::DatePicker
+        | NodeKind::TimePicker
+        | NodeKind::ColorPicker
+        | NodeKind::Sparkline
         | NodeKind::Container
         | NodeKind::Spacer
         | NodeKind::Divider
@@ -946,6 +967,11 @@ impl<'a> Emitter<'a> {
                 }
                 out
             }
+            NodeKind::Calendar => String::from("Calendar::new()"),
+            NodeKind::DatePicker => String::from("DatePicker::new()"),
+            NodeKind::TimePicker => String::from("TimePicker::new()"),
+            NodeKind::ColorPicker => String::from("ColorPicker::new()"),
+            NodeKind::Sparkline => String::from("Sparkline::new()"),
             NodeKind::TextField => {
                 let mut out = String::from("TextField::new()");
                 if let Some(value) = self.text(node, "value") {
