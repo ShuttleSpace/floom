@@ -1,0 +1,7 @@
+{
+  "string": [
+    { "name": "module_desc", "value": "Floom HarmonyOS render demo" },
+    { "name": "EntryAbility_desc", "value": "Floom" },
+    { "name": "EntryAbility_label", "value": "Floom" }
+  ]
+}

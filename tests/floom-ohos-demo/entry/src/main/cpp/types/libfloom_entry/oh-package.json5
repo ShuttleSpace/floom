@@ -1,0 +1,6 @@
+{
+  "name": "libfloom_entry.so",
+  "types": "./Index.d.ts",
+  "version": "0.1.0",
+  "description": "Floom HarmonyOS XComponent host (N-API)"
+}
