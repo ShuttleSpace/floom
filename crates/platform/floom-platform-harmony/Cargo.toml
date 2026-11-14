@@ -1,0 +1,18 @@
+[package]
+name = "floom-platform-harmony"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "HarmonyOS platform backend for Floom 2.0: a N-API cdylib whose surface is an ArkUI XComponent OHNativeWindow"
+rust-version.workspace = true
+
+# `ohos-rs` shape: an ArkTS/HAP app loads a Rust `cdylib` via N-API. The OS
+# owns the window, lifecycle and input; Rust owns the pixels. A `rlib` is kept
+# so the facade and the host-side tests can link the pure-Rust half.
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+floom-platform = { path = "../floom-platform" }
+floom-types = { path = "../../core/floom-types" }

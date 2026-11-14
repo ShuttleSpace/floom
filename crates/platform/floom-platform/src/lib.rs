@@ -4,13 +4,19 @@
 //! Concrete backends (desktop/mobile/web) live in sibling crates and must not
 //! leak into `floom-types` / `floom-scene` / widgets.
 //!
-//! The iOS, embedded and HarmonyOS adapters are **stand-ins**: they carry no OS
-//! or GPU dependency yet, so they live here behind the `ios` / `embedded` /
-//! `harmony` features instead of in their own crates. Keeping them out of the
-//! default build preserves the tiny OS-neutral ABI (bitflags, floom-types and
-//! raw-window-handle); when a real backend lands with `objc2`/DRM calls it
-//! must move back out to a sibling crate, because this crate is what the gate
-//! holds to "no concrete OS dependency".
+//! The iOS, embedded and HarmonyOS adapters here are **stand-ins**: they carry
+//! no OS or GPU dependency, so they live behind the `ios` / `embedded` /
+//! `harmony` features to keep the default build the tiny OS-neutral ABI
+//! (bitflags, floom-types and raw-window-handle). They are capability profiles
+//! and contract doubles, not backends.
+//!
+//! The *real* backends are sibling crates: `floom-platform-ios` (a UIKit
+//! staticlib) and `floom-platform-harmony` (an `ohos-rs`-style N-API cdylib
+//! whose surface is an ArkUI XComponent `OHNativeWindow`). iOS and HarmonyOS
+//! are full OSes — phone/tablet/PC — not embedded boards, so they own their
+//! feature bundles and capability profiles in the facade. Real backends must
+//! stay in sibling crates because this crate is what the gate holds to "no
+//! concrete OS dependency".
 //!
 //! # Plugins
 //!

@@ -347,9 +347,9 @@ plugins    the capability plugins compile on the host
 plugin-template  every plugin carries the documented template files
 plugin-facades  every plugin's TypeScript facade mirrors its Rust API
 android    the plugins compile for aarch64-linux-android
-ios        the plugins compile for aarch64-apple-ios
+ios        the iOS backend + plugins compile for aarch64-apple-ios
 windows    the plugins with real Windows arms compile for x86_64-pc-windows-msvc
-ohos       the plugins with OHOS arms compile for aarch64-linux-ohos
+ohos       the HarmonyOS backend + plugins compile for aarch64-unknown-linux-ohos
 golden     the pixel-golden examples
 size       release binary sizes within 10% of the checked-in baseline
 EOF
@@ -581,6 +581,9 @@ run_cross_check android aarch64-linux-android android_check
 # the probe below is a real capability test rather than a formality.
 ios_check() {
   local p
+  # The iOS backend itself: a UIKit staticlib whose C ABI seam compiles for the
+  # device target. `check` does not link, so the Xcode SDK is not needed here.
+  cargo check --target aarch64-apple-ios -p floom-platform-ios || return 1
   for p in "${MOBILE_CAPABILITY_PLUGINS[@]}"; do
     cargo check --manifest-path "$PLUGIN_MANIFEST" \
       --target aarch64-apple-ios -p "$p" || return 1
@@ -606,6 +609,10 @@ run_cross_check windows x86_64-pc-windows-msvc windows_check
 # absent on purpose: their OHOS halves are native and need the OHOS SDK.
 ohos_check() {
   local p
+  # The HarmonyOS backend itself: the `ohos-rs`-style N-API cdylib. Its
+  # `#[cfg(target_env = "ohos")]` NDK arm only compiles for this target, so it
+  # belongs in this check; `check` does not link, so no SDK sysroot is needed.
+  cargo check --target aarch64-unknown-linux-ohos -p floom-platform-harmony || return 1
   for p in "${OHOS_CAPABILITY_PLUGINS[@]}"; do
     cargo check --manifest-path "$PLUGIN_MANIFEST" \
       --target aarch64-unknown-linux-ohos -p "$p" || return 1

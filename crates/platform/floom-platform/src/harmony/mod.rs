@@ -3,20 +3,19 @@
 
 pub mod accessibility;
 
-use crate::{Capability, HostPlatform, PlatformCapabilities};
+use crate::{HostPlatform, PlatformCapabilities};
 use floom_types::PlatformId;
 
 pub use crate::{Clipboard, Ime, Platform, PlatformEvent, WindowConfig};
 
 pub fn harmony_platform() -> HostPlatform {
-    // Distinct capability profile from Android: marks NATIVE_VIEW for ArkUI embedding hooks.
-    let mut caps = PlatformCapabilities::unsupported_a11y_stub();
-    caps.caps |= Capability::NATIVE_VIEW;
-    caps.caps |= Capability::IME;
-    caps.caps |= Capability::CLIPBOARD;
+    // The stand-in uses the same canonical OS profile as the real
+    // `floom-platform-harmony` backend: HarmonyOS is a full OS, not an embedded
+    // board. IME/clipboard/accessibility wait on the ArkTS bridge, so they are
+    // not claimed here either (every capability bit is a promise).
     HostPlatform::new()
         .with_id(PlatformId::new(12, 1))
-        .with_capabilities(caps)
+        .with_capabilities(PlatformCapabilities::harmony_default())
 }
 
 #[cfg(test)]

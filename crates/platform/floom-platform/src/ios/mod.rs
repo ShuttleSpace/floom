@@ -9,9 +9,13 @@ use floom_types::PlatformId;
 pub use crate::{Capability, Clipboard, Ime, Platform, PlatformEvent, WindowConfig};
 
 pub fn ios_platform() -> HostPlatform {
+    // The stand-in uses the same canonical OS profile as the real
+    // `floom-platform-ios` backend: iOS is a full OS, not an embedded board.
+    // A stand-in still has no soft keyboard or OS a11y tree, so `ime`/touch
+    // claims below stay honest — see the test.
     HostPlatform::new()
         .with_id(PlatformId::new(11, 1))
-        .with_capabilities(PlatformCapabilities::unsupported_a11y_stub())
+        .with_capabilities(PlatformCapabilities::ios_default())
 }
 
 #[cfg(test)]

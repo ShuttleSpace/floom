@@ -38,6 +38,12 @@ embedded = [
     "dep:floom-renderer-software",
     "floom-platform/embedded",
 ]
+# iOS and HarmonyOS are full OS backends, not the embedded board. Each is a
+# N-API/UIKit native-surface sibling crate plus the software renderer that
+# produces its frames; the OS owns window/lifecycle/input. They are their own
+# bundles so an `embedded` build never drags them in and vice versa.
+ios = ["dep:floom-platform-ios", "dep:floom-renderer-software"]
+harmony = ["dep:floom-platform-harmony", "dep:floom-renderer-software"]
 # Terminal (character-grid) backend: the L4 platform + renderer that turn a
 # terminal into a live Floom window. Off by default so a default build stays
 # headless; `--features tui` adds exactly these two crates.
@@ -76,6 +82,8 @@ floom-renderer-web = { path = "../../render/floom-renderer-web", version = "0.2.
 floom-platform-tui = { path = "../../platform/floom-platform-tui", version = "0.2.0", optional = true }
 floom-renderer-tui = { path = "../../render/floom-renderer-tui", version = "0.2.0", optional = true }
 floom-platform-embedded = { path = "../../platform/floom-platform-embedded", version = "0.2.0", optional = true }
+floom-platform-ios = { path = "../../platform/floom-platform-ios", version = "0.2.0", optional = true }
+floom-platform-harmony = { path = "../../platform/floom-platform-harmony", version = "0.2.0", optional = true }
 floom-renderer-vello = { path = "../../render/floom-renderer-vello", version = "0.2.0", optional = true }
 floom-renderer-software = { path = "../../render/floom-renderer-software", version = "0.2.0", optional = true }
 floom-devtools = { path = "../../devtools/floom-devtools", version = "0.2.0", optional = true }

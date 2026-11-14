@@ -17,6 +17,16 @@ parley = { workspace = true }
 swash = { workspace = true, features = ["scale"] }
 rustc-hash.workspace = true
 
+# OHOS is `target_os = "linux"` but ships no fontconfig. `fontique`'s default
+# `system` source (pulled by parley) would try to link fontconfig against a
+# sysroot that has none. Enabling the `dlopen` source resolves it at runtime
+# instead, so the cross build needs no fontconfig dev package or pkg-config.
+# A target-specific dependency is the clean lever: no feature chains (cargo
+# forbids `dep/dep2/feature`), no CLI flag, no env var, and it applies only to
+# OHOS — the host and other targets keep the linked fontconfig path untouched.
+[target.'cfg(target_env = "ohos")'.dependencies]
+fontique = { workspace = true, features = ["fontconfig-dlopen"] }
+
 [dev-dependencies]
 criterion = { version = "0.8.1", features = ["html_reports"] }
 

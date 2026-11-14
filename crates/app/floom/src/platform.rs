@@ -137,9 +137,11 @@ pub fn require(cap: Capability, policy: OnUnsupported) -> Result<(), PlatformErr
 ///
 /// The cascade mirrors the targets the backends target: a browser tab (wasm +
 /// `web`), an Android surface (`mobile` + target `android`), a desktop GPU
-/// window (`desktop` + `renderer-gpu`), and a terminal (`tui`). iOS and Harmony
-/// are `mobile` members but have no run loop yet, so on those targets the cascade
-/// falls through to [`NO_BACKEND`] rather than pretending to run.
+/// window (`desktop` + `renderer-gpu`), a terminal (`tui`), an embedded board
+/// (`embedded`), and the two full mobile/desktop OSes — iOS (`ios` + target
+/// `ios`) and HarmonyOS (`harmony` + target_env `ohos`) — which are first-class
+/// OS backends, not embedded boards. Each of the last two runs the software
+/// renderer and presents into the native window its OS host hands it.
 pub fn current() -> &'static dyn PlatformBackend {
     #[cfg(all(feature = "web", target_arch = "wasm32"))]
     {
@@ -167,21 +169,35 @@ pub fn current() -> &'static dyn PlatformBackend {
     {
         return &tui::TuiBackend;
     }
-    // An embedded board: a framebuffer and the software rasteriser. It is
-    // last in the cascade because it is the one backend that runs anywhere --
-    // it needs no window manager and no GPU -- so it is the right answer
-    // whenever no more specific backend applies.
+    // An embedded board: a framebuffer and the software rasteriser. It runs
+    // anywhere with no window manager and no GPU, but iOS and HarmonyOS are
+    // *not* embedded boards — they have real window systems and their own
+    // backends above — so this fallback explicitly excludes them.
     #[cfg(all(
         feature = "embedded",
         not(target_arch = "wasm32"),
-        not(target_os = "android")
+        not(target_os = "android"),
+        not(target_os = "ios"),
+        not(target_env = "ohos")
     ))]
     #[allow(unreachable_code)]
     {
         return &embedded::EmbeddedBackend;
     }
-    // No backend matches this build: either the right feature bundle is off, or
-    // the target (iOS, Harmony) has no run loop wired in yet.
+    // iOS and HarmonyOS are full OSes with their own feature bundles and
+    // siblings, ahead of the generic embedded fallback (which must not swallow
+    // them: it is gated on `not ios/ohos` below).
+    #[cfg(all(feature = "ios", target_os = "ios"))]
+    #[allow(unreachable_code)]
+    {
+        return &ios::IosBackend;
+    }
+    #[cfg(all(feature = "harmony", target_env = "ohos"))]
+    #[allow(unreachable_code)]
+    {
+        return &harmony::HarmonyBackend;
+    }
+    // No backend matches this build: the right feature bundle is off.
     #[allow(unreachable_code)]
     {
         &NO_BACKEND
@@ -426,6 +442,129 @@ pub mod embedded {
         }
         frames
     }
+}
+
+/// iOS and HarmonyOS backends: full OS platforms, each behind its own feature.
+///
+/// Both follow the `ohos-rs`/UIKit model: the OS host owns the window and the
+/// loop, and hands Rust a native surface (a `UIView` drawable or an ArkUI
+/// `XComponent` `OHNativeWindow`). Rust's job is the pixels. The software
+/// renderer runs into an in-memory staging platform — the same CPU framebuffer
+/// the embedded board uses, which is a rendering detail, not a claim that
+/// these OSes are embedded — and every frame is presented into the native
+/// surface by the sibling crate's C ABI seam
+/// ([`floom_platform_ios::present`] / [`floom_platform_harmony::present`]).
+///
+/// The loop is bounded by the stage's `count_frame()` the same way the embedded
+/// backend is: the OS host stops it by releasing the surface. A build without
+/// a bound native surface simply presents nowhere, which is exactly what a
+/// headless cross-compile does.
+#[cfg(all(feature = "ios", target_os = "ios"))]
+mod ios {
+    use super::{AppRequest, BuildFn, PlatformBackend, PlatformCapabilities};
+
+    /// The iOS backend: UIKit window + software renderer + native present.
+    pub struct IosBackend;
+
+    impl PlatformBackend for IosBackend {
+        fn name(&self) -> &'static str {
+            "ios (UIKit + software)"
+        }
+
+        fn capabilities(&self) -> PlatformCapabilities {
+            floom_platform_ios::capabilities()
+        }
+
+        fn run(&self, request: AppRequest, build: BuildFn) -> Result<(), String> {
+            super::run_os_frames(
+                request,
+                build,
+                floom_platform_ios::IOS_PLATFORM_ID,
+                floom_platform_ios::capabilities(),
+                floom_platform_ios::present,
+            )
+        }
+    }
+}
+
+#[cfg(all(feature = "harmony", target_env = "ohos"))]
+mod harmony {
+    use super::{AppRequest, BuildFn, PlatformBackend, PlatformCapabilities};
+
+    /// The HarmonyOS backend: ArkUI XComponent + software renderer + native present.
+    pub struct HarmonyBackend;
+
+    impl PlatformBackend for HarmonyBackend {
+        fn name(&self) -> &'static str {
+            "harmony (ArkUI + software)"
+        }
+
+        fn capabilities(&self) -> PlatformCapabilities {
+            floom_platform_harmony::capabilities()
+        }
+
+        fn run(&self, request: AppRequest, build: BuildFn) -> Result<(), String> {
+            super::run_os_frames(
+                request,
+                build,
+                floom_platform_harmony::HARMONY_PLATFORM_ID,
+                floom_platform_harmony::capabilities(),
+                floom_platform_harmony::present,
+            )
+        }
+    }
+}
+
+/// The frame pump shared by the two OS backends.
+///
+/// The OS host owns the window and the loop; Rust owns the pixels. The staging
+/// platform is the OS-neutral [`HostPlatform`] from `floom-platform` — an event
+/// queue and a sized surface, with **no** embedded/frameboard dependency —
+/// because the real surface lives in ArkUI/UIKit, not in Rust. Each rendered
+/// frame is presented into that native surface through `present`. The loop is
+/// driven by `request_frame`/`poll_events` and stops when the host releases the
+/// surface (a failed present) rather than spinning.
+#[cfg(any(
+    all(feature = "ios", target_os = "ios"),
+    all(feature = "harmony", target_env = "ohos")
+))]
+fn run_os_frames(
+    request: AppRequest,
+    build: BuildFn,
+    id: floom_types::PlatformId,
+    caps: PlatformCapabilities,
+    present: fn(&[u8], u32, u32) -> bool,
+) -> Result<(), String> {
+    use floom_app::{AppRunner, WidgetHost};
+    use floom_platform::{HostPlatform, Platform, WindowConfig};
+    use floom_renderer_software::SoftwarePresenter;
+
+    let mut platform = HostPlatform::new().with_id(id).with_capabilities(caps);
+    let window = platform.create_window(WindowConfig {
+        title: request.title,
+        size: request.size,
+        resizable: request.resizable,
+    });
+    let mut host = WidgetHost::new();
+    build(&mut host);
+    let mut runner = AppRunner::new(host, SoftwarePresenter::new());
+
+    // The OS host drives the cadence on a real device via the sibling crate's
+    // C ABI (vsync → `floom_*_present_frame`); `floom::run` here is the
+    // standalone/testing entry. Queue the first redraw, then render-and-present
+    // until the native present fails (surface released, or none bound in a
+    // headless cross-build) so it terminates instead of spinning.
+    platform.request_frame(window);
+    loop {
+        runner.pump(&mut platform);
+        let p = runner.presenter();
+        let (w, h) = (p.width(), p.height());
+        if !present(p.pixels(), w, h) {
+            break;
+        }
+        platform.request_frame(window);
+    }
+    Ok(())
 }
 
 /// Web backend: the `floom-platform-web` run loop behind the same door.

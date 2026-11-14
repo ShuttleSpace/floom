@@ -146,13 +146,15 @@ PLATFORM_HINTS = {
     # The platform *adapters* -- the crates that translate one OS into the
     # `floom-platform` traits. They are the crates a capability must never
     # live in, and the ones a capability plugin must never depend on upward.
-    # `floom-platform-ios`, `-harmony` and `-embedded` were OS-free stand-ins and
-    # are folded into `floom-platform` behind features; a real backend for any
-    # of them must move back out (the `floom-platform` FUTURE rule below holds
-    # the ABI crate itself to no OS/GPU dependency).
+    # `-embedded` is a bare frameboard; `-ios` and `-harmony` are full OS
+    # backends (ohos-rs XComponent cdylib / UIKit staticlib) that moved back
+    # out of `floom-platform` into sibling crates, as the FUTURE rule below
+    # requires. The OS-free stand-ins still live in `floom-platform` behind
+    # features for capability tests.
     "floom-platform", "floom-platform-desktop", "floom-platform-android",
     "floom-platform-web",
     "floom-platform-tui", "floom-platform-mobile",
+    "floom-platform-ios", "floom-platform-harmony",
 }
 GPU_HINTS = {
     "wgpu", "vello", "vger", "floem-vger", "skia-safe", "metal", "ash",
@@ -302,6 +304,8 @@ for _names, _level in [
             # renderer edge -- the software rasteriser reaches *up* to its
             # surface, never the other way round.
             "floom-platform-embedded",
+            # Full OS backends: the OS owns the window/input, Rust owns pixels.
+            "floom-platform-ios", "floom-platform-harmony",
             "floom-native",
             "floom-native-ffi",
             # winit event-loop adapter; no internal floom deps, consumed by the

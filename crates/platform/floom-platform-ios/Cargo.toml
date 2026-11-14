@@ -1,0 +1,19 @@
+[package]
+name = "floom-platform-ios"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "iOS platform backend for Floom 2.0: a staticlib linked into a UIKit app, presenting into a UIView/CAMetalLayer drawable"
+rust-version.workspace = true
+
+# The Apple counterpart to the HarmonyOS cdylib: an iOS app links Rust as a
+# static library (no dynamic N-API loader on iOS). UIKit owns the window,
+# lifecycle, touch, IME and clipboard; a UIView hands Rust its drawable pixels.
+# A rlib is kept so the facade and host-side tests link the pure-Rust half.
+[lib]
+crate-type = ["rlib", "staticlib"]
+
+[dependencies]
+floom-platform = { path = "../floom-platform" }
+floom-types = { path = "../../core/floom-types" }

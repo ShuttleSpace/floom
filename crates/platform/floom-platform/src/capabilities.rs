@@ -173,4 +173,44 @@ impl PlatformCapabilities {
                 | Capability::WEBGPU,
         }
     }
+
+    /// What a HarmonyOS backend can do.
+    ///
+    /// HarmonyOS is a unified OS — phone, tablet, PC — not an embedded board.
+    /// ArkUI owns the window, touch, IME and clipboard; the Rust half is a
+    /// `cdylib` N-API module that an ArkTS/HAP app loads, and an `XComponent`
+    /// hands it an `OHNativeWindow*` to present into (see `ohos-rs`). That makes
+    /// this a *windowed, native-view* platform, explicitly **not**
+    /// [`embedded_default`]: the software renderer is a choice forced by there
+    /// being no wgpu/OHOS GPU backend yet, not a statement about the OS.
+    ///
+    /// Only the bits with a wired path are claimed. `IME`, `CLIPBOARD` and
+    /// `ACCESSIBILITY` are real OS services here but reach the framework over
+    /// the ArkTS bridge, so they are added back by that bridge when it lands —
+    /// the same honesty rule [`android_default`] follows for the clipboard.
+    pub fn harmony_default() -> Self {
+        Self {
+            caps: Capability::WINDOWING
+                | Capability::TOUCH
+                | Capability::NATIVE_VIEW
+                | Capability::SOFTWARE_RENDER,
+        }
+    }
+
+    /// What an iOS backend can do.
+    ///
+    /// The symmetric Apple case: UIKit owns the window, touch, IME and
+    /// clipboard; the Rust half is a static library linked into the app, and a
+    /// `UIView`/`CAMetalLayer` is the surface `ohos-rs`'s `OHNativeWindow`
+    /// plays on HarmonyOS. Windowed and touch-driven, not
+    /// [`embedded_default`]. `IME`, `CLIPBOARD` and `ACCESSIBILITY` wait on the
+    /// UIKit bridge, exactly as on HarmonyOS.
+    pub fn ios_default() -> Self {
+        Self {
+            caps: Capability::WINDOWING
+                | Capability::TOUCH
+                | Capability::NATIVE_VIEW
+                | Capability::SOFTWARE_RENDER,
+        }
+    }
 }
