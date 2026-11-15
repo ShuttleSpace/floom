@@ -11,6 +11,10 @@ exclude = [
   # A TSX-only app: it has no `Cargo.toml` on purpose (`floom run app.tsx`
   # generates one), so the workspace cannot own it.
   "examples/floom-tsx-app",
+  # Generated plugin scaffolds carry their own `[workspace]`; the `floom-*`
+  # glob below would otherwise pull one in and resolve its (relative, wrong)
+  # platform path against `examples/`, breaking the whole workspace.
+  "examples/floom-plugin-demo",
 ]
 members = [
   "crates/core/floom-accessibility",

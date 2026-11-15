@@ -5,8 +5,11 @@
 //! Rust core under `src/` plus one directory per target platform.
 
 mod native_project;
+mod package;
+mod pack;
 mod run_app;
 mod templates;
+mod toolchain;
 mod watch;
 
 use std::fs;
