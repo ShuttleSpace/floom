@@ -19,13 +19,13 @@ real = [
 ]
 
 [dependencies]
-floom-animation = { path = "../../crates/system/floom-animation", version = "0.2.0" }
-floom-app = { path = "../../crates/app/floom-app", version = "0.2.0" }
-floom-core = { path = "../../crates/core/floom-core", version = "0.2.0" }
-floom-layout = { path = "../../crates/core/floom-layout", version = "0.2.0" }
-floom-platform = { path = "../../crates/platform/floom-platform", version = "0.2.0" }
-floom-types = { path = "../../crates/core/floom-types", version = "0.2.0" }
-floom-widgets = { path = "../../crates/widgets/floom-widgets", version = "0.2.0" }
+floom-animation = { workspace = true }
+floom-app = { workspace = true }
+floom-core = { workspace = true }
+floom-layout = { workspace = true }
+floom-platform = { workspace = true }
+floom-types = { workspace = true }
+floom-widgets = { workspace = true }
 # The composite controls the on-screen cases drive — `Dialog`, `Popup`,
 # `Select`, `BottomSheet`, `NavigationDrawer`, `NavDestination` — are not
 # engine primitives. They live one layer above `floom-widgets`, in the
@@ -35,9 +35,9 @@ floom-widgets = { path = "../../crates/widgets/floom-widgets", version = "0.2.0"
 #
 # This is a path dependency across the two workspaces, the same shape
 # `examples/floom-demo` uses for the design systems themselves.
-floom-ui-composites = { path = "../../crates/ecosystem/floom-ui/crates/floom-ui-composites" }
-floom-platform-desktop = { path = "../../crates/platform/floom-platform-desktop", version = "0.2.0", optional = true }
-floom-renderer-vello = { path = "../../crates/render/floom-renderer-vello", version = "0.2.0", optional = true }
+floom-ui-composites = { workspace = true }
+floom-platform-desktop = { workspace = true, optional = true }
+floom-renderer-vello = { workspace = true, optional = true }
 
 [[bin]]
 name = "floom-probe"

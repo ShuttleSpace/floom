@@ -11,7 +11,7 @@ description = "Versioned inspection protocol for Floom 2.0 devtools: tree/style/
 # Protocol-only crate: serde-friendly DTOs and validation rules. It never links
 # the runtime, so a devtools frontend can parse a snapshot without a window.
 # `floom-types` supplies only the `Color` <-> `Rgba` bridge.
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-types = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 

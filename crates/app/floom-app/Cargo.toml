@@ -8,41 +8,41 @@ description = "Headless app shell that hosts a Floom 2.0 widget tree"
 rust-version.workspace = true
 
 [dependencies]
-floom-core = { path = "../../core/floom-core", version = "0.2.0" }
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
-floom-scene = { path = "../../core/floom-scene", version = "0.2.0" }
-floom-accessibility = { path = "../../core/floom-accessibility", version = "0.2.0" }
-floom-layout = { path = "../../core/floom-layout", version = "0.2.0" }
-floom-runtime-core = { path = "../../core/floom-runtime-core", version = "0.2.0" }
+floom-core = { workspace = true }
+floom-types = { workspace = true }
+floom-scene = { workspace = true }
+floom-accessibility = { workspace = true }
+floom-layout = { workspace = true }
+floom-runtime-core = { workspace = true }
 # The same scheduler the overlay stack drives its entry animation with: a
 # frozen participant is animated by reusing it, not by adding a second clock.
-floom-animation = { path = "../../system/floom-animation", version = "0.2.0" }
+floom-animation = { workspace = true }
 # Error boundary merged into floom-core.
-floom-widgets = { path = "../../widgets/floom-widgets", version = "0.2.0" }
-floom-text = { path = "../../widgets/floom-text", version = "0.2.0" }
+floom-widgets = { workspace = true }
+floom-text = { workspace = true }
 # Participant ABI: the app hosts native views, so it is where the controller
 # lives. The OS bridges themselves stay in the platform crates.
-floom-native = { path = "../../native/floom-native", version = "0.2.0" }
+floom-native = { workspace = true }
 # The wiring layer: the app is the top of the layering, so it is the one crate
 # allowed to name both the platform ABI and the renderer ABI.
-floom-platform = { path = "../../platform/floom-platform", version = "0.2.0" }
-floom-renderer = { path = "../../render/floom-renderer", version = "0.2.0" }
+floom-platform = { workspace = true }
+floom-renderer = { workspace = true }
 # Image decoding for `register_image_decoded`: PNG + JPEG decode the formats
 # UI layers actually load; more formats can be opted into via features.
 image = { workspace = true, features = ["png", "jpeg"] }
 smallvec = "1.15"
 
 [dev-dependencies]
-floom-signal = { path = "../../core/floom-signal", version = "0.2.0" }
-floom-renderer-software = { path = "../../render/floom-renderer-software", version = "0.2.0" }
-floom-renderer-tui = { path = "../../render/floom-renderer-tui", version = "0.2.0" }
-floom-platform-tui = { path = "../../platform/floom-platform-tui", version = "0.2.0" }
-floom-text = { path = "../../widgets/floom-text", version = "0.2.0" }
+floom-signal = { workspace = true }
+floom-renderer-software = { workspace = true }
+floom-renderer-tui = { workspace = true }
+floom-platform-tui = { workspace = true }
+floom-text = { workspace = true }
 # The integration suites drive the app through the shared harness rather than
 # each growing their own copy of it.
-floom-testkit = { path = "../../devtools/floom-testkit", version = "0.2.0" }
+floom-testkit = { workspace = true }
 # The hosted-tree suite checks the host's data against the live tree it
 # describes into. Dev-only: the app itself never depends on the tooling.
-floom-hot-reload = { path = "../../devtools/floom-hot-reload", version = "0.2.0" }
+floom-hot-reload = { workspace = true }
 # The devtools-demo suite checks the panel wiring against a real host.
-floom-devtools = { path = "../../devtools/floom-devtools", version = "0.2.0" }
+floom-devtools = { workspace = true }

@@ -10,26 +10,26 @@ description = "AI/design accuracy loop: a reference screen gallery, a render-and
 [dependencies]
 # The gallery screens are real widget trees, not mock-ups: the loop is only
 # worth automating if what it measures is what a user would see.
-floom-widgets = { path = "../../widgets/floom-widgets", version = "0.2.0" }
-floom-testkit = { path = "../../devtools/floom-testkit", version = "0.2.0" }
+floom-widgets = { workspace = true }
+floom-testkit = { workspace = true }
 # Pixels, scenes and semantics come from the snapshot engine, so an evaluation
 # fingerprint is the same one `assert_snapshot` would pin.
-floom-snapshot = { path = "../../devtools/floom-snapshot", version = "0.2.0" }
+floom-snapshot = { workspace = true }
 # Inspection goes through the agent protocol (Phase 25, now folded in as the
 # `agent` module) and the design contract (Phase 26) — the loop closes over
 # vocabulary that already exists.
-floom-inspector = { path = "../../devtools/floom-inspector", version = "0.2.0" }
+floom-inspector = { workspace = true }
 # The design contract and the IR vocabulary are folded into floom-dsl.
-floom-dsl = { path = "../../frontend/floom-dsl", version = "0.2.0" }
+floom-dsl = { workspace = true }
 # Scene nodes are read directly out of the retained graph for geometry and
 # colour probes.
-floom-scene = { path = "../../core/floom-scene", version = "0.2.0" }
+floom-scene = { workspace = true }
 # The `Labeled` box the screens use declares its role in the a11y vocabulary.
-floom-accessibility = { path = "../../core/floom-accessibility", version = "0.2.0" }
+floom-accessibility = { workspace = true }
 # The screen builder sizes cards from the text engine's own measurements, so
 # the layout adapts to whatever font metrics the host resolves.
-floom-text = { path = "../../widgets/floom-text", version = "0.2.0" }
-floom-core = { path = "../../core/floom-core", version = "0.2.0" }
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-text = { workspace = true }
+floom-core = { workspace = true }
+floom-types = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

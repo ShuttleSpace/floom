@@ -18,28 +18,24 @@ name = "floom-demo"
 path = "src/main.rs"
 
 [dependencies]
-floom = { path = "../../crates/app/floom", version = "0.2.0", features = [
-    "desktop",
-    "renderer-gpu",
-    "devtools",
-] }
-floom-widgets = { path = "../../crates/widgets/floom-widgets", version = "0.2.0" }
-floom-signal = { path = "../../crates/core/floom-signal", version = "0.2.0" }
-floom-core-theme = { path = "../../crates/ecosystem/floom-ui/crates/floom-core-theme" }
+floom = { workspace = true, features = ["desktop", "renderer-gpu", "devtools"] }
+floom-widgets = { workspace = true }
+floom-signal = { workspace = true }
+floom-core-theme = { workspace = true }
 
 # The composite controls the kits build their widgets from. The `floom`
 # umbrella deliberately does not re-export these -- a crate that ships in
 # an app binary does not get to depend on a satellite workspace -- so a
 # gallery that shows a date picker has to name `DateValue` and
 # `TimeValue` itself.
-floom-ui-composites = { path = "../../crates/ecosystem/floom-ui/crates/floom-ui-composites" }
+floom-ui-composites = { workspace = true }
 
 # The three design-system kits, each a single crate that builds every
 # component behind a per-component feature. `features = ["full"]` turns
 # them all on -- the gallery shows every component of every system.
-floom-material = { path = "../../crates/ecosystem/floom-ui/crates/floom-material", version = "0.2.0", features = ["full"] }
-floom-cupertino = { path = "../../crates/ecosystem/floom-ui/crates/floom-cupertino", version = "0.2.0", features = ["full"] }
-floom-fluent = { path = "../../crates/ecosystem/floom-ui/crates/floom-fluent", version = "0.2.0", features = ["full"] }
+floom-material = { workspace = true, features = ["full"] }
+floom-cupertino = { workspace = true, features = ["full"] }
+floom-fluent = { workspace = true, features = ["full"] }
 
 [dev-dependencies]
-floom-testkit = { path = "../../crates/devtools/floom-testkit", version = "0.2.0" }
+floom-testkit = { workspace = true }

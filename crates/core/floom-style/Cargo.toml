@@ -8,7 +8,7 @@ description = "Style properties and selectors for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]
-floom-types = { path = "../floom-types", version = "0.2.0" }
+floom-types = { workspace = true }
 bitflags = "2.9"
 
 [dev-dependencies]

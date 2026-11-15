@@ -8,7 +8,7 @@ description = "Renderer-neutral text layout and shaping for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-types = { workspace = true }
 peniko = { workspace = true }
 parley = { workspace = true }
 # The `scale` feature is what lets the editor layout measure a glyph's ink

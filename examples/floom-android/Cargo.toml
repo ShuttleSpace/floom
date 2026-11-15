@@ -23,15 +23,15 @@ default = []
 real = ["floom-renderer-vello/gpu"]
 
 [dependencies]
-floom-app = { path = "../../crates/app/floom-app" }
-floom-core = { path = "../../crates/core/floom-core" }
-floom-layout = { path = "../../crates/core/floom-layout" }
-floom-platform = { path = "../../crates/platform/floom-platform" }
-floom-platform-android = { path = "../../crates/platform/floom-platform-android" }
-floom-platform-mobile = { path = "../../crates/platform/floom-platform-mobile" }
-floom-renderer-vello = { path = "../../crates/render/floom-renderer-vello", optional = true }
-floom-types = { path = "../../crates/core/floom-types" }
-floom-widgets = { path = "../../crates/widgets/floom-widgets" }
+floom-app = { workspace = true }
+floom-core = { workspace = true }
+floom-layout = { workspace = true }
+floom-platform = { workspace = true }
+floom-platform-android = { workspace = true }
+floom-platform-mobile = { workspace = true }
+floom-renderer-vello = { workspace = true, optional = true }
+floom-types = { workspace = true }
+floom-widgets = { workspace = true }
 
 # On Android we need the *same* winit fork Floom uses so the `AndroidApp`
 # type lines up with `floom_platform_android::set_android_app`. The rev must

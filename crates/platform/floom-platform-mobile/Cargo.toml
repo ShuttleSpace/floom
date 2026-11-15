@@ -16,7 +16,7 @@ rust-version.workspace = true
 # framework bindings; the platform layer brings only what the platform itself
 # needs.
 [dependencies]
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-types = { workspace = true }
 
 # ── Android ────────────────────────────────────────────────────────────────
 # The JNI bridge: the JavaVM, the activity, and the helpers the platform's

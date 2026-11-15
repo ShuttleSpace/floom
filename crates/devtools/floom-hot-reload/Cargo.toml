@@ -8,14 +8,14 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
-floom-core = { path = "../../core/floom-core", version = "0.2.0" }
-floom-style = { path = "../../core/floom-style", version = "0.2.0" }
-floom-runtime-core = { path = "../../core/floom-runtime-core", version = "0.2.0" }
+floom-types = { workspace = true }
+floom-core = { workspace = true }
+floom-style = { workspace = true }
+floom-runtime-core = { workspace = true }
 # The reload protocol diffs two UI IR documents; the IR is folded into
 # floom-dsl as its `ui_ir` module.
-floom-dsl = { path = "../../frontend/floom-dsl", version = "0.2.0" }
+floom-dsl = { workspace = true }
 
 [dev-dependencies]
 # Test documents read better as DSL source than as struct literals.
-floom-dsl = { path = "../../frontend/floom-dsl", version = "0.2.0" }
+floom-dsl = { workspace = true }

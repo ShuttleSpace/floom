@@ -6,7 +6,7 @@ license.workspace = true
 description = "TSX front end for Floom: compile-time lowering of TSX into the UI IR"
 
 [dependencies]
-floom-dsl = { path = "../floom-dsl" }
+floom-dsl = { workspace = true }
 serde_json = { workspace = true }
 
 # Build-time only: the TSX parser never ships in the application binary.

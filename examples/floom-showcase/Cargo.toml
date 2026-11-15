@@ -7,20 +7,16 @@ publish = false
 description = "One application over the engine, signals, the ported kits, and the editor"
 
 [dependencies]
-floom = { path = "../../crates/app/floom", version = "0.2.0", features = [
-    "desktop",
-    "renderer-gpu",
-    "devtools",
-] }
-floom-widgets = { path = "../../crates/widgets/floom-widgets", version = "0.2.0" }
-floom-signal = { path = "../../crates/core/floom-signal", version = "0.2.0" }
-floom-editor = { path = "../../crates/widgets/floom-editor", version = "0.2.0" }
+floom = { workspace = true, features = ["desktop", "renderer-gpu", "devtools"] }
+floom-widgets = { workspace = true }
+floom-signal = { workspace = true }
+floom-editor = { workspace = true }
 
 # Only the ported kits are imported. `crates/ecosystem/floom-ui` is a satellite
 # workspace; the Material kit now ships every component behind a per-component
 # feature, so this demo turns on just the three it shows. See `src/main.rs`.
-floom-material = { path = "../../crates/ecosystem/floom-ui/crates/floom-material", version = "0.2.0", features = ["text", "button", "checkbox"] }
-floom-core-theme = { path = "../../crates/ecosystem/floom-ui/crates/floom-core-theme", features = ["material"] }
+floom-material = { workspace = true, features = ["text", "button", "checkbox"] }
+floom-core-theme = { workspace = true, features = ["material"] }
 
 [dev-dependencies]
-floom-testkit = { path = "../../crates/devtools/floom-testkit", version = "0.2.0" }
+floom-testkit = { workspace = true }

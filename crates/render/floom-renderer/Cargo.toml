@@ -13,18 +13,18 @@ rust-version.workspace = true
 # longer collide on an import name.
 
 [dependencies]
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
-floom-scene = { path = "../../core/floom-scene", version = "0.2.0" }
+floom-types = { workspace = true }
+floom-scene = { workspace = true }
 # Handle descriptors only — the ABI never names a windowing or GPU library.
 raw-window-handle = { workspace = true }
 
 [dev-dependencies]
 # The capability query is checked against the backends that answer it
 # differently: the software rasteriser and the character grid.
-floom-renderer-software = { path = "../floom-renderer-software", version = "0.2.0" }
-floom-renderer-tui = { path = "../floom-renderer-tui", version = "0.2.0" }
+floom-renderer-software = { workspace = true }
+floom-renderer-tui = { workspace = true }
 # The unified degradation report is checked against the backends whose
 # conversions are non-trivial: vello's (a field-for-field copy) and the skia
 # recorder's (its own counters, nothing invented).
-floom-renderer-vello = { path = "../floom-renderer-vello", version = "0.2.0", features = ["gpu"] }
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-renderer-vello = { workspace = true, features = ["gpu"] }
+floom-types = { workspace = true }

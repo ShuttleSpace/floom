@@ -10,9 +10,9 @@ rust-version.workspace = true
 [dependencies]
 bitflags = "2.9"
 smallvec = "1.15"
-floom-types = { path = "../floom-types", version = "0.2.0" }
-floom-core = { path = "../floom-core", version = "0.2.0" }
-floom-signal = { path = "../floom-signal", version = "0.2.0" }
+floom-types = { workspace = true }
+floom-core = { workspace = true }
+floom-signal = { workspace = true }
 
 [dev-dependencies]
 criterion = { version = "0.8.1", features = ["html_reports"] }

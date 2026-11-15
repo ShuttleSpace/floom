@@ -8,8 +8,8 @@ description = "Native composition for Floom 2.0: participant slot pool, provider
 rust-version.workspace = true
 
 [dependencies]
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
-floom-virtual = { path = "../../widgets/floom-virtual", version = "0.2.0" }
+floom-types = { workspace = true }
+floom-virtual = { workspace = true }
 
 [dev-dependencies]
 criterion = { version = "0.8.1", features = ["html_reports"] }

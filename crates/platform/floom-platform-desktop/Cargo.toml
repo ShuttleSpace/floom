@@ -16,13 +16,13 @@ default = []
 winit = ["dep:winit", "dep:cursor-icon"]
 
 [dependencies]
-floom-accessibility = { path = "../../core/floom-accessibility", version = "0.2.0" }
+floom-accessibility = { workspace = true }
 # Same layer (L4), so the architecture gate permits this edge: the desktop
 # backend implements the native-view provider ABI, and `floom-native` stays a
 # leaf that knows nothing about an OS.
-floom-native = { path = "../../native/floom-native", version = "0.2.0" }
-floom-platform = { path = "../floom-platform", version = "0.2.0" }
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-native = { workspace = true }
+floom-platform = { workspace = true }
+floom-types = { workspace = true }
 winit = { workspace = true, optional = true }
 # The fork's `window` module takes a `Cursor` but keeps `CursorIcon` private, so
 # naming a pointer shape means naming this crate. Already in `Cargo.lock` as the

@@ -13,8 +13,8 @@ rust-version.workspace = true
 # layer that contains `unsafe`, and it is a separate crate precisely so that
 # `floom-native` can keep `#![forbid(unsafe_code)]`.
 [dependencies]
-floom-native = { path = "../floom-native", version = "0.2.0" }
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-native = { workspace = true }
+floom-types = { workspace = true }
 
 [dev-dependencies]
 # The C test compiles a provider with the platform compiler and drives it

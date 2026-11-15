@@ -8,8 +8,8 @@ description = "Terminal (character-grid) platform backend for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]
-floom-platform = { path = "../floom-platform" }
-floom-types = { path = "../../core/floom-types" }
+floom-platform = { workspace = true }
+floom-types = { workspace = true }
 
 # Terminal size detection on unix needs an ioctl; libc provides TIOCGWINSZ.
 [target.'cfg(unix)'.dependencies]
@@ -19,7 +19,7 @@ libc = "0.2"
 # never ships a dependency on the L7 app crate (which would be a forbidden
 # upward edge).
 [dev-dependencies]
-floom-app = { path = "../../app/floom-app" }
-floom-renderer-tui = { path = "../../render/floom-renderer-tui" }
-floom-widgets = { path = "../../widgets/floom-widgets" }
-floom-layout = { path = "../../core/floom-layout" }
+floom-app = { workspace = true }
+floom-renderer-tui = { workspace = true }
+floom-widgets = { workspace = true }
+floom-layout = { workspace = true }

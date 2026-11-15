@@ -17,10 +17,10 @@ default = []
 gpu = ["dep:vello", "dep:pollster", "dep:floom-text"]
 
 [dependencies]
-floom-renderer = { path = "../floom-renderer", version = "0.2.0" }
-floom-scene = { path = "../../core/floom-scene", version = "0.2.0" }
-floom-text = { path = "../../widgets/floom-text", version = "0.2.0", optional = true }
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-renderer = { workspace = true }
+floom-scene = { workspace = true }
+floom-text = { workspace = true, optional = true }
+floom-types = { workspace = true }
 vello = { version = "0.7.0", optional = true }
 pollster = { version = "0.4.0", optional = true }
 

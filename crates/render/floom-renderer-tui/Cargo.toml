@@ -8,12 +8,12 @@ description = "Terminal (character-cell) Scene renderer and presenter for Floom 
 rust-version.workspace = true
 
 [dependencies]
-floom-renderer = { path = "../floom-renderer", version = "0.2.0" }
-floom-scene = { path = "../../core/floom-scene", version = "0.2.0" }
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-renderer = { workspace = true }
+floom-scene = { workspace = true }
+floom-types = { workspace = true }
 
 [dev-dependencies]
-floom-text = { path = "../../widgets/floom-text", version = "0.2.0" }
+floom-text = { workspace = true }
 # The golden-file comparison comes from `floom-renderer` (already a
 # dependency, so no new edge): the terminal's picture is a character grid,
 # and the snapshot is that grid as text.

@@ -116,6 +116,48 @@ rust-version = "1.91"
 repository = "https://gitee.com/floem/floem"
 
 [workspace.dependencies]
+floom = { path = "crates/app/floom", version = "0.2.0" }
+floom-accessibility = { path = "crates/core/floom-accessibility", version = "0.2.0" }
+floom-animation = { path = "crates/system/floom-animation", version = "0.2.0" }
+floom-app = { path = "crates/app/floom-app", version = "0.2.0" }
+floom-core = { path = "crates/core/floom-core", version = "0.2.0" }
+floom-core-theme = { path = "crates/ecosystem/floom-ui/crates/floom-core-theme" }
+floom-cupertino = { path = "crates/ecosystem/floom-ui/crates/floom-cupertino", version = "0.2.0" }
+floom-devtools = { path = "crates/devtools/floom-devtools", version = "0.2.0" }
+floom-dsl = { path = "crates/frontend/floom-dsl", version = "0.2.0" }
+floom-editor = { path = "crates/widgets/floom-editor", version = "0.2.0" }
+floom-fluent = { path = "crates/ecosystem/floom-ui/crates/floom-fluent", version = "0.2.0" }
+floom-hot-reload = { path = "crates/devtools/floom-hot-reload", version = "0.2.0" }
+floom-inspector = { path = "crates/devtools/floom-inspector", version = "0.2.0" }
+floom-layout = { path = "crates/core/floom-layout", version = "0.2.0" }
+floom-material = { path = "crates/ecosystem/floom-ui/crates/floom-material", version = "0.2.0" }
+floom-native = { path = "crates/native/floom-native", version = "0.2.0" }
+floom-platform = { path = "crates/platform/floom-platform", version = "0.2.0" }
+floom-platform-android = { path = "crates/platform/floom-platform-android", version = "0.2.0" }
+floom-platform-desktop = { path = "crates/platform/floom-platform-desktop", version = "0.2.0" }
+floom-platform-embedded = { path = "crates/platform/floom-platform-embedded", version = "0.2.0" }
+floom-platform-harmony = { path = "crates/platform/floom-platform-harmony", version = "0.2.0" }
+floom-platform-ios = { path = "crates/platform/floom-platform-ios", version = "0.2.0" }
+floom-platform-mobile = { path = "crates/platform/floom-platform-mobile", version = "0.2.0" }
+floom-platform-tui = { path = "crates/platform/floom-platform-tui", version = "0.2.0" }
+floom-platform-web = { path = "crates/platform/floom-platform-web", version = "0.2.0" }
+floom-renderer = { path = "crates/render/floom-renderer", version = "0.2.0" }
+floom-renderer-software = { path = "crates/render/floom-renderer-software", version = "0.2.0" }
+floom-renderer-tui = { path = "crates/render/floom-renderer-tui", version = "0.2.0" }
+floom-renderer-vello = { path = "crates/render/floom-renderer-vello", version = "0.2.0" }
+floom-renderer-web = { path = "crates/render/floom-renderer-web", version = "0.2.0" }
+floom-runtime-core = { path = "crates/core/floom-runtime-core", version = "0.2.0" }
+floom-scene = { path = "crates/core/floom-scene", version = "0.2.0" }
+floom-signal = { path = "crates/core/floom-signal", version = "0.2.0" }
+floom-snapshot = { path = "crates/devtools/floom-snapshot", version = "0.2.0" }
+floom-style = { path = "crates/core/floom-style", version = "0.2.0" }
+floom-testkit = { path = "crates/devtools/floom-testkit", version = "0.2.0" }
+floom-text = { path = "crates/widgets/floom-text", version = "0.2.0" }
+floom-tsx = { path = "crates/frontend/floom-tsx" }
+floom-types = { path = "crates/core/floom-types", version = "0.2.0" }
+floom-ui-composites = { path = "crates/ecosystem/floom-ui/crates/floom-ui-composites" }
+floom-virtual = { path = "crates/widgets/floom-virtual", version = "0.2.0" }
+floom-widgets = { path = "crates/widgets/floom-widgets", version = "0.2.0" }
 peniko = { version = "0.6.0", features = ["serde"] }
 parley = { version = "0.7.0" }
 fontique = { version = "0.7.0" }

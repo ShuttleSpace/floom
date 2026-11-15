@@ -14,7 +14,7 @@ description = "Declarative UI DSL: parser, lowering to the UI IR, and builder co
 # property table in the workspace.
 # `floom-codegen` (folded in as the `codegen` module) needs only the value
 # types; it is the one DSL piece with no IR dependency.
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
+floom-types = { workspace = true }
 # The schema and IR are (de)serializable for ABI-versioned persistence/tests.
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

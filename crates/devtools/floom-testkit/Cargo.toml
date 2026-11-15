@@ -8,17 +8,17 @@ description = "Headless test harness that drives a Floom 2.0 app the way a windo
 rust-version.workspace = true
 
 [dependencies]
-floom-app = { path = "../../app/floom-app", version = "0.2.0" }
-floom-core = { path = "../../core/floom-core", version = "0.2.0" }
-floom-types = { path = "../../core/floom-types", version = "0.2.0" }
-floom-layout = { path = "../../core/floom-layout", version = "0.2.0" }
-floom-scene = { path = "../../core/floom-scene", version = "0.2.0" }
+floom-app = { workspace = true }
+floom-core = { workspace = true }
+floom-types = { workspace = true }
+floom-layout = { workspace = true }
+floom-scene = { workspace = true }
 # A harness has to own the same two edges the app shell does: it delivers the
 # platform ABI in and reads the scene out. That is the whole point of it, and it
 # is why this crate sits *above* the app rather than beside the framework
 # crates — nothing in the framework may depend on it.
-floom-platform = { path = "../../platform/floom-platform", version = "0.2.0" }
-floom-renderer-software = { path = "../../render/floom-renderer-software", version = "0.2.0" }
+floom-platform = { workspace = true }
+floom-renderer-software = { workspace = true }
 
 [dev-dependencies]
-floom-widgets = { path = "../../widgets/floom-widgets", version = "0.2.0" }
+floom-widgets = { workspace = true }
