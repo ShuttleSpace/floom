@@ -60,7 +60,17 @@ OPTIONS (create):
 OPTIONS (check / test / package):
     --release              Release profile (package only)
     --features <LIST>      Cargo features (repeatable)
-    --platform <NAME>      One platform to target (package only)
+    --platform <NAME>      One platform to target (package only):
+                             android,ios,ohos,web,windows,linux,macos
+
+OPTIONS (package):
+    --abi <ABI>            Android ABI to build (default: arm64-v8a)
+    --manifest <PATH>     Cargo.toml to package (default: <DIR>/Cargo.toml)
+    --install             Install the built artifact (adb install for android)
+    --device               Build for a real device (ios: needs a signing
+                             identity, reported as a blocked tier)
+    --bin <NAME>          Package a specific binary target
+    --yes                 Auto-confirm cargo tool installs (never SDKs)
 EXAMPLES:
     floom run app.tsx
     floom run app.tsx --release
