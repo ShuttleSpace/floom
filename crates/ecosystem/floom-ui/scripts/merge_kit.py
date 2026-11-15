@@ -164,15 +164,23 @@ def main():
             open(os.path.join(sub, fn), "w").write(
                 rewrite_src(open(os.path.join(csrc, fn)).read(), prefix))
 
-        # tests (rename to prefix_feat.rs to avoid collisions)
+        # tests: one output file per SOURCE test file. The component's primary
+        # (non-`api`) test keeps `<prefix>_<feat>.rs`; extra files such as
+        # `api.rs` get a distinct `_<stem>` suffix. Ordering non-`api` first
+        # keeps the primary name stable. Collapsing all sources onto one path
+        # used to silently overwrite 32 contract-API tests.
         tdir = os.path.join(cdir, "tests")
         if os.path.isdir(tdir):
-            for tf in sorted(os.listdir(tdir)):
-                if not tf.endswith(".rs"):
-                    continue
+            test_files = sorted(
+                (f for f in os.listdir(tdir) if f.endswith(".rs")),
+                key=lambda f: (f == "api.rs", f),
+            )
+            for i, tf in enumerate(test_files):
                 t = rewrite_test(open(os.path.join(tdir, tf)).read(), prefix, ds)
                 out = '#![cfg(feature = "%s")]\n' % feat + t
-                open(os.path.join(tests_dir, "%s_%s.rs" % (prefix, feat)), "w").write(out)
+                stem = os.path.splitext(tf)[0]
+                suffix = "" if i == 0 else "_" + stem
+                open(os.path.join(tests_dir, "%s_%s%s.rs" % (prefix, feat, suffix)), "w").write(out)
 
     # widgets/mod.rs
     mod_lines = ["#![cfg_attr(feature = \"full\", allow(unused))]"]  # keep lints quiet when partial

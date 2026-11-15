@@ -74,9 +74,16 @@ def main():
         d for d in os.listdir(comp_root)
         if os.path.isdir(os.path.join(comp_root, d)) and d.startswith(prefix + "-")
     )
+    if not comp_dirs:
+        fail(
+            "no source component dirs under %s — this is a one-shot verifier "
+            "that only runs before the merge deletes the sources; the committed "
+            "artifacts are now the source of truth" % comp_root
+        )
 
     orig_tests = 0
     gen_tests = 0
+    seen_gen_paths = set()
     for d in comp_dirs:
         feat = feat_of(d, prefix)
         if not os.path.isfile(os.path.join(merged, "src", "widgets", feat + ".rs")):
@@ -88,11 +95,19 @@ def main():
 
         tdir = os.path.join(comp_root, d, "tests")
         if os.path.isdir(tdir):
-            for f in sorted(os.listdir(tdir)):
-                if not f.endswith(".rs"):
-                    continue
+            test_files = sorted(
+                (f for f in os.listdir(tdir) if f.endswith(".rs")),
+                key=lambda f: (f == "api.rs", f),
+            )
+            for i, f in enumerate(test_files):
                 orig_tests += 1
-                g = os.path.join(merged, "tests", "%s_%s.rs" % (prefix, feat))
+                stem = os.path.splitext(f)[0]
+                suffix = "" if i == 0 else "_" + stem
+                gname = "%s_%s%s.rs" % (prefix, feat, suffix)
+                g = os.path.join(merged, "tests", gname)
+                if gname in seen_gen_paths:
+                    fail("generated test path collision: %s" % gname)
+                seen_gen_paths.add(gname)
                 if not os.path.isfile(g):
                     fail("missing generated test %s" % g)
                 t = open(g).read()

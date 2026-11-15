@@ -64,7 +64,7 @@ crates/ecosystem/floom-ui（satellite，9 members）
 | 三层：`floom-elements` contract / per-kit adapters / core | 已改为 engine `floom-widgets` → `floom-ui-composites` → per-DS kits；`floom-elements` 已删 |
 | 每组件一 crate，内含实现（`spec/props/event/state/tests`） | 已合并进 3 个 kit crate 的 per-component feature（`floom-material`/`floom-cupertino`/`floom-fluent`），每个组件一 `#[cfg(feature)]`；共享逻辑在 composites + engine |
 | Phase 1 MVP：8 个 Material 组件 | 远超：98 material + 99 cupertino + 99 fluent |
-| Phase 2：Cupertino ×8、Fluent ×8 | 远超：各约 99 个 kit crate |
+| Phase 2：Cupertino ×8、Fluent ×8 | 远超：各约 99 个组件，合并进单 crate 的 per-component feature |
 | Phase 3 高级组件：Table/Tree/VirtualList/Chart/Navigation | 大部分已有：`md-table`、`md-treeview`、`md-virtual_scroller`、`md-sparkline`、`md-navigation_drawer`、`md-datatable`、`md-timeline`、`md-calendar` |
 | `examples/demo` + `floom-demo` | **已建**：`examples/floom-demo`（根 workspace），98 组件 × 3 DS 并排；见 P1 |
 | `floom-testing` | 已存在 |
@@ -76,7 +76,7 @@ crates/ecosystem/floom-ui（satellite，9 members）
 
 - [x] 重写本 `PLAN.md` 为 v2 现状 + 本任务清单（2026-11-11）
 - [ ] `docs/COMPONENT_PARITY.md`（77KB）改为 v2：清理 `floom-elements`/`floom-demo`/`examples/demo` 的残留引用
-      （约 32 行）；补 `floom-harmony` 与 `floom-ui-composites` 的说明；补 Batch-14 的 5 行
+      （约 32 行）；补 `floom-ui-composites` 的说明（`floom-harmony` 已于 2026-11-15 删除）；补 Batch-14 的 5 行
       （ButtonGroup/FAB/RangeSlider/FileInput/OTPInput）进 contract 表；修 `:969-978` 过期的 implementation-order 复选框。
   - 退出：文档不再出现已删除 crate 的可执行引用；数与 `cargo metadata`（9）一致。
 - [ ] `docs/demo-gallery-plan.md`：按新架构重写（去掉 `examples/demo` 路径），或明确标为 superseded。
@@ -111,7 +111,7 @@ crates/ecosystem/floom-ui（satellite，9 members）
 - [x] **Harmony 策略**：`floom-harmony` 已于 2026-11-15 删除（consolidated-only，无 per-component 子 crate），无需再决策。
 - [ ] **警告债**：`h_stack`/`v_stack`/`text`/`label`/`empty` 弃用调用 + unused imports（`AUDIT:107-109`，
       "historical debt, not addressed"；本次未重新验证数量）。
-- [ ] **10 个 consolidated crate 补 `//!` 模块文档**（当前 0 个有）。
+- [ ] **9 个 consolidated crate 补 `//!` 模块文档**（当前 0 个有；`floom-harmony` 已删除）。
 
 ### P3 — 旧计划 Phase 4 生态工具（1.1+，未开工）
 

@@ -8,9 +8,10 @@
 # --workspace here, all headless).
 #
 # Layout: engine floom-widgets (root) -> floom-ui-composites (cross-DS
-# components) -> per-DS kit crates. All 306 members resolve; exclude = []
-# (no excluded crates). There is no floom-elements facade (removed in Stage D),
-# and each kit crate is a thin token adapter over floom-ui-composites.
+# components) -> per-DS kit crates. All 9 members resolve; exclude = []
+# (no excluded crates). There is no floom-elements facade (removed in Stage D);
+# each design system is one kit crate (floom-material/cupertino/fluent) with a
+# per-component feature over floom-ui-composites (default = [], full = all).
 #
 # See docs/PLAN.md for the current architecture and task list.
 

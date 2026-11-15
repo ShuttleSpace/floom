@@ -26,7 +26,7 @@
 set -uo pipefail
 
 # The gate only needs pass/fail, not debuggable binaries, and the two big
-# workspaces here are 306 and 4 members. Measured on this machine:
+# workspaces here are 9 and 4 members. Measured on this machine:
 #
 #   cargo test --workspace, full debuginfo      >109 min (the first attempt was
 #                                                 killed by a full disk before it

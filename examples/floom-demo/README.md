@@ -18,9 +18,9 @@ the same component, not three different components:
 
 | Column | Design system | Comes from |
 |---|---|---|
-| Material | Material 3 | `floom_widget_md_*` kit crates |
-| Cupertino | Cupertino / HIG | `floom_widget_cupertino_*` kit crates |
-| Fluent | Fluent | `floom_widget_fluent_*` kit crates |
+| Material | Material 3 | `floom-material` (one crate, per-component features) |
+| Cupertino | Cupertino / HIG | `floom-cupertino` (one crate, per-component features) |
+| Fluent | Fluent | `floom-fluent` (one crate, per-component features) |
 
 The gallery holds all three in **one binary**, so switching between them is
 switching between columns rather than between builds. The theme each column
