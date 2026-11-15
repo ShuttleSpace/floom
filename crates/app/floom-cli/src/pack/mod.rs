@@ -39,6 +39,7 @@ pub fn pack(platform: &str, project: &Project, opts: &PackOpts) -> Result<PackRe
     match platform {
         "android" => crate::pack::android::pack_android(project, opts),
         "ios" => crate::pack::ios::pack_ios(project, opts),
+        "web" => crate::pack::web::pack_web(project, opts),
         other => Err(format!("platform `{other}` is not implemented yet")),
     }
 }
@@ -46,3 +47,4 @@ pub fn pack(platform: &str, project: &Project, opts: &PackOpts) -> Result<PackRe
 pub mod shared;
 pub mod android;
 pub mod ios;
+pub mod web;
