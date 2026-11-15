@@ -20,14 +20,14 @@ Version: 0.2.0 (workspace shows root's `0.2.0`)
 它由 `just gate ecosystem` 与 CI `ecosystem-check`（`.github/workflows/ci-plugins.yml`）用
 `cargo test --workspace` 覆盖（每个 member 都是 headless 测试，渲染进 buffer，无窗口/无 GPU）。
 
-**306 个 workspace member，全部能解析**（`cargo metadata`: packages=306, workspace_members=306）：
+**9 个 workspace member，全部能解析**（`cargo metadata`: packages=9, workspace_members=9）：
 
 ```
 应用
   │
 根 engine：crates/widgets/floom-widgets（盒子/文本等原语）、floom-core、floom-scene、floom-app …
   │
-crates/ecosystem/floom-ui（satellite，306 members）
+crates/ecosystem/floom-ui（satellite，9 members）
   ├─ floom-widget-runtime      运行时状态：主题 / DesignSystem / dark signals、布局注册、ripple
   ├─ floom-core-theme          Theme trait + tokens + 每组件 tokens/props + 全局主题状态
   ├─ floom-theme               跨 DS token 结构（Color/Typography/Spacing/Radius/Elevation/Motion、ColorScheme、ThemeScope）
@@ -36,11 +36,8 @@ crates/ecosystem/floom-ui（satellite，306 members）
   │                            基于根 engine `floom-widgets` 组合而来，DS 无关
   ├─ floom-material            Material 3 kit：MaterialRoles/MaterialTheme、button 指标/样式、M3 scale、gallery
   ├─ floom-cupertino           Cupertino/HIG kit：CupertinoColors/CupertinoTheme、button、touch target、gallery
-  ├─ floom-fluent              Fluent kit：FluentColors/FluentTheme、button、gallery
-  ├─ floom-harmony             HarmonyOS kit：HarmonyColors/HarmonyTheme（brand/warning/error/success）、button、gallery
-  ├─ floom-testing             snapshot 测试助手（Snapshot、component_snapshot）
-  └─ 296 个 per-component kit crate：98 material + 99 cupertino + 99 fluent
-                                （薄 token 适配层，import `floom_ui_composites`）
+  └─ floom-fluent              Fluent kit：每组件一 `#[cfg(feature)]`，`full` 开全部（99 个）
+  └─ floom-testing             snapshot 测试助手（Snapshot、component_snapshot）
 ```
 
 **关键点（旧文档都写错了）：**
@@ -53,21 +50,20 @@ crates/ecosystem/floom-ui（satellite，306 members）
   不是本 workspace。它把 98 个组件在 Material/Cupertino/Fluent **三列并排**渲染，
   props 表在运行期从 `floom-core-theme` 自己的 props 源解析，headless 测试覆盖
   全部 98 页与每一个 sample。`justfile` 的目标已接通（`just demo` / `just demo-headless`）。
-  Harmony 没有 per-component kit crate，所以不在三列之内（见下文 P1）。
-- **Harmony 只有 consolidated crate**（`floom-harmony`），没有像 material/cupertino/fluent 那样的
-  per-component kit 子 crate。
+- **`floom-harmony` 已于 2026-11-15 删除**（它只是 consolidated crate，无 per-component 子 crate，
+  也不在 `floom-demo` 的三列之内）。
 - 每 DS 的 per-component crate **是薄适配器**；行为共享在 `floom-ui-composites` + engine `floom-widgets`，
   不是旧计划设想的"每组件 crate 自带 spec/props/state/style 实现"。
 - `Cargo.toml` 顶部那段注释（"8 有 engine widget、90 待 promote、member 列表是 32"）**整体过期**：
-  现在 306 members、`exclude = []`、kit crates 已适配。
+  现在 9 members、`exclude = []`、kit crates 已合并为 feature 门控。
 
 ## 2. 旧计划 vs 现实
 
 | 2026-07-31 旧计划 | 今天（2026-11-11） |
 |---|---|
 | 三层：`floom-elements` contract / per-kit adapters / core | 已改为 engine `floom-widgets` → `floom-ui-composites` → per-DS kits；`floom-elements` 已删 |
-| 每组件一 crate，内含实现（`spec/props/event/state/tests`） | 296 个 kit crate 仍存在，但是**薄 token 适配器**；共享逻辑在 composites + engine |
-| Phase 1 MVP：8 个 Material 组件 | 远超：98 material + 99 cupertino + 99 fluent（+ harmony kit） |
+| 每组件一 crate，内含实现（`spec/props/event/state/tests`） | 已合并进 3 个 kit crate 的 per-component feature（`floom-material`/`floom-cupertino`/`floom-fluent`），每个组件一 `#[cfg(feature)]`；共享逻辑在 composites + engine |
+| Phase 1 MVP：8 个 Material 组件 | 远超：98 material + 99 cupertino + 99 fluent |
 | Phase 2：Cupertino ×8、Fluent ×8 | 远超：各约 99 个 kit crate |
 | Phase 3 高级组件：Table/Tree/VirtualList/Chart/Navigation | 大部分已有：`md-table`、`md-treeview`、`md-virtual_scroller`、`md-sparkline`、`md-navigation_drawer`、`md-datatable`、`md-timeline`、`md-calendar` |
 | `examples/demo` + `floom-demo` | **已建**：`examples/floom-demo`（根 workspace），98 组件 × 3 DS 并排；见 P1 |
@@ -82,12 +78,12 @@ crates/ecosystem/floom-ui（satellite，306 members）
 - [ ] `docs/COMPONENT_PARITY.md`（77KB）改为 v2：清理 `floom-elements`/`floom-demo`/`examples/demo` 的残留引用
       （约 32 行）；补 `floom-harmony` 与 `floom-ui-composites` 的说明；补 Batch-14 的 5 行
       （ButtonGroup/FAB/RangeSlider/FileInput/OTPInput）进 contract 表；修 `:969-978` 过期的 implementation-order 复选框。
-  - 退出：文档不再出现已删除 crate 的可执行引用；数与 `cargo metadata`（306）一致。
+  - 退出：文档不再出现已删除 crate 的可执行引用；数与 `cargo metadata`（9）一致。
 - [ ] `docs/demo-gallery-plan.md`：按新架构重写（去掉 `examples/demo` 路径），或明确标为 superseded。
 - [ ] `docs/AUDIT_2026-08-12_...md`：标注其前提（`floom-elements`/`floom-demo` 可编译）已不成立；
       保留其中仍有效的记录（`Transition::child` vs `Overlay::child` 的 API 不一致）。
 - [ ] `docs/superpowers/plans/2026-07-31-floom-elements.md`（1586 行，全 v1、复选框未勾、路径指向别的机器）：标注 superseded。
-- [ ] `Cargo.toml` 顶部过期注释改写为准确描述（306 members、`exclude = []`、kit 已适配）。
+- [x] `Cargo.toml` 顶部过期注释改写为准确描述（9 members、`exclude = []`、kit 已合并为 feature 门控，2026-11-15）。
 - [x] `justfile`：接通 `floom-demo` —— 三个断目标换成 `just demo` / `just demo-headless`（2026-11-12）。
 
 ### P1 — 恢复可运行 gallery/demo（组件要可见、可测、可迭代）
@@ -101,8 +97,7 @@ crates/ecosystem/floom-ui（satellite，306 members）
     按钮/复选框的交互真的走通 handler。
   - **与计划的两处偏差**（有意为之）：
     1. **不是每 DS 一个 build**，而是一个二进制三列并排 —— 三列同屏比较才是这个 gallery 的价值；
-    2. **只有 3 套 DS**，不是 4 套 —— Harmony 只有 consolidated crate，没有 per-component kit crate，
-       凑不出第三列（见 P2 的 Harmony 策略）。
+    2. **只有 3 套 DS**（Material / Cupertino / Fluent）；`floom-harmony` 已于 2026-11-15 删除。
 - [ ] `demo-gallery-plan.md` 的 A–D 阶段（Props 面板 / API 表 / method demo / 代码片段）在 demo 落地后再排。
   - 已完成的部分：Props/API 表（props 表已从库自己的 props 源解析，不手写）、每组件 ≥2 个实况示例、notes。
   - 未完成：可交互的属性面板、把组件方法做成可点按的演示、源码片段。
@@ -113,7 +108,7 @@ crates/ecosystem/floom-ui（satellite，306 members）
 - [ ] **headless primitives**：把可复用 component 行为抽成无样式原语（`COMPONENT_PARITY.md:666`）。
 - [ ] **Row/Col 一等公民**：目前只有 `Grid`，Row/Col 不是独立原语（`COMPONENT_PARITY.md:537`）。
 - [ ] **Batch-14 contract 表 5 行补齐**（同上 P0 文档任务的具体子项）。
-- [ ] **Harmony 策略**：是否像另三套一样补 per-component kit 子 crate，还是保持 consolidated sample？写清楚并落文档。
+- [x] **Harmony 策略**：`floom-harmony` 已于 2026-11-15 删除（consolidated-only，无 per-component 子 crate），无需再决策。
 - [ ] **警告债**：`h_stack`/`v_stack`/`text`/`label`/`empty` 弃用调用 + unused imports（`AUDIT:107-109`，
       "historical debt, not addressed"；本次未重新验证数量）。
 - [ ] **10 个 consolidated crate 补 `//!` 模块文档**（当前 0 个有）。
@@ -141,9 +136,9 @@ crates/ecosystem/floom-ui（satellite，306 members）
 
 ## 5. 验证口径
 
-- `cargo metadata --no-deps` → 306 packages / 306 workspace members（本文件所据）。
+- `cargo metadata --no-deps` → 9 packages / 9 workspace members（本文件所据，2026-11-15 合并后）。
 - `just gate ecosystem`（根仓库）或 CI `ecosystem-check` → `cargo test --workspace`（satellite 全量）。
-  **本次 reconcile 未重跑 306 crate 测试**，只做了结构与元数据核对；P0/P1 的"绿"以实际跑通为准。
+  **本次 reconcile 未重跑全部组件测试**，只做了结构与元数据核对；P0/P1 的"绿"以实际跑通为准。
 - **gallery（2026-11-12）**：`cargo test -p floom-demo` 全绿 —— 98 页逐页 mount+paint、
   全部 sample 单独 mount、props 表与库自己的 props struct 逐字段对齐、按钮/复选框交互走通 handler；
   `cargo run -p floom-demo -- --headless` 逐页打印 painted 计数（98 页 / 23045 painted）。

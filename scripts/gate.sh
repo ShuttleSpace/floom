@@ -422,8 +422,18 @@ has_check test && run_check test "" test_check
 #
 # The whole workspace, not a `-p` list: the clippy scope was truncated once
 # already, and a hand-written package list is how a third of a track goes
-# unlinted while the gate prints PASS. 306 members is the real shape of the
-# `floom-ui` tree, so that is what this runs.
+# unlinted while the gate prints PASS. ~9 members is the real shape of the
+# `floom-ui` tree now — each design system collapsed into a single kit crate
+# shipping every component behind a per-component feature — so that is what
+# this runs.
+#
+# `--all-features` is mandatory FOR `floom-ui`: its kits' `default = []` turns
+# every component feature off, so a bare `cargo test --workspace` compiles the
+# kits but runs only the three kit golden suites (~508 tests) and silently skips
+# all ~3040 component tests. The flag is scoped to floom-ui only — the plugin
+# satellite has feature-gated native tests (AppKit) that cannot run in this
+# environment, so enabling all its features would break a check that used to
+# pass. (See docs/superpowers/specs/2026-11-15-floom-ui-feature-kits-design.md.)
 #
 # No `--exclude`: every member is a headless test. The galleries render through
 # the software renderer into a buffer, so no display and no window is involved —
@@ -434,7 +444,11 @@ has_check test && run_check test "" test_check
 ecosystem_check() {
   local ws status=0
   for ws in "${SATELLITE_WORKSPACES[@]}"; do
-    (cd "$ws" && cargo test --workspace --no-fail-fast) || status=1
+    if [ "$ws" = "crates/ecosystem/floom-ui" ]; then
+      (cd "$ws" && cargo test --workspace --all-features --no-fail-fast) || status=1
+    else
+      (cd "$ws" && cargo test --workspace --no-fail-fast) || status=1
+    fi
   done
   return "$status"
 }

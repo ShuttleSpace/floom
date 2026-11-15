@@ -352,10 +352,10 @@ for _names, _level in [
             # other model crates and the checker sees no edges at all.
             "floom-editor-core",
             # The design systems (`floom-theme`, `floom-design`, `floom-material`,
-            # `floom-cupertino`, `floom-fluent`, `floom-harmony`) are deliberately
-            # absent. They moved to the `floom-ui` workspace, which the root
-            # workspace `exclude`s, so this gate never sees them as members and
-            # cannot enforce their edges. Their own build is checked there.
+            # `floom-cupertino`, `floom-fluent`) are deliberately absent. They
+            # moved to the `floom-ui` workspace, which the root workspace
+            # `exclude`s, so this gate never sees them as members and cannot
+            # enforce their edges. Their own build is checked there.
         ],
         5,
     ),

@@ -77,10 +77,12 @@ jobs:
   # paint-level tests were committed and run by nothing at all. This job is the
   # only thing that runs either.
   #
-  # The whole workspace rather than a package list: `floom-ui` alone is 306
-  # members, every one a headless test that renders into a buffer. A
-  # hand-maintained `-p` list is how the `FLOOM2_PACKAGES` scope got truncated
-  # once already.
+  # The whole workspace rather than a package list: `floom-ui` is ~9 members
+  # now -- each design system a single kit crate shipping every component
+  # behind a per-component feature. `default = []`, so a bare `cargo test`
+  # runs only the kit goldens and skips every component test; `--all-features`
+  # turns them all on. A hand-maintained `-p` list is how the
+  # `FLOOM2_PACKAGES` scope got truncated once already.
   ecosystem-check:
     name: Ecosystem workspaces (design-system goldens, editor)
     if: github.event.pull_request.draft == false
@@ -107,7 +109,15 @@ jobs:
             grep -qx '\[workspace\]' "$manifest" || continue
             dir="$(dirname "$manifest")"
             echo "::group::$dir"
-            (cd "$dir" && cargo test --workspace --no-fail-fast) || status=1
+            # floom-ui gates every component behind a per-component feature and
+            # has `default = []`; without --all-features only the 3 kit goldens
+            # run. Other satellites keep their default features: the plugins'
+            # gated AppKit native tests cannot run in this environment.
+            if [ "$dir" = "crates/ecosystem/floom-ui" ]; then
+              (cd "$dir" && cargo test --workspace --all-features --no-fail-fast) || status=1
+            else
+              (cd "$dir" && cargo test --workspace --no-fail-fast) || status=1
+            fi
             echo "::endgroup::"
           done
           exit "$status"

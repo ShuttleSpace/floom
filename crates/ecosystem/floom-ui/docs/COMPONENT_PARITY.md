@@ -5,18 +5,21 @@ Last updated (batch history): 2026-08-12 (Batch 20: inputs & interaction — Num
 
 This project targets a Floom component library with a Vuetify-like out-of-the-box developer experience across Material, Cupertino, and Fluent design systems.
 
-> **Current state (reconciled 2026-11-11).** The tree now has **306 workspace members**
-> (verified via `cargo metadata`): 10 consolidated crates (`floom-widget-runtime`,
+> **Current state (reconciled 2026-11-11; design-system merge 2026-11-15).** The tree now
+> has **9 workspace members** (verified via `cargo metadata`): `floom-widget-runtime`,
 > `floom-core-theme`, `floom-theme`, `floom-design`, `floom-ui-composites`, `floom-material`,
-> `floom-cupertino`, `floom-fluent`, `floom-harmony`, `floom-testing`) + 296 per-component
-> kit crates (98 material + 99 cupertino + 99 fluent). The **`floom-elements` re-export
-> facade no longer exists** (removed in "Stage D", `Cargo.toml:361-365`); each kit crate
-> re-exports its own neutral builder directly over `floom-ui-composites` + the engine
-> `floom-widgets` primitives. A **`floom-demo` gallery crate does exist** (2026-11-12), at
-> `examples/floom-demo` in the **root** workspace — it mounts all 98 components in Material,
-> Cupertino and Fluent side by side, and its headless tests cover every page and every
-> sample. `floom-harmony` is consolidated-only (no per-component kit crates), so Harmony is
-> not one of the gallery's three columns.
+> `floom-cupertino`, `floom-fluent`, `floom-testing`. On 2026-11-15 the 296 per-component kit
+> crates (98 material + 99 cupertino + 99 fluent) were merged into the three `floom-<ds>`
+> kit crates, one `#[cfg(feature)]` per component (web-sys style), and **`floom-harmony` was
+> deleted** (it was consolidated-only). See
+> `docs/superpowers/plans/2026-11-15-floom-ui-feature-kits.md` for the merge. The kits'
+> `default = []` keeps component code out of a default build; `cargo test --workspace
+> --all-features` turns every component test on. The **`floom-elements` re-export facade no
+> longer exists** (removed in "Stage D"); each kit crate re-exports its own neutral builder
+> directly over `floom-ui-composites` + the engine `floom-widgets` primitives. A
+> **`floom-demo` gallery crate does exist**, at `examples/floom-demo` in the **root**
+> workspace — it mounts the components of Material, Cupertino and Fluent side by side and its
+> headless tests cover every page and every sample.
 >
 > The batch narratives below are **history**: they describe the v1 pipeline
 > ("→ floom-elements facade → demo → verify") and were true when each batch shipped. Read
