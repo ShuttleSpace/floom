@@ -8,6 +8,6 @@ description = "Theme tokens for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]
-floom-types = { path = "../../../../core/floom-types", version = "0.2.0" }
+floom-types = { workspace = true }
 
 [dev-dependencies]

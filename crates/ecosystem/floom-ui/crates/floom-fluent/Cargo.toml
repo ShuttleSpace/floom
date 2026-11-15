@@ -8,27 +8,27 @@ description = "Fluent desktop design system tokens and pointer-first control var
 rust-version.workspace = true
 
 [dependencies]
-floom-accessibility = { path = "../../../../core/floom-accessibility" }
-floom-core = { path = "../../../../core/floom-core" }
+floom-accessibility = { workspace = true }
+floom-core = { workspace = true }
 floom-core-theme = { workspace = true, features = ["fluent"] }
-floom-design = { path = "../floom-design" }
-floom-scene = { path = "../../../../core/floom-scene" }
-floom-signal = { path = "../../../../core/floom-signal" }
-floom-style = { path = "../../../../core/floom-style" }
-floom-theme = { path = "../floom-theme" }
-floom-types = { path = "../../../../core/floom-types" }
-floom-ui-composites = { path = "../floom-ui-composites" }
+floom-design = { workspace = true }
+floom-scene = { workspace = true }
+floom-signal = { workspace = true }
+floom-style = { workspace = true }
+floom-theme = { workspace = true }
+floom-types = { workspace = true }
+floom-ui-composites = { workspace = true }
 floom-widget-runtime = { workspace = true, features = ["fluent"] }
-floom-widgets = { path = "../../../../widgets/floom-widgets" }
+floom-widgets = { workspace = true }
 
 [dev-dependencies]
-floom-core = { path = "../../../../core/floom-core" }
+floom-core = { workspace = true }
 floom-core-theme = { workspace = true, features = ["fluent"] }
-floom-signal = { path = "../../../../core/floom-signal" }
-floom-snapshot = { path = "../../../../devtools/floom-snapshot" }
-floom-types = { path = "../../../../core/floom-types" }
-floom-ui-composites = { path = "../floom-ui-composites" }
-floom-widgets = { path = "../../../../widgets/floom-widgets" }
+floom-signal = { workspace = true }
+floom-snapshot = { workspace = true }
+floom-types = { workspace = true }
+floom-ui-composites = { workspace = true }
+floom-widgets = { workspace = true }
 
 [features]
 alert = ["icon"]

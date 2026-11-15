@@ -9,8 +9,8 @@ edition = "2021"
 # 2.0 prelude already re-exports from `floom-signal`, so this crate
 # needs no widget layer. See `../floem-archive/docs/porting-floem-ui-to-2.0.md`.
 floom-core-theme = { workspace = true }
-floom-signal = { path = "../../../../core/floom-signal" }
-floom-widgets = { path = "../../../../widgets/floom-widgets" }
+floom-signal = { workspace = true }
+floom-widgets = { workspace = true }
 
 [features]
 material = ["floom-core-theme/material"]

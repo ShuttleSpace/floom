@@ -23,22 +23,22 @@ edition = "2021"
 # that depended on this would close the loop.
 
 [dependencies]
-floom-core = { path = "../../../../core/floom-core" }
+floom-core = { workspace = true }
 # The widgets name accessibility roles directly, so this is not dev-only.
-floom-accessibility = { path = "../../../../core/floom-accessibility" }
-floom-types = { path = "../../../../core/floom-types" }
-floom-scene = { path = "../../../../core/floom-scene" }
-floom-widgets = { path = "../../../../widgets/floom-widgets" }
-floom-signal = { path = "../../../../core/floom-signal" }
-floom-text = { path = "../../../../widgets/floom-text" }
+floom-accessibility = { workspace = true }
+floom-types = { workspace = true }
+floom-scene = { workspace = true }
+floom-widgets = { workspace = true }
+floom-signal = { workspace = true }
+floom-text = { workspace = true }
 
 [dev-dependencies]
 # The popup test drives real platform events through TestApp.
-floom-platform = { path = "../../../../platform/floom-platform" }
-floom-testkit = { path = "../../../../devtools/floom-testkit" }
-floom-app = { path = "../../../../app/floom-app" }
-floom-layout = { path = "../../../../core/floom-layout" }
+floom-platform = { workspace = true }
+floom-testkit = { workspace = true }
+floom-app = { workspace = true }
+floom-layout = { workspace = true }
 # The IME/routing tests drive a real AppRunner to a SoftwarePresenter.
-floom-renderer-software = { path = "../../../../render/floom-renderer-software" }
+floom-renderer-software = { workspace = true }
 # The native-composition tests need a fake provider to hand focus to.
-floom-native = { path = "../../../../native/floom-native" }
+floom-native = { workspace = true }
