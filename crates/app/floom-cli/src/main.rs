@@ -382,9 +382,18 @@ fn create_tsx_app(_opts: &CreateOpts, root: &Path, name: &str) -> Result<(), Str
 
 /// Scaffold a Rust app: a widget tree, plus one directory per platform.
 fn create_rust_app(opts: &CreateOpts, root: &Path, name: &str) -> Result<(), String> {
+    let mobile = opts
+        .platforms
+        .iter()
+        .any(|p| matches!(p.as_str(), "android" | "ios" | "ohos"));
     write(
         &root.join("Cargo.toml"),
-        &templates::cargo_toml(&opts.name, &opts.floom_crate, opts.floom_path.as_deref()),
+        &templates::cargo_toml(
+            &opts.name,
+            &opts.floom_crate,
+            opts.floom_path.as_deref(),
+            mobile,
+        ),
     )?;
     write(
         &root.join("src/main.rs"),
@@ -392,6 +401,9 @@ fn create_rust_app(opts: &CreateOpts, root: &Path, name: &str) -> Result<(), Str
             .replace("{{TITLE}}", name)
             .replace("{{FLOOM}}", &opts.floom_crate),
     )?;
+    if mobile {
+        write(&root.join("src/lib.rs"), templates::MOBILE_LIB_RS)?;
+    }
     write(
         &root.join("tests/smoke.rs"),
         "// Integration tests go here. Unit tests belong next to the code in `src/`.\n",
@@ -1487,6 +1499,47 @@ mod tests {
         }
         let readme = read(&dir, "README.md");
         assert!(!readme.contains("@types/floom"), "{readme}");
+    }
+
+    #[test]
+    fn mobile_scaffold_emits_a_cdylib_lib_target() {
+        let mobile = templates::cargo_toml("my_app", "floom", None, true);
+        assert!(mobile.contains("[lib]"), "{mobile}");
+        assert!(mobile.contains("crate-type = [\"cdylib\"]"), "{mobile}");
+        assert!(mobile.contains("name = \"my_app\""), "{mobile}");
+        assert!(mobile.contains("path = \"src/lib.rs\""), "{mobile}");
+
+        let desktop = templates::cargo_toml("my_app", "floom", None, false);
+        assert!(!desktop.contains("[lib]"), "{desktop}");
+        assert!(!desktop.contains("cdylib"), "{desktop}");
+    }
+
+    #[test]
+    fn mobile_scaffold_writes_the_cdylib_stub_and_desktop_does_not() {
+        let mobile = repo_root()
+            .join("tests")
+            .join("floom-cli-test-mobilelib");
+        let _ = fs::remove_dir_all(&mobile);
+        fs::create_dir_all(&mobile).unwrap();
+        let opts = CreateOpts {
+            name: "mob".to_string(),
+            template: Template::App,
+            style: AppStyle::Rust,
+            platforms: vec!["android".to_string()],
+            org: "com.example".to_string(),
+            floom_crate: "floom".to_string(),
+            floom_path: None,
+            platform_path: None,
+            force: true,
+        };
+        create_rust_app(&opts, &mobile, "mob").unwrap();
+        assert!(mobile.join("src/lib.rs").is_file());
+        assert!(
+            read(&mobile, "Cargo.toml").contains("crate-type = [\"cdylib\"]")
+        );
+
+        let desktop = scaffold_app("deskapp", AppStyle::Rust);
+        assert!(!desktop.join("src/lib.rs").exists());
     }
 
     #[test]

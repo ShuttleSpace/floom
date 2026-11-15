@@ -45,7 +45,12 @@ fn features_literal() -> String {
         .join(", ")
 }
 
-pub fn cargo_toml(name: &str, floom_crate: &str, floom_path: Option<&str>) -> String {
+pub fn cargo_toml(
+    name: &str,
+    floom_crate: &str,
+    floom_path: Option<&str>,
+    mobile: bool,
+) -> String {
     let dep = match floom_path {
         Some(p) => format!(
             "{f} = {{ path = \"{p}\", features = [{features}] }}\n\
@@ -61,6 +66,21 @@ pub fn cargo_toml(name: &str, floom_crate: &str, floom_path: Option<&str>) -> St
             features = features_literal()
         ),
     };
+    // Mobile hosts load a shared library, not an executable: `cargo ndk`
+    // copies the cdylib into jniLibs, and `cargo-ios`/Xcode links it. A
+    // bin-only crate would produce an executable and leave nothing to
+    // package. Desktop scaffolds keep the bin-only shape.
+    let lib = if mobile {
+        format!(
+            "\n[lib]\n\
+             name = \"{lib_name}\"\n\
+             path = \"src/lib.rs\"\n\
+             crate-type = [\"cdylib\"]\n",
+            lib_name = name.replace('-', "_")
+        )
+    } else {
+        String::new()
+    };
     format!(
         "[package]\n\
          name = \"{name}\"\n\
@@ -68,9 +88,25 @@ pub fn cargo_toml(name: &str, floom_crate: &str, floom_path: Option<&str>) -> St
          edition = \"2024\"\n\
          \n\
          [dependencies]\n\
-         {dep}\n"
+         {dep}\n\
+         {lib}"
     )
 }
+
+/// `src/lib.rs` for a mobile scaffold: the cdylib entry a mobile host loads.
+/// The real per-platform entry wiring (`android_main`, the iOS `main`) is the
+/// app's business; this stub is what makes the crate produce a `.so` that
+/// `floom package` can bundle. It compiles for the host too, so `cargo test`
+/// of the scaffold is unaffected.
+pub const MOBILE_LIB_RS: &str = r#"// SPDX-License-Identifier: MIT
+// Mobile cdylib target. `floom package` builds this into a shared library
+// (`cargo ndk` -> jniLibs, `cargo-ios`/Xcode -> the app bundle).
+//
+// Wire the platform's entry point here (e.g. `#[no_mangle] pub extern "C"`
+// `android_main`), calling the same widget tree as `src/main.rs`. The stub
+// intentionally exports nothing yet: it exists so the crate type is a cdylib
+// and packaging has a `.so` to bundle.
+"#;
 
 /// The Rust core entry point, targeting the Floom 2.0 widget API.
 pub const MAIN_RS: &str = r#"// Floom application core.
