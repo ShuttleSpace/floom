@@ -112,17 +112,6 @@ pub fn default_features(features: &[String], platform: &str) -> Vec<String> {
     }
 }
 
-/// Android ABI → Rust target, matching `scripts/build-apk.sh`.
-pub fn abi_to_rust_target(abi: &str) -> Option<&'static str> {
-    match abi {
-        "arm64-v8a" => Some("aarch64-linux-android"),
-        "armeabi-v7a" => Some("armv7-linux-androideabi"),
-        "x86" => Some("i686-linux-android"),
-        "x86_64" => Some("x86_64-linux-android"),
-        _ => None,
-    }
-}
-
 /// Require every SDK precondition to be satisfied; return the joined hints of
 /// any that are missing. This is the "detect and require, never auto-install"
 /// rule, centralized so every packer shares it.
@@ -148,6 +137,16 @@ pub fn require_sdks_blocked(sdks: &[SdkPrecondition]) -> Result<(), PackResult> 
             artifact: None,
             note: Some(hint),
         }),
+    }
+}
+
+/// Append `--features <comma-list>` to a cargo argv when the caller derived any.
+/// Keeps the `<platform>` → `real` → none feature derivation in effect for the
+/// platform build (the orchestrator computes it; the cargo commands apply it).
+pub fn append_features(argv: &mut Vec<String>, features: &[String]) {
+    if !features.is_empty() {
+        argv.push("--features".to_string());
+        argv.push(features.join(","));
     }
 }
 
@@ -210,7 +209,7 @@ fn push_if_newer(best: &mut Option<(std::time::SystemTime, PathBuf)>, path: &Pat
 /// A deliberately small JSON value — only what cargo metadata's fields need.
 enum Json {
     Null,
-    Bool(bool),
+    Bool,
     Number,
     String(String),
     Array(Vec<Json>),
@@ -287,11 +286,11 @@ impl Reader<'_> {
             Some(b'"') => Ok(Json::String(self.string()?)),
             Some(b't') => {
                 self.literal(b"true")?;
-                Ok(Json::Bool(true))
+                Ok(Json::Bool)
             }
             Some(b'f') => {
                 self.literal(b"false")?;
-                Ok(Json::Bool(false))
+                Ok(Json::Bool)
             }
             Some(b'n') => {
                 self.literal(b"null")?;
@@ -471,17 +470,19 @@ mod tests {
     }
 
     #[test]
-    fn abi_maps_to_android_rust_target() {
-        assert_eq!(abi_to_rust_target("arm64-v8a"), Some("aarch64-linux-android"));
-        assert_eq!(abi_to_rust_target("armeabi-v7a"), Some("armv7-linux-androideabi"));
-        assert_eq!(abi_to_rust_target("x86"), Some("i686-linux-android"));
-        assert_eq!(abi_to_rust_target("x86_64"), Some("x86_64-linux-android"));
-        assert_eq!(abi_to_rust_target("nope"), None);
+    fn requiring_no_sdks_always_succeeds() {
+        assert!(require_sdks(&[]).is_ok());
     }
 
     #[test]
-    fn requiring_no_sdks_always_succeeds() {
-        assert!(require_sdks(&[]).is_ok());
+    fn append_features_adds_a_comma_list_only_when_present() {
+        let mut argv = vec!["build".to_string()];
+        append_features(&mut argv, &[]);
+        assert_eq!(argv, vec!["build"]);
+
+        argv = vec!["build".to_string()];
+        append_features(&mut argv, &["android".to_string(), "real".to_string()]);
+        assert_eq!(argv, vec!["build", "--features", "android,real"]);
     }
 
     #[test]

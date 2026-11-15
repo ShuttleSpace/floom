@@ -6,7 +6,7 @@
 //! opt-in via `--platform`; packaging is self-contained (no Floom checkout /
 //! `scripts/build.sh` needed).
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::pack;
 
@@ -15,10 +15,8 @@ use crate::pack;
 #[derive(Default)]
 struct PackageFlags {
     abi: Option<String>,
-    manifest: Option<PathBuf>,
     install: bool,
     device: bool,
-    bin: Option<String>,
     yes: bool,
 }
 
@@ -32,19 +30,13 @@ fn parse_package(
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
-            "--abi" | "--manifest" | "--bin" => {
-                let key = args[i].clone();
-                i += 1;
+            "--abi" => {
                 let v = args
-                    .get(i)
-                    .ok_or_else(|| format!("`{key}` requires a value"))?
+                    .get(i + 1)
+                    .ok_or_else(|| "`--abi` requires a value".to_string())?
                     .clone();
-                match key.as_str() {
-                    "--abi" => flags.abi = Some(v),
-                    "--manifest" => flags.manifest = Some(PathBuf::from(v)),
-                    "--bin" => flags.bin = Some(v),
-                    _ => unreachable!(),
-                }
+                flags.abi = Some(v);
+                i += 1;
             }
             "--install" => flags.install = true,
             "--device" => flags.device = true,
@@ -90,12 +82,9 @@ pub fn run(args: &[String]) -> Result<(), String> {
         release: lc.release,
         features,
         abi: flags.abi,
-        manifest: flags.manifest,
         install: flags.install,
         device: flags.device,
-        bin: flags.bin,
         yes: flags.yes,
-        dir: lc.dir.clone(),
     };
 
     let result = pack::pack(&platform, &project, &opts)?;

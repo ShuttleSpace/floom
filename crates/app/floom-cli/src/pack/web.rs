@@ -21,6 +21,7 @@ pub fn wasm_build_argv(opts: &PackOpts) -> Vec<String> {
     if opts.release {
         argv.push("--release".to_string());
     }
+    shared::append_features(&mut argv, &opts.features);
     argv
 }
 
@@ -90,12 +91,9 @@ mod tests {
             release,
             features: vec![],
             abi: None,
-            manifest: None,
             install: false,
             device: false,
-            bin: None,
             yes: false,
-            dir: PathBuf::from("/p"),
         }
     }
 

@@ -6,8 +6,6 @@
 //! `Info.plist` + Swift sources. Packaging drives that project instead of
 //! hand-assembling an `.app` like the old `ios-bundle.sh`.
 
-use std::path::Path;
-
 use crate::pack::shared::{self, Project};
 use crate::pack::{PackOpts, PackResult, Tier};
 use crate::toolchain::{CargoTool, RustupTarget, SdkPrecondition, Tool};
@@ -116,12 +114,9 @@ mod tests {
             release,
             features: vec![],
             abi: None,
-            manifest: None,
             install: false,
             device,
-            bin: None,
             yes: false,
-            dir: PathBuf::from("/p"),
         }
     }
 

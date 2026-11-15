@@ -44,6 +44,7 @@ pub fn ndk_argv(project: &Project, opts: &PackOpts) -> Vec<String> {
     if opts.release {
         argv.push("--release".to_string());
     }
+    shared::append_features(&mut argv, &opts.features);
     argv
 }
 
@@ -134,12 +135,9 @@ mod tests {
             release,
             features: vec![],
             abi: abi.map(str::to_string),
-            manifest: None,
             install: false,
             device: false,
-            bin: None,
             yes: false,
-            dir: PathBuf::from("/p"),
         }
     }
 

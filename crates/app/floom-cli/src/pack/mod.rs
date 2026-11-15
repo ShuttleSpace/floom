@@ -27,12 +27,9 @@ pub struct PackOpts {
     pub release: bool,
     pub features: Vec<String>,
     pub abi: Option<String>,
-    pub manifest: Option<PathBuf>,
     pub install: bool,
     pub device: bool,
-    pub bin: Option<String>,
     pub yes: bool,
-    pub dir: PathBuf,
 }
 
 pub fn pack(platform: &str, project: &Project, opts: &PackOpts) -> Result<PackResult, String> {

@@ -101,12 +101,9 @@ mod tests {
             release,
             features: vec![],
             abi: None,
-            manifest: None,
             install: false,
             device: false,
-            bin: None,
             yes: false,
-            dir: PathBuf::from("/p"),
         }
     }
 

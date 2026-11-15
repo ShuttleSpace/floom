@@ -65,11 +65,9 @@ OPTIONS (check / test / package):
 
 OPTIONS (package):
     --abi <ABI>            Android ABI to build (default: arm64-v8a)
-    --manifest <PATH>     Cargo.toml to package (default: <DIR>/Cargo.toml)
     --install             Install the built artifact (adb install for android)
     --device               Build for a real device (ios: needs a signing
                              identity, reported as a blocked tier)
-    --bin <NAME>          Package a specific binary target
     --yes                 Auto-confirm cargo tool installs (never SDKs)
 EXAMPLES:
     floom run app.tsx
