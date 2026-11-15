@@ -3,6 +3,8 @@
 
 use std::path::PathBuf;
 
+use crate::pack::shared::Project;
+
 /// Whether a platform build produced a real artifact, only compiled, or was
 /// blocked (e.g. missing SDK or device signing).
 pub enum Tier {
@@ -33,8 +35,12 @@ pub struct PackOpts {
     pub dir: PathBuf,
 }
 
-pub fn pack(_platform: &str, _project: &shared::Project, _opts: &PackOpts) -> Result<PackResult, String> {
-    unimplemented!("implemented per platform in later tasks")
+pub fn pack(platform: &str, project: &Project, opts: &PackOpts) -> Result<PackResult, String> {
+    match platform {
+        "android" => crate::pack::android::pack_android(project, opts),
+        other => Err(format!("platform `{other}` is not implemented yet")),
+    }
 }
 
 pub mod shared;
+pub mod android;
