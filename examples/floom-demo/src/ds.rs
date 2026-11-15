@@ -9,104 +9,104 @@
 
 /// The material components.
 pub mod material {
-    pub use floom_widget_md_alert::MdAlert as Alert;
-    pub use floom_widget_md_app::MaterialApp as App;
-    pub use floom_widget_md_app_bar::MaterialAppBar as AppBar;
-    pub use floom_widget_md_autocomplete::MdAutocomplete as Autocomplete;
-    pub use floom_widget_md_avatar::MaterialAvatar as Avatar;
-    pub use floom_widget_md_badge::MdBadge as Badge;
-    pub use floom_widget_md_banner::MaterialBanner as Banner;
-    pub use floom_widget_md_bottom_navigation::MaterialBottomNavigation as BottomNavigation;
-    pub use floom_widget_md_breadcrumbs::MaterialBreadcrumbs as Breadcrumbs;
-    pub use floom_widget_md_button::MdButton as Button;
-    pub use floom_widget_md_button_group::MaterialButtonGroup as ButtonGroup;
-    pub use floom_widget_md_calendar::MaterialCalendar as Calendar;
-    pub use floom_widget_md_card::MdCard as Card;
-    pub use floom_widget_md_carousel::MaterialCarousel as Carousel;
-    pub use floom_widget_md_checkbox::MdCheckbox as Checkbox;
-    pub use floom_widget_md_checkbox_btn::MaterialCheckboxBtn as CheckboxBtn;
-    pub use floom_widget_md_chip::MaterialChip as Chip;
-    pub use floom_widget_md_chip_group::MaterialChipGroup as ChipGroup;
-    pub use floom_widget_md_code::MaterialCode as Code;
-    pub use floom_widget_md_color_picker::MaterialColorPicker as ColorPicker;
-    pub use floom_widget_md_combobox::MdCombobox as Combobox;
-    pub use floom_widget_md_confirm_edit::MaterialConfirmEdit as ConfirmEdit;
-    pub use floom_widget_md_container::MaterialContainer as Container;
-    pub use floom_widget_md_counter::MdCounter as Counter;
-    pub use floom_widget_md_data_iterator::MaterialDataIterator as DataIterator;
-    pub use floom_widget_md_datatable::MaterialDataTable as Datatable;
-    pub use floom_widget_md_date_adapter_provider::MaterialDateAdapterProvider as DateAdapterProvider;
-    pub use floom_widget_md_date_picker::MaterialDatePicker as DatePicker;
-    pub use floom_widget_md_defaults_provider::MaterialDefaultsProvider as DefaultsProvider;
-    pub use floom_widget_md_dialog::MdDialog as Dialog;
-    pub use floom_widget_md_display_provider::MaterialDisplayProvider as DisplayProvider;
-    pub use floom_widget_md_divider::MdDivider as Divider;
-    pub use floom_widget_md_empty_state::MaterialEmptyState as EmptyState;
-    pub use floom_widget_md_expand_transition::MaterialExpandTransition as ExpandTransition;
-    pub use floom_widget_md_expansion_panels::MdExpansionPanels as ExpansionPanels;
-    pub use floom_widget_md_fade_transition::MaterialFadeTransition as FadeTransition;
-    pub use floom_widget_md_file_input::MaterialFileInput as FileInput;
-    pub use floom_widget_md_floating_action_button::MaterialFloatingActionButton as FloatingActionButton;
-    pub use floom_widget_md_footer::MdFooter as Footer;
-    pub use floom_widget_md_form::MaterialForm as Form;
-    pub use floom_widget_md_grid::MaterialGrid as Grid;
-    pub use floom_widget_md_hover::MaterialHover as Hover;
-    pub use floom_widget_md_icon::MdIcon as Icon;
-    pub use floom_widget_md_icon_button::MdIconButton as IconButton;
-    pub use floom_widget_md_icons_provider::MaterialIconsProvider as IconsProvider;
-    pub use floom_widget_md_image::MaterialImage as Image;
-    pub use floom_widget_md_infinite_scroller::MaterialInfiniteScroller as InfiniteScroller;
-    pub use floom_widget_md_item_group::MdItemGroup as ItemGroup;
-    pub use floom_widget_md_kbd::MaterialKbd as Kbd;
-    pub use floom_widget_md_list::MdList as List;
-    pub use floom_widget_md_list_group::MaterialListGroup as ListGroup;
-    pub use floom_widget_md_list_item::MdListItem as ListItem;
-    pub use floom_widget_md_list_subheader::MaterialListSubheader as ListSubheader;
-    pub use floom_widget_md_locale_provider::MaterialLocaleProvider as LocaleProvider;
-    pub use floom_widget_md_main::MaterialMain as Main;
-    pub use floom_widget_md_menu::MaterialMenu as Menu;
-    pub use floom_widget_md_navigation_drawer::MaterialNavigationDrawer as NavigationDrawer;
-    pub use floom_widget_md_number_input::MaterialNumberInput as NumberInput;
-    pub use floom_widget_md_otp_input::MaterialOtpInput as OtpInput;
-    pub use floom_widget_md_overlay::MdOverlay as Overlay;
-    pub use floom_widget_md_pagination::MaterialPagination as Pagination;
-    pub use floom_widget_md_parallax::MaterialParallax as Parallax;
-    pub use floom_widget_md_progress_circular::MaterialProgressCircular as ProgressCircular;
-    pub use floom_widget_md_progress_linear::MdProgressLinear as ProgressLinear;
-    pub use floom_widget_md_pull_to_refresh::MaterialPullToRefresh as PullToRefresh;
-    pub use floom_widget_md_radio::MdRadio as Radio;
-    pub use floom_widget_md_radio_group::MaterialRadioGroup as RadioGroup;
-    pub use floom_widget_md_range_slider::MaterialRangeSlider as RangeSlider;
-    pub use floom_widget_md_rating::MaterialRating as Rating;
-    pub use floom_widget_md_responsive::MaterialResponsive as Responsive;
-    pub use floom_widget_md_scale_transition::MaterialScaleTransition as ScaleTransition;
-    pub use floom_widget_md_select::MdSelect as Select;
-    pub use floom_widget_md_sheet::MaterialSheet as Sheet;
-    pub use floom_widget_md_skeleton_loader::MaterialSkeletonLoader as SkeletonLoader;
-    pub use floom_widget_md_slide_group::MaterialSlideGroup as SlideGroup;
-    pub use floom_widget_md_slide_transition::MaterialSlideTransition as SlideTransition;
-    pub use floom_widget_md_slider::MdSlider as Slider;
-    pub use floom_widget_md_snackbar::MaterialSnackbar as Snackbar;
-    pub use floom_widget_md_spacer::MdSpacer as Spacer;
-    pub use floom_widget_md_sparkline::MaterialSparkline as Sparkline;
-    pub use floom_widget_md_speed_dial::MaterialSpeedDial as SpeedDial;
-    pub use floom_widget_md_stepper::MaterialStepper as Stepper;
-    pub use floom_widget_md_switch::MdSwitch as Switch;
-    pub use floom_widget_md_system_bar::MaterialSystemBar as SystemBar;
-    pub use floom_widget_md_table::MaterialTable as Table;
-    pub use floom_widget_md_tabs::MaterialTabs as Tabs;
-    pub use floom_widget_md_text::MaterialText as Text;
-    pub use floom_widget_md_text_field::MdTextField as TextField;
-    pub use floom_widget_md_textarea::MaterialTextarea as Textarea;
-    pub use floom_widget_md_theme_provider::MaterialThemeProvider as ThemeProvider;
-    pub use floom_widget_md_time_picker::MaterialTimePicker as TimePicker;
-    pub use floom_widget_md_timeline::MaterialTimeline as Timeline;
-    pub use floom_widget_md_toolbar::MdToolbar as Toolbar;
-    pub use floom_widget_md_tooltip::MaterialTooltip as Tooltip;
-    pub use floom_widget_md_treeview::MdTreeview as Treeview;
-    pub use floom_widget_md_validation_messages::MaterialValidationMessages as ValidationMessages;
-    pub use floom_widget_md_virtual_scroller::MaterialVirtualScroller as VirtualScroller;
-    pub use floom_widget_md_window::MaterialWindow as Window;
+    pub use floom_material::widgets::alert::MdAlert as Alert;
+    pub use floom_material::widgets::app::MaterialApp as App;
+    pub use floom_material::widgets::app_bar::MaterialAppBar as AppBar;
+    pub use floom_material::widgets::autocomplete::MdAutocomplete as Autocomplete;
+    pub use floom_material::widgets::avatar::MaterialAvatar as Avatar;
+    pub use floom_material::widgets::badge::MdBadge as Badge;
+    pub use floom_material::widgets::banner::MaterialBanner as Banner;
+    pub use floom_material::widgets::bottom_navigation::MaterialBottomNavigation as BottomNavigation;
+    pub use floom_material::widgets::breadcrumbs::MaterialBreadcrumbs as Breadcrumbs;
+    pub use floom_material::widgets::button::MdButton as Button;
+    pub use floom_material::widgets::button_group::MaterialButtonGroup as ButtonGroup;
+    pub use floom_material::widgets::calendar::MaterialCalendar as Calendar;
+    pub use floom_material::widgets::card::MdCard as Card;
+    pub use floom_material::widgets::carousel::MaterialCarousel as Carousel;
+    pub use floom_material::widgets::checkbox::MdCheckbox as Checkbox;
+    pub use floom_material::widgets::checkbox_btn::MaterialCheckboxBtn as CheckboxBtn;
+    pub use floom_material::widgets::chip::MaterialChip as Chip;
+    pub use floom_material::widgets::chip_group::MaterialChipGroup as ChipGroup;
+    pub use floom_material::widgets::code::MaterialCode as Code;
+    pub use floom_material::widgets::color_picker::MaterialColorPicker as ColorPicker;
+    pub use floom_material::widgets::combobox::MdCombobox as Combobox;
+    pub use floom_material::widgets::confirm_edit::MaterialConfirmEdit as ConfirmEdit;
+    pub use floom_material::widgets::container::MaterialContainer as Container;
+    pub use floom_material::widgets::counter::MdCounter as Counter;
+    pub use floom_material::widgets::data_iterator::MaterialDataIterator as DataIterator;
+    pub use floom_material::widgets::datatable::MaterialDataTable as Datatable;
+    pub use floom_material::widgets::date_adapter_provider::MaterialDateAdapterProvider as DateAdapterProvider;
+    pub use floom_material::widgets::date_picker::MaterialDatePicker as DatePicker;
+    pub use floom_material::widgets::defaults_provider::MaterialDefaultsProvider as DefaultsProvider;
+    pub use floom_material::widgets::dialog::MdDialog as Dialog;
+    pub use floom_material::widgets::display_provider::MaterialDisplayProvider as DisplayProvider;
+    pub use floom_material::widgets::divider::MdDivider as Divider;
+    pub use floom_material::widgets::empty_state::MaterialEmptyState as EmptyState;
+    pub use floom_material::widgets::expand_transition::MaterialExpandTransition as ExpandTransition;
+    pub use floom_material::widgets::expansion_panels::MdExpansionPanels as ExpansionPanels;
+    pub use floom_material::widgets::fade_transition::MaterialFadeTransition as FadeTransition;
+    pub use floom_material::widgets::file_input::MaterialFileInput as FileInput;
+    pub use floom_material::widgets::floating_action_button::MaterialFloatingActionButton as FloatingActionButton;
+    pub use floom_material::widgets::footer::MdFooter as Footer;
+    pub use floom_material::widgets::form::MaterialForm as Form;
+    pub use floom_material::widgets::grid::MaterialGrid as Grid;
+    pub use floom_material::widgets::hover::MaterialHover as Hover;
+    pub use floom_material::widgets::icon::MdIcon as Icon;
+    pub use floom_material::widgets::icon_button::MdIconButton as IconButton;
+    pub use floom_material::widgets::icons_provider::MaterialIconsProvider as IconsProvider;
+    pub use floom_material::widgets::image::MaterialImage as Image;
+    pub use floom_material::widgets::infinite_scroller::MaterialInfiniteScroller as InfiniteScroller;
+    pub use floom_material::widgets::item_group::MdItemGroup as ItemGroup;
+    pub use floom_material::widgets::kbd::MaterialKbd as Kbd;
+    pub use floom_material::widgets::list::MdList as List;
+    pub use floom_material::widgets::list_group::MaterialListGroup as ListGroup;
+    pub use floom_material::widgets::list_item::MdListItem as ListItem;
+    pub use floom_material::widgets::list_subheader::MaterialListSubheader as ListSubheader;
+    pub use floom_material::widgets::locale_provider::MaterialLocaleProvider as LocaleProvider;
+    pub use floom_material::widgets::main::MaterialMain as Main;
+    pub use floom_material::widgets::menu::MaterialMenu as Menu;
+    pub use floom_material::widgets::navigation_drawer::MaterialNavigationDrawer as NavigationDrawer;
+    pub use floom_material::widgets::number_input::MaterialNumberInput as NumberInput;
+    pub use floom_material::widgets::otp_input::MaterialOtpInput as OtpInput;
+    pub use floom_material::widgets::overlay::MdOverlay as Overlay;
+    pub use floom_material::widgets::pagination::MaterialPagination as Pagination;
+    pub use floom_material::widgets::parallax::MaterialParallax as Parallax;
+    pub use floom_material::widgets::progress_circular::MaterialProgressCircular as ProgressCircular;
+    pub use floom_material::widgets::progress_linear::MdProgressLinear as ProgressLinear;
+    pub use floom_material::widgets::pull_to_refresh::MaterialPullToRefresh as PullToRefresh;
+    pub use floom_material::widgets::radio::MdRadio as Radio;
+    pub use floom_material::widgets::radio_group::MaterialRadioGroup as RadioGroup;
+    pub use floom_material::widgets::range_slider::MaterialRangeSlider as RangeSlider;
+    pub use floom_material::widgets::rating::MaterialRating as Rating;
+    pub use floom_material::widgets::responsive::MaterialResponsive as Responsive;
+    pub use floom_material::widgets::scale_transition::MaterialScaleTransition as ScaleTransition;
+    pub use floom_material::widgets::select::MdSelect as Select;
+    pub use floom_material::widgets::sheet::MaterialSheet as Sheet;
+    pub use floom_material::widgets::skeleton_loader::MaterialSkeletonLoader as SkeletonLoader;
+    pub use floom_material::widgets::slide_group::MaterialSlideGroup as SlideGroup;
+    pub use floom_material::widgets::slide_transition::MaterialSlideTransition as SlideTransition;
+    pub use floom_material::widgets::slider::MdSlider as Slider;
+    pub use floom_material::widgets::snackbar::MaterialSnackbar as Snackbar;
+    pub use floom_material::widgets::spacer::MdSpacer as Spacer;
+    pub use floom_material::widgets::sparkline::MaterialSparkline as Sparkline;
+    pub use floom_material::widgets::speed_dial::MaterialSpeedDial as SpeedDial;
+    pub use floom_material::widgets::stepper::MaterialStepper as Stepper;
+    pub use floom_material::widgets::switch::MdSwitch as Switch;
+    pub use floom_material::widgets::system_bar::MaterialSystemBar as SystemBar;
+    pub use floom_material::widgets::table::MaterialTable as Table;
+    pub use floom_material::widgets::tabs::MaterialTabs as Tabs;
+    pub use floom_material::widgets::text::MaterialText as Text;
+    pub use floom_material::widgets::text_field::MdTextField as TextField;
+    pub use floom_material::widgets::textarea::MaterialTextarea as Textarea;
+    pub use floom_material::widgets::theme_provider::MaterialThemeProvider as ThemeProvider;
+    pub use floom_material::widgets::time_picker::MaterialTimePicker as TimePicker;
+    pub use floom_material::widgets::timeline::MaterialTimeline as Timeline;
+    pub use floom_material::widgets::toolbar::MdToolbar as Toolbar;
+    pub use floom_material::widgets::tooltip::MaterialTooltip as Tooltip;
+    pub use floom_material::widgets::treeview::MdTreeview as Treeview;
+    pub use floom_material::widgets::validation_messages::MaterialValidationMessages as ValidationMessages;
+    pub use floom_material::widgets::virtual_scroller::MaterialVirtualScroller as VirtualScroller;
+    pub use floom_material::widgets::window::MaterialWindow as Window;
 
     /// Every component this design system provides.
     pub const COMPONENTS: &[&str] = &[
@@ -216,205 +216,205 @@ pub mod material {
     pub const COMPONENT_KEYS: &[&str] = &[
         "alert",
         "app",
-        "app_bar",
+        "app-bar",
         "autocomplete",
         "avatar",
         "badge",
         "banner",
-        "bottom_navigation",
+        "bottom-navigation",
         "breadcrumbs",
         "button",
-        "button_group",
+        "button-group",
         "calendar",
         "card",
         "carousel",
         "checkbox",
-        "checkbox_btn",
+        "checkbox-btn",
         "chip",
-        "chip_group",
+        "chip-group",
         "code",
-        "color_picker",
+        "color-picker",
         "combobox",
-        "confirm_edit",
+        "confirm-edit",
         "container",
         "counter",
-        "data_iterator",
+        "data-iterator",
         "datatable",
-        "date_adapter_provider",
-        "date_picker",
-        "defaults_provider",
+        "date-adapter-provider",
+        "date-picker",
+        "defaults-provider",
         "dialog",
-        "display_provider",
+        "display-provider",
         "divider",
-        "empty_state",
-        "expand_transition",
-        "expansion_panels",
-        "fade_transition",
-        "file_input",
-        "floating_action_button",
+        "empty-state",
+        "expand-transition",
+        "expansion-panels",
+        "fade-transition",
+        "file-input",
+        "floating-action-button",
         "footer",
         "form",
         "grid",
         "hover",
         "icon",
-        "icon_button",
-        "icons_provider",
+        "icon-button",
+        "icons-provider",
         "image",
-        "infinite_scroller",
-        "item_group",
+        "infinite-scroller",
+        "item-group",
         "kbd",
         "list",
-        "list_group",
-        "list_item",
-        "list_subheader",
-        "locale_provider",
+        "list-group",
+        "list-item",
+        "list-subheader",
+        "locale-provider",
         "main",
         "menu",
-        "navigation_drawer",
-        "number_input",
-        "otp_input",
+        "navigation-drawer",
+        "number-input",
+        "otp-input",
         "overlay",
         "pagination",
         "parallax",
-        "progress_circular",
-        "progress_linear",
-        "pull_to_refresh",
+        "progress-circular",
+        "progress-linear",
+        "pull-to-refresh",
         "radio",
         "radio-group",
-        "range_slider",
+        "range-slider",
         "rating",
         "responsive",
-        "scale_transition",
+        "scale-transition",
         "select",
         "sheet",
-        "skeleton_loader",
-        "slide_group",
-        "slide_transition",
+        "skeleton-loader",
+        "slide-group",
+        "slide-transition",
         "slider",
         "snackbar",
         "spacer",
         "sparkline",
-        "speed_dial",
+        "speed-dial",
         "stepper",
         "switch",
-        "system_bar",
+        "system-bar",
         "table",
         "tabs",
         "text",
         "text-field",
         "textarea",
-        "theme_provider",
-        "time_picker",
+        "theme-provider",
+        "time-picker",
         "timeline",
         "toolbar",
         "tooltip",
         "treeview",
-        "validation_messages",
-        "virtual_scroller",
+        "validation-messages",
+        "virtual-scroller",
         "window",
     ];
 }
 
 /// The cupertino components.
 pub mod cupertino {
-    pub use floom_widget_cupertino_alert::CupertinoAlert as Alert;
-    pub use floom_widget_cupertino_app::CupertinoApp as App;
-    pub use floom_widget_cupertino_app_bar::CupertinoAppBar as AppBar;
-    pub use floom_widget_cupertino_autocomplete::CupertinoAutocomplete as Autocomplete;
-    pub use floom_widget_cupertino_avatar::CupertinoAvatar as Avatar;
-    pub use floom_widget_cupertino_badge::CupertinoBadge as Badge;
-    pub use floom_widget_cupertino_banner::CupertinoBanner as Banner;
-    pub use floom_widget_cupertino_bottom_navigation::CupertinoBottomNavigation as BottomNavigation;
-    pub use floom_widget_cupertino_breadcrumbs::CupertinoBreadcrumbs as Breadcrumbs;
-    pub use floom_widget_cupertino_button::CupertinoButton as Button;
-    pub use floom_widget_cupertino_button_group::CupertinoButtonGroup as ButtonGroup;
-    pub use floom_widget_cupertino_calendar::CupertinoCalendar as Calendar;
-    pub use floom_widget_cupertino_card::CupertinoCard as Card;
-    pub use floom_widget_cupertino_carousel::CupertinoCarousel as Carousel;
-    pub use floom_widget_cupertino_checkbox::CupertinoCheckbox as Checkbox;
-    pub use floom_widget_cupertino_checkbox_btn::CupertinoCheckboxBtn as CheckboxBtn;
-    pub use floom_widget_cupertino_chip::CupertinoChip as Chip;
-    pub use floom_widget_cupertino_chip_group::CupertinoChipGroup as ChipGroup;
-    pub use floom_widget_cupertino_code::CupertinoCode as Code;
-    pub use floom_widget_cupertino_color_picker::CupertinoColorPicker as ColorPicker;
-    pub use floom_widget_cupertino_combobox::CupertinoCombobox as Combobox;
-    pub use floom_widget_cupertino_confirm_edit::CupertinoConfirmEdit as ConfirmEdit;
-    pub use floom_widget_cupertino_container::CupertinoContainer as Container;
-    pub use floom_widget_cupertino_counter::CupertinoCounter as Counter;
-    pub use floom_widget_cupertino_data_iterator::CupertinoDataIterator as DataIterator;
-    pub use floom_widget_cupertino_datatable::CupertinoDataTable as Datatable;
-    pub use floom_widget_cupertino_date_adapter_provider::CupertinoDateAdapterProvider as DateAdapterProvider;
-    pub use floom_widget_cupertino_date_picker::CupertinoDatePicker as DatePicker;
-    pub use floom_widget_cupertino_defaults_provider::CupertinoDefaultsProvider as DefaultsProvider;
-    pub use floom_widget_cupertino_dialog::CupertinoDialog as Dialog;
-    pub use floom_widget_cupertino_display_provider::CupertinoDisplayProvider as DisplayProvider;
-    pub use floom_widget_cupertino_divider::CupertinoDivider as Divider;
-    pub use floom_widget_cupertino_empty_state::CupertinoEmptyState as EmptyState;
-    pub use floom_widget_cupertino_expand_transition::CupertinoExpandTransition as ExpandTransition;
-    pub use floom_widget_cupertino_expansion_panels::CupertinoExpansionPanels as ExpansionPanels;
-    pub use floom_widget_cupertino_fade_transition::CupertinoFadeTransition as FadeTransition;
-    pub use floom_widget_cupertino_file_input::CupertinoFileInput as FileInput;
-    pub use floom_widget_cupertino_floating_action_button::CupertinoFloatingActionButton as FloatingActionButton;
-    pub use floom_widget_cupertino_footer::CupertinoFooter as Footer;
-    pub use floom_widget_cupertino_form::CupertinoForm as Form;
-    pub use floom_widget_cupertino_grid::CupertinoGrid as Grid;
-    pub use floom_widget_cupertino_hover::CupertinoHover as Hover;
-    pub use floom_widget_cupertino_icon::CupertinoIcon as Icon;
-    pub use floom_widget_cupertino_icon_button::CupertinoIconButton as IconButton;
-    pub use floom_widget_cupertino_icons_provider::CupertinoIconsProvider as IconsProvider;
-    pub use floom_widget_cupertino_image::CupertinoImage as Image;
-    pub use floom_widget_cupertino_infinite_scroller::CupertinoInfiniteScroller as InfiniteScroller;
-    pub use floom_widget_cupertino_item_group::CupertinoItemGroup as ItemGroup;
-    pub use floom_widget_cupertino_kbd::CupertinoKbd as Kbd;
-    pub use floom_widget_cupertino_list::CupertinoList as List;
-    pub use floom_widget_cupertino_list_group::CupertinoListGroup as ListGroup;
-    pub use floom_widget_cupertino_list_item::CupertinoListItem as ListItem;
-    pub use floom_widget_cupertino_list_subheader::CupertinoListSubheader as ListSubheader;
-    pub use floom_widget_cupertino_locale_provider::CupertinoLocaleProvider as LocaleProvider;
-    pub use floom_widget_cupertino_main::CupertinoMain as Main;
-    pub use floom_widget_cupertino_menu::CupertinoMenu as Menu;
-    pub use floom_widget_cupertino_navigation_drawer::CupertinoNavigationDrawer as NavigationDrawer;
-    pub use floom_widget_cupertino_number_input::CupertinoNumberInput as NumberInput;
-    pub use floom_widget_cupertino_otp_input::CupertinoOtpInput as OtpInput;
-    pub use floom_widget_cupertino_overlay::CupertinoOverlay as Overlay;
-    pub use floom_widget_cupertino_pagination::CupertinoPagination as Pagination;
-    pub use floom_widget_cupertino_parallax::CupertinoParallax as Parallax;
-    pub use floom_widget_cupertino_progress_circular::CupertinoProgressCircular as ProgressCircular;
-    pub use floom_widget_cupertino_progress_linear::CupertinoProgressLinear as ProgressLinear;
-    pub use floom_widget_cupertino_pull_to_refresh::CupertinoPullToRefresh as PullToRefresh;
-    pub use floom_widget_cupertino_radio::CupertinoRadio as Radio;
-    pub use floom_widget_cupertino_radio_group::CupertinoRadioGroup as RadioGroup;
-    pub use floom_widget_cupertino_range_slider::CupertinoRangeSlider as RangeSlider;
-    pub use floom_widget_cupertino_rating::CupertinoRating as Rating;
-    pub use floom_widget_cupertino_responsive::CupertinoResponsive as Responsive;
-    pub use floom_widget_cupertino_scale_transition::CupertinoScaleTransition as ScaleTransition;
-    pub use floom_widget_cupertino_select::CupertinoSelect as Select;
-    pub use floom_widget_cupertino_sheet::CupertinoSheet as Sheet;
-    pub use floom_widget_cupertino_skeleton_loader::CupertinoSkeletonLoader as SkeletonLoader;
-    pub use floom_widget_cupertino_slide_group::CupertinoSlideGroup as SlideGroup;
-    pub use floom_widget_cupertino_slide_transition::CupertinoSlideTransition as SlideTransition;
-    pub use floom_widget_cupertino_slider::CupertinoSlider as Slider;
-    pub use floom_widget_cupertino_snackbar::CupertinoSnackbar as Snackbar;
-    pub use floom_widget_cupertino_spacer::CupertinoSpacer as Spacer;
-    pub use floom_widget_cupertino_sparkline::CupertinoSparkline as Sparkline;
-    pub use floom_widget_cupertino_speed_dial::CupertinoSpeedDial as SpeedDial;
-    pub use floom_widget_cupertino_stepper::CupertinoStepper as Stepper;
-    pub use floom_widget_cupertino_switch::CupertinoSwitch as Switch;
-    pub use floom_widget_cupertino_system_bar::CupertinoSystemBar as SystemBar;
-    pub use floom_widget_cupertino_table::CupertinoTable as Table;
-    pub use floom_widget_cupertino_tabs::CupertinoTabs as Tabs;
-    pub use floom_widget_cupertino_text::CupertinoText as Text;
-    pub use floom_widget_cupertino_text_field::CupertinoTextField as TextField;
-    pub use floom_widget_cupertino_textarea::CupertinoTextarea as Textarea;
-    pub use floom_widget_cupertino_theme_provider::CupertinoThemeProvider as ThemeProvider;
-    pub use floom_widget_cupertino_time_picker::CupertinoTimePicker as TimePicker;
-    pub use floom_widget_cupertino_timeline::CupertinoTimeline as Timeline;
-    pub use floom_widget_cupertino_toolbar::CupertinoToolbar as Toolbar;
-    pub use floom_widget_cupertino_tooltip::CupertinoTooltip as Tooltip;
-    pub use floom_widget_cupertino_treeview::CupertinoTreeview as Treeview;
-    pub use floom_widget_cupertino_validation_messages::CupertinoValidationMessages as ValidationMessages;
-    pub use floom_widget_cupertino_virtual_scroller::CupertinoVirtualScroller as VirtualScroller;
-    pub use floom_widget_cupertino_window::CupertinoWindow as Window;
+    pub use floom_cupertino::widgets::alert::CupertinoAlert as Alert;
+    pub use floom_cupertino::widgets::app::CupertinoApp as App;
+    pub use floom_cupertino::widgets::app_bar::CupertinoAppBar as AppBar;
+    pub use floom_cupertino::widgets::autocomplete::CupertinoAutocomplete as Autocomplete;
+    pub use floom_cupertino::widgets::avatar::CupertinoAvatar as Avatar;
+    pub use floom_cupertino::widgets::badge::CupertinoBadge as Badge;
+    pub use floom_cupertino::widgets::banner::CupertinoBanner as Banner;
+    pub use floom_cupertino::widgets::bottom_navigation::CupertinoBottomNavigation as BottomNavigation;
+    pub use floom_cupertino::widgets::breadcrumbs::CupertinoBreadcrumbs as Breadcrumbs;
+    pub use floom_cupertino::widgets::button::CupertinoButton as Button;
+    pub use floom_cupertino::widgets::button_group::CupertinoButtonGroup as ButtonGroup;
+    pub use floom_cupertino::widgets::calendar::CupertinoCalendar as Calendar;
+    pub use floom_cupertino::widgets::card::CupertinoCard as Card;
+    pub use floom_cupertino::widgets::carousel::CupertinoCarousel as Carousel;
+    pub use floom_cupertino::widgets::checkbox::CupertinoCheckbox as Checkbox;
+    pub use floom_cupertino::widgets::checkbox_btn::CupertinoCheckboxBtn as CheckboxBtn;
+    pub use floom_cupertino::widgets::chip::CupertinoChip as Chip;
+    pub use floom_cupertino::widgets::chip_group::CupertinoChipGroup as ChipGroup;
+    pub use floom_cupertino::widgets::code::CupertinoCode as Code;
+    pub use floom_cupertino::widgets::color_picker::CupertinoColorPicker as ColorPicker;
+    pub use floom_cupertino::widgets::combobox::CupertinoCombobox as Combobox;
+    pub use floom_cupertino::widgets::confirm_edit::CupertinoConfirmEdit as ConfirmEdit;
+    pub use floom_cupertino::widgets::container::CupertinoContainer as Container;
+    pub use floom_cupertino::widgets::counter::CupertinoCounter as Counter;
+    pub use floom_cupertino::widgets::data_iterator::CupertinoDataIterator as DataIterator;
+    pub use floom_cupertino::widgets::datatable::CupertinoDataTable as Datatable;
+    pub use floom_cupertino::widgets::date_adapter_provider::CupertinoDateAdapterProvider as DateAdapterProvider;
+    pub use floom_cupertino::widgets::date_picker::CupertinoDatePicker as DatePicker;
+    pub use floom_cupertino::widgets::defaults_provider::CupertinoDefaultsProvider as DefaultsProvider;
+    pub use floom_cupertino::widgets::dialog::CupertinoDialog as Dialog;
+    pub use floom_cupertino::widgets::display_provider::CupertinoDisplayProvider as DisplayProvider;
+    pub use floom_cupertino::widgets::divider::CupertinoDivider as Divider;
+    pub use floom_cupertino::widgets::empty_state::CupertinoEmptyState as EmptyState;
+    pub use floom_cupertino::widgets::expand_transition::CupertinoExpandTransition as ExpandTransition;
+    pub use floom_cupertino::widgets::expansion_panels::CupertinoExpansionPanels as ExpansionPanels;
+    pub use floom_cupertino::widgets::fade_transition::CupertinoFadeTransition as FadeTransition;
+    pub use floom_cupertino::widgets::file_input::CupertinoFileInput as FileInput;
+    pub use floom_cupertino::widgets::floating_action_button::CupertinoFloatingActionButton as FloatingActionButton;
+    pub use floom_cupertino::widgets::footer::CupertinoFooter as Footer;
+    pub use floom_cupertino::widgets::form::CupertinoForm as Form;
+    pub use floom_cupertino::widgets::grid::CupertinoGrid as Grid;
+    pub use floom_cupertino::widgets::hover::CupertinoHover as Hover;
+    pub use floom_cupertino::widgets::icon::CupertinoIcon as Icon;
+    pub use floom_cupertino::widgets::icon_button::CupertinoIconButton as IconButton;
+    pub use floom_cupertino::widgets::icons_provider::CupertinoIconsProvider as IconsProvider;
+    pub use floom_cupertino::widgets::image::CupertinoImage as Image;
+    pub use floom_cupertino::widgets::infinite_scroller::CupertinoInfiniteScroller as InfiniteScroller;
+    pub use floom_cupertino::widgets::item_group::CupertinoItemGroup as ItemGroup;
+    pub use floom_cupertino::widgets::kbd::CupertinoKbd as Kbd;
+    pub use floom_cupertino::widgets::list::CupertinoList as List;
+    pub use floom_cupertino::widgets::list_group::CupertinoListGroup as ListGroup;
+    pub use floom_cupertino::widgets::list_item::CupertinoListItem as ListItem;
+    pub use floom_cupertino::widgets::list_subheader::CupertinoListSubheader as ListSubheader;
+    pub use floom_cupertino::widgets::locale_provider::CupertinoLocaleProvider as LocaleProvider;
+    pub use floom_cupertino::widgets::main::CupertinoMain as Main;
+    pub use floom_cupertino::widgets::menu::CupertinoMenu as Menu;
+    pub use floom_cupertino::widgets::navigation_drawer::CupertinoNavigationDrawer as NavigationDrawer;
+    pub use floom_cupertino::widgets::number_input::CupertinoNumberInput as NumberInput;
+    pub use floom_cupertino::widgets::otp_input::CupertinoOtpInput as OtpInput;
+    pub use floom_cupertino::widgets::overlay::CupertinoOverlay as Overlay;
+    pub use floom_cupertino::widgets::pagination::CupertinoPagination as Pagination;
+    pub use floom_cupertino::widgets::parallax::CupertinoParallax as Parallax;
+    pub use floom_cupertino::widgets::progress_circular::CupertinoProgressCircular as ProgressCircular;
+    pub use floom_cupertino::widgets::progress_linear::CupertinoProgressLinear as ProgressLinear;
+    pub use floom_cupertino::widgets::pull_to_refresh::CupertinoPullToRefresh as PullToRefresh;
+    pub use floom_cupertino::widgets::radio::CupertinoRadio as Radio;
+    pub use floom_cupertino::widgets::radio_group::CupertinoRadioGroup as RadioGroup;
+    pub use floom_cupertino::widgets::range_slider::CupertinoRangeSlider as RangeSlider;
+    pub use floom_cupertino::widgets::rating::CupertinoRating as Rating;
+    pub use floom_cupertino::widgets::responsive::CupertinoResponsive as Responsive;
+    pub use floom_cupertino::widgets::scale_transition::CupertinoScaleTransition as ScaleTransition;
+    pub use floom_cupertino::widgets::select::CupertinoSelect as Select;
+    pub use floom_cupertino::widgets::sheet::CupertinoSheet as Sheet;
+    pub use floom_cupertino::widgets::skeleton_loader::CupertinoSkeletonLoader as SkeletonLoader;
+    pub use floom_cupertino::widgets::slide_group::CupertinoSlideGroup as SlideGroup;
+    pub use floom_cupertino::widgets::slide_transition::CupertinoSlideTransition as SlideTransition;
+    pub use floom_cupertino::widgets::slider::CupertinoSlider as Slider;
+    pub use floom_cupertino::widgets::snackbar::CupertinoSnackbar as Snackbar;
+    pub use floom_cupertino::widgets::spacer::CupertinoSpacer as Spacer;
+    pub use floom_cupertino::widgets::sparkline::CupertinoSparkline as Sparkline;
+    pub use floom_cupertino::widgets::speed_dial::CupertinoSpeedDial as SpeedDial;
+    pub use floom_cupertino::widgets::stepper::CupertinoStepper as Stepper;
+    pub use floom_cupertino::widgets::switch::CupertinoSwitch as Switch;
+    pub use floom_cupertino::widgets::system_bar::CupertinoSystemBar as SystemBar;
+    pub use floom_cupertino::widgets::table::CupertinoTable as Table;
+    pub use floom_cupertino::widgets::tabs::CupertinoTabs as Tabs;
+    pub use floom_cupertino::widgets::text::CupertinoText as Text;
+    pub use floom_cupertino::widgets::text_field::CupertinoTextField as TextField;
+    pub use floom_cupertino::widgets::textarea::CupertinoTextarea as Textarea;
+    pub use floom_cupertino::widgets::theme_provider::CupertinoThemeProvider as ThemeProvider;
+    pub use floom_cupertino::widgets::time_picker::CupertinoTimePicker as TimePicker;
+    pub use floom_cupertino::widgets::timeline::CupertinoTimeline as Timeline;
+    pub use floom_cupertino::widgets::toolbar::CupertinoToolbar as Toolbar;
+    pub use floom_cupertino::widgets::tooltip::CupertinoTooltip as Tooltip;
+    pub use floom_cupertino::widgets::treeview::CupertinoTreeview as Treeview;
+    pub use floom_cupertino::widgets::validation_messages::CupertinoValidationMessages as ValidationMessages;
+    pub use floom_cupertino::widgets::virtual_scroller::CupertinoVirtualScroller as VirtualScroller;
+    pub use floom_cupertino::widgets::window::CupertinoWindow as Window;
 
     /// Every component this design system provides.
     pub const COMPONENTS: &[&str] = &[
@@ -524,205 +524,205 @@ pub mod cupertino {
     pub const COMPONENT_KEYS: &[&str] = &[
         "alert",
         "app",
-        "app_bar",
+        "app-bar",
         "autocomplete",
         "avatar",
         "badge",
         "banner",
-        "bottom_navigation",
+        "bottom-navigation",
         "breadcrumbs",
         "button",
-        "button_group",
+        "button-group",
         "calendar",
         "card",
         "carousel",
         "checkbox",
-        "checkbox_btn",
+        "checkbox-btn",
         "chip",
-        "chip_group",
+        "chip-group",
         "code",
-        "color_picker",
+        "color-picker",
         "combobox",
-        "confirm_edit",
+        "confirm-edit",
         "container",
         "counter",
-        "data_iterator",
+        "data-iterator",
         "datatable",
-        "date_adapter_provider",
-        "date_picker",
-        "defaults_provider",
+        "date-adapter-provider",
+        "date-picker",
+        "defaults-provider",
         "dialog",
-        "display_provider",
+        "display-provider",
         "divider",
-        "empty_state",
-        "expand_transition",
-        "expansion_panels",
-        "fade_transition",
-        "file_input",
-        "floating_action_button",
+        "empty-state",
+        "expand-transition",
+        "expansion-panels",
+        "fade-transition",
+        "file-input",
+        "floating-action-button",
         "footer",
         "form",
         "grid",
         "hover",
         "icon",
-        "icon_button",
-        "icons_provider",
+        "icon-button",
+        "icons-provider",
         "image",
-        "infinite_scroller",
-        "item_group",
+        "infinite-scroller",
+        "item-group",
         "kbd",
         "list",
-        "list_group",
-        "list_item",
-        "list_subheader",
-        "locale_provider",
+        "list-group",
+        "list-item",
+        "list-subheader",
+        "locale-provider",
         "main",
         "menu",
-        "navigation_drawer",
-        "number_input",
-        "otp_input",
+        "navigation-drawer",
+        "number-input",
+        "otp-input",
         "overlay",
         "pagination",
         "parallax",
-        "progress_circular",
-        "progress_linear",
-        "pull_to_refresh",
+        "progress-circular",
+        "progress-linear",
+        "pull-to-refresh",
         "radio",
         "radio-group",
-        "range_slider",
+        "range-slider",
         "rating",
         "responsive",
-        "scale_transition",
+        "scale-transition",
         "select",
         "sheet",
-        "skeleton_loader",
-        "slide_group",
-        "slide_transition",
+        "skeleton-loader",
+        "slide-group",
+        "slide-transition",
         "slider",
         "snackbar",
         "spacer",
         "sparkline",
-        "speed_dial",
+        "speed-dial",
         "stepper",
         "switch",
-        "system_bar",
+        "system-bar",
         "table",
         "tabs",
         "text",
         "text-field",
         "textarea",
-        "theme_provider",
-        "time_picker",
+        "theme-provider",
+        "time-picker",
         "timeline",
         "toolbar",
         "tooltip",
         "treeview",
-        "validation_messages",
-        "virtual_scroller",
+        "validation-messages",
+        "virtual-scroller",
         "window",
     ];
 }
 
 /// The fluent components.
 pub mod fluent {
-    pub use floom_widget_fluent_alert::FluentAlert as Alert;
-    pub use floom_widget_fluent_app::FluentApp as App;
-    pub use floom_widget_fluent_app_bar::FluentAppBar as AppBar;
-    pub use floom_widget_fluent_autocomplete::FluentAutocomplete as Autocomplete;
-    pub use floom_widget_fluent_avatar::FluentAvatar as Avatar;
-    pub use floom_widget_fluent_badge::FluentBadge as Badge;
-    pub use floom_widget_fluent_banner::FluentBanner as Banner;
-    pub use floom_widget_fluent_bottom_navigation::FluentBottomNavigation as BottomNavigation;
-    pub use floom_widget_fluent_breadcrumbs::FluentBreadcrumbs as Breadcrumbs;
-    pub use floom_widget_fluent_button::FluentButton as Button;
-    pub use floom_widget_fluent_button_group::FluentButtonGroup as ButtonGroup;
-    pub use floom_widget_fluent_calendar::FluentCalendar as Calendar;
-    pub use floom_widget_fluent_card::FluentCard as Card;
-    pub use floom_widget_fluent_carousel::FluentCarousel as Carousel;
-    pub use floom_widget_fluent_checkbox::FluentCheckbox as Checkbox;
-    pub use floom_widget_fluent_checkbox_btn::FluentCheckboxBtn as CheckboxBtn;
-    pub use floom_widget_fluent_chip::FluentChip as Chip;
-    pub use floom_widget_fluent_chip_group::FluentChipGroup as ChipGroup;
-    pub use floom_widget_fluent_code::FluentCode as Code;
-    pub use floom_widget_fluent_color_picker::FluentColorPicker as ColorPicker;
-    pub use floom_widget_fluent_combobox::FluentCombobox as Combobox;
-    pub use floom_widget_fluent_confirm_edit::FluentConfirmEdit as ConfirmEdit;
-    pub use floom_widget_fluent_container::FluentContainer as Container;
-    pub use floom_widget_fluent_counter::FluentCounter as Counter;
-    pub use floom_widget_fluent_data_iterator::FluentDataIterator as DataIterator;
-    pub use floom_widget_fluent_datatable::FluentDataTable as Datatable;
-    pub use floom_widget_fluent_date_adapter_provider::FluentDateAdapterProvider as DateAdapterProvider;
-    pub use floom_widget_fluent_date_picker::FluentDatePicker as DatePicker;
-    pub use floom_widget_fluent_defaults_provider::FluentDefaultsProvider as DefaultsProvider;
-    pub use floom_widget_fluent_dialog::FluentDialog as Dialog;
-    pub use floom_widget_fluent_display_provider::FluentDisplayProvider as DisplayProvider;
-    pub use floom_widget_fluent_divider::FluentDivider as Divider;
-    pub use floom_widget_fluent_empty_state::FluentEmptyState as EmptyState;
-    pub use floom_widget_fluent_expand_transition::FluentExpandTransition as ExpandTransition;
-    pub use floom_widget_fluent_expansion_panels::FluentExpansionPanels as ExpansionPanels;
-    pub use floom_widget_fluent_fade_transition::FluentFadeTransition as FadeTransition;
-    pub use floom_widget_fluent_file_input::FluentFileInput as FileInput;
-    pub use floom_widget_fluent_floating_action_button::FluentFloatingActionButton as FloatingActionButton;
-    pub use floom_widget_fluent_footer::FluentFooter as Footer;
-    pub use floom_widget_fluent_form::FluentForm as Form;
-    pub use floom_widget_fluent_grid::FluentGrid as Grid;
-    pub use floom_widget_fluent_hover::FluentHover as Hover;
-    pub use floom_widget_fluent_icon::FluentIcon as Icon;
-    pub use floom_widget_fluent_icon_button::FluentIconButton as IconButton;
-    pub use floom_widget_fluent_icons_provider::FluentIconsProvider as IconsProvider;
-    pub use floom_widget_fluent_image::FluentImage as Image;
-    pub use floom_widget_fluent_infinite_scroller::FluentInfiniteScroller as InfiniteScroller;
-    pub use floom_widget_fluent_item_group::FluentItemGroup as ItemGroup;
-    pub use floom_widget_fluent_kbd::FluentKbd as Kbd;
-    pub use floom_widget_fluent_list::FluentList as List;
-    pub use floom_widget_fluent_list_group::FluentListGroup as ListGroup;
-    pub use floom_widget_fluent_list_item::FluentListItem as ListItem;
-    pub use floom_widget_fluent_list_subheader::FluentListSubheader as ListSubheader;
-    pub use floom_widget_fluent_locale_provider::FluentLocaleProvider as LocaleProvider;
-    pub use floom_widget_fluent_main::FluentMain as Main;
-    pub use floom_widget_fluent_menu::FluentMenu as Menu;
-    pub use floom_widget_fluent_navigation_drawer::FluentNavigationDrawer as NavigationDrawer;
-    pub use floom_widget_fluent_number_input::FluentNumberInput as NumberInput;
-    pub use floom_widget_fluent_otp_input::FluentOtpInput as OtpInput;
-    pub use floom_widget_fluent_overlay::FluentOverlay as Overlay;
-    pub use floom_widget_fluent_pagination::FluentPagination as Pagination;
-    pub use floom_widget_fluent_parallax::FluentParallax as Parallax;
-    pub use floom_widget_fluent_progress_circular::FluentProgressCircular as ProgressCircular;
-    pub use floom_widget_fluent_progress_linear::FluentProgressLinear as ProgressLinear;
-    pub use floom_widget_fluent_pull_to_refresh::FluentPullToRefresh as PullToRefresh;
-    pub use floom_widget_fluent_radio::FluentRadio as Radio;
-    pub use floom_widget_fluent_radio_group::FluentRadioGroup as RadioGroup;
-    pub use floom_widget_fluent_range_slider::FluentRangeSlider as RangeSlider;
-    pub use floom_widget_fluent_rating::FluentRating as Rating;
-    pub use floom_widget_fluent_responsive::FluentResponsive as Responsive;
-    pub use floom_widget_fluent_scale_transition::FluentScaleTransition as ScaleTransition;
-    pub use floom_widget_fluent_select::FluentSelect as Select;
-    pub use floom_widget_fluent_sheet::FluentSheet as Sheet;
-    pub use floom_widget_fluent_skeleton_loader::FluentSkeletonLoader as SkeletonLoader;
-    pub use floom_widget_fluent_slide_group::FluentSlideGroup as SlideGroup;
-    pub use floom_widget_fluent_slide_transition::FluentSlideTransition as SlideTransition;
-    pub use floom_widget_fluent_slider::FluentSlider as Slider;
-    pub use floom_widget_fluent_snackbar::FluentSnackbar as Snackbar;
-    pub use floom_widget_fluent_spacer::FluentSpacer as Spacer;
-    pub use floom_widget_fluent_sparkline::FluentSparkline as Sparkline;
-    pub use floom_widget_fluent_speed_dial::FluentSpeedDial as SpeedDial;
-    pub use floom_widget_fluent_stepper::FluentStepper as Stepper;
-    pub use floom_widget_fluent_switch::FluentSwitch as Switch;
-    pub use floom_widget_fluent_system_bar::FluentSystemBar as SystemBar;
-    pub use floom_widget_fluent_table::FluentTable as Table;
-    pub use floom_widget_fluent_tabs::FluentTabs as Tabs;
-    pub use floom_widget_fluent_text::FluentText as Text;
-    pub use floom_widget_fluent_text_field::FluentTextField as TextField;
-    pub use floom_widget_fluent_textarea::FluentTextarea as Textarea;
-    pub use floom_widget_fluent_theme_provider::FluentThemeProvider as ThemeProvider;
-    pub use floom_widget_fluent_time_picker::FluentTimePicker as TimePicker;
-    pub use floom_widget_fluent_timeline::FluentTimeline as Timeline;
-    pub use floom_widget_fluent_toolbar::FluentToolbar as Toolbar;
-    pub use floom_widget_fluent_tooltip::FluentTooltip as Tooltip;
-    pub use floom_widget_fluent_treeview::FluentTreeview as Treeview;
-    pub use floom_widget_fluent_validation_messages::FluentValidationMessages as ValidationMessages;
-    pub use floom_widget_fluent_virtual_scroller::FluentVirtualScroller as VirtualScroller;
-    pub use floom_widget_fluent_window::FluentWindow as Window;
+    pub use floom_fluent::widgets::alert::FluentAlert as Alert;
+    pub use floom_fluent::widgets::app::FluentApp as App;
+    pub use floom_fluent::widgets::app_bar::FluentAppBar as AppBar;
+    pub use floom_fluent::widgets::autocomplete::FluentAutocomplete as Autocomplete;
+    pub use floom_fluent::widgets::avatar::FluentAvatar as Avatar;
+    pub use floom_fluent::widgets::badge::FluentBadge as Badge;
+    pub use floom_fluent::widgets::banner::FluentBanner as Banner;
+    pub use floom_fluent::widgets::bottom_navigation::FluentBottomNavigation as BottomNavigation;
+    pub use floom_fluent::widgets::breadcrumbs::FluentBreadcrumbs as Breadcrumbs;
+    pub use floom_fluent::widgets::button::FluentButton as Button;
+    pub use floom_fluent::widgets::button_group::FluentButtonGroup as ButtonGroup;
+    pub use floom_fluent::widgets::calendar::FluentCalendar as Calendar;
+    pub use floom_fluent::widgets::card::FluentCard as Card;
+    pub use floom_fluent::widgets::carousel::FluentCarousel as Carousel;
+    pub use floom_fluent::widgets::checkbox::FluentCheckbox as Checkbox;
+    pub use floom_fluent::widgets::checkbox_btn::FluentCheckboxBtn as CheckboxBtn;
+    pub use floom_fluent::widgets::chip::FluentChip as Chip;
+    pub use floom_fluent::widgets::chip_group::FluentChipGroup as ChipGroup;
+    pub use floom_fluent::widgets::code::FluentCode as Code;
+    pub use floom_fluent::widgets::color_picker::FluentColorPicker as ColorPicker;
+    pub use floom_fluent::widgets::combobox::FluentCombobox as Combobox;
+    pub use floom_fluent::widgets::confirm_edit::FluentConfirmEdit as ConfirmEdit;
+    pub use floom_fluent::widgets::container::FluentContainer as Container;
+    pub use floom_fluent::widgets::counter::FluentCounter as Counter;
+    pub use floom_fluent::widgets::data_iterator::FluentDataIterator as DataIterator;
+    pub use floom_fluent::widgets::datatable::FluentDataTable as Datatable;
+    pub use floom_fluent::widgets::date_adapter_provider::FluentDateAdapterProvider as DateAdapterProvider;
+    pub use floom_fluent::widgets::date_picker::FluentDatePicker as DatePicker;
+    pub use floom_fluent::widgets::defaults_provider::FluentDefaultsProvider as DefaultsProvider;
+    pub use floom_fluent::widgets::dialog::FluentDialog as Dialog;
+    pub use floom_fluent::widgets::display_provider::FluentDisplayProvider as DisplayProvider;
+    pub use floom_fluent::widgets::divider::FluentDivider as Divider;
+    pub use floom_fluent::widgets::empty_state::FluentEmptyState as EmptyState;
+    pub use floom_fluent::widgets::expand_transition::FluentExpandTransition as ExpandTransition;
+    pub use floom_fluent::widgets::expansion_panels::FluentExpansionPanels as ExpansionPanels;
+    pub use floom_fluent::widgets::fade_transition::FluentFadeTransition as FadeTransition;
+    pub use floom_fluent::widgets::file_input::FluentFileInput as FileInput;
+    pub use floom_fluent::widgets::floating_action_button::FluentFloatingActionButton as FloatingActionButton;
+    pub use floom_fluent::widgets::footer::FluentFooter as Footer;
+    pub use floom_fluent::widgets::form::FluentForm as Form;
+    pub use floom_fluent::widgets::grid::FluentGrid as Grid;
+    pub use floom_fluent::widgets::hover::FluentHover as Hover;
+    pub use floom_fluent::widgets::icon::FluentIcon as Icon;
+    pub use floom_fluent::widgets::icon_button::FluentIconButton as IconButton;
+    pub use floom_fluent::widgets::icons_provider::FluentIconsProvider as IconsProvider;
+    pub use floom_fluent::widgets::image::FluentImage as Image;
+    pub use floom_fluent::widgets::infinite_scroller::FluentInfiniteScroller as InfiniteScroller;
+    pub use floom_fluent::widgets::item_group::FluentItemGroup as ItemGroup;
+    pub use floom_fluent::widgets::kbd::FluentKbd as Kbd;
+    pub use floom_fluent::widgets::list::FluentList as List;
+    pub use floom_fluent::widgets::list_group::FluentListGroup as ListGroup;
+    pub use floom_fluent::widgets::list_item::FluentListItem as ListItem;
+    pub use floom_fluent::widgets::list_subheader::FluentListSubheader as ListSubheader;
+    pub use floom_fluent::widgets::locale_provider::FluentLocaleProvider as LocaleProvider;
+    pub use floom_fluent::widgets::main::FluentMain as Main;
+    pub use floom_fluent::widgets::menu::FluentMenu as Menu;
+    pub use floom_fluent::widgets::navigation_drawer::FluentNavigationDrawer as NavigationDrawer;
+    pub use floom_fluent::widgets::number_input::FluentNumberInput as NumberInput;
+    pub use floom_fluent::widgets::otp_input::FluentOtpInput as OtpInput;
+    pub use floom_fluent::widgets::overlay::FluentOverlay as Overlay;
+    pub use floom_fluent::widgets::pagination::FluentPagination as Pagination;
+    pub use floom_fluent::widgets::parallax::FluentParallax as Parallax;
+    pub use floom_fluent::widgets::progress_circular::FluentProgressCircular as ProgressCircular;
+    pub use floom_fluent::widgets::progress_linear::FluentProgressLinear as ProgressLinear;
+    pub use floom_fluent::widgets::pull_to_refresh::FluentPullToRefresh as PullToRefresh;
+    pub use floom_fluent::widgets::radio::FluentRadio as Radio;
+    pub use floom_fluent::widgets::radio_group::FluentRadioGroup as RadioGroup;
+    pub use floom_fluent::widgets::range_slider::FluentRangeSlider as RangeSlider;
+    pub use floom_fluent::widgets::rating::FluentRating as Rating;
+    pub use floom_fluent::widgets::responsive::FluentResponsive as Responsive;
+    pub use floom_fluent::widgets::scale_transition::FluentScaleTransition as ScaleTransition;
+    pub use floom_fluent::widgets::select::FluentSelect as Select;
+    pub use floom_fluent::widgets::sheet::FluentSheet as Sheet;
+    pub use floom_fluent::widgets::skeleton_loader::FluentSkeletonLoader as SkeletonLoader;
+    pub use floom_fluent::widgets::slide_group::FluentSlideGroup as SlideGroup;
+    pub use floom_fluent::widgets::slide_transition::FluentSlideTransition as SlideTransition;
+    pub use floom_fluent::widgets::slider::FluentSlider as Slider;
+    pub use floom_fluent::widgets::snackbar::FluentSnackbar as Snackbar;
+    pub use floom_fluent::widgets::spacer::FluentSpacer as Spacer;
+    pub use floom_fluent::widgets::sparkline::FluentSparkline as Sparkline;
+    pub use floom_fluent::widgets::speed_dial::FluentSpeedDial as SpeedDial;
+    pub use floom_fluent::widgets::stepper::FluentStepper as Stepper;
+    pub use floom_fluent::widgets::switch::FluentSwitch as Switch;
+    pub use floom_fluent::widgets::system_bar::FluentSystemBar as SystemBar;
+    pub use floom_fluent::widgets::table::FluentTable as Table;
+    pub use floom_fluent::widgets::tabs::FluentTabs as Tabs;
+    pub use floom_fluent::widgets::text::FluentText as Text;
+    pub use floom_fluent::widgets::text_field::FluentTextField as TextField;
+    pub use floom_fluent::widgets::textarea::FluentTextarea as Textarea;
+    pub use floom_fluent::widgets::theme_provider::FluentThemeProvider as ThemeProvider;
+    pub use floom_fluent::widgets::time_picker::FluentTimePicker as TimePicker;
+    pub use floom_fluent::widgets::timeline::FluentTimeline as Timeline;
+    pub use floom_fluent::widgets::toolbar::FluentToolbar as Toolbar;
+    pub use floom_fluent::widgets::tooltip::FluentTooltip as Tooltip;
+    pub use floom_fluent::widgets::treeview::FluentTreeview as Treeview;
+    pub use floom_fluent::widgets::validation_messages::FluentValidationMessages as ValidationMessages;
+    pub use floom_fluent::widgets::virtual_scroller::FluentVirtualScroller as VirtualScroller;
+    pub use floom_fluent::widgets::window::FluentWindow as Window;
 
     /// Every component this design system provides.
     pub const COMPONENTS: &[&str] = &[
@@ -832,101 +832,101 @@ pub mod fluent {
     pub const COMPONENT_KEYS: &[&str] = &[
         "alert",
         "app",
-        "app_bar",
+        "app-bar",
         "autocomplete",
         "avatar",
         "badge",
         "banner",
-        "bottom_navigation",
+        "bottom-navigation",
         "breadcrumbs",
         "button",
-        "button_group",
+        "button-group",
         "calendar",
         "card",
         "carousel",
         "checkbox",
-        "checkbox_btn",
+        "checkbox-btn",
         "chip",
-        "chip_group",
+        "chip-group",
         "code",
-        "color_picker",
+        "color-picker",
         "combobox",
-        "confirm_edit",
+        "confirm-edit",
         "container",
         "counter",
-        "data_iterator",
+        "data-iterator",
         "datatable",
-        "date_adapter_provider",
-        "date_picker",
-        "defaults_provider",
+        "date-adapter-provider",
+        "date-picker",
+        "defaults-provider",
         "dialog",
-        "display_provider",
+        "display-provider",
         "divider",
-        "empty_state",
-        "expand_transition",
-        "expansion_panels",
-        "fade_transition",
-        "file_input",
-        "floating_action_button",
+        "empty-state",
+        "expand-transition",
+        "expansion-panels",
+        "fade-transition",
+        "file-input",
+        "floating-action-button",
         "footer",
         "form",
         "grid",
         "hover",
         "icon",
-        "icon_button",
-        "icons_provider",
+        "icon-button",
+        "icons-provider",
         "image",
-        "infinite_scroller",
-        "item_group",
+        "infinite-scroller",
+        "item-group",
         "kbd",
         "list",
-        "list_group",
-        "list_item",
-        "list_subheader",
-        "locale_provider",
+        "list-group",
+        "list-item",
+        "list-subheader",
+        "locale-provider",
         "main",
         "menu",
-        "navigation_drawer",
-        "number_input",
-        "otp_input",
+        "navigation-drawer",
+        "number-input",
+        "otp-input",
         "overlay",
         "pagination",
         "parallax",
-        "progress_circular",
-        "progress_linear",
-        "pull_to_refresh",
+        "progress-circular",
+        "progress-linear",
+        "pull-to-refresh",
         "radio",
         "radio-group",
-        "range_slider",
+        "range-slider",
         "rating",
         "responsive",
-        "scale_transition",
+        "scale-transition",
         "select",
         "sheet",
-        "skeleton_loader",
-        "slide_group",
-        "slide_transition",
+        "skeleton-loader",
+        "slide-group",
+        "slide-transition",
         "slider",
         "snackbar",
         "spacer",
         "sparkline",
-        "speed_dial",
+        "speed-dial",
         "stepper",
         "switch",
-        "system_bar",
+        "system-bar",
         "table",
         "tabs",
         "text",
         "text-field",
         "textarea",
-        "theme_provider",
-        "time_picker",
+        "theme-provider",
+        "time-picker",
         "timeline",
         "toolbar",
         "tooltip",
         "treeview",
-        "validation_messages",
-        "virtual_scroller",
+        "validation-messages",
+        "virtual-scroller",
         "window",
     ];
 }

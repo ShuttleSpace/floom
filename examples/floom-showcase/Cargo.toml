@@ -17,11 +17,9 @@ floom-signal = { path = "../../crates/core/floom-signal", version = "0.2.0" }
 floom-editor = { path = "../../crates/widgets/floom-editor", version = "0.2.0" }
 
 # Only the ported kits are imported. `crates/ecosystem/floom-ui` is a satellite
-# workspace with 300+ members; pulling the workspace in whole would build kits
-# this demo does not show. See the module doc in `src/main.rs`.
-floom-widget-md-text = { path = "../../crates/ecosystem/floom-ui/crates/material/md-text" }
-floom-widget-md-button = { path = "../../crates/ecosystem/floom-ui/crates/material/md-button" }
-floom-widget-md-checkbox = { path = "../../crates/ecosystem/floom-ui/crates/material/md-checkbox" }
+# workspace; the Material kit now ships every component behind a per-component
+# feature, so this demo turns on just the three it shows. See `src/main.rs`.
+floom-material = { path = "../../crates/ecosystem/floom-ui/crates/floom-material", version = "0.2.0", features = ["text", "button", "checkbox"] }
 floom-core-theme = { path = "../../crates/ecosystem/floom-ui/crates/floom-core-theme", features = ["material"] }
 
 [dev-dependencies]

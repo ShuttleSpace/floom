@@ -95,31 +95,45 @@ def alias_name(component: str) -> str:
     return "".join(part.capitalize() for part in re.split(r"[-_]", component))
 
 
+def parse_feature_names(path: str) -> list:
+    """Component feature names declared in a merged kit's [features].
+
+    Each feature equals a component key with `-` -> `_`. `full` and `default`
+    are not components and are skipped.
+    """
+    text = open(path, encoding="utf-8").read()
+    block = re.search(r"\[features\](.*?)(\n\[|\Z)", text, re.S)
+    names = []
+    if not block:
+        return names
+    for line in block.group(1).splitlines():
+        m = re.match(r'\s*([A-Za-z0-9_]+)\s*=\s*\[', line)
+        if m and m.group(1) not in ("full", "default"):
+            names.append(m.group(1))
+    return names
+
+
 def scan_kits() -> dict:
     """Every kit crate of every design system, keyed by component name.
 
-    The component type is found later, for the components every design system
-    shares: a crate that exists in only two of the three is not a component
-    the gallery can show, and one of them -- `cupertino-icon-paths` -- is a
-    crate of icon path data rather than a component at all.
+    After the feature-kit merge each design system is ONE crate
+    (`floom-<system>`) whose [features] lists every component and whose
+    component module lives at `src/widgets/<feat>.rs`. The component key keeps
+    the satellite's `-` spelling (`text-field`); the merged feature uses `_`
+    (`text_field`), and the gallery matches them up.
     """
     kits: dict = {}
     for system in DESIGN_SYSTEMS:
-        root = os.path.join(SATELLITE, system)
-        if not os.path.isdir(root):
-            fail(f"no {system} directory under {SATELLITE}")
+        kit_dir = os.path.join(SATELLITE, "floom-" + system)
+        if not os.path.isdir(kit_dir):
+            fail(f"no floom-{system} kit under {SATELLITE}")
+        features = parse_feature_names(os.path.join(kit_dir, "Cargo.toml"))
         found = {}
-        for entry in sorted(os.listdir(root)):
-            crate = os.path.join(root, entry)
-            if not os.path.isfile(os.path.join(crate, "src", "lib.rs")):
-                continue  # a data directory, not a crate
-            prefix = PREFIX[system]
-            if not entry.startswith(prefix):
-                fail(f"{crate}: does not start with {prefix!r}")
-            component = entry[len(prefix) :]
-            found[component] = {
-                "dir": crate,
-                "package": package_name(crate),
+        for feat in features:
+            found[feat.replace("_", "-")] = {
+                "feat": feat,
+                "dir": kit_dir,
+                "package": "floom-" + system,
             }
         kits[system] = found
     return kits
@@ -190,12 +204,14 @@ def emit_cargo_toml(kits: dict, components: list, deps: list) -> None:
         "# `TimeValue` itself.",
         'floom-ui-composites = { path = "../../crates/ecosystem/floom-ui/crates/floom-ui-composites" }',
         "",
-        "# The kit crates: every component of the floom-ui satellite, in every",
-        "# design system. Path deps, because the satellite is a separate",
-        "# workspace and the gallery needs the components, not the workspace.",
+        "# The three design-system kits, each a single crate that builds every",
+        "# component behind a per-component feature. `features = [\"full\"]` turns",
+        "# them all on -- the gallery shows every component of every system.",
     ]
     for package, path in deps:
-        lines.append(f'{package} = {{ path = "{path}" }}')
+        lines.append(
+            f'{package} = {{ path = "{path}", version = "0.2.0", features = ["full"] }}'
+        )
     lines += [
         "",
         "[dev-dependencies]",
@@ -225,7 +241,8 @@ def emit_ds_rs(kits: dict, components: list) -> None:
         for component in components:
             kit = kits[system][component]
             lines.append(
-                f"    pub use {rust_path(kit['package'])}::{kit['type']} as {alias_name(component)};"
+                f"    pub use floom_{system}::widgets::{kit['feat']}::"
+                f"{kit['type']} as {alias_name(component)};"
             )
         names = ", ".join(f'"{alias_name(c)}"' for c in components)
         keys = ", ".join(f'"{c}"' for c in components)
@@ -317,7 +334,8 @@ def main() -> None:
     for system in DESIGN_SYSTEMS:
         for component in components:
             kit = kits[system][component]
-            kit["type"] = main_type(os.path.join(kit["dir"], "src", "lib.rs"))
+            mod = os.path.join(kit["dir"], "src", "widgets", kit["feat"] + ".rs")
+            kit["type"] = main_type(mod)
 
     props_modules = []
     for component in components:
@@ -327,11 +345,10 @@ def main() -> None:
         props_modules.append(module)
 
     deps = []
-    for component in components:
-        for system in DESIGN_SYSTEMS:
-            kit = kits[system][component]
-            relative = os.path.relpath(kit["dir"], DEMO)
-            deps.append((kit["package"], relative.replace(os.sep, "/")))
+    for system in DESIGN_SYSTEMS:
+        kit_dir = os.path.join(SATELLITE, "floom-" + system)
+        relative = os.path.relpath(kit_dir, DEMO)
+        deps.append(("floom-" + system, relative.replace(os.sep, "/")))
 
     emit_cargo_toml(kits, components, deps)
     emit_ds_rs(kits, components)

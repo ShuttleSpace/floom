@@ -557,7 +557,7 @@ fn page_kits(state: Arc<AppState>) -> Stack {
                 LayoutRequest::new(),
                 move || {
                     Box::new(
-                        floom_widget_md_text::MaterialText::new(
+                        floom_material::widgets::text::MaterialText::new(
                             "Material body text, resolved from the theme",
                         )
                         .view(),
@@ -579,7 +579,7 @@ fn page_kits(state: Arc<AppState>) -> Stack {
                 move || {
                     let state = state.clone();
                     Box::new(
-                        floom_widget_md_button::MdButton::new()
+                        floom_material::widgets::button::MdButton::new()
                             .label("Primary")
                             .on_click(move || {
                                 state.kit_clicks.update(|n| *n += 1);
@@ -597,7 +597,7 @@ fn page_kits(state: Arc<AppState>) -> Stack {
                 move || {
                     let state = state.clone();
                     Box::new(
-                        floom_widget_md_button::MdButton::new()
+                        floom_material::widgets::button::MdButton::new()
                             .label("Secondary")
                             .variant(floom_core_theme::props::button::ButtonVariant::Secondary)
                             .on_click(move || {
@@ -613,7 +613,7 @@ fn page_kits(state: Arc<AppState>) -> Stack {
             LayoutRequest::new().height(40.0),
             move || {
                 Box::new(
-                    floom_widget_md_button::MdButton::new()
+                    floom_material::widgets::button::MdButton::new()
                         .label("Ghost")
                         .variant(floom_core_theme::props::button::ButtonVariant::Ghost)
                         .view(),
@@ -625,7 +625,7 @@ fn page_kits(state: Arc<AppState>) -> Stack {
             LayoutRequest::new().height(40.0),
             move || {
                 Box::new(
-                    floom_widget_md_button::MdButton::new()
+                    floom_material::widgets::button::MdButton::new()
                         .label("Disabled")
                         .disabled(true)
                         .view(),
@@ -677,7 +677,7 @@ fn page_kits(state: Arc<AppState>) -> Stack {
         move || {
             let state = checkbox_state.clone();
             Box::new(
-                floom_widget_md_checkbox::MdCheckbox::new("Receive updates")
+                floom_material::widgets::checkbox::MdCheckbox::new("Receive updates")
                     .checked(state.kit_checked.get())
                     .on_change(move |checked| state.kit_checked.set(checked))
                     .view(),
