@@ -10,6 +10,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use crate::toolchain::SdkPrecondition;
+
 /// A resolved Cargo project, ready to package.
 pub struct Project {
     pub root: PathBuf,
@@ -117,6 +119,75 @@ pub fn abi_to_rust_target(abi: &str) -> Option<&'static str> {
         "x86" => Some("i686-linux-android"),
         "x86_64" => Some("x86_64-linux-android"),
         _ => None,
+    }
+}
+
+/// Require every SDK precondition to be satisfied; return the joined hints of
+/// any that are missing. This is the "detect and require, never auto-install"
+/// rule, centralized so every packer shares it.
+pub fn require_sdks(sdks: &[SdkPrecondition]) -> Result<(), String> {
+    let missing: Vec<&SdkPrecondition> = sdks.iter().filter(|s| !s.is_satisfied()).collect();
+    if missing.is_empty() {
+        Ok(())
+    } else {
+        let hints = missing.iter().map(|s| s.hint()).collect::<Vec<_>>().join("; ");
+        Err(hints)
+    }
+}
+
+/// Run `program` with `args` inside `dir`, returning an error that includes the
+/// argv and exit status on failure. Shared by every packer that shells out.
+pub fn run(program: &str, args: &[&str], dir: &Path) -> Result<(), String> {
+    let status = Command::new(program)
+        .args(args)
+        .current_dir(dir)
+        .status()
+        .map_err(|e| format!("cannot run `{} {}`: {e}", program, args.join(" ")))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("`{} {}` failed ({status})", program, args.join(" ")))
+    }
+}
+
+/// Find the most-recently-modified file under `dir` whose name ends with
+/// `.{ext}` (ext given without the dot). Returns `None` if nothing matches.
+/// Used to locate the artifact a native build dropped, regardless of where the
+/// toolchain placed it within the build tree.
+pub fn newest_artifact(dir: &Path, ext: &str) -> Option<PathBuf> {
+    let needle = format!(".{ext}");
+    let Ok(walker) = std::fs::read_dir(dir) else {
+        return None;
+    };
+    let mut best: Option<(std::time::SystemTime, PathBuf)> = None;
+    for entry in walker.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(found) = newest_artifact(&path, ext) {
+                push_if_newer(&mut best, &found);
+            }
+            continue;
+        }
+        let Some(name) = path.file_name().map(|n| n.to_string_lossy().ends_with(&needle)) else {
+            continue;
+        };
+        if !name {
+            continue;
+        }
+        push_if_newer(&mut best, &path);
+    }
+    best.map(|(_, p)| p)
+}
+
+fn push_if_newer(best: &mut Option<(std::time::SystemTime, PathBuf)>, path: &Path) {
+    let Ok(meta) = std::fs::metadata(path) else {
+        return;
+    };
+    let Ok(mtime) = meta.modified() else {
+        return;
+    };
+    if best.as_ref().map(|(t, _)| mtime > *t).unwrap_or(true) {
+        *best = Some((mtime, path.to_path_buf()));
     }
 }
 
@@ -390,5 +461,34 @@ mod tests {
         assert_eq!(abi_to_rust_target("x86"), Some("i686-linux-android"));
         assert_eq!(abi_to_rust_target("x86_64"), Some("x86_64-linux-android"));
         assert_eq!(abi_to_rust_target("nope"), None);
+    }
+
+    #[test]
+    fn requiring_no_sdks_always_succeeds() {
+        assert!(require_sdks(&[]).is_ok());
+    }
+
+    #[test]
+    fn requiring_a_missing_sdk_fails_with_its_hint() {
+        // `__definitely_not_a_real_target__` as a stand-in is not an SDK; use
+        // a real precondition whose satisfaction we control via a fake command
+        // is overkill — pin the hint-to-error wiring with an always-absent one.
+        let err = require_sdks(&[SdkPrecondition::Hvigor]).unwrap_err();
+        if !SdkPrecondition::Hvigor.is_satisfied() {
+            assert!(err.contains("DEVECO_SDK_HOME"), "{err}");
+        }
+    }
+
+    #[test]
+    fn newest_artifact_finds_a_matching_file_recursively() {
+        let dir = std::env::temp_dir().join(format!("floom-cli-artifact-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("a/b")).unwrap();
+        std::fs::write(dir.join("a/b/app.apk"), b"x").unwrap();
+        std::fs::write(dir.join("a/notes.txt"), b"x").unwrap();
+        let found = newest_artifact(&dir, "apk").unwrap();
+        assert_eq!(found.file_name().unwrap(), "app.apk");
+        assert!(newest_artifact(&dir, "ipa").is_none());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
