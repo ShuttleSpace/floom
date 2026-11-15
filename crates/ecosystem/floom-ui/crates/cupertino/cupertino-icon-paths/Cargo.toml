@@ -1,7 +1,0 @@
-[package]
-name = "floom-widget-cupertino-icon-paths"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-# Nothing. The icons are path data; a crate that draws them is a consumer.

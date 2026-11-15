@@ -1,18 +1,134 @@
 [package]
 name = "floom-fluent"
 version.workspace = true
-edition.workspace = true
+edition = "2021"
 license.workspace = true
 repository.workspace = true
 description = "Fluent desktop design system tokens and pointer-first control variants for Floom 2.0"
 rust-version.workspace = true
 
 [dependencies]
-floom-types = { path = "../../../../core/floom-types", version = "0.2.0" }
-floom-style = { path = "../../../../core/floom-style", version = "0.2.0" }
-floom-theme = { path = "../floom-theme", version = "0.2.0" }
-floom-scene = { path = "../../../../core/floom-scene", version = "0.2.0" }
-floom-design = { path = "../floom-design", version = "0.2.0" }
+floom-accessibility = { path = "../../../../core/floom-accessibility" }
+floom-core = { path = "../../../../core/floom-core" }
+floom-core-theme = { workspace = true, features = ["fluent"] }
+floom-design = { path = "../floom-design" }
+floom-scene = { path = "../../../../core/floom-scene" }
+floom-signal = { path = "../../../../core/floom-signal" }
+floom-style = { path = "../../../../core/floom-style" }
+floom-theme = { path = "../floom-theme" }
+floom-types = { path = "../../../../core/floom-types" }
+floom-ui-composites = { path = "../floom-ui-composites" }
+floom-widget-runtime = { workspace = true, features = ["fluent"] }
+floom-widgets = { path = "../../../../widgets/floom-widgets" }
 
 [dev-dependencies]
-floom-snapshot = { path = "../../../../devtools/floom-snapshot", version = "0.2.0" }
+floom-core = { path = "../../../../core/floom-core" }
+floom-core-theme = { workspace = true, features = ["fluent"] }
+floom-signal = { path = "../../../../core/floom-signal" }
+floom-snapshot = { path = "../../../../devtools/floom-snapshot" }
+floom-types = { path = "../../../../core/floom-types" }
+floom-ui-composites = { path = "../floom-ui-composites" }
+floom-widgets = { path = "../../../../widgets/floom-widgets" }
+
+[features]
+alert = ["icon"]
+app = []
+app_bar = []
+autocomplete = ["icon"]
+avatar = []
+badge = []
+banner = []
+bottom_navigation = []
+breadcrumbs = []
+button = []
+button_group = []
+calendar = []
+card = []
+carousel = []
+checkbox = ["icon_paths"]
+checkbox_btn = ["icon"]
+chip = []
+chip_group = []
+code = []
+color_picker = []
+combobox = ["icon"]
+confirm_edit = ["icon"]
+container = []
+counter = []
+data_iterator = []
+datatable = []
+date_adapter_provider = []
+date_picker = []
+defaults_provider = []
+dialog = ["icon"]
+display_provider = []
+divider = []
+empty_state = []
+expand_transition = []
+expansion_panels = ["icon"]
+fade_transition = []
+file_input = []
+floating_action_button = []
+footer = []
+form = []
+grid = []
+hover = []
+icon = ["icon_paths"]
+icon_button = ["icon"]
+icon_paths = []
+icons_provider = []
+image = []
+infinite_scroller = []
+item_group = []
+kbd = []
+list = []
+list_group = ["icon"]
+list_item = []
+list_subheader = []
+locale_provider = []
+main = []
+menu = []
+navigation_drawer = []
+number_input = []
+otp_input = []
+overlay = []
+pagination = []
+parallax = []
+progress_circular = []
+progress_linear = []
+pull_to_refresh = []
+radio = []
+radio_group = []
+range_slider = []
+rating = ["icon"]
+responsive = []
+scale_transition = []
+select = ["icon_paths"]
+sheet = []
+skeleton_loader = []
+slide_group = []
+slide_transition = []
+slider = []
+snackbar = []
+spacer = []
+sparkline = []
+speed_dial = ["icon"]
+stepper = ["icon"]
+switch = []
+system_bar = []
+table = []
+tabs = []
+text = []
+text_field = []
+textarea = []
+theme_provider = []
+time_picker = []
+timeline = []
+toolbar = []
+tooltip = []
+treeview = ["icon"]
+validation_messages = []
+virtual_scroller = []
+window = []
+full = ["alert", "app", "app_bar", "autocomplete", "avatar", "badge", "banner", "bottom_navigation", "breadcrumbs", "button", "button_group", "calendar", "card", "carousel", "checkbox", "checkbox_btn", "chip", "chip_group", "code", "color_picker", "combobox", "confirm_edit", "container", "counter", "data_iterator", "datatable", "date_adapter_provider", "date_picker", "defaults_provider", "dialog", "display_provider", "divider", "empty_state", "expand_transition", "expansion_panels", "fade_transition", "file_input", "floating_action_button", "footer", "form", "grid", "hover", "icon", "icon_button", "icon_paths", "icons_provider", "image", "infinite_scroller", "item_group", "kbd", "list", "list_group", "list_item", "list_subheader", "locale_provider", "main", "menu", "navigation_drawer", "number_input", "otp_input", "overlay", "pagination", "parallax", "progress_circular", "progress_linear", "pull_to_refresh", "radio", "radio_group", "range_slider", "rating", "responsive", "scale_transition", "select", "sheet", "skeleton_loader", "slide_group", "slide_transition", "slider", "snackbar", "spacer", "sparkline", "speed_dial", "stepper", "switch", "system_bar", "table", "tabs", "text", "text_field", "textarea", "theme_provider", "time_picker", "timeline", "toolbar", "tooltip", "treeview", "validation_messages", "virtual_scroller", "window"]
+default = []

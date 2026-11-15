@@ -1,0 +1,210 @@
+#![cfg(feature = "app_bar")]
+//! The ported Fluent app bar -- an optional leading slot, a title, and
+
+use floom_core::{Child, ChildKey, ElementId, LayoutRequest, Rect, Widget};
+use floom_types::Color;
+use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
+
+use floom_core_theme::global_theme::DesignSystem;
+use floom_core_theme::theme::{MultiTheme, Theme};
+
+use floom_fluent::widgets::app_bar::{FluentAppBar, FluentAppBarStyle};
+
+const BOX: Rect = Rect {
+    x0: 0.0,
+    y0: 0.0,
+    x1: 400.0,
+    y1: 100.0,
+};
+
+fn theme() -> MultiTheme {
+    floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);
+    MultiTheme::new_for(DesignSystem::Fluent)
+}
+
+fn kit() -> FluentAppBar {
+    FluentAppBar::new().with_theme(theme())
+}
+
+fn paint(c: floom_core_theme::tokens::color::Color) -> Color {
+    Color {
+        r: c.r,
+        g: c.g,
+        b: c.b,
+        a: c.a,
+    }
+}
+
+fn slot(text: &'static str) -> Child {
+    Child::new(ChildKey::index(0), LayoutRequest::new(), move || {
+        Box::new(floom_widgets::Text::new(text))
+    })
+}
+
+#[test]
+fn the_tokens_and_colours_reach_the_style() {
+    let style: FluentAppBarStyle = kit().resolved_style();
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::AppBar) {
+        floom_core_theme::component_tokens::ComponentTokens::AppBar(tokens) => tokens,
+        _ => unreachable!(),
+    };
+    assert_eq!(style.height, tokens.height, "the token's height");
+    assert_eq!(
+        style.padding_horizontal, tokens.padding_horizontal,
+        "the token's padding"
+    );
+    assert_eq!(
+        style.title_font_size, tokens.title_font_size,
+        "the token's title size"
+    );
+    assert_eq!(style.bar_color, theme().colors().surface, "the bar's fill");
+    assert_eq!(
+        style.title_color,
+        theme().colors().on_surface,
+        "the title's ink"
+    );
+    assert_eq!(
+        style.action_color,
+        theme().colors().on_surface_variant,
+        "the actions' ink"
+    );
+}
+
+#[test]
+fn the_callers_height_wins_over_the_token() {
+    let tokens = match theme().component(floom_core_theme::component_tokens::ComponentId::AppBar) {
+        floom_core_theme::component_tokens::ComponentTokens::AppBar(tokens) => tokens,
+        _ => unreachable!(),
+    };
+    assert_eq!(
+        kit().resolved_style().height,
+        tokens.height,
+        "the token's by default"
+    );
+    assert_eq!(
+        kit().height(48.0).resolved_style().height,
+        48.0,
+        "and the caller's when they gave one"
+    );
+}
+
+#[test]
+fn the_design_system_is_named_in_the_style() {
+    assert_eq!(kit().resolved_style().design_system, "fluent");
+}
+
+#[test]
+fn the_bar_is_painted_in_v1_s_colour() {
+    let resolved = kit().resolved_style();
+    let bar = kit().title("Title").view();
+    let mut create = AllocatingCreateContext::new();
+    let id: ElementId = bar.create(&mut create);
+    let mut recorder = SceneRecorder::new(BOX);
+    bar.paint(&mut recorder, id);
+    recorder.finish();
+
+    let fill = recorder.ops().iter().find_map(|op| match op {
+        PaintOp::RoundedRect { color, .. } => Some(*color),
+        PaintOp::Rect { color, .. } => Some(*color),
+        _ => None,
+    });
+    assert_eq!(fill, Some(paint(resolved.bar_color)), "the bar's fill");
+
+    let row = bar.children().remove(0).build();
+    let title = row.children().remove(0).build();
+    let mut create = AllocatingCreateContext::new();
+    let id: ElementId = title.create(&mut create);
+    let mut recorder = SceneRecorder::new(BOX);
+    title.paint(&mut recorder, id);
+    recorder.finish();
+    let (text, size, ink) = recorder
+        .ops()
+        .iter()
+        .find_map(|op| match op {
+            PaintOp::Text {
+                text, size, color, ..
+            } => Some((text.clone(), *size, *color)),
+            _ => None,
+        })
+        .expect("the title is painted");
+    assert_eq!(text, "Title");
+    assert_eq!(size, resolved.title_font_size, "v1's title size");
+    assert_eq!(ink, paint(resolved.title_color), "and v1's title ink");
+}
+
+#[test]
+fn an_elevation_draws_the_shadow() {
+    let flat = kit().title("Title").view();
+    let mut create = AllocatingCreateContext::new();
+    let id: ElementId = flat.create(&mut create);
+    let mut recorder = SceneRecorder::new(BOX);
+    flat.paint(&mut recorder, id);
+    recorder.finish();
+    assert!(
+        !recorder
+            .ops()
+            .iter()
+            .any(|op| matches!(op, PaintOp::Shadow { .. })),
+        "no shadow without an elevation"
+    );
+
+    let raised = kit().title("Title").elevation(2).view();
+    let mut create = AllocatingCreateContext::new();
+    let id: ElementId = raised.create(&mut create);
+    let mut recorder = SceneRecorder::new(BOX);
+    raised.paint(&mut recorder, id);
+    recorder.finish();
+    let shadow = recorder.ops().iter().find_map(|op| match op {
+        PaintOp::Shadow { blur, spread, .. } => Some((*blur, *spread)),
+        _ => None,
+    });
+    assert_eq!(
+        shadow,
+        Some((2.0 + 2.0 * 2.0, 1.0)),
+        "v1's shadow: the blur grows with the elevation, the spread is one"
+    );
+}
+
+#[test]
+fn the_callers_slots_are_mounted() {
+    let bar = kit()
+        .title("Title")
+        .leading(slot("L"))
+        .actions(vec![slot("A")])
+        .view();
+    let row = bar.children().remove(0).build();
+    assert_eq!(
+        row.children().len(),
+        4,
+        "the leading, the title, the room and the actions"
+    );
+    let leading = row.children().remove(0).build();
+    let mut create = AllocatingCreateContext::new();
+    let id: ElementId = leading.create(&mut create);
+    let mut recorder = SceneRecorder::new(BOX);
+    leading.paint(&mut recorder, id);
+    recorder.finish();
+    assert!(
+        recorder
+            .ops()
+            .iter()
+            .any(|op| matches!(op, PaintOp::Text { text, .. } if text == "L")),
+        "the leading slot is mounted"
+    );
+}
+
+#[test]
+fn the_props_report_the_title() {
+    let kit = kit().title("Title").elevation(3);
+    assert_eq!(kit.props().title, "Title");
+    assert_eq!(kit.props().elevation, 3);
+}
+
+#[test]
+fn the_theme_is_a_snapshot_of_its_own_design_system() {
+    assert_ne!(
+        FluentAppBar::new().theme().id(),
+        floom_core_theme::global_theme::theme_signal().id(),
+        "v1's Fluent app bar took a snapshot, not the app-wide signal"
+    );
+}
