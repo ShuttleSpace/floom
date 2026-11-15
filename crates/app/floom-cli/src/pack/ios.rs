@@ -67,7 +67,9 @@ pub fn pack_ios(project: &Project, opts: &PackOpts) -> Result<PackResult, String
         ],
         opts.yes,
     )?;
-    shared::require_sdks(&[SdkPrecondition::Xcode])?;
+    if let Err(blocked) = shared::require_sdks_blocked(&[SdkPrecondition::Xcode]) {
+        return Ok(blocked);
+    }
 
     let sub = crate::toolchain::ios_or_xcode_subcommand();
     let ios_dir = project.root.join("ios");

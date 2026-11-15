@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::toolchain::SdkPrecondition;
+use super::{PackResult, Tier};
 
 /// A resolved Cargo project, ready to package.
 pub struct Project {
@@ -132,6 +133,21 @@ pub fn require_sdks(sdks: &[SdkPrecondition]) -> Result<(), String> {
     } else {
         let hints = missing.iter().map(|s| s.hint()).collect::<Vec<_>>().join("; ");
         Err(hints)
+    }
+}
+
+/// Require SDKs, but treat a missing one as a `blocked` tier (exit 0) rather
+/// than a hard error: SDKs cannot be auto-installed, so their absence is a
+/// blocked build, and the setup hint becomes the result note. The orchestrator
+/// prints the `TIER=blocked` line and exits 0.
+pub fn require_sdks_blocked(sdks: &[SdkPrecondition]) -> Result<(), PackResult> {
+    match require_sdks(sdks) {
+        Ok(()) => Ok(()),
+        Err(hint) => Err(PackResult {
+            tier: Tier::Blocked,
+            artifact: None,
+            note: Some(hint),
+        }),
     }
 }
 

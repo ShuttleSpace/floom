@@ -41,12 +41,8 @@ pub fn assemble_argv(project: &Project, _opts: &PackOpts) -> (String, Vec<String
 /// the SDK); otherwise provision the rustup target, build the `.so`, stage it
 /// into the HAP module, and assemble the HAP.
 pub fn pack_ohos(project: &Project, opts: &PackOpts) -> Result<PackResult, String> {
-    if !SdkPrecondition::Hvigor.is_satisfied() {
-        return Ok(PackResult {
-            tier: Tier::Blocked,
-            artifact: None,
-            note: Some(SdkPrecondition::Hvigor.hint().into()),
-        });
+    if let Err(blocked) = shared::require_sdks_blocked(&[SdkPrecondition::Hvigor]) {
+        return Ok(blocked);
     }
 
     crate::toolchain::provision(

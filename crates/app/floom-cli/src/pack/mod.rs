@@ -41,6 +41,7 @@ pub fn pack(platform: &str, project: &Project, opts: &PackOpts) -> Result<PackRe
         "ios" => crate::pack::ios::pack_ios(project, opts),
         "web" => crate::pack::web::pack_web(project, opts),
         "ohos" => crate::pack::ohos::pack_ohos(project, opts),
+        "windows" | "linux" | "macos" => crate::pack::desktop::pack_desktop(platform, project, opts),
         other => Err(format!("platform `{other}` is not implemented yet")),
     }
 }
@@ -50,3 +51,4 @@ pub mod android;
 pub mod ios;
 pub mod web;
 pub mod ohos;
+pub mod desktop;

@@ -118,6 +118,7 @@ pub enum SdkPrecondition {
     Gradle,
     Xcode,
     Hvigor,
+    Cmake,
 }
 
 impl SdkPrecondition {
@@ -133,6 +134,7 @@ impl SdkPrecondition {
                 std::env::var_os("DEVECO_SDK_HOME").is_some()
                     || command_succeeds("hvigorw", &["--version"])
             }
+            SdkPrecondition::Cmake => command_succeeds("cmake", &["--version"]),
         }
     }
 
@@ -150,6 +152,7 @@ impl SdkPrecondition {
             SdkPrecondition::Hvigor => {
                 "install DevEco/hvigorw or set DEVECO_SDK_HOME (needed for the OHOS HAP)"
             }
+            SdkPrecondition::Cmake => "install CMake (`cmake` on PATH), needed for desktop builds",
         }
     }
 }
@@ -264,6 +267,7 @@ mod tests {
         assert!(SdkPrecondition::Gradle.hint().contains("gradle"));
         assert!(SdkPrecondition::Xcode.hint().contains("xcode-select"));
         assert!(SdkPrecondition::Hvigor.hint().contains("DEVECO_SDK_HOME"));
+        assert!(SdkPrecondition::Cmake.hint().to_lowercase().contains("cmake"));
     }
 
     #[test]

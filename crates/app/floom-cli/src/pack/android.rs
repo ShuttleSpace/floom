@@ -15,6 +15,12 @@ use crate::toolchain::{CargoTool, RustupTarget, SdkPrecondition, Tool};
 /// Default NDK ABI when the user passes none. `arm64-v8a` covers modern phones.
 const DEFAULT_ABI: &str = "arm64-v8a";
 
+/// The `adb install` argv for a built APK (`-r` keeps the data of an existing
+/// install). Pure so the command is pinned without touching a device.
+pub fn adb_install_argv(apk: &Path) -> Vec<String> {
+    vec!["install".to_string(), "-r".to_string(), apk.to_string_lossy().into_owned()]
+}
+
 /// The exact `cargo ndk` argv. Pure so its flags are pinned without a real
 /// build. `-P 24` is the minimum SDK (matches the create scaffold); the `.so`
 /// lands in the Gradle project's `jniLibs` dir where AGP picks it up.
@@ -71,12 +77,15 @@ pub fn pack_android(project: &Project, opts: &PackOpts) -> Result<PackResult, St
         opts.yes,
     )?;
 
-    // SDKs cannot be auto-installed; fail with a setup hint instead.
-    shared::require_sdks(&[
+    // SDKs cannot be auto-installed; a missing one is a `blocked` tier, not a
+    // hard error.
+    if let Err(blocked) = shared::require_sdks_blocked(&[
         SdkPrecondition::AndroidSdk,
         SdkPrecondition::Jdk,
         SdkPrecondition::Gradle,
-    ])?;
+    ]) {
+        return Ok(blocked);
+    }
 
     let ndk = ndk_argv(project, opts);
     let ndk_ref: Vec<&str> = ndk.iter().map(String::as_str).collect();
@@ -98,6 +107,15 @@ pub fn pack_android(project: &Project, opts: &PackOpts) -> Result<PackResult, St
 
     let apk = shared::newest_artifact(&android_dir, "apk")
         .ok_or_else(|| "Gradle produced no .apk".to_string())?;
+
+    if opts.install {
+        // `adb` ships with the Android SDK platform-tools; if it is missing the
+        // install fails with a clear error rather than silently skipping.
+        let adb = adb_install_argv(&apk);
+        let adb_ref: Vec<&str> = adb.iter().map(String::as_str).collect();
+        shared::run("adb", &adb_ref, &android_dir)?;
+    }
+
     Ok(PackResult {
         tier: Tier::Artifact,
         artifact: Some(apk),
@@ -168,5 +186,14 @@ mod tests {
         assert_eq!(release.1, vec!["assembleRelease".to_string()]);
         let debug = gradle_argv(&project(), &opts_with(None, false));
         assert_eq!(debug.1, vec!["assembleDebug".to_string()]);
+    }
+
+    #[test]
+    fn adb_install_argv_uses_replace_flag() {
+        let apk = Path::new("/p/android/app-release.apk");
+        assert_eq!(
+            adb_install_argv(apk),
+            vec!["install", "-r", "/p/android/app-release.apk"]
+        );
     }
 }
