@@ -97,7 +97,7 @@ fn run(args: &[String]) -> Result<(), String> {
         "init" => init(&args[1..]),
         "check" => check(&args[1..]),
         "test" => test(&args[1..]),
-        "package" => package(&args[1..]),
+        "package" => package::run(&args[1..]),
         "help" | "-h" | "--help" => {
             print!("{USAGE}");
             Ok(())
@@ -630,90 +630,6 @@ fn check(args: &[String]) -> Result<(), String> {
 fn test(args: &[String]) -> Result<(), String> {
     let opts = parse_lifecycle(args)?;
     cargo_in(&opts.dir, "test", &opts.features, false)
-}
-
-/// Read the `[package] name = "..."` line from a Cargo.toml.
-fn crate_name(manifest: &Path) -> Result<String, String> {
-    let text = fs::read_to_string(manifest).map_err(|e| format!("{}: {e}", manifest.display()))?;
-    for line in text.lines() {
-        let line = line.trim_start();
-        if let Some(rest) = line.strip_prefix("name")
-            && let Some(stripped) = rest.trim_start_matches([' ', '=']).strip_prefix('"')
-            && let Some(end) = stripped.find('"')
-        {
-            return Ok(stripped[..end].to_string());
-        }
-    }
-    Err(format!("no `name` in {}", manifest.display()))
-}
-
-/// Walk up from `dir` looking for `scripts/build.sh` — the one-command-per-
-/// platform builder that only exists inside a Floom checkout.
-fn find_build_sh(dir: &Path) -> Option<PathBuf> {
-    let mut cur = if dir.is_absolute() {
-        dir.to_path_buf()
-    } else {
-        std::env::current_dir().ok()?.join(dir)
-    };
-    loop {
-        let candidate = cur.join("scripts").join("build.sh");
-        if candidate.is_file() {
-            return Some(candidate);
-        }
-        if !cur.pop() {
-            return None;
-        }
-    }
-}
-
-/// `floom package <DIR>` — build a release binary, then hand a requested
-/// platform to `scripts/build.sh` when run from inside a Floom checkout.
-///
-/// Without `--platform` only the host release binary is built; per-platform
-/// artifacts are opt-in because the platform builder is a Floom-checkout tool,
-/// not something a standalone app ships.
-fn package(args: &[String]) -> Result<(), String> {
-    let opts = parse_lifecycle(args)?;
-    cargo_in(&opts.dir, "build", &opts.features, true)?;
-
-    let manifest = opts.dir.join("Cargo.toml");
-    if !manifest.is_file() {
-        return Err(format!("{} has no Cargo.toml", opts.dir.display()));
-    }
-    let name = crate_name(&manifest)?;
-
-    let Some(platform) = opts.platform.clone() else {
-        println!("built release binary for `{name}` (host).");
-        println!(
-            "  for a platform artifact, run `floom package --platform <macos|windows|linux|android|ios|ohos|web>`"
-        );
-        return Ok(());
-    };
-
-    let Some(build_sh) = find_build_sh(&opts.dir) else {
-        return Err(format!(
-            "per-platform packaging needs the Floom `scripts/build.sh`; `{name}` is not inside a Floom checkout"
-        ));
-    };
-
-    let mut cmd = Command::new("bash");
-    cmd.arg(&build_sh).arg(&name).arg(&platform);
-    if opts.release {
-        cmd.arg("--release");
-    }
-    for f in &opts.features {
-        cmd.arg("--features").arg(f);
-    }
-    let status = cmd
-        .status()
-        .map_err(|e| format!("cannot run {}: {e}", build_sh.display()))?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!(
-            "`floom package --platform {platform}` failed ({status})"
-        ))
-    }
 }
 
 /// Writes the native host project for one platform of an **app**.
@@ -1619,19 +1535,6 @@ mod tests {
             !app.contains("{{TITLE}}"),
             "the title placeholder must be filled"
         );
-    }
-
-    #[test]
-    fn crate_name_reads_the_package_name() {
-        let dir = repo_root().join("tests").join("floom-cli-test-cratename");
-        let _ = fs::remove_dir_all(&dir);
-        fs::create_dir_all(&dir).unwrap();
-        fs::write(
-            dir.join("Cargo.toml"),
-            "[package]\nname = \"my-cool-app\"\nversion = \"0.1.0\"\n",
-        )
-        .unwrap();
-        assert_eq!(crate_name(&dir.join("Cargo.toml")).unwrap(), "my-cool-app");
     }
 
     #[test]
