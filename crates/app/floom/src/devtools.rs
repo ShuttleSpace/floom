@@ -43,6 +43,9 @@ pub use floom_devtools::pick::{
     highlight_rect, pick_pointer,
 };
 pub use floom_devtools::tree;
+// Same as `platform`: `devtools` is a hand-written module, so the crate's
+// remaining public surface is merged in instead of aliasing the name away.
+pub use floom_devtools::*;
 pub use floom_hot_reload::describe;
 
 /// A mounted devtools panel, and the state that opens and closes it.

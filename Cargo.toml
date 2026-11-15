@@ -118,6 +118,7 @@ repository = "https://gitee.com/floem/floem"
 [workspace.dependencies]
 floom = { path = "crates/app/floom", version = "0.2.0" }
 floom-accessibility = { path = "crates/core/floom-accessibility", version = "0.2.0" }
+floom-accuracy = { path = "crates/system/floom-accuracy", version = "0.2.0" }
 floom-animation = { path = "crates/system/floom-animation", version = "0.2.0" }
 floom-app = { path = "crates/app/floom-app", version = "0.2.0" }
 floom-core = { path = "crates/core/floom-core", version = "0.2.0" }
@@ -126,12 +127,14 @@ floom-cupertino = { path = "crates/ecosystem/floom-ui/crates/floom-cupertino", v
 floom-devtools = { path = "crates/devtools/floom-devtools", version = "0.2.0" }
 floom-dsl = { path = "crates/frontend/floom-dsl", version = "0.2.0" }
 floom-editor = { path = "crates/widgets/floom-editor", version = "0.2.0" }
+floom-editor-core = { path = "crates/widgets/floom-editor-core", version = "0.2.0" }
 floom-fluent = { path = "crates/ecosystem/floom-ui/crates/floom-fluent", version = "0.2.0" }
 floom-hot-reload = { path = "crates/devtools/floom-hot-reload", version = "0.2.0" }
 floom-inspector = { path = "crates/devtools/floom-inspector", version = "0.2.0" }
 floom-layout = { path = "crates/core/floom-layout", version = "0.2.0" }
 floom-material = { path = "crates/ecosystem/floom-ui/crates/floom-material", version = "0.2.0" }
 floom-native = { path = "crates/native/floom-native", version = "0.2.0" }
+floom-native-ffi = { path = "crates/native/floom-native-ffi", version = "0.2.0" }
 floom-platform = { path = "crates/platform/floom-platform", version = "0.2.0" }
 floom-platform-android = { path = "crates/platform/floom-platform-android", version = "0.2.0" }
 floom-platform-desktop = { path = "crates/platform/floom-platform-desktop", version = "0.2.0" }
@@ -158,6 +161,7 @@ floom-types = { path = "crates/core/floom-types", version = "0.2.0" }
 floom-ui-composites = { path = "crates/ecosystem/floom-ui/crates/floom-ui-composites" }
 floom-virtual = { path = "crates/widgets/floom-virtual", version = "0.2.0" }
 floom-widgets = { path = "crates/widgets/floom-widgets", version = "0.2.0" }
+floom-widgets-data = { path = "crates/widgets/floom-widgets-data", version = "0.2.0" }
 peniko = { version = "0.6.0", features = ["serde"] }
 parley = { version = "0.7.0" }
 fontique = { version = "0.7.0" }

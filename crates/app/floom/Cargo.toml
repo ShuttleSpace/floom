@@ -51,6 +51,16 @@ tui = ["dep:floom-platform-tui", "dep:floom-renderer-tui"]
 renderer-gpu = ["dep:floom-renderer-vello", "floom-renderer-vello/gpu"]
 renderer-software = ["dep:floom-renderer-software"]
 devtools = ["dep:floom-devtools", "dep:floom-hot-reload"]
+# The three L8 tooling crates that reach the software renderer. They cannot be
+# default facade deps: `tests/feature_graph.rs` asserts the default build links
+# no renderer backend. `full` is the opt-in that hangs *every* workspace crate
+# off the facade; `--all-features` includes it.
+full = [
+    "dep:floom-accuracy",
+    "dep:floom-snapshot",
+    "dep:floom-testkit",
+    "dep:floom-ui-events-winit",
+]
 
 [dependencies]
 floom-app = { workspace = true }
@@ -91,3 +101,29 @@ floom-devtools = { workspace = true, optional = true }
 # a live tree, which is what the inspector reads. Optional with the
 # devtools bundle, which is the only feature that needs it.
 floom-hot-reload = { workspace = true, optional = true }
+
+# Every remaining root-workspace library crate, re-exported under a short name
+# (`floom::accessibility`, `floom::style`, …). These do not reach a renderer or
+# windowing backend, so they are safe as default deps; the three that do are
+# gated behind `full` above. `floom-cli` is a binary-only crate with no [lib],
+# so it cannot be re-exported and is deliberately absent.
+floom-accessibility = { workspace = true }
+floom-dsl = { workspace = true }
+floom-editor = { workspace = true }
+floom-editor-core = { workspace = true }
+floom-inspector = { workspace = true }
+floom-native = { workspace = true }
+floom-native-ffi = { workspace = true }
+floom-platform-mobile = { workspace = true }
+floom-renderer = { workspace = true }
+floom-runtime-core = { workspace = true }
+floom-style = { workspace = true }
+floom-text = { workspace = true }
+floom-tsx = { workspace = true }
+floom-virtual = { workspace = true }
+floom-widgets-data = { workspace = true }
+
+floom-accuracy = { workspace = true, optional = true }
+floom-snapshot = { workspace = true, optional = true }
+floom-testkit = { workspace = true, optional = true }
+floom-ui-events-winit = { workspace = true, optional = true }

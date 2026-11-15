@@ -33,6 +33,12 @@ use std::fmt;
 
 use floom_app::WidgetHost;
 pub use floom_platform::{Capability, PlatformCapabilities};
+// The whole `floom-platform` ABI is also reachable as `floom::platform::…`:
+// `platform` is a hand-written module (`require`, `current`, the backends), so
+// the crate is merged in rather than aliased over it. Local items shadow the
+// glob's same-named ones (e.g. our `embedded` backend module), keeping every
+// existing path intact.
+pub use floom_platform::*;
 
 /// What to do when the compiled-in backend lacks a capability.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
