@@ -38,9 +38,11 @@ pub struct PackOpts {
 pub fn pack(platform: &str, project: &Project, opts: &PackOpts) -> Result<PackResult, String> {
     match platform {
         "android" => crate::pack::android::pack_android(project, opts),
+        "ios" => crate::pack::ios::pack_ios(project, opts),
         other => Err(format!("platform `{other}` is not implemented yet")),
     }
 }
 
 pub mod shared;
 pub mod android;
+pub mod ios;

@@ -200,6 +200,17 @@ fn cargo_subcommand_present(sub: &str) -> bool {
     command_succeeds("cargo", &[sub, "--version"])
 }
 
+/// Which of `cargo ios` / `cargo xcode` to invoke (both generate the Xcode
+/// project from the `ios/` Swift + Info.plist); returns whichever is installed,
+/// preferring `ios`.
+pub fn ios_or_xcode_subcommand() -> &'static str {
+    if cargo_subcommand_present("ios") {
+        "ios"
+    } else {
+        "xcode"
+    }
+}
+
 fn command_succeeds(program: &str, args: &[&str]) -> bool {
     Command::new(program)
         .args(args)
