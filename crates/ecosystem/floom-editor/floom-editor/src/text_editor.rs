@@ -8,11 +8,11 @@
 
 use std::sync::{Arc, Mutex};
 
+use crate::core::xi_rope::Rope;
 use floom_core::{
     CreateContext, ElementId, EventContext, LayoutRequest, PaintContext, SemanticsContext,
     UpdateContext, Widget, WidgetAny,
 };
-use crate::core::xi_rope::Rope;
 
 use crate::document::{Document, TextDocument};
 use crate::editor::{Editor, EditorState};
@@ -46,13 +46,40 @@ impl TextEditor {
         self.editor.document()
     }
 
-    /// Replaces the document's text.
+    /// The document's current text.
+    pub fn text(&self) -> String {
+        self.document().text().to_string()
+    }
+
+    /// Replaces the document's text and repaints.
     ///
     /// The caret is left where it was, clamped to the new text's length by
     /// the editor's own geometry, which is what a caller replacing a document
     /// behind an editor expects.
     pub fn set_text(&self, text: impl Into<Rope>) {
         self.editor.document().set_text(text.into());
+        self.bump_generation();
+    }
+
+    /// Undo the last edit. Reports whether there was one.
+    pub fn undo(&self) -> bool {
+        self.editor.undo()
+    }
+
+    /// Redo the last undone edit. Reports whether there was one.
+    pub fn redo(&self) -> bool {
+        self.editor.redo()
+    }
+
+    fn bump_generation(&self) {
+        let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        state.generation += 1;
+    }
+
+    /// Takes the keyboard as soon as the editor mounts. Off by default.
+    pub fn autofocus(mut self, autofocus: bool) -> Self {
+        self.editor.set_autofocus(autofocus);
+        self
     }
 
     /// Sets the editor's appearance.
@@ -108,6 +135,10 @@ impl Widget for TextEditor {
     fn semantics(&self, cx: &mut dyn SemanticsContext, id: ElementId) {
         self.editor.semantics(cx, id);
     }
+
+    fn set_focused(&mut self, focused: bool) {
+        self.editor.set_focused(focused);
+    }
 }
 
 impl WidgetAny for TextEditor {
@@ -120,6 +151,6 @@ impl WidgetAny for TextEditor {
     }
 
     fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
-        None
+        Some(self.editor.accessibility_hint())
     }
 }

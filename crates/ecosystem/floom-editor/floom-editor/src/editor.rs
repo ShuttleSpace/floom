@@ -2,21 +2,34 @@ use std::collections::HashMap;
 use std::ops::Range;
 use std::sync::{Arc, Mutex};
 
-use floom_core::{
-    CreateContext, ElementId, Event, EventContext, Key, KeyPhase, LayoutRequest, Modifiers,
-    NamedKey, PaintContext, Point, Rect, SemanticsContext, SemanticsRole, UpdateContext, Widget,
-    WidgetAny,
-};
 use crate::core::buffer::rope_text::RopeText;
 use crate::core::cursor::CursorAffinity;
 use crate::core::selection::{SelRegion, Selection};
+use floom_core::{
+    CreateContext, ElementId, Event, EventContext, Key, KeyPhase, LayoutRequest, Modifiers,
+    NamedKey, PaintContext, Point, Rect, SemanticsContext, SemanticsHint, SemanticsRole,
+    UpdateContext, Widget, WidgetAny,
+};
 use floom_text::{CaretAffinity, TextLayout};
-use floom_types::{StyledText, TextStyle, TextWrap};
+use floom_types::{ImeUpdate, StyledText, TextStyle, TextWrap};
 use floom_widgets::primitives::Revision;
 
 use crate::document::Document;
 use crate::style::EditorStyle;
 use crate::styling::Styling;
+
+/// The ink of an in-progress IME composition: the accent, so a composition is
+/// visibly not part of the document yet.
+const COMPOSITION_COLOR: floom_types::Color = floom_types::Color::rgb(0x2B, 0x6C, 0xB0);
+
+/// Clamps a byte offset into `text` to a character boundary.
+fn clamp_char_boundary(text: &str, mut offset: usize) -> usize {
+    offset = offset.min(text.len());
+    while offset > 0 && !text.is_char_boundary(offset) {
+        offset -= 1;
+    }
+    offset
+}
 
 /// The editor's mutable state, shared with whoever holds a handle.
 ///
@@ -302,6 +315,27 @@ pub struct Editor {
     painted: bool,
     /// The repaint flag, in the house shape.
     revision: Revision,
+    /// The IME composition in progress, drawn at the caret and *not* part of
+    /// the document until the OS commits it.
+    preedit: String,
+    /// Caret position inside [`Self::preedit`], in bytes.
+    preedit_caret: usize,
+    /// Whether the editor takes the keyboard when it mounts.
+    autofocus: bool,
+    /// The element autofocus was last requested for. A shared editor can be
+    /// mounted again under a new id, and each mount takes the keyboard again.
+    auto_focused_for: Option<ElementId>,
+    /// The element this widget was last updated as, so a remount can reset the
+    /// focus flag the old element left behind.
+    mounted_id: Option<ElementId>,
+    /// Mirrors `Widget::set_focused`, so the IME area is only reported while
+    /// the editor owns the keyboard.
+    focused: bool,
+    /// The caret area last reported to the host, so an unchanged caret does
+    /// not reshape the document every frame just to answer the same rectangle.
+    ime_area: Option<Rect>,
+    /// Set whenever the caret area needs re-reporting.
+    ime_dirty: bool,
 }
 
 impl Clone for Editor {
@@ -316,6 +350,14 @@ impl Clone for Editor {
             painted_revision: self.painted_revision,
             painted: self.painted,
             revision: Revision::default(),
+            preedit: self.preedit.clone(),
+            preedit_caret: self.preedit_caret,
+            autofocus: self.autofocus,
+            auto_focused_for: None,
+            mounted_id: None,
+            focused: false,
+            ime_area: None,
+            ime_dirty: false,
         }
     }
 }
@@ -339,7 +381,53 @@ impl Editor {
             painted_revision: 0,
             painted: false,
             revision: Revision::default(),
+            preedit: String::new(),
+            preedit_caret: 0,
+            autofocus: false,
+            auto_focused_for: None,
+            mounted_id: None,
+            focused: false,
+            ime_area: None,
+            ime_dirty: false,
         }
+    }
+
+    /// Whether the editor takes the keyboard as soon as it mounts.
+    pub fn set_autofocus(&mut self, autofocus: bool) {
+        self.autofocus = autofocus;
+    }
+
+    /// Undo the last edit, repainting if it changed the document.
+    pub fn undo(&self) -> bool {
+        let changed = self.document().undo();
+        self.bump_generation_if(changed);
+        changed
+    }
+
+    /// Redo the last undone edit, repainting if it changed the document.
+    pub fn redo(&self) -> bool {
+        let changed = self.document().redo();
+        self.bump_generation_if(changed);
+        changed
+    }
+
+    fn bump_generation_if(&self, changed: bool) {
+        if changed {
+            let mut state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+            state.generation += 1;
+        }
+    }
+
+    /// Drops the in-progress composition, called when the OS finalizes or
+    /// abandons it.
+    fn cancel_preedit(&mut self) {
+        if self.preedit.is_empty() && self.preedit_caret == 0 {
+            return;
+        }
+        self.preedit.clear();
+        self.preedit_caret = 0;
+        self.ime_dirty = true;
+        self.revision.bump();
     }
 
     /// A handle to the editor's state.
@@ -838,6 +926,77 @@ impl Editor {
         Some(entry.range.start + offset)
     }
 
+    /// The screen rectangle of the primary caret, in the host's coordinates.
+    ///
+    /// The same shaped line and the same scroll walk as paint, so the IME popup
+    /// anchors to the glyph the user actually sees.
+    fn caret_rect(&self, bounds: Rect) -> Option<Rect> {
+        let width = self.text_width(bounds);
+        let line_height = self.line_height();
+        if width <= 0.0 || line_height <= 0.0 {
+            return None;
+        }
+        let cursor = self.cursor_offset();
+        let doc = self.document();
+        let line = doc.rope_text().line_of_offset(cursor);
+        let entry = self.line_layout(line, width);
+        let local = cursor.saturating_sub(entry.range.start);
+        let rect =
+            entry
+                .layout
+                .cursor_rect(local, CaretAffinity::Downstream, self.style.caret_width)?;
+        let top = self.line_top(bounds, line);
+        let x = self.text_x(bounds);
+        Some(Rect {
+            x0: x + rect.x0,
+            y0: top + (rect.y0 - entry.min_coord()),
+            x1: x + rect.x1,
+            y1: top + (rect.y1 - entry.min_coord()),
+        })
+    }
+
+    /// The screen `y` of `target_line`'s first row.
+    fn line_top(&self, bounds: Rect, target_line: usize) -> f64 {
+        let width = self.text_width(bounds);
+        let (scroll_line, scroll_offset) = {
+            let state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+            (state.scroll_line, state.scroll_offset)
+        };
+        let mut line = scroll_line;
+        let mut top = bounds.y0 - scroll_offset;
+        while line > 0 && top > bounds.y0 {
+            line -= 1;
+            top -= self.line_height_px(line, width);
+        }
+        while line < target_line {
+            top += self.line_height_px(line, width);
+            line += 1;
+        }
+        top
+    }
+
+    /// Re-reports the IME caret area after a focus or caret change.
+    fn sync_ime_area(&mut self, cx: &mut dyn UpdateContext) {
+        if !self.ime_dirty {
+            return;
+        }
+        self.ime_dirty = false;
+        let area = if self.focused {
+            let bounds = cx.bounds();
+            if bounds.width() > 0.0 {
+                self.caret_rect(bounds)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        if area != self.ime_area {
+            self.ime_area = area;
+            cx.set_ime_cursor_area(area);
+        }
+    }
+
     /// Moves the caret and, when the shift key is down, extends the
     /// selection to it.
     fn move_cursor(&self, offset: usize, extend: bool) {
@@ -1004,6 +1163,17 @@ impl Widget for Editor {
     }
 
     fn update(&mut self, cx: &mut dyn UpdateContext, id: ElementId) {
+        // A shared editor can be mounted again under a new element id. Each
+        // mount takes the keyboard on its own and starts unfocused.
+        if self.mounted_id != Some(id) {
+            self.mounted_id = Some(id);
+            self.focused = false;
+            self.ime_dirty = true;
+        }
+        if self.autofocus && self.auto_focused_for != Some(id) {
+            self.auto_focused_for = Some(id);
+            cx.request_focus(id);
+        }
         // A change made through the state handle — a caller setting the text,
         // say — is not visible from inside the widget, so the generation is
         // what notices it.
@@ -1017,9 +1187,12 @@ impl Widget for Editor {
         {
             self.painted_generation = generation;
             self.painted_revision = revision;
+            // The caret may have moved, so the OS popup has to be re-anchored.
+            self.ime_dirty = true;
             self.revision.bump();
         }
         self.revision.sync(cx, id);
+        self.sync_ime_area(cx);
     }
 
     fn layout_request(&self) -> Option<LayoutRequest> {
@@ -1043,7 +1216,7 @@ impl Widget for Editor {
                 self.scroll_by(scroll.delta_y, bounds);
                 true
             }
-            Event::Ime(_) => false,
+            Event::Ime(update) => self.ime_event(cx, update),
         }
     }
 
@@ -1206,11 +1379,59 @@ impl Widget for Editor {
             top += rows as f64 * line_height;
             line += 1;
         }
+
+        // The IME composition is drawn at the caret in the accent ink, with an
+        // underline and its own caret, so the letters are visible before the OS
+        // commits them. It is never part of the document text.
+        if !self.preedit.is_empty()
+            && let Some(caret) = self.caret_rect(bounds)
+        {
+            let font_size = self.styling.font_size();
+            let caret_width = f64::from(self.style.caret_width);
+            let width =
+                (f64::from(font_size) * 0.6 * self.preedit.chars().count() as f64).max(caret_width);
+            let baseline = caret.y1 - (caret.y1 - caret.y0) * 0.2;
+            cx.fill_text(
+                Point::new(caret.x0, baseline),
+                &self.preedit,
+                font_size,
+                self.styling.weight(),
+                COMPOSITION_COLOR,
+            );
+            cx.fill_rect(
+                Rect {
+                    x0: caret.x0,
+                    y0: caret.y1 - 1.0,
+                    x1: caret.x0 + width,
+                    y1: caret.y1,
+                },
+                COMPOSITION_COLOR,
+            );
+            let head = self.preedit[..self.preedit_caret].chars().count() as f64;
+            let x = caret.x0 + head * f64::from(font_size) * 0.6;
+            cx.fill_rect(
+                Rect {
+                    x0: x,
+                    y0: caret.y0,
+                    x1: x + caret_width,
+                    y1: caret.y1,
+                },
+                COMPOSITION_COLOR,
+            );
+        }
     }
 
     fn semantics(&self, cx: &mut dyn SemanticsContext, _id: ElementId) {
         cx.set_role(SemanticsRole::TextField);
         cx.set_bounds(cx.bounds());
+    }
+
+    fn set_focused(&mut self, focused: bool) {
+        if self.focused != focused {
+            self.focused = focused;
+            self.ime_dirty = true;
+            self.revision.bump();
+        }
     }
 }
 
@@ -1325,10 +1546,60 @@ impl Editor {
         state.generation += 1;
     }
 
+    /// The IME's half of the event handling.
+    ///
+    /// A composition is shown but not committed: it lives in `preedit`, and the
+    /// commit arrives later as character keys, which replace it.
+    fn ime_event(&mut self, cx: &mut dyn EventContext, update: ImeUpdate) -> bool {
+        match update {
+            ImeUpdate::OpenChanged(open) => {
+                if !open {
+                    self.cancel_preedit();
+                }
+                true
+            }
+            ImeUpdate::Preedit { text, caret, .. } => {
+                self.preedit_caret = clamp_char_boundary(&text, caret);
+                self.preedit = text;
+                self.ime_dirty = true;
+                self.revision.bump();
+                // The runner reads the host's area right after dispatch, so the
+                // popup has to follow the caret *now*, not on the next frame.
+                let bounds = cx.bounds();
+                let area = if bounds.width() > 0.0 {
+                    self.caret_rect(bounds)
+                } else {
+                    None
+                };
+                self.ime_area = area;
+                cx.set_ime_cursor_area(area);
+                true
+            }
+        }
+    }
+
     /// The keyboard's half of the event handling.
     fn key_event(&mut self, cx: &mut dyn EventContext, key: floom_core::KeyEvent) -> bool {
         if key.phase == KeyPhase::Up {
             return false;
+        }
+        // Undo and redo, matching the 2.0 editor's keyboard map.
+        let mod_only =
+            key.modifiers.contains(Modifiers::CONTROL) || key.modifiers.contains(Modifiers::META);
+        if mod_only {
+            match key.key {
+                Key::Char('z') => {
+                    self.cancel_preedit();
+                    self.undo();
+                    return true;
+                }
+                Key::Char('y') => {
+                    self.cancel_preedit();
+                    self.redo();
+                    return true;
+                }
+                _ => {}
+            }
         }
         let extend = key.modifiers.contains(Modifiers::SHIFT);
         let control = key.modifiers.contains(Modifiers::CONTROL);
@@ -1352,6 +1623,9 @@ impl Editor {
                 } else {
                     c
                 };
+                // A character key while a composition is open is the OS
+                // finalizing it: the preedit is dropped before the commit.
+                self.cancel_preedit();
                 // The edit replaces every region's selection, or inserts at
                 // every caret — so a keystroke with several carets types at
                 // all of them.
@@ -1360,11 +1634,13 @@ impl Editor {
                 true
             }
             Key::Named(NamedKey::Backspace) => {
+                self.cancel_preedit();
                 self.delete_backward(word);
                 self.scroll_caret_into_view(cx.bounds());
                 true
             }
             Key::Named(NamedKey::Delete) => {
+                self.cancel_preedit();
                 self.delete_forward(word);
                 self.scroll_caret_into_view(cx.bounds());
                 true
@@ -1436,11 +1712,13 @@ impl Editor {
                 true
             }
             Key::Named(NamedKey::Enter) => {
+                self.cancel_preedit();
                 self.edit_regions("\n");
                 self.scroll_caret_into_view(cx.bounds());
                 true
             }
             Key::Named(NamedKey::Tab) => {
+                self.cancel_preedit();
                 let indent = " ".repeat(self.styling.tab_width());
                 self.edit_regions(&indent);
                 true
@@ -1558,6 +1836,13 @@ impl Editor {
     }
 }
 
+impl Editor {
+    /// The accessibility description of this editable text field.
+    pub fn accessibility_hint(&self) -> SemanticsHint {
+        SemanticsHint::labeled(SemanticsRole::TextField, self.document().text().to_string())
+    }
+}
+
 impl WidgetAny for Editor {
     fn as_any(&self) -> &dyn std::any::Any {
         self
@@ -1568,6 +1853,6 @@ impl WidgetAny for Editor {
     }
 
     fn semantics_hint(&self) -> Option<floom_core::SemanticsHint> {
-        None
+        Some(self.accessibility_hint())
     }
 }

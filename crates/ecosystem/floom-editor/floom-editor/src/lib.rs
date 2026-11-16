@@ -40,11 +40,10 @@
 //! been:
 //!
 //! * **Modal editing.** The v1 editor had a modal mode with its own keymap.
-//! * **Phantom text and IME preedit.** v1 drew both: the phantom text is the
-//!   text an editor shows without holding it, and the preedit is the text the
-//!   input method is composing. The preedit needs the host's composition, and
-//!   the host does not hand one to a widget yet — so the editor cannot draw
-//!   what it is never told.
+//! * **Phantom text.** v1 drew text an editor showed without holding it.
+//!   IME preedit *is* here: [`Editor`] draws the composition from
+//!   `Event::Ime` at the caret without putting it in the document until the
+//!   OS commits it.
 //! * **The command system.** v1 had a `Command` enum, a command registry, and
 //!   a keymap that dispatched into it. This port's keyboard handling is
 //!   direct.
