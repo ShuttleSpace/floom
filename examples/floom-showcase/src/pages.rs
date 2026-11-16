@@ -765,7 +765,7 @@ fn page_editor(state: Arc<AppState>) -> Stack {
 
     page = page.child(paragraph(
         "hint",
-        "The editor takes the keyboard when this page opens; click it to put the caret at the end. Mod+Z / Mod+Y, Enter, Backspace and Delete are handled by the widget.",
+        "The editor takes the keyboard when this page opens; click it to put the caret where you click. Mod+Z / Mod+Y, Enter, Backspace and Delete are handled by the widget.",
         13.0,
         FontWeight::Normal,
         MUTED,

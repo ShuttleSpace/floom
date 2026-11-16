@@ -320,6 +320,11 @@ pub struct Editor {
     preedit: String,
     /// Caret position inside [`Self::preedit`], in bytes.
     preedit_caret: usize,
+    /// Shared generation and document revision the composition was opened at.
+    ///
+    /// A change through a state handle or the public API does not go through
+    /// the keyboard's preedit cancellation, so the next update drops it.
+    preedit_base: Option<(u64, u64)>,
     /// Whether the editor takes the keyboard when it mounts.
     autofocus: bool,
     /// The element autofocus was last requested for. A shared editor can be
@@ -352,6 +357,7 @@ impl Clone for Editor {
             revision: Revision::default(),
             preedit: self.preedit.clone(),
             preedit_caret: self.preedit_caret,
+            preedit_base: self.preedit_base,
             autofocus: self.autofocus,
             auto_focused_for: None,
             mounted_id: None,
@@ -383,6 +389,7 @@ impl Editor {
             revision: Revision::default(),
             preedit: String::new(),
             preedit_caret: 0,
+            preedit_base: None,
             autofocus: false,
             auto_focused_for: None,
             mounted_id: None,
@@ -421,6 +428,7 @@ impl Editor {
     /// Drops the in-progress composition, called when the OS finalizes or
     /// abandons it.
     fn cancel_preedit(&mut self) {
+        self.preedit_base = None;
         if self.preedit.is_empty() && self.preedit_caret == 0 {
             return;
         }
@@ -1181,6 +1189,15 @@ impl Widget for Editor {
         let generation = state.generation;
         let revision = state.doc.revision();
         drop(state);
+        // A composition belongs to the document it was opened against. Undo,
+        // redo and set_text reach the document through the public API, where
+        // there is no keyboard event to cancel the preedit first.
+        if self
+            .preedit_base
+            .is_some_and(|base| base != (generation, revision))
+        {
+            self.cancel_preedit();
+        }
         if !self.painted
             || generation != self.painted_generation
             || revision != self.painted_revision
@@ -1561,6 +1578,10 @@ impl Editor {
             ImeUpdate::Preedit { text, caret, .. } => {
                 self.preedit_caret = clamp_char_boundary(&text, caret);
                 self.preedit = text;
+                {
+                    let state = self.state.lock().unwrap_or_else(|e| e.into_inner());
+                    self.preedit_base = Some((state.generation, state.doc.revision()));
+                }
                 self.ime_dirty = true;
                 self.revision.bump();
                 // The runner reads the host's area right after dispatch, so the

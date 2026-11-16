@@ -1,11 +1,30 @@
 use floom_app::WidgetHost;
 use floom_core::{Key, KeyEvent, KeyPhase, Modifiers, SemanticsRole};
-use floom_editor::{TextEditor, text_editor};
+use floom_editor::{EditorStyle, TextEditor, text_editor};
 use floom_layout::LayoutStyle;
-use floom_types::{Event, ImeUpdate, Size};
+use floom_types::{Color, Event, ImeUpdate, Size};
 
 fn viewport() -> Size {
     Size::new(600.0, 300.0)
+}
+
+/// The colours of the glyph runs painted for the sample preedit.
+fn preedit_colors(host: &WidgetHost) -> Vec<Color> {
+    host.scene()
+        .iter()
+        .filter_map(|(_, node)| {
+            let floom_scene::SceneNode::Text { glyphs, color, .. } = node else {
+                return None;
+            };
+            let is_preedit = host.resources().get(*glyphs).is_some_and(|resource| {
+                matches!(
+                    &resource.kind,
+                    floom_scene::ResourceKind::GlyphRun { text, .. } if &**text == "あ"
+                )
+            });
+            is_preedit.then_some(*color)
+        })
+        .collect()
 }
 
 /// Mounts a copy of `editor` at the end of its document.
@@ -114,18 +133,56 @@ fn ime_preedit_is_painted_in_the_composition_ink() {
     }));
     host.frame();
 
-    let painted = host.scene().iter().any(|(_, node)| match node {
-        floom_scene::SceneNode::Text { glyphs, .. } => {
-            host.resources()
-                .get(*glyphs)
-                .is_some_and(|resource| match &resource.kind {
-                    floom_scene::ResourceKind::GlyphRun { text, .. } => &**text == "あ",
-                    _ => false,
-                })
+    let colors = preedit_colors(&host);
+    assert_eq!(
+        colors,
+        vec![Color::rgb(0x2B, 0x6C, 0xB0)],
+        "the composition was not painted in its own ink"
+    );
+    assert!(
+        !colors.contains(&EditorStyle::default().text_color),
+        "the composition was painted in the document's ink"
+    );
+}
+
+#[test]
+fn external_document_changes_drop_the_preedit() {
+    for action in ["undo", "redo", "set_text"] {
+        let editor = text_editor("hi");
+        let mut host = mount(editor.clone());
+        focus_editor(&mut host);
+        host.dispatch(Event::Key(KeyEvent {
+            phase: KeyPhase::Down,
+            key: Key::Char('!'),
+            modifiers: Modifiers::NONE,
+        }));
+        if action == "redo" {
+            // Leave something for redo, before the composition starts.
+            assert!(editor.undo());
         }
-        _ => false,
-    });
-    assert!(painted, "the composition text was not painted");
+        host.dispatch(Event::Ime(ImeUpdate::Preedit {
+            text: "あ".to_string(),
+            caret: "あ".len(),
+            selection: None,
+        }));
+        host.frame();
+        assert!(
+            !preedit_colors(&host).is_empty(),
+            "{action}: no preedit was painted to begin with"
+        );
+
+        match action {
+            "undo" => assert!(editor.undo()),
+            "redo" => assert!(editor.redo()),
+            "set_text" => editor.set_text("bye"),
+            _ => unreachable!(),
+        }
+        host.frame();
+        assert!(
+            preedit_colors(&host).is_empty(),
+            "{action}: the preedit is still painted over the changed document"
+        );
+    }
 }
 
 #[test]
