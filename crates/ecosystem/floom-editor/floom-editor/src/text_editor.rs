@@ -12,7 +12,7 @@ use floom_core::{
     CreateContext, ElementId, EventContext, LayoutRequest, PaintContext, SemanticsContext,
     UpdateContext, Widget, WidgetAny,
 };
-use floom_editor_core::xi_rope::Rope;
+use crate::core::xi_rope::Rope;
 
 use crate::document::{Document, TextDocument};
 use crate::editor::{Editor, EditorState};

@@ -7,9 +7,9 @@ use floom_core::{
     NamedKey, PaintContext, Point, Rect, SemanticsContext, SemanticsRole, UpdateContext, Widget,
     WidgetAny,
 };
-use floom_editor_core::buffer::rope_text::RopeText;
-use floom_editor_core::cursor::CursorAffinity;
-use floom_editor_core::selection::{SelRegion, Selection};
+use crate::core::buffer::rope_text::RopeText;
+use crate::core::cursor::CursorAffinity;
+use crate::core::selection::{SelRegion, Selection};
 use floom_text::{CaretAffinity, TextLayout};
 use floom_types::{StyledText, TextStyle, TextWrap};
 use floom_widgets::primitives::Revision;
@@ -1545,7 +1545,7 @@ impl Editor {
         let doc = state.doc.clone();
         drop(state);
         let text = doc.rope_text();
-        text.move_n_words_backward(offset, 1, floom_editor_core::mode::Mode::Normal)
+        text.move_n_words_backward(offset, 1, crate::core::mode::Mode::Normal)
     }
 
     /// The end of the word after `offset`.

@@ -283,10 +283,10 @@ fn a_selection_is_painted_in_the_selections_colour() {
     let state = editor.state();
     {
         let mut state = state.lock().unwrap();
-        state.sel = floom_editor_core::selection::Selection::region(
+        state.sel = floom_editor::core::selection::Selection::region(
             0,
             5,
-            floom_editor_core::cursor::CursorAffinity::Forward,
+            floom_editor::core::cursor::CursorAffinity::Forward,
         );
         state.generation += 1;
     }
@@ -648,9 +648,9 @@ fn scrolling_to_the_end_keeps_the_last_line_on_screen() {
 }
 
 /// A selection with two carets, as the editor's state holds it.
-fn two_carets(first: usize, second: usize) -> floom_editor_core::selection::Selection {
-    use floom_editor_core::cursor::CursorAffinity;
-    use floom_editor_core::selection::{SelRegion, Selection};
+fn two_carets(first: usize, second: usize) -> floom_editor::core::selection::Selection {
+    use floom_editor::core::cursor::CursorAffinity;
+    use floom_editor::core::selection::{SelRegion, Selection};
     let mut selection = Selection::new();
     selection.add_region(SelRegion::caret(first, CursorAffinity::Forward));
     selection.add_region(SelRegion::caret(second, CursorAffinity::Forward));

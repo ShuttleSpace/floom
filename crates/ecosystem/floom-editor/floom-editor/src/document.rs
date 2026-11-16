@@ -9,11 +9,11 @@
 
 use std::sync::Mutex;
 
-use floom_editor_core::buffer::Buffer;
-use floom_editor_core::buffer::rope_text::{RopeText, RopeTextVal};
-use floom_editor_core::editor::EditType;
-use floom_editor_core::selection::Selection;
-use floom_editor_core::xi_rope::Rope;
+use crate::core::buffer::Buffer;
+use crate::core::buffer::rope_text::{RopeText, RopeTextVal};
+use crate::core::editor::EditType;
+use crate::core::selection::Selection;
+use crate::core::xi_rope::Rope;
 
 /// A document: text that can be edited.
 ///

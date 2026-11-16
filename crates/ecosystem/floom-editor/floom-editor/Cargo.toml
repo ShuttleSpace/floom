@@ -10,7 +10,6 @@ path = "src/lib.rs"
 
 [dependencies]
 floom-core.workspace = true
-floom-editor-core = { path = "../../../widgets/floom-editor-core" }
 floom-text.workspace = true
 floom-types.workspace = true
 floom-widgets.workspace = true
@@ -33,4 +32,4 @@ floom-scene.workspace = true
 
 [features]
 default = ["serde"]
-serde = ["dep:serde", "floom-editor-core/serde"]
+serde = ["dep:serde"]

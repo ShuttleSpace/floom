@@ -4,9 +4,8 @@
 //!
 //! The v1-era editor satellite, ported onto 2.0's `Widget` API. The model —
 //! a rope buffer, a cursor, a selection, modes, registers, movement and word
-//! motions — is `floom-editor-core`, which is framework-free and needed no
-//! change at all. This crate is the *view* layer: the widget, the style, and
-//! the document.
+//! motions — lives in [`core`], which is framework-free. This crate is the
+//! *view* layer: the widget, the style, and the document.
 //!
 //! ## How the text is drawn
 //!
