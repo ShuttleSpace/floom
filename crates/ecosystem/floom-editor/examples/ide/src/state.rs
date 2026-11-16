@@ -12,10 +12,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use floom_core::{ElementId, EventContext};
+use floom_editor::core::buffer::rope_text::RopeText;
+use floom_editor::core::cursor::CursorAffinity;
+use floom_editor::core::selection::Selection;
 use floom_editor::{Document, EditorState, TextDocument};
-use floom_editor_core::buffer::rope_text::RopeText;
-use floom_editor_core::cursor::CursorAffinity;
-use floom_editor_core::selection::Selection;
 use floom_types::Point;
 
 use crate::lang::{Lang, Syntax};

@@ -17,9 +17,7 @@ path = "src/main.rs"
 # The public facade, for `run_desktop`.
 floom.workspace = true
 floom-core.workspace = true
-floom-editor = { path = "../../../../widgets/floom-editor" }
-# The editor's model, for the `Selection` a file remembers between tabs.
-floom-editor-core = { path = "../../../../widgets/floom-editor-core" }
+floom-editor = { path = "../../floom-editor" }
 floom-text.workspace = true
 floom-types.workspace = true
 # The software renderer, for `--render`: one frame rasterised with no window
