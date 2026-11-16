@@ -743,7 +743,7 @@ fn page_editor(state: Arc<AppState>) -> Stack {
             "Undo",
             LayoutRequest::new().width(86.0).height(34.0),
             move || {
-                undo_editor.lock().unwrap().undo();
+                undo_editor.undo();
             },
         ))
         .child(button_child(
@@ -751,7 +751,7 @@ fn page_editor(state: Arc<AppState>) -> Stack {
             "Redo",
             LayoutRequest::new().width(86.0).height(34.0),
             move || {
-                redo_editor.lock().unwrap().redo();
+                redo_editor.redo();
             },
         ))
         .child(button_child(
@@ -759,7 +759,7 @@ fn page_editor(state: Arc<AppState>) -> Stack {
             "Reset sample",
             LayoutRequest::new().width(118.0).height(34.0),
             move || {
-                reset_editor.lock().unwrap().set_text(crate::state::SAMPLE);
+                reset_editor.set_text(crate::state::SAMPLE);
             },
         ));
 

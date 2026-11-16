@@ -2,12 +2,10 @@
 //! Application state that outlives a page rebuild.
 //!
 //! `SyncBaseSignal` (not the `Rc`-based `RwSignal`) is the one that crosses
-//! `Child::new`'s `Send + Sync` builder boundary; the editor is behind a
-//! `Mutex` for the same reason.
+//! `Child::new`'s `Send + Sync` builder boundary; the unified `TextEditor`
+//! shares one document through `Arc` internals, so it crosses it too.
 
-use std::sync::{Arc, Mutex};
-
-use floom_editor::EditorWidget;
+use floom_editor::{TextEditor, text_editor};
 use floom_signal::SyncBaseSignal;
 
 use crate::routes::AppRoute;
@@ -35,8 +33,8 @@ pub struct AppState {
     pub kit_checked: SyncBaseSignal<bool>,
     pub route: SyncBaseSignal<u8>,
     /// The editor outlives any single page mount, so its text and selection
-    /// survive navigating away and back.
-    pub editor: Mutex<Arc<Mutex<EditorWidget>>>,
+    /// survive navigating away and back. Clones share one document.
+    pub editor: TextEditor,
 }
 
 impl AppState {
@@ -49,14 +47,12 @@ impl AppState {
             kit_clicks: SyncBaseSignal::new(0),
             kit_checked: SyncBaseSignal::new(true),
             route: SyncBaseSignal::new(AppRoute::Home.id() as u8),
-            editor: Mutex::new(Arc::new(Mutex::new(
-                EditorWidget::from_text(SAMPLE).autofocus(true),
-            ))),
+            editor: text_editor(SAMPLE).autofocus(true),
         }
     }
 
-    pub fn editor(&self) -> Arc<Mutex<EditorWidget>> {
-        self.editor.lock().unwrap().clone()
+    pub fn editor(&self) -> TextEditor {
+        self.editor.clone()
     }
 }
 

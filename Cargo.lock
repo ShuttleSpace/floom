@@ -928,6 +928,7 @@ dependencies = [
  "floom-app",
  "floom-core",
  "floom-devtools",
+ "floom-editor 0.2.0",
  "floom-hot-reload",
  "floom-layout",
  "floom-platform",
@@ -1115,6 +1116,24 @@ dependencies = [
  "floom-types",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "floom-editor"
+version = "0.1.0"
+dependencies = [
+ "bitflags 2.11.0",
+ "floom-core",
+ "floom-text",
+ "floom-types",
+ "floom-widgets",
+ "itertools 0.14.0",
+ "lapce-xi-rope",
+ "memchr",
+ "serde",
+ "strum",
+ "strum_macros",
+ "ui-events",
 ]
 
 [[package]]
@@ -1448,7 +1467,7 @@ version = "0.2.0"
 dependencies = [
  "floom",
  "floom-core-theme",
- "floom-editor",
+ "floom-editor 0.1.0",
  "floom-material",
  "floom-signal",
  "floom-testkit",

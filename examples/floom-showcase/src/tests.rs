@@ -3,7 +3,9 @@
 //! interaction.
 //!
 //! These are GUI-adjacent tests run headless through `floom_testkit` — they
-//! assert behaviour, not pixels.
+//! assert behaviour, not pixels. The editor assertions go through the unified
+//! `TextEditor` API (`text`, `state`, `document`, `set_text`, `undo`, `redo`),
+//! never through a widget's private fields.
 
 use std::sync::Arc;
 
@@ -29,9 +31,9 @@ fn the_editor_page_takes_the_keyboard_on_mount() {
     let nav = app.node(Selector::label("Editor"));
     app.tap(nav);
 
-    let before = state.editor().lock().unwrap().text();
+    let before = state.editor().text();
     app.commit("x");
-    let after = state.editor().lock().unwrap().text();
+    let after = state.editor().text();
     assert_ne!(
         before, after,
         "typing after navigating to /editor did not reach the document"
@@ -46,12 +48,78 @@ fn returning_to_the_editor_page_takes_the_keyboard_again() {
     let mut app = TestApp::unpinned(WINDOW, ShowcaseShell::new(state.clone()));
 
     app.tap(app.node(Selector::label("Editor")));
+    app.commit("y");
+    let typed = state.editor().text();
+
     app.tap(app.node(Selector::label("Home")));
+    // The document is held by the shared editor, not rebuilt with the page.
+    assert_eq!(
+        state.editor().text(),
+        typed,
+        "text changed while navigating away from /editor"
+    );
+
+    app.tap(app.node(Selector::label("Editor")));
+    assert_eq!(
+        state.editor().text(),
+        typed,
+        "text changed while navigating back to /editor"
+    );
+    app.commit("z");
+    assert_ne!(state.editor().text(), typed);
+}
+
+/// The toolbar drives the same unified editor through `undo`, `redo` and
+/// `set_text`, so its buttons edit the document the widget displays.
+#[test]
+fn editor_toolbar_undo_redo_and_reset_work() {
+    let state = Arc::new(AppState::new());
+    let mut app = TestApp::unpinned(WINDOW, ShowcaseShell::new(state.clone()));
     app.tap(app.node(Selector::label("Editor")));
 
-    let before = state.editor().lock().unwrap().text();
-    app.commit("y");
-    assert_ne!(before, state.editor().lock().unwrap().text());
+    let original = state.editor().text();
+    app.commit("x");
+    let typed = state.editor().text();
+    assert_ne!(typed, original, "the keystroke did not reach the document");
+
+    app.tap(app.node(Selector::label("Undo")));
+    assert_eq!(state.editor().text(), original, "Undo did not revert the edit");
+
+    app.tap(app.node(Selector::label("Redo")));
+    assert_eq!(state.editor().text(), typed, "Redo did not restore the edit");
+
+    app.tap(app.node(Selector::label("Reset sample")));
+    assert_eq!(
+        state.editor().text(),
+        crate::state::SAMPLE,
+        "Reset did not restore the sample text"
+    );
+}
+
+/// The public `TextEditor` surface is usable without mounting: state, document
+/// and text are all reachable, and set_text/undo/redo operate on that document.
+#[test]
+fn text_editor_public_api_reads_mutates_and_undoes() {
+    use floom_editor::text_editor;
+
+    let editor = text_editor("hello");
+    assert_eq!(editor.text(), "hello");
+    assert_eq!(editor.document().text().to_string(), "hello");
+
+    let state = editor.state();
+    let generation = state.lock().unwrap().generation;
+
+    editor.set_text("world");
+    assert_eq!(editor.text(), "world");
+    assert!(
+        state.lock().unwrap().generation > generation,
+        "set_text did not bump the shared state's generation"
+    );
+
+    assert!(editor.undo(), "set_text is undoable through the public API");
+    assert_eq!(editor.text(), "hello");
+    assert!(editor.redo(), "redo through the public API");
+    assert_eq!(editor.text(), "world");
 }
 
 /// The devtools panel is mounted as a drawer at startup. While hidden it
@@ -90,10 +158,10 @@ fn the_hidden_devtools_drawer_does_not_eat_editor_clicks() {
         "a press on the editor focused nothing"
     );
 
-    let before = state.editor().lock().unwrap().text();
+    let before = state.editor().text();
     host.dispatch(Event::Key(KeyEvent::down(Key::Char('x'))));
     host.frame();
-    assert_ne!(state.editor().lock().unwrap().text(), before);
+    assert_ne!(state.editor().text(), before);
 }
 
 /// The shell routes push/back through a real host.

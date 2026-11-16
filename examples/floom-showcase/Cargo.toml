@@ -10,7 +10,9 @@ description = "One application over the engine, signals, the ported kits, and th
 floom = { workspace = true, features = ["desktop", "renderer-gpu", "devtools"] }
 floom-widgets = { workspace = true }
 floom-signal = { workspace = true }
-floom-editor = { workspace = true }
+# The merged satellite crate, not the old root crate (Task 6 will retarget the
+# workspace dependency itself).
+floom-editor = { path = "../../crates/ecosystem/floom-editor/floom-editor" }
 
 # Only the ported kits are imported. `crates/ecosystem/floom-ui` is a satellite
 # workspace; the Material kit now ships every component behind a per-component

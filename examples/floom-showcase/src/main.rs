@@ -6,7 +6,7 @@
 //! - `/components` mounts the engine's Tier-0 widgets directly.
 //! - `/signals` drives state through `floom-signal`'s `SyncBaseSignal`.
 //! - `/kits` mounts the ported `floom-ui` material components.
-//! - `/editor` mounts `floom-editor`'s `EditorWidget`.
+//! - `/editor` mounts `floom-editor`'s unified `TextEditor`.
 //! - `/devtools` explains the panel that F12 opens (the entry is
 //!   `run_desktop_with_devtools`, so it is wired for the whole app).
 //!
