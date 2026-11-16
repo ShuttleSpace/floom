@@ -110,7 +110,6 @@ floom-hot-reload = { workspace = true, optional = true }
 floom-accessibility = { workspace = true }
 floom-dsl = { workspace = true }
 floom-editor = { workspace = true }
-floom-editor-core = { workspace = true }
 floom-inspector = { workspace = true }
 floom-native = { workspace = true }
 floom-native-ffi = { workspace = true }

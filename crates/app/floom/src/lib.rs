@@ -92,7 +92,6 @@ pub use floom_signal as signal;
 pub use floom_accessibility as accessibility;
 pub use floom_dsl as dsl;
 pub use floom_editor as editor;
-pub use floom_editor_core as editor_core;
 pub use floom_inspector as inspector;
 pub use floom_native as native;
 pub use floom_native_ffi as native_ffi;

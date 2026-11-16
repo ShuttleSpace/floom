@@ -11,7 +11,6 @@ use floom::signal as _;
 use floom::accessibility as _;
 use floom::dsl as _;
 use floom::editor as _;
-use floom::editor_core as _;
 use floom::inspector as _;
 use floom::native as _;
 use floom::native_ffi as _;

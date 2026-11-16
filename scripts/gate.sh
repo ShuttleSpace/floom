@@ -108,7 +108,7 @@ FLOOM2_PACKAGES=(
   --package=floom-platform-android
   --package=floom-platform-web
   --package=floom-platform-mobile
-  --package=floom-text --package=floom-editor
+  --package=floom-text
   --package=floom-layout --package=floom-style --package=floom-virtual
   --package=floom-native --package=floom-native-ffi
   # No plugins here: they are a separate workspace (`$PLUGIN_WORKSPACE`), and

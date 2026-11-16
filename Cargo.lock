@@ -928,7 +928,7 @@ dependencies = [
  "floom-app",
  "floom-core",
  "floom-devtools",
- "floom-editor 0.2.0",
+ "floom-editor",
  "floom-hot-reload",
  "floom-layout",
  "floom-platform",
@@ -1127,32 +1127,6 @@ dependencies = [
  "floom-text",
  "floom-types",
  "floom-widgets",
- "itertools 0.14.0",
- "lapce-xi-rope",
- "memchr",
- "serde",
- "strum",
- "strum_macros",
- "ui-events",
-]
-
-[[package]]
-name = "floom-editor"
-version = "0.2.0"
-dependencies = [
- "floom-accessibility",
- "floom-core",
- "floom-text",
- "floom-types",
- "floom-widgets",
- "lapce-xi-rope",
-]
-
-[[package]]
-name = "floom-editor-core"
-version = "0.2.0"
-dependencies = [
- "bitflags 2.11.0",
  "itertools 0.14.0",
  "lapce-xi-rope",
  "memchr",
@@ -1467,7 +1441,7 @@ version = "0.2.0"
 dependencies = [
  "floom",
  "floom-core-theme",
- "floom-editor 0.1.0",
+ "floom-editor",
  "floom-material",
  "floom-signal",
  "floom-testkit",

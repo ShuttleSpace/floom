@@ -25,8 +25,7 @@ members = [
   "crates/core/floom-core",
   "crates/devtools/floom-devtools",
   "crates/frontend/floom-dsl",
-  "crates/widgets/floom-editor",
-  "crates/widgets/floom-editor-core",    "crates/devtools/floom-hot-reload",
+  "crates/devtools/floom-hot-reload",
   "crates/devtools/floom-inspector",
   "crates/core/floom-layout",
   "crates/core/floom-signal",
@@ -73,8 +72,7 @@ default-members = [
   "crates/core/floom-core",
   "crates/devtools/floom-devtools",
   "crates/frontend/floom-dsl",
-  "crates/widgets/floom-editor",
-  "crates/widgets/floom-editor-core",    "crates/devtools/floom-hot-reload",
+  "crates/devtools/floom-hot-reload",
   "crates/devtools/floom-inspector",
   "crates/core/floom-layout",
   "crates/core/floom-signal",
@@ -126,8 +124,7 @@ floom-core-theme = { path = "crates/ecosystem/floom-ui/crates/floom-core-theme" 
 floom-cupertino = { path = "crates/ecosystem/floom-ui/crates/floom-cupertino", version = "0.2.0" }
 floom-devtools = { path = "crates/devtools/floom-devtools", version = "0.2.0" }
 floom-dsl = { path = "crates/frontend/floom-dsl", version = "0.2.0" }
-floom-editor = { path = "crates/widgets/floom-editor", version = "0.2.0" }
-floom-editor-core = { path = "crates/widgets/floom-editor-core", version = "0.2.0" }
+floom-editor = { path = "crates/ecosystem/floom-editor/floom-editor", version = "0.1.0" }
 floom-fluent = { path = "crates/ecosystem/floom-ui/crates/floom-fluent", version = "0.2.0" }
 floom-hot-reload = { path = "crates/devtools/floom-hot-reload", version = "0.2.0" }
 floom-inspector = { path = "crates/devtools/floom-inspector", version = "0.2.0" }

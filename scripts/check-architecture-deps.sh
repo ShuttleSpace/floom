@@ -345,12 +345,6 @@ for _names, _level in [
             "floom-plugin-secure-storage",
             "floom-plugin-tray",
             "floom-animation", "floom-focus",
-            "floom-editor",
-            # `floom-editor-core` is the editor's *model* -- a rope buffer, a
-            # cursor, a selection, modes, registers, movement and word motions.
-            # It reaches for nothing inside the workspace, so it sits with the
-            # other model crates and the checker sees no edges at all.
-            "floom-editor-core",
             # The design systems (`floom-theme`, `floom-design`, `floom-material`,
             # `floom-cupertino`, `floom-fluent`) are deliberately absent. They
             # moved to the `floom-ui` workspace, which the root workspace
@@ -385,16 +379,7 @@ for _names, _level in [
 
 # Upward edges that exist, are understood, and are not to be "fixed" blindly.
 # Each entry needs a reason; an entry without one is a bug waiting to happen.
-UPWARD_ALLOW: dict[tuple[str, str], str] = {
-    # `floom-editor` is L5 model + its own widget. The widget side needs
-    # `floom_widgets::primitives::Revision` / `SemanticsHint` / `testkit` and
-    # lives one layer above the widgets as a consequence: the editor model
-    # itself reaches only L1..L3, so the upward edge is the widget wrapper
-    # leaning on the widget layer it renders with.
-    (norm("floom-editor"), norm("floom-widgets")): (
-        "editor's widget wrapper uses floom_widgets::primitives/testkit"
-    ),
-}
+UPWARD_ALLOW: dict[tuple[str, str], str] = {}
 LAYERS = {norm(k): v for k, v in LAYERS.items()}
 UPWARD_ALLOW = {(norm(a), norm(b)): why for (a, b), why in UPWARD_ALLOW.items()}
 

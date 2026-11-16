@@ -49,7 +49,7 @@ jobs:
         --package=floom-types --package=floom-core --package=floom-signal --package=floom-style --package=floom-layout --package=floom-scene --package=floom-runtime-core --package=floom-accessibility
         --package=floom-accuracy --package=floom-animation
         --package=floom-dsl --package=floom-tsx
-        --package=floom-text --package=floom-editor-core --package=floom-editor --package=floom-virtual --package=floom-widgets --package=floom-widgets-data
+        --package=floom-text --package=floom-virtual --package=floom-widgets --package=floom-widgets-data
         --package=floom-native --package=floom-native-ffi
         --package=floom-platform --package=floom-platform-desktop --package=floom-platform-mobile --package=floom-platform-android --package=floom-platform-tui --package=floom-platform-web --package=floom-ui-events-winit
         --package=floom-renderer --package=floom-renderer-software --package=floom-renderer-vello --package=floom-renderer-tui --package=floom-renderer-web
