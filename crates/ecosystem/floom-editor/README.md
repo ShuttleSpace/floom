@@ -1,6 +1,6 @@
 # floom-editor
 
-Official **satellite** library for Floom code and text editor views (`floom-editor-core` + `floom-editor`).
+Official **satellite** library for Floom code and text editor views. One crate, `floom-editor`, provides the `text_editor()` / `TextEditor` API and its framework-free model under `floom_editor::core`.
 
 It lives in the floom monorepo under [`crates/ecosystem/`](..), as a **nested workspace**:
 it is listed in the root `Cargo.toml`'s `exclude`, so `cargo test --workspace` at the
@@ -24,13 +24,12 @@ The editor is a Floom 2.0 `Widget`: it is mounted into a 2.0 host like any
 other, and it paints the document, the caret, the selection and the gutter
 itself. It soft-wraps long lines, it takes more than one caret, and it can
 draw the whitespace and the indent guides. The port's scope — and the parts
-of the v1 editor it does *not* reproduce — are in
-[`docs/porting-floem-editor-to-2.0.md`](../floem-archive/docs/porting-floem-editor-to-2.0.md)
-and in the crate's own module note.
+of the v1 editor it does *not* reproduce — are described in the crate's own
+module note.
 
 The *model* — the rope buffer, the cursor, the selection, the word motions —
-is `floom-editor-core`, which now lives in the root workspace at
-`crates/floom-editor-core` and is framework-free.
+lives in this same crate as `floom_editor::core` and is framework-free. There
+is no separate core package to depend on.
 
 ## The examples
 

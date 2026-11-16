@@ -12,7 +12,7 @@ by running cargo from its own directory.
 | Satellite | Role | Depends on |
 |-----------|------|------------|
 | [`crates/ecosystem/floom-ui`](../ecosystem/floom-ui) | Material / Cupertino / Fluent kit (`floom-elements`), ~350 crates | `floom` public API (path, `[patch]`ed to this checkout) |
-| [`crates/ecosystem/floom-editor`](../ecosystem/floom-editor) | Code/text editor views + `floom-editor-core` | `floom` public API (path) |
+| [`crates/ecosystem/floom-editor`](../ecosystem/floom-editor) | Code/text editor views; `floom_editor::core` model + `TextEditor` API | `floom` public API (path) |
 | [`crates/ecosystem/flameo`](../ecosystem/flameo) | Demo application exercising the floom-ui kit | `floom` + the floom-ui crates |
 
 `floom-ui` was spelled **`flome-ui`** (a typo) until it moved in here.
@@ -23,12 +23,11 @@ by running cargo from its own directory.
 > dependency on `floom` would resolve `floem-winit-core` / `dpi` from git while
 > the rest of the graph uses the vendored copies — two instances of one type.
 >
-> Two packages are named `floom-editor`: the 2.0 crate at `crates/widgets/floom-editor`
-> and the satellite at `crates/ecosystem/floom-editor/floom-editor`. They never share a
-> resolve graph as *members* (the satellite is excluded), but
-> `examples/{custom_keymap,widget-gallery}` pull the satellite in by path, so
-> the root graph does contain both. `scripts/check-architecture-deps.sh`
-> resolves nodes among `workspace_members` first for exactly this reason.
+> There is now **one** `floom-editor` package: the satellite at
+> `crates/ecosystem/floom-editor/floom-editor`. It owns the editor model as
+> `floom_editor::core` and exposes the `text_editor()` / `TextEditor` view API,
+> so no second same-named package shares the root resolve graph. The showcase
+> pulls this one crate in by path.
 
 ## Compatibility matrix
 

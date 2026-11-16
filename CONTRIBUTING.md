@@ -25,7 +25,10 @@ suite.
 
 `crates/vendor/` and `crates/ecosystem/` are listed in the workspace `exclude`:
 each is its own nested workspace, so `cargo test --workspace` stays focused on
-the core.
+the core. The `floom-editor` satellite is a single crate at
+`crates/ecosystem/floom-editor/floom-editor` (model as `floom_editor::core`,
+view as `text_editor()` / `TextEditor`); test it from that nested workspace with
+`cargo test --manifest-path crates/ecosystem/floom-editor/Cargo.toml`.
 
 Two naming rules are deliberate exceptions, because they name artifacts we do not
 own and Cargo matches them against an external source:

@@ -52,9 +52,11 @@ shell widget; `floom-navigation` is widget-free, so the shell re-declares its
 subtree when `Router::current` changes and the host diffs it by `ChildKey`.
 
 The state that must outlive a page lives in `AppState`: `SyncBaseSignal`s for the
-counters and toggles, and an `Arc<Mutex<EditorWidget>>` for the document. The
-`Sync` variants are the ones a `Child::new` builder (`Fn + Send + Sync`) can
-capture; an `Rc`-based `RwSignal` cannot cross that boundary.
+counters and toggles, and a `TextEditor` (from the `floom-editor` satellite) for
+the document. The `Sync` variants are the ones a `Child::new` builder
+(`Fn + Send + Sync`) can capture; an `Rc`-based `RwSignal` cannot cross that
+boundary. `TextEditor` can — its clones share one document through `Arc`
+internals.
 
 ```sh
 cargo run -p floom-showcase            # the window

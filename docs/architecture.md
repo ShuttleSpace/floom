@@ -29,7 +29,7 @@ Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples) and
 | `floom-plugin-webview` | L5 | a plugin whose capability is a native web view, with one native half per platform (Objective-C/AppKit, WKWebView, WebView2, WebKitGTK) |
 | `floom-plugin-camera`, `floom-plugin-battery`, `floom-plugin-connectivity`, `floom-plugin-device-info`, `floom-plugin-local-auth`, `floom-plugin-location`, `floom-plugin-notifications`, `floom-plugin-sensors`, `floom-plugin-share`, `floom-plugin-vibration`, `floom-plugin-package-info`, `floom-plugin-paths`, `floom-plugin-open-url`, `floom-plugin-file-dialog`, `floom-plugin-prefs`, `floom-plugin-wakelock`, `floom-plugin-network-info`, `floom-plugin-background-work`, `floom-plugin-mdns`, `floom-plugin-secure-storage`, `floom-plugin-tray` | L5 | the capability plugins: one capability each, opt-in by dependency. They live in `crates/ecosystem/plugins/`, their own workspace: the SDK ships none of them and does not build them |
 | `floom-platform-mobile` | L4 | mobile OS capabilities (camera, location, sensors, vibration) behind one ABI, with `jni` / `objc2` backends |
-| `floom-animation`, `floom-focus`, `floom-editor`, `floom-editor-core` | L5 | framework services, widget-free by design |
+| `floom-animation`, `floom-focus` | L5 | framework services, widget-free by design |
 | _(design systems)_ | — | `floom-theme`, `floom-design`, `floom-material`, `floom-cupertino`, `floom-fluent` live in the `floom-ui` workspace, which the root workspace `exclude`s. Each DS ships one crate with a per-component feature (`floom-harmony` was removed 2026-11-15). They emit `floom-style` property values rather than paint calls, and their own dependency graph is checked by that workspace's build, not by `scripts/check-architecture-deps.sh`. |
 | `floom-widgets`, `floom-widgets-data` | L6 | widgets: Tier-0 primitives, controls, composites, data widgets |
 | `floom-app` | L7 | the headless app shell: `WidgetHost`, `AppRunner`, input routing, semantics publication |
@@ -47,6 +47,10 @@ Two crates sit outside the ladder on purpose:
   `crates/ecosystem/plugins/`: its members *are* in this table at L5, and the gate
   loads that workspace's metadata as a second source so their edges are checked
   whether or not an example happens to depend on them.
+
+The editor is a satellite rather than an L5 member: the single `floom-editor`
+package at `crates/ecosystem/floom-editor/floom-editor` owns its model as
+`floom_editor::core` and exposes the `text_editor()` / `TextEditor` API.
 
 ## Dependency diagram
 

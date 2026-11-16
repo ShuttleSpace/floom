@@ -62,6 +62,9 @@ repository under `crates/ecosystem/`, but each is its **own workspace** — the 
   reaching `floom` by path must **re-declare** the vendored `[patch]`
   (`floem-winit`, `floem-winit-core`, `dpi` / `floom`). Skipping this silently
   produces two instances of a type across the boundary.
+- The `floom-editor` satellite is one self-contained crate at
+  `crates/ecosystem/floom-editor/floom-editor`: it owns the editor model as
+  `floom_editor::core` and exposes the `text_editor()` / `TextEditor` API.
 - Import history is preserved with `git subtree add` where the satellite had real
   history (`floom-ui`, 17 commits); single-commit scaffolds were imported flat.
 
