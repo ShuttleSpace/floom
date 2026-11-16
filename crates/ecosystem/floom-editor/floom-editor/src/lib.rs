@@ -54,6 +54,7 @@ pub mod document;
 pub mod editor;
 pub mod style;
 pub mod styling;
+pub mod core;
 pub mod text_editor;
 
 pub use document::{Document, TextDocument};

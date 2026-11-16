@@ -16,6 +16,12 @@ floom-types.workspace = true
 floom-widgets.workspace = true
 lapce-xi-rope = "0.4.0"
 serde = { version = "1.0", optional = true }
+itertools = "0.14.0"
+bitflags = "2.4.2"
+memchr = "2.7.1"
+strum = { version = "0.28", features = ["derive"] }
+strum_macros = "0.28"
+ui-events = { version = "0.3", features = ["kurbo"] }
 
 [dev-dependencies]
 # The paint-level tests mount the editor in a host and read the scene, which

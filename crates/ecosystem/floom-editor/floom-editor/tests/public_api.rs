@@ -17,3 +17,12 @@ fn editor_type_is_exported() {
         "floom-editor must export editor::Editor, got {name}"
     );
 }
+
+#[test]
+fn core_model_is_exposed() {
+    let _ = core::mem::size_of::<floom_editor::core::buffer::Buffer>();
+    let _ = core::mem::size_of::<floom_editor::core::selection::Selection>();
+    let _: fn() = || {
+        let _ = floom_editor::core::xi_rope::Rope::from("");
+    };
+}
