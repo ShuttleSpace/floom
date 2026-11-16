@@ -95,8 +95,8 @@ impl SelRegion {
     /// **Example:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::SelRegion;
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::SelRegion;
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let  region = SelRegion::new(1, 10, CursorAffinity::Backward, None);
     /// assert_eq!(region.min(), region.start);
     /// let  region = SelRegion::new(42, 1, CursorAffinity::Backward, None);
@@ -111,8 +111,8 @@ impl SelRegion {
     /// **Example:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::SelRegion;
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::SelRegion;
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let  region = SelRegion::new(1, 10, CursorAffinity::Backward, None);
     /// assert_eq!(region.max(), region.end);
     /// let  region = SelRegion::new(42, 1, CursorAffinity::Backward, None);
@@ -127,8 +127,8 @@ impl SelRegion {
     /// **Example:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::SelRegion;
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::SelRegion;
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let  region = SelRegion::new(1, 1, CursorAffinity::Backward, None);
     /// assert!(region.is_caret());
     /// ```
@@ -141,8 +141,8 @@ impl SelRegion {
     /// **Example:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::SelRegion;
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::SelRegion;
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let  region = SelRegion::new(1, 2, CursorAffinity::Backward, None);
     /// let  other = SelRegion::new(3, 4, CursorAffinity::Backward, None);
     /// assert_eq!(region.merge_with(other), SelRegion::new(1, 4, CursorAffinity::Backward, None));
@@ -220,8 +220,8 @@ impl Selection {
     /// **Example:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::Selection;
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::Selection;
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let  selection = Selection::region(0, 2, CursorAffinity::Backward);
     /// assert!(selection.contains(0));
     /// assert!(selection.contains(1));
@@ -253,8 +253,8 @@ impl Selection {
     /// **Examples:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::{Selection, SelRegion};
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::{Selection, SelRegion};
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let mut selection = Selection::new();
     /// selection.add_region(SelRegion::new(1, 3, CursorAffinity::Backward, None));
     /// selection.add_region(SelRegion::new(6, 12, CursorAffinity::Backward, None));
@@ -330,8 +330,8 @@ impl Selection {
     /// **Example:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::{Selection, SelRegion};
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::{Selection, SelRegion};
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let mut selection = Selection::new();
     /// selection.add_region(SelRegion::caret(4, CursorAffinity::Backward));
     /// selection.add_region(SelRegion::new(0, 12, CursorAffinity::Backward, None));
@@ -353,8 +353,8 @@ impl Selection {
     /// **Example:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::{Selection, SelRegion};
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::{Selection, SelRegion};
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let mut selection = Selection::new();
     /// selection.add_region(SelRegion::caret(4, CursorAffinity::Backward));
     /// selection.add_region(SelRegion::new(0, 12, CursorAffinity::Backward, None));
@@ -375,8 +375,8 @@ impl Selection {
     /// **Example:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::{Selection, SelRegion};
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::{Selection, SelRegion};
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let mut selection = Selection::new();
     /// selection.add_region(SelRegion::new(0, 3, CursorAffinity::Backward, None));
     /// selection.add_region(SelRegion::new(3, 6, CursorAffinity::Backward, None));
@@ -403,8 +403,8 @@ impl Selection {
     /// **Example:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::{Selection, SelRegion};
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::{Selection, SelRegion};
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let mut selection = Selection::new();
     /// selection.add_region(SelRegion::new(0, 3, CursorAffinity::Backward, None));
     /// selection.add_region(SelRegion::new(3, 6, CursorAffinity::Backward, None));
@@ -430,8 +430,8 @@ impl Selection {
     /// **Example:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::{Selection, SelRegion};
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::{Selection, SelRegion};
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let mut selection = Selection::new();
     /// selection.add_region(SelRegion::new(0, 3, CursorAffinity::Backward, None));
     /// selection.add_region(SelRegion::new(3, 6, CursorAffinity::Backward, None));
@@ -472,8 +472,8 @@ impl Selection {
     /// **Example:**
     ///
     /// ```rust
-    /// # use floom_editor_core::selection::{Selection, SelRegion};
-    /// # use floom_editor_core::cursor::CursorAffinity;
+    /// # use floom_editor::core::selection::{Selection, SelRegion};
+    /// # use floom_editor::core::cursor::CursorAffinity;
     /// let mut selection = Selection::new();
     /// // Overlapping
     /// selection.add_region(SelRegion::new(0, 4, CursorAffinity::Backward, None));

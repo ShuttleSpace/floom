@@ -61,8 +61,8 @@ pub trait RopeText {
     /// This should be preferred over simply adding the column to the line offset, because it
     /// validates better and avoids returning newlines.
     /// ```rust
-    /// # use floom_editor_core::xi_rope::Rope;
-    /// # use floom_editor_core::buffer::rope_text::{RopeText, RopeTextRef};
+    /// # use floom_editor::core::xi_rope::Rope;
+    /// # use floom_editor::core::buffer::rope_text::{RopeText, RopeTextRef};
     /// let text = Rope::from("hello\nworld");
     /// let text = RopeTextRef::new(&text);
     /// assert_eq!(text.offset_of_line_col(0, 0), 0);  // "h"
@@ -111,8 +111,8 @@ pub trait RopeText {
     /// If the line is out of bounds, then the last offset (the len) is returned.
     ///
     /// ```rust
-    /// # use floom_editor_core::xi_rope::Rope;
-    /// # use floom_editor_core::buffer::rope_text::{RopeText, RopeTextRef};
+    /// # use floom_editor::core::xi_rope::Rope;
+    /// # use floom_editor::core::buffer::rope_text::{RopeText, RopeTextRef};
     /// let text = Rope::from("hello\nworld");
     /// let text = RopeTextRef::new(&text);
     /// assert_eq!(text.line_end_offset(0, false), 4);  // "hell|o"

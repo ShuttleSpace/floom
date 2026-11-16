@@ -23,7 +23,7 @@ use core::{borrow::Borrow, cmp::Ordering, fmt, hash, ops::Deref, str};
 /// # Examples
 ///
 /// ```
-/// use floom_editor_core::char_buffer::CharBuffer;
+/// use floom_editor::core::char_buffer::CharBuffer;
 ///
 /// let word = "goodbye";
 ///
@@ -67,7 +67,7 @@ impl CharBuffer {
     /// # Examples
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let char_buf = CharBuffer::new('a');
     /// assert_eq!("a", &char_buf);
@@ -91,7 +91,7 @@ impl CharBuffer {
     /// # Examples
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let char_buf = CharBuffer::from('r');
     /// assert_eq!("r", char_buf.as_str());
@@ -108,7 +108,7 @@ impl CharBuffer {
     /// # Examples
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let f = CharBuffer::new('f');
     /// assert_eq!(f.len(), 1);
@@ -127,7 +127,7 @@ impl CharBuffer {
     /// # Examples
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let c = CharBuffer::new('\0');
     /// assert!(!c.is_empty());
@@ -148,7 +148,7 @@ impl From<char> for CharBuffer {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let char_buf = CharBuffer::from('a');
     /// assert_eq!("a", &char_buf);
@@ -172,7 +172,7 @@ impl From<&char> for CharBuffer {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let string = "Some string";
     /// let char_vec = string.chars().collect::<Vec<_>>();
@@ -200,7 +200,7 @@ impl From<&mut char> for CharBuffer {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let string = "Some string";
     /// let mut char_vec = string.chars().collect::<Vec<_>>();
@@ -236,7 +236,7 @@ impl From<CharBuffer> for char {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let char_buf = CharBuffer::from('a');
     /// let char: char = char_buf.into();
@@ -274,7 +274,7 @@ impl From<&CharBuffer> for char {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let char_buf = CharBuffer::from('a');
     /// let char: char = char::from(&char_buf);
@@ -304,7 +304,7 @@ impl From<&CharBuffer> for CharBuffer {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let char_buf1 = CharBuffer::from('a');
     /// let char_buf2: CharBuffer = CharBuffer::from(&char_buf1);
@@ -328,7 +328,7 @@ impl From<CharBuffer> for String {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let c: CharBuffer = CharBuffer::from('a');
     /// let s: String = String::from(c);
@@ -346,7 +346,7 @@ impl From<&CharBuffer> for String {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let c: CharBuffer = CharBuffer::from('a');
     /// let s: String = String::from(&c);
@@ -364,7 +364,7 @@ impl<'a> From<&'a CharBuffer> for &'a str {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let c: CharBuffer = CharBuffer::from('a');
     /// let s: &str = From::from(&c);
@@ -382,7 +382,7 @@ impl<'a> From<&'a CharBuffer> for Cow<'a, str> {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     /// use std::borrow::Cow;
     ///
     /// let c: CharBuffer = CharBuffer::from('a');
@@ -402,7 +402,7 @@ impl From<CharBuffer> for Cow<'_, CharBuffer> {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     /// use std::borrow::Cow;
     ///
     /// let c: CharBuffer = CharBuffer::from('a');
@@ -445,7 +445,7 @@ impl_from_to_ptr! {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     /// use std::sync::Arc;
     ///
     /// let c: CharBuffer = CharBuffer::from('a');
@@ -465,7 +465,7 @@ impl_from_to_ptr! {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     ///
     /// let c: CharBuffer = CharBuffer::from('a');
     /// let s1: Box<str> = From::from(&c);
@@ -484,7 +484,7 @@ impl_from_to_ptr! {
     /// # Example
     ///
     /// ```
-    /// use floom_editor_core::char_buffer::CharBuffer;
+    /// use floom_editor::core::char_buffer::CharBuffer;
     /// use std::rc::Rc;
     ///
     /// let c: CharBuffer = CharBuffer::from('a');
