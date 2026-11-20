@@ -234,6 +234,11 @@ mod tests {
 
     /// A store name no other run — or user — can collide with. The counter is
     /// what makes it unique within a process; the nanosecond stamp across runs.
+    ///
+    /// Only the Apple arm's tests need it (a Keychain item is global); on a host
+    /// without that arm nothing calls it, which is not dead code but a helper
+    /// for a platform this build does not have.
+    #[cfg(target_vendor = "apple")]
     pub(super) fn unique_store_name() -> String {
         use std::sync::atomic::{AtomicU64, Ordering};
         static NEXT: AtomicU64 = AtomicU64::new(0);
