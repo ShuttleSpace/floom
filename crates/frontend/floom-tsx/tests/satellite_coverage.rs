@@ -40,6 +40,10 @@ fn satellite_components() -> Vec<String> {
         .filter_map(|entry| {
             let name = entry.ok()?.file_name().into_string().ok()?;
             let rest = name.strip_suffix(".rs")?.to_string();
+            // `mod.rs` is the module list, not a component.
+            if rest == "mod" {
+                return None;
+            }
             if std::path::Path::new(&root.join(&name)).is_file() {
                 Some(rest)
             } else {
@@ -153,6 +157,7 @@ const COVERAGE: &[(&str, Option<&str>)] = &[
     ("tabs", Some("tabs")),
     ("text", Some("text")),
     ("text-field", Some("text_field")),
+    ("text_field", Some("text_field")),
     ("textarea", Some("text_field")),
     ("time_picker", Some("time_picker")),
     ("timeline", Some("list")),
@@ -183,7 +188,11 @@ fn every_satellite_component_is_accounted_for() {
 
     let mut missing = Vec::new();
     for component in &components {
-        let covered = COVERAGE.iter().any(|(name, _)| name == component)
+        // The table spells a hyphenated component `radio-group`; a module is
+        // `radio_group`. The set is what matters, so one spelling is compared.
+        let covered = COVERAGE
+            .iter()
+            .any(|(name, _)| name.replace('-', "_") == *component)
             || NOT_NODES.contains(&component.as_str());
         if !covered {
             missing.push(component.clone());
