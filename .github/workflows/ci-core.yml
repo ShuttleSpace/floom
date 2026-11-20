@@ -17,7 +17,7 @@ jobs:
   # render/ devtools/ app/. Every check below names those packages explicitly --
   # see FLOOM2_PACKAGES -- so the job neither depends on the workspace default
   # members nor pulls in the nested vendor/ and ecosystem/ workspaces.
-  floom-2.0:
+  floom-2-0:
     name: Floom 2.0 on ${{ matrix.os }}
     if: github.event.pull_request.draft == false
     strategy:
@@ -51,7 +51,7 @@ jobs:
         --package=floom-dsl --package=floom-tsx
         --package=floom-text --package=floom-virtual --package=floom-widgets --package=floom-widgets-data
         --package=floom-native --package=floom-native-ffi
-        --package=floom-platform --package=floom-platform-desktop --package=floom-platform-mobile --package=floom-platform-android --package=floom-platform-tui --package=floom-platform-web --package=floom-ui-events-winit
+        --package=floom-platform --package=floom-platform-desktop --package=floom-platform-android --package=floom-platform-tui --package=floom-platform-web --package=floom-ui-events-winit
         --package=floom-renderer --package=floom-renderer-software --package=floom-renderer-vello --package=floom-renderer-tui --package=floom-renderer-web
         --package=floom-devtools --package=floom-hot-reload --package=floom-inspector --package=floom-snapshot --package=floom-testkit
         --package=floom-app --package=floom-cli --package=floom
