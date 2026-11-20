@@ -34,8 +34,9 @@ mod macos {
     //! cargo run -p floom-plugin-webview --example native_view
     //! ```
     //!
-    //! The window **is** shown, and it stays up for a few seconds so the web view
-    //! can be seen. The page it loads is a `data:` URL, so the example still works
+    //! The window **is** shown, and it stays up until you close it, so the web
+    //! view can be seen. Pass `--self-check` (CI does) to exit as soon as the
+    //! chain has been proved instead of waiting for a human. The page it loads is a `data:` URL, so the example still works
     //! on a machine with no network: what is being demonstrated is that a real
     //! `WKWebView` was created, placed and painted, not that a site answered.
     //!
@@ -287,6 +288,10 @@ mod macos {
             "\nthe native half did all of it: a real web view created, placed, loaded, and destroyed,"
         );
         println!("and a kind it cannot build refused with a reason that names it.");
+        if std::env::args().any(|a| a == "--self-check") {
+            println!("self-check asked for it: exiting without opening the run loop.");
+            return;
+        }
         println!("the window stays up — close it to quit.");
 
         // Drive the window with the real Cocoa run loop. A manual `runUntilDate` loop

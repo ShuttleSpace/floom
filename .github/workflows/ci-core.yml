@@ -112,10 +112,12 @@ jobs:
       # covered by the test suite on every platform.
       - name: Run the native-view example
         if: matrix.os == 'macos-latest'
+        # `--self-check` exits once the chain is proved; without it the example
+        # keeps its window up for a human, and the job waits forever.
         run: >
           cargo run
           --manifest-path crates/ecosystem/plugins/Cargo.toml
-          -p floom-plugin-webview --example native_view
+          -p floom-plugin-webview --example native_view -- --self-check
 
   build:
     name: Rust on ${{ matrix.os }}
