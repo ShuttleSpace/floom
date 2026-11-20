@@ -40,6 +40,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # The webview plugin's Linux half compiles one C file against GTK3 +
+      # WebKit2GTK 4.1; without the headers the build stops at `gtk/gtk.h`.
+      - name: Install GTK + WebKit headers on Ubuntu
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+
       - name: Update toolchain & add rustfmt
         run: |
           rustup update --no-self-update

@@ -92,18 +92,26 @@ fn main() {
                 .join("floom_webview.c");
             println!("cargo:rerun-if-changed={}", source.display());
 
-            cc::Build::new()
+            let mut build = cc::Build::new();
+            build
                 .file(&source)
                 .include(&common)
                 .include(&out_dir)
-                .warnings(true)
-                .compile("floom_webview");
+                .warnings(true);
 
-            // GTK3 + WebKitGTK are what the Linux half reaches. The exact
-            // pkg-config spelling is its own step: `system-deps` or a
-            // `pkg-config` build-dependency resolves the right `-l` flags per
-            // distro, and until that lands these are the two desktop distro
-            // spellings most hosts have.
+            // GTK3 + WebKit2GTK 4.1 are what the Linux half reaches. Their
+            // headers live in a versioned include dir
+            // (`/usr/include/webkitgtk-4.1`), which a bare `cc` does not
+            // search, so pkg-config supplies both the include path and the two
+            // `-l` flags. A host without them gets one sentence naming the
+            // packages, not a wall of missing-header errors.
+            for pkg in ["gtk+-3.0", "webkit2gtk-4.1"] {
+                for dir in pkg_config_includes(pkg) {
+                    build.include(dir);
+                }
+            }
+            build.compile("floom_webview");
+
             println!("cargo:rustc-link-lib=dylib=gtk-3");
             println!("cargo:rustc-link-lib=dylib=gdk-3");
             println!("cargo:rustc-link-lib=dylib=webkit2gtk-4.1");
@@ -142,4 +150,30 @@ fn main() {
     }
 
     println!("cargo:rustc-cfg=floom_plugin_native");
+}
+
+/// The include directories `pkg-config --cflags <pkg>` reports.
+///
+/// Only the `-I` entries matter here: `cc` compiles one `.c` and the linker
+/// flags are printed above. A missing package is a build failure with one
+/// readable sentence, which is the most useful thing a build script can say at
+/// that point. Defined on every host because `match` arms are type-checked
+/// everywhere even when only one of them runs; it is only ever *called* for the
+/// Linux target.
+fn pkg_config_includes(pkg: &str) -> Vec<String> {
+    let output = std::process::Command::new("pkg-config")
+        .args(["--cflags", pkg])
+        .output()
+        .unwrap_or_else(|e| {
+            panic!("floom-plugin-webview: `pkg-config --cflags {pkg}` did not run ({e}); install pkg-config to build the Linux half")
+        });
+    if !output.status.success() {
+        panic!(
+            "floom-plugin-webview: {pkg} is not installed -- apt install libgtk-3-dev libwebkit2gtk-4.1-dev (the Linux half needs GTK3 and WebKit2GTK 4.1)"
+        );
+    }
+    String::from_utf8_lossy(&output.stdout)
+        .split_whitespace()
+        .filter_map(|flag| flag.strip_prefix("-I").map(str::to_string))
+        .collect()
 }

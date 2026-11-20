@@ -40,7 +40,10 @@
  */
 
 #include <gtk/gtk.h>
-#include <webkit/webkit.h>
+/* WebKit2GTK 4.1, the GTK3 build: `webkit/webkit.h` is WebKit 6.0's GTK4
+ * header, and everything below howls for GTK3 (`gtk_fixed_put`,
+ * `gtk_window_resize`), so the two cannot be mixed. */
+#include <webkit2/webkit2.h>
 
 #include <stdarg.h>
 #include <stdint.h>
