@@ -9,7 +9,7 @@ use floom_demo::props_src;
 
 /// The button's props table is the button's props struct.
 #[test]
-fn the_button_props_table_matches_the_librarys_button_props() {
+fn the_button_props_table_matches_the_libraries_button_props() {
     let rows = props_src::props_for("button");
     let names: Vec<&str> = rows.iter().map(|row| row.name.as_str()).collect();
     assert_eq!(

@@ -11,7 +11,9 @@
 //!
 //! [`Platform::poll_events`]: floom_platform::Platform::poll_events
 
-use std::io::{Read, Write};
+use std::io::Read;
+#[cfg(unix)]
+use std::io::Write;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::thread;
@@ -185,12 +187,11 @@ impl TerminalGuard {
             let _ = out.write_all(b"\x1b[?1049h\x1b[?25l");
             let _ = out.flush();
             unsafe {
-                // macOS' libc spells the handler argument as `usize`; the rest
-                // of unix uses `sighandler_t` (an `Option<extern "C" fn(i32)>`).
-                #[cfg(target_os = "macos")]
+                // `sighandler_t` is a `usize` on every unix `libc` we build for
+                // (macOS and Linux alike), so the handler goes in as an address
+                // rather than as an `Option<extern "C" fn(i32)>`: Linux rejected
+                // the `Option` form, which only macOS' older spelling accepted.
                 let _ = libc::signal(libc::SIGWINCH, on_winch as *const () as usize);
-                #[cfg(not(target_os = "macos"))]
-                let _ = libc::signal(libc::SIGWINCH, Some(on_winch));
             }
             Ok(Self {
                 engaged: true,
@@ -207,11 +208,10 @@ impl TerminalGuard {
 
 impl Drop for TerminalGuard {
     fn drop(&mut self) {
-        if !self.engaged {
-            return;
-        }
+        // Off unix `engage` never took the terminal over; the `engaged` check
+        // keeps a piped run from emitting restore escapes it never wrote.
         #[cfg(unix)]
-        {
+        if self.engaged {
             // Restore attributes, leave the alternate screen, show the cursor.
             unsafe {
                 libc::tcsetattr(0, libc::TCSANOW, &self.original);

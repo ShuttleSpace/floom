@@ -268,7 +268,10 @@ impl NativeParent {
     /// Wrap a view the caller has already retained.
     ///
     /// `pub(crate)` in effect: the platform crate is the only thing that has a
-    /// window handle to get one from.
+    /// window handle to get one from — and it only has one behind the `winit`
+    /// feature, which is why this constructor is gated the same way (clippy on
+    /// macOS otherwise calls it dead in a default-feature build).
+    #[cfg(feature = "winit")]
     pub(crate) fn from_retained(view: Retained<NSView>) -> Self {
         Self(view)
     }

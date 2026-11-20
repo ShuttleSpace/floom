@@ -39,6 +39,7 @@
 | S1.5 | Android：a11y `perform_action` 真实现 + 聚焦元素可见（焦点环） | `gates/android.md` item3/item7 由 `fail`/`partial` 转 `pass` | 设备上 TalkBack 能点击；截图见焦点环 |
 | S1.6 | 桌面：剪贴板非 macOS 实现 + AT-SPI/UIA 桥 + `file-picker` trait | `gates/linux.md`/`windows.md` 首项转 `pass` | 三平台 `cargo test -p floom-platform-desktop` + 手工复制粘贴 |
 | S1.7 | 平台状态表改真：把达标的 target 从 `device-gated` 改 `tested` | ≥3 target `tested` 含 ≥1 移动端（G1 达成） | `grep -c "tested" docs/release-policy.md`；`gates/*.md` 无 `fail` |
+| S1.8 | **Windows 文本半像素换行**（CI 首次真跑发现）：`a_label_that_fits_on_one_line_paints_on_one_line` 在 Windows 上实测 1.1499 行——同一字符串在 Segoe UI 下量得够宽，量/画对不齐的旧缺陷在 Windows 上仍在 | 该测试去掉 `cfg_attr(ignore)` 后在 Windows runner 上绿；文本测量改用 fixture 字体而非系统字体 | `gh run view <id> --job <windows 2.0 job>` 里该测试为 `ok` |
 
 ### S2 契约与门禁（锁住已有优势）
 
@@ -86,7 +87,7 @@
 | D.1 | 文档重整（26 篇 / 6,371 行 → 14 篇 / 1,537 行，15 篇归档） | 完成 | `cargo test -p floom --test docs_parity` → 7 passed；`floom-wip/2026-11-20-01-docs-consolidation/{MANIFEST.md,docs-parity.log,link-check.log}` | 2026-11-20 |
 | D.2 | 代码图谱（graphify） | 完成 | `graphify-out/graph.json`：38,933 节点 / 87,985 边 / 1,538 社区；`GRAPH_REPORT.md` | 2026-11-20 |
 | A.0 | 代码审计：OHOS / android+ios binding / 插件 / 组件风格 | 完成 | `docs/platforms.md`（OHOS 7 + iOS 3 + Android 3 条）、`docs/plugins.md` §3、`docs/components.md`（82 处） | 2026-11-20 |
-| S0.1 | CI 真的会跑 | 未开始 | — | — |
+| S0.1 | CI 真的会跑 | 进行中 | https://github.com/ShuttleSpace/floom（public，remote `github`）；4 个 workflow 全部触发；Pages 已启用（docs 绿）。三处既有缺陷已修：非法 job id `floom-2.0`、9 个 job 的格式化/typos/clippy/MSRV 红、`objc2` 在 Linux 上无条件编译。剩余红：见下一条更新 | 2026-11-20 |
 | S0.2 | 门禁口径一致 | 未开始 | — | — |
 | S1.1 | OHOS 后端选型 | 未开始 | 决策点已写在 `docs/platforms.md` §4 | — |
 | S1.2 | OHOS 上屏 5 缺陷 | 未开始 | 缺陷清单：`docs/platforms.md` §4 | — |
@@ -95,6 +96,7 @@
 | S1.5 | Android a11y + 焦点环 | 未开始 | 证据：`docs/gates/android.md` item3/item7 | — |
 | S1.6 | 桌面剪贴板 / a11y / file-picker | 未开始 | `crates/platform/floom-platform-desktop/src/{clipboard,accessibility}.rs` | — |
 | S1.7 | ≥3 target tested（G1） | 未开始 | `docs/release-policy.md` targets 表 | — |
+| S1.8 | Windows 文本半像素换行（新发现） | 未开始 | `crates/app/floom-app/tests/text_weight.rs` 的 `cfg_attr(ignore)` 与理由 | 2026-11-20 |
 | S2.1 | 插件 `abi_version` | 未开始 | 全仓 0 命中 `abi_version` | — |
 | S2.2 | 资源门禁（G12） | 未开始 | `gate.sh --list` 无 resources | — |
 | S2.3 | 组件 token 清零 + 门禁 | 未开始 | 82 处（26/29/27） | — |

@@ -394,6 +394,13 @@ impl EmbeddedPlatform {
     }
 }
 
+impl Default for EmbeddedPlatform {
+    /// Same as [`new`](Self::new): a platform with no window yet.
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Platform for EmbeddedPlatform {
     fn id(&self) -> PlatformId {
         EMBEDDED_PLATFORM_ID
