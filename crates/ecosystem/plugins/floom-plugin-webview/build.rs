@@ -105,16 +105,30 @@ fn main() {
             // search, so pkg-config supplies both the include path and the two
             // `-l` flags. A host without them gets one sentence naming the
             // packages, not a wall of missing-header errors.
-            for pkg in ["gtk+-3.0", "webkit2gtk-4.1"] {
+            // `javascriptcoregtk-4.1` is not a dependency of webkit2gtk-4.1's
+            // own `--libs`, but the file reaches `jsc_value_*` through the
+            // webkit2 header, so it has to be asked for by name.
+            let pkgs = ["gtk+-3.0", "webkit2gtk-4.1", "javascriptcoregtk-4.1"];
+            for pkg in pkgs {
                 for dir in pkg_config_includes(pkg) {
                     build.include(dir);
                 }
             }
             build.compile("floom_webview");
 
-            println!("cargo:rustc-link-lib=dylib=gtk-3");
-            println!("cargo:rustc-link-lib=dylib=gdk-3");
-            println!("cargo:rustc-link-lib=dylib=webkit2gtk-4.1");
+            // One flag per library the three packages bring, rather than a
+            // hand-kept list: the previous list was missing gobject-2.0 and
+            // javascriptcoregtk-4.1, which is a link error, not a warning.
+            let mut seen: Vec<String> = Vec::new();
+            for pkg in pkgs {
+                for lib in pkg_config_libs(pkg) {
+                    if seen.contains(&lib) {
+                        continue;
+                    }
+                    println!("cargo:rustc-link-lib=dylib={lib}");
+                    seen.push(lib);
+                }
+            }
         }
         "windows" => {
             let source = manifest
@@ -175,5 +189,22 @@ fn pkg_config_includes(pkg: &str) -> Vec<String> {
     String::from_utf8_lossy(&output.stdout)
         .split_whitespace()
         .filter_map(|flag| flag.strip_prefix("-I").map(str::to_string))
+        .collect()
+}
+
+/// The library names `pkg-config --libs <pkg>` reports.
+fn pkg_config_libs(pkg: &str) -> Vec<String> {
+    let output = std::process::Command::new("pkg-config")
+        .args(["--libs", pkg])
+        .output()
+        .unwrap_or_else(|e| {
+            panic!("floom-plugin-webview: `pkg-config --libs {pkg}` did not run ({e})")
+        });
+    if !output.status.success() {
+        panic!("floom-plugin-webview: {pkg} is not installed -- see pkg_config_includes above")
+    }
+    String::from_utf8_lossy(&output.stdout)
+        .split_whitespace()
+        .filter_map(|flag| flag.strip_prefix("-l").map(str::to_string))
         .collect()
 }
