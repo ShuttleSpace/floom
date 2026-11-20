@@ -40,7 +40,10 @@
  */
 
 #include <gtk/gtk.h>
-#include <gtk/gtkplug.h>
+/* GtkPlug/GtkSocket: `gtkx.h` is the only header GTK allows them to come
+ * from. Without X11 the type does not exist, and the plug path is compiled
+ * out below -- which leaves the widget path, the one a Wayland host uses. */
+#include <gtk/gtkx.h>
 /* WebKit2GTK 4.1, the GTK3 build: `webkit/webkit.h` is WebKit 6.0's GTK4
  * header, and everything below howls for GTK3 (`gtk_fixed_put`,
  * `gtk_window_resize`), so the two cannot be mixed. */
@@ -66,7 +69,7 @@
  */
 static int g_host_is_widget = 0;
 static GtkWidget *g_host_widget = NULL;
-static GtkPlug *g_host_plug = NULL;
+static GtkWidget *g_host_plug = NULL;
 
 static void webview_handle_js_message(FloomNativeSlot slot, const char *json);
 
@@ -167,7 +170,7 @@ static int looks_like_widget(const void *p) {
 
 /* The scale factor the host places at, for the device-pixel division. */
 static double host_scale(void) {
-    GtkWidget *w = g_host_is_widget ? g_host_widget : GTK_WIDGET(g_host_plug);
+    GtkWidget *w = g_host_is_widget ? g_host_widget : g_host_plug;
     if (w != NULL) {
         int s = gtk_widget_get_scale_factor(w);
         if (s > 0) {
@@ -338,7 +341,7 @@ static int32_t webview_create(void *self, FloomNativeSlot slot, uint32_t kind,
      */
     if (!g_host_is_widget && g_host_plug != NULL) {
         gtk_container_add(GTK_CONTAINER(g_host_plug), view->web);
-        gtk_widget_show(GTK_WIDGET(g_host_plug));
+        gtk_widget_show(g_host_plug);
     }
 
     view->next = g_views;
@@ -438,7 +441,7 @@ static void webview_apply(void *self, FloomNativeSlot slot,
         gtk_widget_set_size_request(view->web, (gint)g_last_w, (gint)g_last_h);
         if (state->visible) {
             gtk_widget_show(view->web);
-            gtk_widget_show(GTK_WIDGET(g_host_plug));
+            gtk_widget_show(g_host_plug);
         } else {
             gtk_widget_hide(view->web);
         }
@@ -491,11 +494,15 @@ static int32_t webview_attach(void *self, const void *host_window) {
         return 0;
     }
     GtkWidget *widget = (GtkWidget *)host_window;
+#ifdef GDK_WINDOWING_X11
     if (GTK_IS_PLUG(widget)) {
-        g_host_plug = GTK_PLUG(widget);
+        g_host_plug = widget;
         g_host_widget = NULL;
         g_host_is_widget = 0;
-    } else {
+        return 0;
+    }
+#endif
+    {
         g_host_widget = widget;
         g_host_plug = NULL;
         g_host_is_widget = 1;

@@ -1605,7 +1605,7 @@ would go red if the claim stopped being true.
 - [x] Renderer ABI verified by Vello + software. — `crates/render/floom-renderer/tests/contract.rs` + `render_handoff.rs`; 21 vello + 19 software inline tests; `scene_render` bench.
 - [x] Platform ABI verified by fake backend + desktop backend. — `crates/platform/floom-platform/src/fake.rs` + `crates/platform/floom-platform/tests/contracts.rs`; `floom-platform-desktop` (33 inline + 6 integration, incl. `lifecycle.rs`, `winit_capabilities.rs`, `accessibility.rs`); plus real-window cases G1-1 / G1-5.
 - [x] Legacy adapter — **WAIVED (Policy A):** no legacy adapter; demos must target the new runtime before P0 claim.
-- [x] Baseline benchmarks and dependency checks pass. — 2178 tests / 0 failed / 72 ignored, architecture gate PASS, and **no budgeted bench exceeds its threshold** under `scripts/check-perf-budgets.sh` (best-of-3 Criterion medians against `../floem-archive/superpowers/benchmarks/floom-2-budget-baseline.json`; see the acceptance run below for why best-of-3 replaced the single run the 2026-09-18 pass used).
+- [x] Baseline benchmarks and dependency checks pass. — 2178 tests / 0 failed / 72 ignored, architecture gate PASS, and **no budgeted bench exceeds its threshold** under `scripts/check-perf-budgets.sh` (best-of-3 Criterion medians against `docs/superpowers/benchmarks/floom-2-budget-baseline.json`; see the acceptance run below for why best-of-3 replaced the single run the 2026-09-18 pass used).
 
 ## P1 Acceptance
 
@@ -1640,7 +1640,7 @@ tier is available to anyone with the time.
 - [x] Docs/examples complete. — `docs/examples.md` (9 golden examples, each with its captured real output, run by `scripts/run-golden-examples.sh`), `docs/architecture.md`, `docs/release-policy.md`; `crates/app/floom/tests/docs_parity.rs` asserts the three pages agree with the tree, so they cannot rot silently.
 - [x] Third-party plugin authoring path documented. — `docs/architecture.md` §"Add a renderer or platform backend" and §"Add a native plugin", and two executable references: `examples/floom-native-plugin` writes a real `NativeViewProvider` end to end, and `crates/platform/floom-platform/tests/contracts.rs` is the conformance suite a new backend must pass.
 - [ ] Compatibility/release policy active. **PARTIAL — written and self-checking, not yet exercised end to end.** `docs/release-policy.md` landed in Phase 30; `crates/app/floom/tests/docs_parity.rs` keeps it honest (every test/bench target it names exists; every example it lists exists and runs). Missing for "active": no release has been cut and measured against the policy, and `docs/gates/*.md` — the platform gates — are still entirely unrun. What 2.0 needs is its own conformance run, which Phase 19 owns.
-- [ ] Performance budgets enforced in CI. **PARTIAL — the budget exists and fails, the CI job does not.** `../floem-archive/superpowers/benchmarks/floom-2-budget-baseline.json` finally carries calibration numbers (best-of-3 Criterion medians for the five hot benches), and `scripts/check-perf-budgets.sh` measures and fails over the 10% threshold — verified able to fail, exit 1. Not wired into CI on purpose: the baseline is one host's numbers (macOS arm64, the only tested target) and a runner-specific failure is worse than no gate. Widening the support matrix in `docs/release-policy.md` is the prerequisite.
+- [ ] Performance budgets enforced in CI. **PARTIAL — the budget exists and fails, the CI job does not.** `docs/superpowers/benchmarks/floom-2-budget-baseline.json` finally carries calibration numbers (best-of-3 Criterion medians for the five hot benches), and `scripts/check-perf-budgets.sh` measures and fails over the 10% threshold — verified able to fail, exit 1. Not wired into CI on purpose: the baseline is one host's numbers (macOS arm64, the only tested target) and a runner-specific failure is worse than no gate. Widening the support matrix in `docs/release-policy.md` is the prerequisite.
 
 ---
 
@@ -1810,7 +1810,7 @@ Phase 27 defect (no resource registry ⇒ two different strings hash identically
 Falsified before trusting it: changing one character of the `Text` fixture turns
 exactly one test red.
 
-**P4, performance budgets.** `../floem-archive/superpowers/benchmarks/floom-2-budget-baseline.json`
+**P4, performance budgets.** `docs/superpowers/benchmarks/floom-2-budget-baseline.json`
 now carries real calibration numbers and `scripts/check-perf-budgets.sh` enforces
 them. Building it produced the most useful measurement of the pass:
 `visible_range/10000` read **444.3 / 404.8 / 408.4 ns** across three consecutive
