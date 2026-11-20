@@ -37,3 +37,11 @@ node_modules/
 
 # graphify knowledge-graph output — generated on demand, not source.
 /graphify-out/
+
+# Agent / editor scratch dirs — local only, never committed.
+.superpowers/
+.workbuddy/
+.jj/
+.pi/
+.claude/
+.agents/
