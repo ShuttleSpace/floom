@@ -14,7 +14,17 @@ use std::path::{Path, PathBuf};
 
 /// Compile `file` from `dir` with the given compiler flags, and link the listed
 /// Apple frameworks (ignored on non-Apple targets).
-fn compile_native(manifest: &Path, dir: &str, file: &str, flags: &[&str], frameworks: &[&str]) {
+/// `pkgs` are pkg-config names whose include directories the compiler needs:
+/// GStreamer's headers live in `/usr/include/gstreamer-1.0`, off the default
+/// search path, so `#include <gst/gst.h>` fails without them.
+fn compile_native(
+    manifest: &Path,
+    dir: &str,
+    file: &str,
+    flags: &[&str],
+    frameworks: &[&str],
+    pkgs: &[&str],
+) {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR is set by cargo"));
 
     // The provider ABI header comes from the crate that owns it, so the two
@@ -41,6 +51,11 @@ fn compile_native(manifest: &Path, dir: &str, file: &str, flags: &[&str], framew
         .file(&source)
         .include(manifest.join("native").join("common"))
         .include(&out_dir);
+    for pkg in pkgs {
+        for dir in pkg_config_includes(pkg) {
+            build.include(dir);
+        }
+    }
     for flag in flags {
         build.flag_if_supported(flag);
     }
@@ -75,6 +90,7 @@ fn main() {
             "floom_camera.m",
             &["-fobjc-arc"],
             &["AppKit", "Foundation", "AVFoundation"],
+            &[],
         ),
         "ios" => compile_native(
             &manifest,
@@ -82,6 +98,7 @@ fn main() {
             "floom_camera.m",
             &["-fobjc-arc"],
             &["UIKit", "Foundation", "AVFoundation"],
+            &[],
         ),
         "windows" => compile_native(
             &manifest,
@@ -89,13 +106,22 @@ fn main() {
             "floom_camera.cpp",
             &["/std:c++17"],
             &[],
+            &[],
         ),
-        "linux" => compile_native(&manifest, "native/linux", "floom_camera.c", &[], &[]),
+        "linux" => compile_native(
+            &manifest,
+            "native/linux",
+            "floom_camera.c",
+            &[],
+            &[],
+            &["gstreamer-1.0", "gstreamer-video-1.0"],
+        ),
         "ohos" => compile_native(
             &manifest,
             "native/ohos",
             "floom_camera.cpp",
             &["-std=c++17"],
+            &[],
             &[],
         ),
         // `android` builds its Java half via Gradle; `web` is pure Rust; `tui`
@@ -107,4 +133,28 @@ fn main() {
             );
         }
     }
+}
+
+/// The include directories `pkg-config --cflags <pkg>` reports.
+///
+/// Defined on every host because `match` arms are type-checked everywhere even
+/// when only one of them runs; it is only ever *called* for the Linux target. A
+/// missing package panics with the apt line that fixes it, which is the most
+/// useful thing a build script can say here.
+fn pkg_config_includes(pkg: &str) -> Vec<String> {
+    let output = std::process::Command::new("pkg-config")
+        .args(["--cflags", pkg])
+        .output()
+        .unwrap_or_else(|e| {
+            panic!("floom-plugin-camera: `pkg-config --cflags {pkg}` did not run ({e}); install pkg-config to build the Linux half")
+        });
+    if !output.status.success() {
+        panic!(
+            "floom-plugin-camera: {pkg} is not installed -- apt install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev (the Linux half captures through GStreamer)"
+        );
+    }
+    String::from_utf8_lossy(&output.stdout)
+        .split_whitespace()
+        .filter_map(|flag| flag.strip_prefix("-I").map(str::to_string))
+        .collect()
 }

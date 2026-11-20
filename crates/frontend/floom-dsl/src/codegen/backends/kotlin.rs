@@ -107,6 +107,11 @@ pub fn generate(schema: &ComponentSchema) -> Vec<super::GeneratedFile> {
     let _ = writeln!(out, "    }}");
     let _ = writeln!(out);
     let _ = writeln!(out, "    external fun destroy()");
+    // The JNI-facing functions are `nativeGet…`/`nativeSet…`, not `get…`/`set…`:
+    // a `val src` already compiles to a JVM `getSrc()`, and an `external fun
+    // getSrc()` alongside it is a platform declaration clash (kotlinc: "the
+    // following declarations have the same JVM signature"). The native side
+    // exports `nativeGetSrc`, which no Kotlin declaration can collide with.
 
     for p in &schema.properties {
         let n = camel_case(&p.name.0);
@@ -121,19 +126,19 @@ pub fn generate(schema: &ComponentSchema) -> Vec<super::GeneratedFile> {
         );
         match p.access {
             Access::Read => {
-                let _ = writeln!(out, "    external fun get{cap}(): {t}");
-                let _ = writeln!(out, "    val {n}: {t} get() = get{cap}()");
+                let _ = writeln!(out, "    external fun nativeGet{cap}(): {t}");
+                let _ = writeln!(out, "    val {n}: {t} get() = nativeGet{cap}()");
             }
             Access::Write => {
-                let _ = writeln!(out, "    external fun set{cap}(value: {t})");
-                let _ = writeln!(out, "    var {n}: {t} set(value) = set{cap}(value)");
+                let _ = writeln!(out, "    external fun nativeSet{cap}(value: {t})");
+                let _ = writeln!(out, "    var {n}: {t} set(value) = nativeSet{cap}(value)");
             }
             Access::ReadWrite => {
-                let _ = writeln!(out, "    external fun get{cap}(): {t}");
-                let _ = writeln!(out, "    external fun set{cap}(value: {t})");
+                let _ = writeln!(out, "    external fun nativeGet{cap}(): {t}");
+                let _ = writeln!(out, "    external fun nativeSet{cap}(value: {t})");
                 let _ = writeln!(
                     out,
-                    "    var {n}: {t}\n        get() = get{cap}()\n        set(value) = set{cap}(value)"
+                    "    var {n}: {t}\n        get() = nativeGet{cap}()\n        set(value) = nativeSet{cap}(value)"
                 );
             }
         }
@@ -190,8 +195,8 @@ mod tests {
         let k = &files[0].contents;
         assert!(k.contains("class VideoPlayer(private val handle: Long) {"));
         assert!(k.contains("const val ABI_MAJOR: Int = 1"));
-        assert!(k.contains("external fun getSrc(): String"));
-        assert!(k.contains("external fun setSrc(value: String)"));
+        assert!(k.contains("external fun nativeGetSrc(): String"));
+        assert!(k.contains("external fun nativeSetSrc(value: String)"));
         assert!(k.contains("external fun seek(ms: ULong)"));
         assert!(k.contains("external fun position(): ULong"));
         assert!(k.contains("var onEnded: (() -> Unit)? = null"));
@@ -202,11 +207,11 @@ mod tests {
     fn wide_schema_type_mapping() {
         let s = fixtures::wide_type_coverage();
         let k = &generate(&s)[0].contents;
-        assert!(k.contains("external fun getPayload(): ByteArray"));
-        assert!(k.contains("external fun getTexture(): Long"));
-        assert!(k.contains("external fun getMaybeCount(): Int?"));
-        assert!(k.contains("external fun getSamples(): List<Float>"));
-        assert!(k.contains("external fun setDevice(value: Long)"));
+        assert!(k.contains("external fun nativeGetPayload(): ByteArray"));
+        assert!(k.contains("external fun nativeGetTexture(): Long"));
+        assert!(k.contains("external fun nativeGetMaybeCount(): Int?"));
+        assert!(k.contains("external fun nativeGetSamples(): List<Float>"));
+        assert!(k.contains("external fun nativeSetDevice(value: Long)"));
         assert!(k.contains("external fun submit(samples: List<Float>): ByteArray"));
     }
 

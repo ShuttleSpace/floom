@@ -55,6 +55,13 @@ fn pixel(host: &WidgetHost, size: Size) -> PixelSnapshot {
 
 const BOX: Size = Size::new(160.0, 40.0);
 
+// Pinned to the reference host's font stack: these goldens record a shaped
+// advance width, and a different default font measures a different number (see
+// the module note). CI runs them on macOS, where they were minted.
+#[cfg_attr(
+    not(target_vendor = "apple"),
+    ignore = "text goldens are pinned to the reference host's font stack"
+)]
 #[test]
 fn text_scene_matches_golden() {
     let host = mounted(BOX, Text::new("Hello, Floom"));
@@ -71,6 +78,13 @@ fn text_scene_matches_golden() {
 /// the scene this file records is now the switch -- the same claim (two
 /// states, a different scene) about the two-state control that is still a
 /// primitive.
+// Pinned to the reference host's font stack: these goldens record a shaped
+// advance width, and a different default font measures a different number (see
+// the module note). CI runs them on macOS, where they were minted.
+#[cfg_attr(
+    not(target_vendor = "apple"),
+    ignore = "text goldens are pinned to the reference host's font stack"
+)]
 #[test]
 fn switch_scene_differs_between_states_and_the_checked_one_is_golden() {
     let off = mounted(BOX, Switch::new("Remember me").on(false));
@@ -86,6 +100,13 @@ fn switch_scene_differs_between_states_and_the_checked_one_is_golden() {
     on_snap.assert(snapshots_dir!(), "widget_switch_checked_scene");
 }
 
+// Pinned to the reference host's font stack: these goldens record a shaped
+// advance width, and a different default font measures a different number (see
+// the module note). CI runs them on macOS, where they were minted.
+#[cfg_attr(
+    not(target_vendor = "apple"),
+    ignore = "text goldens are pinned to the reference host's font stack"
+)]
 #[test]
 fn a_stack_of_three_widgets_is_golden_as_a_composite() {
     let host = mounted(
