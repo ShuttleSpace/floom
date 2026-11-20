@@ -46,7 +46,9 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get -y update
-          sudo apt-get -y install pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
+          # webview: GTK3 + WebKit2GTK 4.1. camera: GStreamer (gst/gst.h, gst/video/video.h).
+          sudo apt-get -y install pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
 
       - name: Update toolchain & add rustfmt
         run: |

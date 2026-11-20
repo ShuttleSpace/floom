@@ -284,6 +284,9 @@ fn the_prelude_does_not_promise_the_composites() {
     let read = |name: &str| {
         std::fs::read_to_string(crate_dir.join(name))
             .unwrap_or_else(|e| panic!("cannot read {name}: {e}"))
+            // A Windows checkout has CRLF. The slicing below looks for `\n}\n`,
+            // which a CRLF file never contains.
+            .replace("\r\n", "\n")
     };
 
     let manifest = read("Cargo.toml");

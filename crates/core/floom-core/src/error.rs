@@ -262,7 +262,9 @@ mod tests {
         assert_eq!(report.context, "save draft");
         assert_eq!(report.severity, Severity::Recoverable);
         assert_eq!(report.sequence, 1);
-        assert!(report.location.contains("lib.rs"), "{}", report.location);
+        // The panic location names where the capture happened, which is this
+        // module -- it was `lib.rs` before the boundary moved here.
+        assert!(report.location.contains("error.rs"), "{}", report.location);
     }
 
     #[test]
