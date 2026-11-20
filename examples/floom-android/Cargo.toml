@@ -28,7 +28,6 @@ floom-core = { workspace = true }
 floom-layout = { workspace = true }
 floom-platform = { workspace = true }
 floom-platform-android = { workspace = true }
-floom-platform-mobile = { workspace = true }
 floom-renderer-vello = { workspace = true, optional = true }
 floom-types = { workspace = true }
 floom-widgets = { workspace = true }

@@ -34,7 +34,7 @@ The split is deliberate: logic lives in `src/` so it stays portable, and each
 platform directory only holds the native host project that embeds the compiled
 binary. Plugin capabilities (camera, sensors, ...) reach the OS through Kotlin /
 Java / Swift host libraries called from Rust over a narrow `extern "C"` ABI — see
-[`docs/platform-and-plugins.md`](../../docs/platform-and-plugins.md).
+[`docs/plugins.md`](../../docs/plugins.md).
 
 ## Options
 

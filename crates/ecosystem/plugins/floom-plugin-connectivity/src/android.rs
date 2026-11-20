@@ -25,7 +25,7 @@
 //! synchronously.
 
 use super::{ConnectionType, ConnectivityStatus};
-use floom_platform_mobile::jni::{self as bridge, JniExt};
+use floom_platform_android::jni::{self as bridge, JniExt};
 use jni::objects::JValue;
 
 /// `ConnectivityPlugin`'s class, as `ClassLoader.loadClass` expects it.

@@ -705,7 +705,9 @@ impl Action {
                         continue;
                     }
                     let nonblank = buffer.first_non_blank_character_on_line(line);
-                    if let Some(edit) = crate::core::indent::create_outdent(buffer, nonblank, indent) {
+                    if let Some(edit) =
+                        crate::core::indent::create_outdent(buffer, nonblank, indent)
+                    {
                         edits.push(edit);
                     }
                 }
@@ -871,13 +873,19 @@ impl Action {
 
                         for region in selection.regions() {
                             if region.is_caret() {
-                                edits.push(crate::core::indent::create_edit(buffer, region.start, indent))
+                                edits.push(crate::core::indent::create_edit(
+                                    buffer,
+                                    region.start,
+                                    indent,
+                                ))
                             } else {
                                 let start_line = buffer.line_of_offset(region.min());
                                 let end_line = buffer.line_of_offset(region.max());
                                 for line in start_line..=end_line {
                                     let offset = buffer.first_non_blank_character_on_line(line);
-                                    edits.push(crate::core::indent::create_edit(buffer, offset, indent))
+                                    edits.push(crate::core::indent::create_edit(
+                                        buffer, offset, indent,
+                                    ))
                                 }
                             }
                         }

@@ -8,7 +8,9 @@ use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::props::slide_transition::SlideDirection;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_material::widgets::slide_transition::{MaterialSlideTransition, MaterialSlideTransitionStyle};
+use floom_material::widgets::slide_transition::{
+    MaterialSlideTransition, MaterialSlideTransitionStyle,
+};
 
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);

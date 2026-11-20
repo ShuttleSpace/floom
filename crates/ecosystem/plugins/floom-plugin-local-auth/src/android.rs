@@ -40,7 +40,7 @@
 //! unavailable, rather than returning `Ok` when the intent was merely started.
 
 use super::BiometricKind;
-use floom_platform_mobile::jni::{self as bridge, JniExt};
+use floom_platform_android::jni::{self as bridge, JniExt};
 use jni::objects::JValue;
 
 /// `LocalAuthPlugin`'s class, as `ClassLoader.loadClass` expects it.

@@ -19,7 +19,7 @@ publish = false
 # for it. A plugin reaching *down* to the platform is the allowed
 # direction; the platform reaching up to a plugin is not.
 [target.'cfg(target_os = "android")'.dependencies]
-floom-platform-mobile = { path = "../../../platform/floom-platform-mobile", version = "0.2.0" }
+floom-platform-android = { path = "../../../platform/floom-platform-android", version = "0.2.0" }
 jni = "0.22"
 
 # The iOS half reads `LAContext` through objc2 and links LocalAuthentication for

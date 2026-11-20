@@ -8,13 +8,13 @@ use floom_signal::{RwSignal, SignalGet};
 use floom_ui_composites::{Stepper, StepperStyle, StepperTick};
 use floom_widgets::{shared_map, SharedMap};
 
+use crate::widgets::icon::{CupertinoIcon, VIEW_BOX};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::stepper::StepperProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 use floom_types::Color as PaintColor;
-use crate::widgets::icon::{CupertinoIcon, VIEW_BOX};
 
 /// The key the selected step lives under in the shared map.
 const SELECTED_KEY: &str = "selected";

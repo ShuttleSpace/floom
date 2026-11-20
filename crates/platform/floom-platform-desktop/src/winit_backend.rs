@@ -1093,7 +1093,7 @@ pub fn run<A: WinitApp + 'static>(app: A, windows: Vec<WindowConfig>) -> Result<
         builder.with_activate_ignoring_other_apps(true);
     }
     #[cfg(not(target_os = "macos"))]
-    let builder = winit::event_loop::EventLoop::builder();
+    let mut builder = winit::event_loop::EventLoop::builder();
     let event_loop = builder
         .build()
         .map_err(|err| format!("event loop: {err}"))?;

@@ -7,7 +7,7 @@ Open a URL with the application the OS routes its scheme to.
 
 This is `url_launcher`'s question — "show this `https://` in a browser,
 this `mailto:` in a mail app, this `tel:` in a dialer" — and it is the
-catalog's A2 (`docs/plugin-catalog.md`): the implementation half of the
+catalog's A2 (`docs/plugins.md`): the implementation half of the
 handoff doc's C4 decision, which deleted the `OPEN_URL` capability bit
 because a bit with no operation behind it is a promise nothing keeps.
 
@@ -94,7 +94,7 @@ The public Rust surface (mirrored by `index.d.ts`):
 ## Layout
 
 This plugin follows the capability-plugin template in
-[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#the-layout):
+[`docs/plugins.md`](../../../../docs/plugins.md):
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.

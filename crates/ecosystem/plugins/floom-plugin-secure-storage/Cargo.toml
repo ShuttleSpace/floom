@@ -15,7 +15,7 @@ publish = false
 # goes through the JNI bridge the platform layer owns — no Gradle dependency,
 # no app-side Java classes.
 [target.'cfg(target_os = "android")'.dependencies]
-floom-platform-mobile = { path = "../../../platform/floom-platform-mobile", version = "0.2.0" }
+floom-platform-android = { path = "../../../platform/floom-platform-android", version = "0.2.0" }
 jni = "0.22"
 
 # The keychain is a C API on both Apple targets; `security-framework` wraps

@@ -18,7 +18,11 @@ const DEFAULT_ABI: &str = "arm64-v8a";
 /// The `adb install` argv for a built APK (`-r` keeps the data of an existing
 /// install). Pure so the command is pinned without touching a device.
 pub fn adb_install_argv(apk: &Path) -> Vec<String> {
-    vec!["install".to_string(), "-r".to_string(), apk.to_string_lossy().into_owned()]
+    vec![
+        "install".to_string(),
+        "-r".to_string(),
+        apk.to_string_lossy().into_owned(),
+    ]
 }
 
 /// The exact `cargo ndk` argv. Pure so its flags are pinned without a real

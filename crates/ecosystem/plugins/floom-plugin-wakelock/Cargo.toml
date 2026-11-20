@@ -16,7 +16,7 @@ publish = false
 # through the JNI bridge the platform layer owns. No permission is involved —
 # the flag means "this app, while visible, asks that the display stay on".
 [target.'cfg(target_os = "android")'.dependencies]
-floom-platform-mobile = { path = "../../../platform/floom-platform-mobile", version = "0.2.0" }
+floom-platform-android = { path = "../../../platform/floom-platform-android", version = "0.2.0" }
 jni = "0.22"
 
 # iOS: `UIApplication.idleTimerDisabled`, through UIKit.

@@ -8,8 +8,8 @@ use floom_widgets::testkit::{paint_snapshot, AllocatingCreateContext, SceneRecor
 use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::layout::{layout_signal, LayoutSlot};
 use floom_core_theme::theme::{MultiTheme, Theme};
-use floom_signal::SignalGet;
 use floom_fluent::widgets::footer::FluentFooter;
+use floom_signal::SignalGet;
 
 const BAR: Rect = Rect {
     x0: 0.0,

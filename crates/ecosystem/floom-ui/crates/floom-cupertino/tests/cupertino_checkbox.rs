@@ -960,7 +960,10 @@ fn the_focus_affordance_is_a_ring_around_the_whole_control() {
 /// v1 struct that survived the port rather than being re-derived.
 #[test]
 fn the_design_system_const_is_what_v1_put_on_the_struct() {
-    assert_eq!(floom_cupertino::widgets::checkbox::DESIGN_SYSTEM, "cupertino");
+    assert_eq!(
+        floom_cupertino::widgets::checkbox::DESIGN_SYSTEM,
+        "cupertino"
+    );
 }
 
 /// **The tripwire, stated as Material's numbers.** This crate cannot depend on its

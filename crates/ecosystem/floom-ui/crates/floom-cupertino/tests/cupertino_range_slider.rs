@@ -9,8 +9,8 @@ use floom_widgets::testkit::{dispatch, AllocatingCreateContext, PaintOp, SceneRe
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_ui_composites::RangeSlider;
 use floom_cupertino::widgets::range_slider::{CupertinoRangeSlider, CupertinoRangeSliderStyle};
+use floom_ui_composites::RangeSlider;
 
 /// The box the slider is laid out in: a track 200 wide, so a value's place on
 /// it is readable as a number.

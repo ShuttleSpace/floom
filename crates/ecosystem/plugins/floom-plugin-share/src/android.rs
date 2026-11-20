@@ -26,7 +26,7 @@
 //! pass that authority down) rather than something this plugin can do from the
 //! Rust side.
 
-use floom_platform_mobile::jni::{self as bridge, JniExt};
+use floom_platform_android::jni::{self as bridge, JniExt};
 use jni::objects::JValue;
 
 /// `SharePlugin`'s class, as `ClassLoader.loadClass` expects it.

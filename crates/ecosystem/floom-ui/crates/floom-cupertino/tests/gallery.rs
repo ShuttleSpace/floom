@@ -1,7 +1,7 @@
-use floom_cupertino::{CupertinoTheme, GALLERY_COLUMNS, button_gallery, button_gallery_labels};
-use floom_design::{GallerySample, contrast_ratio, gallery_size};
+use floom_cupertino::{button_gallery, button_gallery_labels, CupertinoTheme, GALLERY_COLUMNS};
+use floom_design::{contrast_ratio, gallery_size, GallerySample};
 use floom_snapshot::{
-    PixelSnapshot, ReferencePixels, SceneSnapshot, assert_snapshot, snapshots_dir,
+    assert_snapshot, snapshots_dir, PixelSnapshot, ReferencePixels, SceneSnapshot,
 };
 use floom_theme::ColorScheme;
 use floom_types::Color;

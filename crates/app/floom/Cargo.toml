@@ -113,7 +113,6 @@ floom-editor = { workspace = true }
 floom-inspector = { workspace = true }
 floom-native = { workspace = true }
 floom-native-ffi = { workspace = true }
-floom-platform-mobile = { workspace = true }
 floom-renderer = { workspace = true }
 floom-runtime-core = { workspace = true }
 floom-style = { workspace = true }

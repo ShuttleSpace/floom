@@ -5,7 +5,7 @@
 
 Ask the OS to bring this app back at a time.
 
-This is the catalog's A8 (`docs/plugin-catalog.md`), which merged
+This is the catalog's A8 (`docs/plugins.md`), which merged
 `android_alarm_manager_plus` and `workmanager` into one crate on the
 theory that both answer "make some code run later". Writing the arm
 found a harder truth, and the crate is the honest narrowing of it.
@@ -22,7 +22,7 @@ code for the system to call;
 * **iOS `BGTaskScheduler`** needs a task identifier in the `Info.plist`
 and an Objective-C handler registered at startup — the Shape-B native
 half this plugin family deliberately does not carry
-(`docs/plugin-catalog.md` §8.1).
+(`docs/plugins.md` §8.1).
 
 The one primitive left standing needs **no Java code at all**: an
 `AlarmManager` alarm whose payload is a `PendingIntent` that starts the
@@ -120,7 +120,7 @@ The public Rust surface (mirrored by `index.d.ts`):
 ## Layout
 
 This plugin follows the capability-plugin template in
-[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#the-layout):
+[`docs/plugins.md`](../../../../docs/plugins.md):
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.

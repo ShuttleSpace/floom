@@ -23,7 +23,7 @@
 //! the caller hears the platform's reason verbatim — this arm does not
 //! translate it, because the reason is already the truth.
 
-use floom_platform_mobile::jni::{self as jni_helpers, JniExt, obj};
+use floom_platform_android::jni::{self as jni_helpers, JniExt, obj};
 use jni::objects::{JObject, JValue};
 
 pub fn open_url(url: &str) -> Result<(), String> {

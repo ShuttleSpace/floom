@@ -11,10 +11,6 @@ rust-version.workspace = true
 floom-accessibility = { workspace = true }
 floom-platform = { workspace = true }
 floom-types = { workspace = true }
-# The JNI bridge (JavaVM / activity handover + `with_env`) lives with the mobile
-# capability packages, because those are its first consumers. Same layer (L4),
-# so this is a sibling edge, not an upward one — the gate permits `dep <= self`.
-floom-platform-mobile = { workspace = true }
 
 # --- Android real backend (Phase 17 / 19.4) ---------------------------------
 # These mirror the dependency blueprint already declared for the workspace root
@@ -24,10 +20,11 @@ floom-platform-mobile = { workspace = true }
 # target-gated so the host build (macOS) is untouched.
 #
 # No direct `jni` dependency: the platform hands its `JavaVM` / activity
-# pointers to `floom-platform-mobile::jni` (which owns the `jni` crate) and
+# pointers to `crate::jni` (which owns the `jni` crate) and
 # calls back through that module's `with_env`. Keeping the JNI types in one
 # place also means one version of the crate in the graph.
 [target.'cfg(target_os = "android")'.dependencies]
 winit = { workspace = true, features = ["android-native-activity"] }
 ndk = "0.9"
 android_logger = "0.14"
+jni = "0.22"

@@ -53,10 +53,10 @@ nothing more.
 | `x86_64-pc-windows-msvc` | `floom-platform-desktop` | **device-gated (Phase 16.2)**: windowing via winit; native-view composition on Win32 incomplete; `cargo build` verified on `windows-latest` CI runner; `cargo test` pending native-view completion |
 | `x86_64-unknown-linux-gnu` | `floom-platform-desktop` | **device-gated (Phase 16.2)**: windowing via winit/X11; same bridge gap; `ubuntu-latest` build runner covers `cargo build`; `cargo test` pending native-view completion |
 | `aarch64-linux-android` | `floom-platform-android` | **device-gated (Phase 17)**: emulator-verified start+interaction+IME+CJK+clipboard; a11y/file picker/safe area pending emulator closure |
-| `aarch64-apple-ios` | `floom-platform` (`ios` feature) | **device-gated (Phase 17)**: iOS simulator-verified start+interaction+IME+CJK+clipboard; a11y zero-frame/file picker/safe area pending |
-| OpenHarmony | `floom-platform` (`harmony` feature) | **device-gated (Phase 19)**: DevEco emulator Mate X7 verified start+interaction; IME/a11y/clipboard/file/safe area/focus pending |
+| `aarch64-apple-ios` | `floom-platform-ios` (UIKit staticlib) | **device-gated (Phase 17)**: iOS simulator-verified start+interaction+IME+CJK+clipboard; a11y zero-frame/file picker/safe area pending |
+| OpenHarmony | `floom-platform-harmony` (N-API cdylib) | **device-gated (Phase 19)**: DevEco emulator Mate X7 verified start+interaction; IME/a11y/clipboard/file/safe area/focus pending |
 | `wasm32-unknown-unknown` | `floom-platform-web` | **target-gated** (Phase 19): headless WASM harness pending |
-| no-std / bare metal | `floom-platform` (`embedded` feature) | **target-gated** (Phase 19): `aarch64-unknown-linux-ohos`/`x86_64-unknown-linux-ohos` ELF verified; bare-metal target pending |
+| no-std / bare metal | `floom-platform-embedded` | **target-gated** (Phase 19): `aarch64-unknown-linux-ohos`/`x86_64-unknown-linux-ohos` ELF verified; bare-metal target pending |
 
 The headless core (`floom` with no feature bundle) has no OS dependency at
 all: the whole workspace test suite runs without a display, and that is what
@@ -151,7 +151,7 @@ Two different gates, and it matters which one is being quoted:
   **2026-11-09 已恢复并复验**：基线从 git 历史 `5f4cbcfd` 恢复（sha256 与历史一致），
   `scripts/check-perf-budgets.sh` 实跑 9 条预算 best-of-2 全绿（`exit 0`）；故意改坏
   一条 median 时 `exit 1`，基线缺失时 `exit 2`。上面 "enforced by a script"
-  重新成立；步骤与证据见 [`1.0-launch-milestone.md`](1.0-launch-milestone.md) WS-3.1。
+  重新成立；步骤与证据见 [`roadmap.md`](roadmap.md) WS-3.1。
 
 **Idle.** An idle window must not burn a core:
 

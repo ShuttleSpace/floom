@@ -13,7 +13,9 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color_ext::with_alpha;
 
-use floom_material::widgets::virtual_scroller::{MaterialVirtualScroller, MaterialVirtualScrollerStyle};
+use floom_material::widgets::virtual_scroller::{
+    MaterialVirtualScroller, MaterialVirtualScrollerStyle,
+};
 
 const BOX: Rect = Rect {
     x0: 0.0,

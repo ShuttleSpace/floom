@@ -48,11 +48,11 @@
 //!   a keymap that dispatched into it. This port's keyboard handling is
 //!   direct.
 
+pub mod core;
 pub mod document;
 pub mod editor;
 pub mod style;
 pub mod styling;
-pub mod core;
 pub mod text_editor;
 
 pub use document::{Document, TextDocument};

@@ -10,8 +10,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::toolchain::SdkPrecondition;
 use super::{PackResult, Tier};
+use crate::toolchain::SdkPrecondition;
 
 /// A resolved Cargo project, ready to package.
 pub struct Project {
@@ -120,7 +120,11 @@ pub fn require_sdks(sdks: &[SdkPrecondition]) -> Result<(), String> {
     if missing.is_empty() {
         Ok(())
     } else {
-        let hints = missing.iter().map(|s| s.hint()).collect::<Vec<_>>().join("; ");
+        let hints = missing
+            .iter()
+            .map(|s| s.hint())
+            .collect::<Vec<_>>()
+            .join("; ");
         Err(hints)
     }
 }
@@ -161,7 +165,11 @@ pub fn run(program: &str, args: &[&str], dir: &Path) -> Result<(), String> {
     if status.success() {
         Ok(())
     } else {
-        Err(format!("`{} {}` failed ({status})", program, args.join(" ")))
+        Err(format!(
+            "`{} {}` failed ({status})",
+            program,
+            args.join(" ")
+        ))
     }
 }
 
@@ -183,7 +191,10 @@ pub fn newest_artifact(dir: &Path, ext: &str) -> Option<PathBuf> {
             }
             continue;
         }
-        let Some(name) = path.file_name().map(|n| n.to_string_lossy().ends_with(&needle)) else {
+        let Some(name) = path
+            .file_name()
+            .map(|n| n.to_string_lossy().ends_with(&needle))
+        else {
             continue;
         };
         if !name {
@@ -275,7 +286,10 @@ impl Reader<'_> {
             self.pos += 1;
             Ok(())
         } else {
-            Err(format!("cargo metadata: expected '{}' at {}", b as char, self.pos))
+            Err(format!(
+                "cargo metadata: expected '{}' at {}",
+                b as char, self.pos
+            ))
         }
     }
     fn value(&mut self) -> Result<Json, String> {
@@ -297,7 +311,10 @@ impl Reader<'_> {
                 Ok(Json::Null)
             }
             Some(b'-' | b'0'..=b'9') => self.number(),
-            other => Err(format!("cargo metadata: unexpected byte {other:?} at {}", self.pos)),
+            other => Err(format!(
+                "cargo metadata: unexpected byte {other:?} at {}",
+                self.pos
+            )),
         }
     }
     fn literal(&mut self, word: &[u8]) -> Result<(), String> {
@@ -309,7 +326,10 @@ impl Reader<'_> {
         }
     }
     fn number(&mut self) -> Result<Json, String> {
-        while matches!(self.peek(), Some(b'-' | b'+' | b'.' | b'e' | b'E' | b'0'..=b'9')) {
+        while matches!(
+            self.peek(),
+            Some(b'-' | b'+' | b'.' | b'e' | b'E' | b'0'..=b'9')
+        ) {
             self.pos += 1;
         }
         Ok(Json::Number)
@@ -318,16 +338,12 @@ impl Reader<'_> {
         self.expect(b'"')?;
         let mut out = String::new();
         loop {
-            let b = self
-                .peek()
-                .ok_or("cargo metadata: unterminated string")?;
+            let b = self.peek().ok_or("cargo metadata: unterminated string")?;
             self.pos += 1;
             match b {
                 b'"' => return Ok(out),
                 b'\\' => {
-                    let esc = self
-                        .peek()
-                        .ok_or("cargo metadata: unterminated escape")?;
+                    let esc = self.peek().ok_or("cargo metadata: unterminated escape")?;
                     self.pos += 1;
                     match esc {
                         b'"' => out.push('"'),
@@ -395,7 +411,12 @@ impl Reader<'_> {
                     self.pos += 1;
                     return Ok(Json::Object(entries));
                 }
-                _ => return Err(format!("cargo metadata: expected ',' or '}}' at {}", self.pos)),
+                _ => {
+                    return Err(format!(
+                        "cargo metadata: expected ',' or '}}' at {}",
+                        self.pos
+                    ));
+                }
             }
         }
     }
@@ -416,7 +437,12 @@ impl Reader<'_> {
                     self.pos += 1;
                     return Ok(Json::Array(items));
                 }
-                _ => return Err(format!("cargo metadata: expected ',' or ']' at {}", self.pos)),
+                _ => {
+                    return Err(format!(
+                        "cargo metadata: expected ',' or ']' at {}",
+                        self.pos
+                    ));
+                }
             }
         }
     }

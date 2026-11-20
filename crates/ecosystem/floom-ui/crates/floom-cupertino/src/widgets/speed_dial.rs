@@ -9,13 +9,13 @@ use floom_types::Color as PaintColor;
 use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface, VectorIcon};
 
+use crate::widgets::icon::{cupertino_icon_path, VIEW_BOX};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::speed_dial::{SpeedDialDirection, SpeedDialProps};
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
-use crate::widgets::icon::{cupertino_icon_path, VIEW_BOX};
 
 /// The button's icon when the caller names none. v1's plus, which is the
 /// table's `add` glyph -- the same path.

@@ -6,7 +6,7 @@
 The OS's own key-value store, for user preferences.
 
 This is `shared_preferences`'s question, and the catalog's A5
-(`docs/plugin-catalog.md`): one string-to-string map per store name,
+(`docs/plugins.md`): one string-to-string map per store name,
 whose *where* is the platform's choice — `SharedPreferences` on Android,
 `NSUserDefaults` on Apple, a file in the user's config directory on Linux
 and Windows (the same shape Flutter's own `shared_preferences_linux` and
@@ -98,7 +98,7 @@ The public Rust surface (mirrored by `index.d.ts`):
 ## Layout
 
 This plugin follows the capability-plugin template in
-[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#the-layout):
+[`docs/plugins.md`](../../../../docs/plugins.md):
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.

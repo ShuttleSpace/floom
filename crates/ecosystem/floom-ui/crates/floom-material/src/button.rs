@@ -1,6 +1,6 @@
 use floom_design::{
-    ControlSize, InteractionState, Props, StyleSetBuilder, Variant, composite_over,
-    most_contrasting, with_alpha,
+    composite_over, most_contrasting, with_alpha, ControlSize, InteractionState, Props,
+    StyleSetBuilder, Variant,
 };
 use floom_style::{StyleProps, StyleSet};
 use floom_types::Color;

@@ -8,8 +8,8 @@ use floom_widgets::testkit::{dispatch, AllocatingCreateContext, PaintOp, SceneRe
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_ui_composites::RangeSlider;
 use floom_fluent::widgets::range_slider::{FluentRangeSlider, FluentRangeSliderStyle};
+use floom_ui_composites::RangeSlider;
 
 const TRACK: Rect = Rect {
     x0: 0.0,

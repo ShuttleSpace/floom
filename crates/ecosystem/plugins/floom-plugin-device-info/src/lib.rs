@@ -22,7 +22,7 @@ mod ios;
 #[cfg(target_env = "ohos")]
 mod ohos;
 // Desktop arms: macOS, Windows and Linux (Linux minus OHOS — per the OHOS
-// contract in `docs/ohos.md`, OHOS is `target_os = "linux"`) share one `std`-only
+// contract in `docs/platforms.md`, OHOS is `target_os = "linux"`) share one `std`-only
 // implementation. Web (`wasm32`) keeps the inert fallback because a browser tab
 // has no host identity to report.
 #[cfg(all(

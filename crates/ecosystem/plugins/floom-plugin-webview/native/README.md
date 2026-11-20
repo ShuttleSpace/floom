@@ -19,4 +19,4 @@ in by `build.rs` from `crates/native/floom-native-ffi/include/` so the two
 cannot drift.
 
 The generic layout is documented in
-[`docs/platform-and-plugins.md`](../../../../../docs/platform-and-plugins.md#the-layout).
+[`docs/plugins.md`](../../../../../docs/plugins.md).

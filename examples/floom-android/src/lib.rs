@@ -26,8 +26,8 @@ mod android {
     use floom_core::{Axis, Color, LayoutRequest};
     use floom_layout::LayoutStyle;
     use floom_platform::{Clipboard, Ime, WindowConfig};
+    use floom_platform_android::packages::keyboard::soft_input::soft_keyboard_state;
     use floom_platform_android::{run, set_android_app, AndroidPlatform, AndroidRunner};
-    use floom_platform_mobile::packages::keyboard::soft_input::soft_keyboard_state;
     use floom_renderer_vello::VelloGpuPresenter;
     use floom_types::{Size, WindowId};
     use floom_widgets::{Button, Stack, Text, TextInput};

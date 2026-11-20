@@ -153,7 +153,7 @@ PLATFORM_HINTS = {
     # features for capability tests.
     "floom-platform", "floom-platform-desktop", "floom-platform-android",
     "floom-platform-web",
-    "floom-platform-tui", "floom-platform-mobile",
+    "floom-platform-tui",
     "floom-platform-ios", "floom-platform-harmony",
 }
 GPU_HINTS = {
@@ -249,7 +249,7 @@ for w in sorted(WIDGET_HINTS):
 #
 # This is the rule that makes "the SDK stays small" structural rather than a
 # promise. It is also the rule that would have caught the thirteen capability
-# packages that used to live inside `floom-platform-mobile`.
+# packages that used to live inside the former `floom-platform-mobile` crate.
 for p in sorted(PLATFORM_HINTS):
     if p not in packages:
         notes.append(f"SKIP {p}: not in workspace yet")
@@ -298,7 +298,7 @@ for _names, _level in [
             "floom-renderer-tui", "floom-renderer-web",
             "floom-platform", "floom-platform-desktop", "floom-platform-android",
             "floom-platform-web",
-            "floom-platform-tui", "floom-platform-mobile",
+            "floom-platform-tui",
             # The embedded backend: a framebuffer and a window, no OS behind
             # it. It sits with the other platform backends and owns no
             # renderer edge -- the software rasteriser reaches *up* to its

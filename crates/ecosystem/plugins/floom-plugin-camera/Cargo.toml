@@ -28,7 +28,7 @@ floom-platform = { path = "../../../platform/floom-platform", version = "0.2.0" 
 # owns the `NativeViewProvider` and drives the Java view through JNI.
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.22"
-floom-platform-mobile = { path = "../../../platform/floom-platform-mobile" }
+floom-platform-android = { path = "../../../platform/floom-platform-android" }
 
 # Web-only: a pure-Rust camera built from `web-sys` (getUserMedia into a <video>).
 # No C native half — the "native" capability is the browser's MediaDevices API,

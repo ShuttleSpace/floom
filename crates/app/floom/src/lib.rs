@@ -80,14 +80,14 @@ pub use floom_widgets;
 // existing `floom::floom_xxx` callers keep working unchanged. `platform` and
 // `devtools` are already hand-written modules, so their crates are merged into
 // those modules with a glob re-export instead (see platform.rs / devtools.rs).
+pub use floom_animation as animation;
 pub use floom_app as app;
 pub use floom_core as core;
 pub use floom_layout as layout;
 pub use floom_scene as scene;
+pub use floom_signal as signal;
 pub use floom_types as types;
 pub use floom_widgets as widgets;
-pub use floom_animation as animation;
-pub use floom_signal as signal;
 
 pub use floom_accessibility as accessibility;
 pub use floom_dsl as dsl;
@@ -95,7 +95,6 @@ pub use floom_editor as editor;
 pub use floom_inspector as inspector;
 pub use floom_native as native;
 pub use floom_native_ffi as native_ffi;
-pub use floom_platform_mobile as platform_mobile;
 pub use floom_renderer as renderer;
 pub use floom_runtime_core as runtime_core;
 pub use floom_style as style;
@@ -109,30 +108,30 @@ pub use floom_widgets_data as widgets_data;
 // Optional crates: aliased under the same feature that links them. An alias for
 // an unlinked optional crate would not compile, so `#[cfg]` here mirrors the
 // `dep:` entries in Cargo.toml. `--all-features` exposes every one.
-#[cfg(feature = "desktop")]
-pub use floom_platform_desktop as platform_desktop;
-#[cfg(feature = "mobile")]
-pub use floom_platform_android as platform_android;
-#[cfg(feature = "web")]
-pub use floom_platform_web as platform_web;
-#[cfg(feature = "web")]
-pub use floom_renderer_web as renderer_web;
-#[cfg(feature = "tui")]
-pub use floom_platform_tui as platform_tui;
-#[cfg(feature = "tui")]
-pub use floom_renderer_tui as renderer_tui;
-#[cfg(feature = "embedded")]
-pub use floom_platform_embedded as platform_embedded;
-#[cfg(feature = "ios")]
-pub use floom_platform_ios as platform_ios;
-#[cfg(feature = "harmony")]
-pub use floom_platform_harmony as platform_harmony;
-#[cfg(feature = "renderer-gpu")]
-pub use floom_renderer_vello as renderer_vello;
-#[cfg(feature = "renderer-software")]
-pub use floom_renderer_software as renderer_software;
 #[cfg(feature = "devtools")]
 pub use floom_hot_reload as hot_reload;
+#[cfg(feature = "mobile")]
+pub use floom_platform_android as platform_android;
+#[cfg(feature = "desktop")]
+pub use floom_platform_desktop as platform_desktop;
+#[cfg(feature = "embedded")]
+pub use floom_platform_embedded as platform_embedded;
+#[cfg(feature = "harmony")]
+pub use floom_platform_harmony as platform_harmony;
+#[cfg(feature = "ios")]
+pub use floom_platform_ios as platform_ios;
+#[cfg(feature = "tui")]
+pub use floom_platform_tui as platform_tui;
+#[cfg(feature = "web")]
+pub use floom_platform_web as platform_web;
+#[cfg(feature = "renderer-software")]
+pub use floom_renderer_software as renderer_software;
+#[cfg(feature = "tui")]
+pub use floom_renderer_tui as renderer_tui;
+#[cfg(feature = "renderer-gpu")]
+pub use floom_renderer_vello as renderer_vello;
+#[cfg(feature = "web")]
+pub use floom_renderer_web as renderer_web;
 
 // L8 tooling that reaches the software renderer; gated behind `full` so the
 // default build stays headless (tests/feature_graph.rs asserts it).

@@ -8,6 +8,7 @@ use floom_types::{Color as PaintColor, FontWeight};
 
 use floom_widgets::{Align, Axis, Pressable, Stack, Surface, Text};
 
+use crate::widgets::icon::FluentIcon;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::alert::{AlertProps, AlertVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -15,7 +16,6 @@ use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::*;
 use floom_core_theme::tokens::typography::FontWeight as ThemeFontWeight;
-use crate::widgets::icon::FluentIcon;
 
 pub fn to_engine_weight(w: ThemeFontWeight) -> FontWeight {
     match w {

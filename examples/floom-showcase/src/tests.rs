@@ -83,10 +83,18 @@ fn editor_toolbar_undo_redo_and_reset_work() {
     assert_ne!(typed, original, "the keystroke did not reach the document");
 
     app.tap(app.node(Selector::label("Undo")));
-    assert_eq!(state.editor().text(), original, "Undo did not revert the edit");
+    assert_eq!(
+        state.editor().text(),
+        original,
+        "Undo did not revert the edit"
+    );
 
     app.tap(app.node(Selector::label("Redo")));
-    assert_eq!(state.editor().text(), typed, "Redo did not restore the edit");
+    assert_eq!(
+        state.editor().text(),
+        typed,
+        "Redo did not restore the edit"
+    );
 
     app.tap(app.node(Selector::label("Reset sample")));
     assert_eq!(

@@ -1,100 +1,199 @@
 #![cfg_attr(feature = "full", allow(unused))]
-#[cfg(feature = "alert")] pub mod alert;
-#[cfg(feature = "app")] pub mod app;
-#[cfg(feature = "app_bar")] pub mod app_bar;
-#[cfg(feature = "autocomplete")] pub mod autocomplete;
-#[cfg(feature = "avatar")] pub mod avatar;
-#[cfg(feature = "badge")] pub mod badge;
-#[cfg(feature = "banner")] pub mod banner;
-#[cfg(feature = "bottom_navigation")] pub mod bottom_navigation;
-#[cfg(feature = "breadcrumbs")] pub mod breadcrumbs;
-#[cfg(feature = "button")] pub mod button;
-#[cfg(feature = "button_group")] pub mod button_group;
-#[cfg(feature = "calendar")] pub mod calendar;
-#[cfg(feature = "card")] pub mod card;
-#[cfg(feature = "carousel")] pub mod carousel;
-#[cfg(feature = "checkbox")] pub mod checkbox;
-#[cfg(feature = "checkbox_btn")] pub mod checkbox_btn;
-#[cfg(feature = "chip")] pub mod chip;
-#[cfg(feature = "chip_group")] pub mod chip_group;
-#[cfg(feature = "code")] pub mod code;
-#[cfg(feature = "color_picker")] pub mod color_picker;
-#[cfg(feature = "combobox")] pub mod combobox;
-#[cfg(feature = "confirm_edit")] pub mod confirm_edit;
-#[cfg(feature = "container")] pub mod container;
-#[cfg(feature = "counter")] pub mod counter;
-#[cfg(feature = "data_iterator")] pub mod data_iterator;
-#[cfg(feature = "datatable")] pub mod datatable;
-#[cfg(feature = "date_adapter_provider")] pub mod date_adapter_provider;
-#[cfg(feature = "date_picker")] pub mod date_picker;
-#[cfg(feature = "defaults_provider")] pub mod defaults_provider;
-#[cfg(feature = "dialog")] pub mod dialog;
-#[cfg(feature = "display_provider")] pub mod display_provider;
-#[cfg(feature = "divider")] pub mod divider;
-#[cfg(feature = "empty_state")] pub mod empty_state;
-#[cfg(feature = "expand_transition")] pub mod expand_transition;
-#[cfg(feature = "expansion_panels")] pub mod expansion_panels;
-#[cfg(feature = "fade_transition")] pub mod fade_transition;
-#[cfg(feature = "file_input")] pub mod file_input;
-#[cfg(feature = "floating_action_button")] pub mod floating_action_button;
-#[cfg(feature = "footer")] pub mod footer;
-#[cfg(feature = "form")] pub mod form;
-#[cfg(feature = "grid")] pub mod grid;
-#[cfg(feature = "hover")] pub mod hover;
-#[cfg(feature = "icon")] pub mod icon;
-#[cfg(feature = "icon_button")] pub mod icon_button;
-#[cfg(feature = "icon_paths")] pub mod icon_paths;
-#[cfg(feature = "icons_provider")] pub mod icons_provider;
-#[cfg(feature = "image")] pub mod image;
-#[cfg(feature = "infinite_scroller")] pub mod infinite_scroller;
-#[cfg(feature = "item_group")] pub mod item_group;
-#[cfg(feature = "kbd")] pub mod kbd;
-#[cfg(feature = "list")] pub mod list;
-#[cfg(feature = "list_group")] pub mod list_group;
-#[cfg(feature = "list_item")] pub mod list_item;
-#[cfg(feature = "list_subheader")] pub mod list_subheader;
-#[cfg(feature = "locale_provider")] pub mod locale_provider;
-#[cfg(feature = "main")] pub mod main;
-#[cfg(feature = "menu")] pub mod menu;
-#[cfg(feature = "navigation_drawer")] pub mod navigation_drawer;
-#[cfg(feature = "number_input")] pub mod number_input;
-#[cfg(feature = "otp_input")] pub mod otp_input;
-#[cfg(feature = "overlay")] pub mod overlay;
-#[cfg(feature = "pagination")] pub mod pagination;
-#[cfg(feature = "parallax")] pub mod parallax;
-#[cfg(feature = "progress_circular")] pub mod progress_circular;
-#[cfg(feature = "progress_linear")] pub mod progress_linear;
-#[cfg(feature = "pull_to_refresh")] pub mod pull_to_refresh;
-#[cfg(feature = "radio")] pub mod radio;
-#[cfg(feature = "radio_group")] pub mod radio_group;
-#[cfg(feature = "range_slider")] pub mod range_slider;
-#[cfg(feature = "rating")] pub mod rating;
-#[cfg(feature = "responsive")] pub mod responsive;
-#[cfg(feature = "scale_transition")] pub mod scale_transition;
-#[cfg(feature = "select")] pub mod select;
-#[cfg(feature = "sheet")] pub mod sheet;
-#[cfg(feature = "skeleton_loader")] pub mod skeleton_loader;
-#[cfg(feature = "slide_group")] pub mod slide_group;
-#[cfg(feature = "slide_transition")] pub mod slide_transition;
-#[cfg(feature = "slider")] pub mod slider;
-#[cfg(feature = "snackbar")] pub mod snackbar;
-#[cfg(feature = "spacer")] pub mod spacer;
-#[cfg(feature = "sparkline")] pub mod sparkline;
-#[cfg(feature = "speed_dial")] pub mod speed_dial;
-#[cfg(feature = "stepper")] pub mod stepper;
-#[cfg(feature = "switch")] pub mod switch;
-#[cfg(feature = "system_bar")] pub mod system_bar;
-#[cfg(feature = "table")] pub mod table;
-#[cfg(feature = "tabs")] pub mod tabs;
-#[cfg(feature = "text")] pub mod text;
-#[cfg(feature = "text_field")] pub mod text_field;
-#[cfg(feature = "textarea")] pub mod textarea;
-#[cfg(feature = "theme_provider")] pub mod theme_provider;
-#[cfg(feature = "time_picker")] pub mod time_picker;
-#[cfg(feature = "timeline")] pub mod timeline;
-#[cfg(feature = "toolbar")] pub mod toolbar;
-#[cfg(feature = "tooltip")] pub mod tooltip;
-#[cfg(feature = "treeview")] pub mod treeview;
-#[cfg(feature = "validation_messages")] pub mod validation_messages;
-#[cfg(feature = "virtual_scroller")] pub mod virtual_scroller;
-#[cfg(feature = "window")] pub mod window;
+#[cfg(feature = "alert")]
+pub mod alert;
+#[cfg(feature = "app")]
+pub mod app;
+#[cfg(feature = "app_bar")]
+pub mod app_bar;
+#[cfg(feature = "autocomplete")]
+pub mod autocomplete;
+#[cfg(feature = "avatar")]
+pub mod avatar;
+#[cfg(feature = "badge")]
+pub mod badge;
+#[cfg(feature = "banner")]
+pub mod banner;
+#[cfg(feature = "bottom_navigation")]
+pub mod bottom_navigation;
+#[cfg(feature = "breadcrumbs")]
+pub mod breadcrumbs;
+#[cfg(feature = "button")]
+pub mod button;
+#[cfg(feature = "button_group")]
+pub mod button_group;
+#[cfg(feature = "calendar")]
+pub mod calendar;
+#[cfg(feature = "card")]
+pub mod card;
+#[cfg(feature = "carousel")]
+pub mod carousel;
+#[cfg(feature = "checkbox")]
+pub mod checkbox;
+#[cfg(feature = "checkbox_btn")]
+pub mod checkbox_btn;
+#[cfg(feature = "chip")]
+pub mod chip;
+#[cfg(feature = "chip_group")]
+pub mod chip_group;
+#[cfg(feature = "code")]
+pub mod code;
+#[cfg(feature = "color_picker")]
+pub mod color_picker;
+#[cfg(feature = "combobox")]
+pub mod combobox;
+#[cfg(feature = "confirm_edit")]
+pub mod confirm_edit;
+#[cfg(feature = "container")]
+pub mod container;
+#[cfg(feature = "counter")]
+pub mod counter;
+#[cfg(feature = "data_iterator")]
+pub mod data_iterator;
+#[cfg(feature = "datatable")]
+pub mod datatable;
+#[cfg(feature = "date_adapter_provider")]
+pub mod date_adapter_provider;
+#[cfg(feature = "date_picker")]
+pub mod date_picker;
+#[cfg(feature = "defaults_provider")]
+pub mod defaults_provider;
+#[cfg(feature = "dialog")]
+pub mod dialog;
+#[cfg(feature = "display_provider")]
+pub mod display_provider;
+#[cfg(feature = "divider")]
+pub mod divider;
+#[cfg(feature = "empty_state")]
+pub mod empty_state;
+#[cfg(feature = "expand_transition")]
+pub mod expand_transition;
+#[cfg(feature = "expansion_panels")]
+pub mod expansion_panels;
+#[cfg(feature = "fade_transition")]
+pub mod fade_transition;
+#[cfg(feature = "file_input")]
+pub mod file_input;
+#[cfg(feature = "floating_action_button")]
+pub mod floating_action_button;
+#[cfg(feature = "footer")]
+pub mod footer;
+#[cfg(feature = "form")]
+pub mod form;
+#[cfg(feature = "grid")]
+pub mod grid;
+#[cfg(feature = "hover")]
+pub mod hover;
+#[cfg(feature = "icon")]
+pub mod icon;
+#[cfg(feature = "icon_button")]
+pub mod icon_button;
+#[cfg(feature = "icon_paths")]
+pub mod icon_paths;
+#[cfg(feature = "icons_provider")]
+pub mod icons_provider;
+#[cfg(feature = "image")]
+pub mod image;
+#[cfg(feature = "infinite_scroller")]
+pub mod infinite_scroller;
+#[cfg(feature = "item_group")]
+pub mod item_group;
+#[cfg(feature = "kbd")]
+pub mod kbd;
+#[cfg(feature = "list")]
+pub mod list;
+#[cfg(feature = "list_group")]
+pub mod list_group;
+#[cfg(feature = "list_item")]
+pub mod list_item;
+#[cfg(feature = "list_subheader")]
+pub mod list_subheader;
+#[cfg(feature = "locale_provider")]
+pub mod locale_provider;
+#[cfg(feature = "main")]
+pub mod main;
+#[cfg(feature = "menu")]
+pub mod menu;
+#[cfg(feature = "navigation_drawer")]
+pub mod navigation_drawer;
+#[cfg(feature = "number_input")]
+pub mod number_input;
+#[cfg(feature = "otp_input")]
+pub mod otp_input;
+#[cfg(feature = "overlay")]
+pub mod overlay;
+#[cfg(feature = "pagination")]
+pub mod pagination;
+#[cfg(feature = "parallax")]
+pub mod parallax;
+#[cfg(feature = "progress_circular")]
+pub mod progress_circular;
+#[cfg(feature = "progress_linear")]
+pub mod progress_linear;
+#[cfg(feature = "pull_to_refresh")]
+pub mod pull_to_refresh;
+#[cfg(feature = "radio")]
+pub mod radio;
+#[cfg(feature = "radio_group")]
+pub mod radio_group;
+#[cfg(feature = "range_slider")]
+pub mod range_slider;
+#[cfg(feature = "rating")]
+pub mod rating;
+#[cfg(feature = "responsive")]
+pub mod responsive;
+#[cfg(feature = "scale_transition")]
+pub mod scale_transition;
+#[cfg(feature = "select")]
+pub mod select;
+#[cfg(feature = "sheet")]
+pub mod sheet;
+#[cfg(feature = "skeleton_loader")]
+pub mod skeleton_loader;
+#[cfg(feature = "slide_group")]
+pub mod slide_group;
+#[cfg(feature = "slide_transition")]
+pub mod slide_transition;
+#[cfg(feature = "slider")]
+pub mod slider;
+#[cfg(feature = "snackbar")]
+pub mod snackbar;
+#[cfg(feature = "spacer")]
+pub mod spacer;
+#[cfg(feature = "sparkline")]
+pub mod sparkline;
+#[cfg(feature = "speed_dial")]
+pub mod speed_dial;
+#[cfg(feature = "stepper")]
+pub mod stepper;
+#[cfg(feature = "switch")]
+pub mod switch;
+#[cfg(feature = "system_bar")]
+pub mod system_bar;
+#[cfg(feature = "table")]
+pub mod table;
+#[cfg(feature = "tabs")]
+pub mod tabs;
+#[cfg(feature = "text")]
+pub mod text;
+#[cfg(feature = "text_field")]
+pub mod text_field;
+#[cfg(feature = "textarea")]
+pub mod textarea;
+#[cfg(feature = "theme_provider")]
+pub mod theme_provider;
+#[cfg(feature = "time_picker")]
+pub mod time_picker;
+#[cfg(feature = "timeline")]
+pub mod timeline;
+#[cfg(feature = "toolbar")]
+pub mod toolbar;
+#[cfg(feature = "tooltip")]
+pub mod tooltip;
+#[cfg(feature = "treeview")]
+pub mod treeview;
+#[cfg(feature = "validation_messages")]
+pub mod validation_messages;
+#[cfg(feature = "virtual_scroller")]
+pub mod virtual_scroller;
+#[cfg(feature = "window")]
+pub mod window;

@@ -2,55 +2,40 @@
 <!-- SPDX-FileCopyrightText: The Floem Authors -->
 # Mobile platform layering
 
-`floom-platform-mobile` is a **platform adapter**, and it is deliberately small.
-It carries two things:
+The mobile platform layer is split into two sibling adapters:
 
-- the **JNI bridge** — the JavaVM, the activity, and the helpers the platform's
-  own packages use to reach Android. It is meaningful only on Android, and the
-  `jni` crate is a target-gated dependency, so nothing pulls it on any other
-  target.
-- the **packages** that are the platform's own business rather than a
-  capability: the clipboard and the soft keyboard (the two of
-  `floom-platform`'s three traits that mobile implements) and the two facts
-  about a window — the safe-area insets and the system chrome.
+- `floom-platform-android` — the **JNI bridge** (JavaVM, activity, `with_env`)
+  with its packages (`clipboard`, `keyboard`, `safe_area`, `system_chrome`) backed
+  by real JNI calls (`ClipboardManager`, `WindowInsets`,
+  `WindowInsetsController`). The `jni` crate is a target-gated dependency, so
+  nothing pulls it on any other target.
+- `floom-platform-ios` — a UIKit staticlib with the same packages. The reads
+  Rust can do on its own (`UIPasteboard`, `UIStatusBarStyle`) go through objc2;
+  the facts only UIKit's host owns (safe-area insets, keyboard notifications,
+  IME text) arrive through the `floom_ios_*` C ABI seam.
+
+The OS-neutral types and pure logic they share — `TargetPlatform`,
+`floom_platform::mobile::{SoftKeyboardState, ImeInput, KeyboardHeightFilter,
+split_composition, android_table, SystemChromeStyle, …}` — live in
+`floom-platform`, so the core ABI stays free of concrete OS dependencies.
 
 ## What is not here
 
 Every *capability* — the battery, the connectivity, the device's identity, the
 biometrics, the location, the notifications, the sensors, the share sheet, the
 haptics — is a **plugin**: one crate under `crates/ecosystem/plugins/`, opt-in by
-dependency, reaching the OS through a native host library.
-
-The split is not cosmetic, and it is the difference between an SDK that stays
-small and one that does not. A capability here would be compiled and linked into
-every mobile app that depends on the platform adapter, whether it wanted the
-capability or not. A capability in its own crate is linked only by the apps that
-ask for it.
+dependency, reaching the OS through a native host library. A capability plugin
+that needs the Android JNI bridge reaches *down* to
+`floom_platform_android::jni`; it does not own a second copy of it.
 
 The rule is enforced rather than merely documented: the architecture gate
 (`scripts/check-architecture-deps.sh`) refuses a dependency from a
 `floom-platform-*` crate to a `floom-plugin-*` crate, because the platform
-reaching *up* to a plugin is the direction that would put the capability back in.
-
-## The packages pattern
-
-What is left here follows the *packages* pattern popularised by
-[`gpui-mobile`](https://github.com/itsbalamurali/gpui-mobile): each package is a
-module with three files —
-
-```text
-packages/<name>/
-  mod.rs     — the public API + `#[cfg]` dispatch to the right backend
-  ios.rs     — the iOS (objc2 / UIKit) implementation
-  android.rs — the Android (JNI / NDK) implementation
-```
-
-The host (non-mobile) `#[cfg]` arm in `mod.rs` returns
-`Err("… only available on iOS and Android")`, so the crate still compiles and is
-a no-op on desktop and web.
+reaching *up* to a plugin is the direction that would put the capability back
+in.
 
 ## Attribution
 
 The dispatch pattern, the vibration FFI and the runtime platform enum are adapted
 from `gpui-mobile`, used under its Apache-2.0 option. The same attribution is
-kept at the top of `floom-platform-mobile/src/lib.rs`.
+kept at the top of `floom-platform/src/target_platform.rs`.

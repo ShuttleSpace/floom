@@ -924,13 +924,19 @@ dependencies = [
 name = "floom"
 version = "0.2.0"
 dependencies = [
+ "floom-accessibility",
+ "floom-accuracy",
  "floom-animation",
  "floom-app",
  "floom-core",
  "floom-devtools",
+ "floom-dsl",
  "floom-editor",
  "floom-hot-reload",
+ "floom-inspector",
  "floom-layout",
+ "floom-native",
+ "floom-native-ffi",
  "floom-platform",
  "floom-platform-android",
  "floom-platform-desktop",
@@ -939,14 +945,24 @@ dependencies = [
  "floom-platform-ios",
  "floom-platform-tui",
  "floom-platform-web",
+ "floom-renderer",
  "floom-renderer-software",
  "floom-renderer-tui",
  "floom-renderer-vello",
  "floom-renderer-web",
+ "floom-runtime-core",
  "floom-scene",
  "floom-signal",
+ "floom-snapshot",
+ "floom-style",
+ "floom-testkit",
+ "floom-text",
+ "floom-tsx",
  "floom-types",
+ "floom-ui-events-winit",
+ "floom-virtual",
  "floom-widgets",
+ "floom-widgets-data",
 ]
 
 [[package]]
@@ -986,7 +1002,6 @@ dependencies = [
  "floom-layout",
  "floom-platform",
  "floom-platform-android",
- "floom-platform-mobile",
  "floom-renderer-vello",
  "floom-types",
  "floom-widgets",
@@ -1258,8 +1273,8 @@ dependencies = [
  "floem-winit",
  "floom-accessibility",
  "floom-platform",
- "floom-platform-mobile",
  "floom-types",
+ "jni 0.22.4",
  "ndk",
 ]
 
@@ -1303,14 +1318,7 @@ version = "0.2.0"
 dependencies = [
  "floom-platform",
  "floom-types",
-]
-
-[[package]]
-name = "floom-platform-mobile"
-version = "0.2.0"
-dependencies = [
- "floom-types",
- "jni 0.22.4",
+ "objc2",
 ]
 
 [[package]]
@@ -1525,23 +1533,6 @@ dependencies = [
  "swc_common",
  "swc_ecma_ast",
  "swc_ecma_parser",
-]
-
-[[package]]
-name = "floom-tsx-showcase"
-version = "0.2.0"
-dependencies = [
- "floom-app",
- "floom-core",
- "floom-dsl",
- "floom-layout",
- "floom-platform",
- "floom-platform-desktop",
- "floom-renderer-vello",
- "floom-testkit",
- "floom-tsx",
- "floom-types",
- "floom-widgets",
 ]
 
 [[package]]

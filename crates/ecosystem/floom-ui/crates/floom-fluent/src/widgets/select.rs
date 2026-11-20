@@ -1,5 +1,6 @@
 //! Fluent's select (dropdown), ported to the Floom 2.0 widget API.
 
+use crate::widgets::icon_paths::fluent_icon_path;
 use floom_core::{Point, Rect, Size};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::select::SelectProps;
@@ -10,7 +11,6 @@ use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 use floom_ui_composites::{Select, SelectStyle};
-use crate::widgets::icon_paths::fluent_icon_path;
 use floom_widgets::VectorIcon;
 
 const DESIGN_SYSTEM: &str = "fluent";

@@ -8,13 +8,13 @@ use floom_types::Color as PaintColor;
 use floom_widgets::text_input::{read_flag, shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, Surface, Text};
 
+use crate::widgets::icon::FluentIcon;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::checkbox_btn::CheckboxBtnProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
-use crate::widgets::icon::FluentIcon;
 
 type Callback = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 

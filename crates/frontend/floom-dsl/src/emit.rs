@@ -1306,10 +1306,10 @@ impl<'a> Emitter<'a> {
         let min = self.num(node, "min").unwrap_or(0.0);
         let max = self.num(node, "max").unwrap_or(100.0);
         let span = if max > min { max - min } else { 1.0 };
-        if self.reactive {
-            if let Some(read) = self.ref_num(node, "value") {
-                return format!("({read} as f64 - {}) / {}", num_lit(min), num_lit(span));
-            }
+        if self.reactive
+            && let Some(read) = self.ref_num(node, "value")
+        {
+            return format!("({read} as f64 - {}) / {}", num_lit(min), num_lit(span));
         }
         match self.num(node, "value") {
             Some(value) => num_lit(((value - min) / span).clamp(0.0, 1.0)),

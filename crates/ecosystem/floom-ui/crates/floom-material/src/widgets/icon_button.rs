@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use floom_types::Color as PaintColor;
 
-use floom_ui_composites::{IconButton, IconButtonPaint, IconButtonStyle, IconButtonVariant};
 use crate::widgets::icon::MdIcon;
+use floom_ui_composites::{IconButton, IconButtonPaint, IconButtonStyle, IconButtonVariant};
 
 use crate::widgets::icon::MdIconStyle;
 

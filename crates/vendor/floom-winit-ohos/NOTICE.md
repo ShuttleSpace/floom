@@ -52,5 +52,5 @@ directly and the OHOS example gate passes against the published crate.
 
 ## See also
 
-- `docs/ohos.md` — retarget notes and build steps.
+- `docs/platforms.md` — retarget notes and build steps.
 - `patch/README.md` — what the retarget rename touches and why it is safe.

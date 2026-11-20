@@ -1,7 +1,7 @@
 //! Discover services on the local network — the mDNS / DNS-SD question.
 //!
 //! This is `multicast_dns`'s question, and the catalog's C6
-//! (`docs/plugin-catalog.md`): "who on this LAN is serving `_http._tcp`?" —
+//! (`docs/plugins.md`): "who on this LAN is serving `_http._tcp`?" —
 //! find the printer, the cast target, the other player, without knowing an
 //! address beforehand.
 //!

@@ -5,8 +5,8 @@
 //! Rust core under `src/` plus one directory per target platform.
 
 mod native_project;
-mod package;
 mod pack;
+mod package;
 mod run_app;
 mod templates;
 mod toolchain;
@@ -1177,7 +1177,7 @@ mod tests {
         assert!(lib_rs.contains("return Some(CAPABILITY_ID)"));
 
         assert!(
-            cargo_toml.contains("floom-platform-mobile"),
+            cargo_toml.contains("floom-platform-android"),
             "the android edge needs the JNI bridge from the platform layer"
         );
         assert!(
@@ -1524,9 +1524,7 @@ mod tests {
 
     #[test]
     fn mobile_scaffold_writes_the_cdylib_stub_and_desktop_does_not() {
-        let mobile = repo_root()
-            .join("tests")
-            .join("floom-cli-test-mobilelib");
+        let mobile = repo_root().join("tests").join("floom-cli-test-mobilelib");
         let _ = fs::remove_dir_all(&mobile);
         fs::create_dir_all(&mobile).unwrap();
         let opts = CreateOpts {
@@ -1542,9 +1540,7 @@ mod tests {
         };
         create_rust_app(&opts, &mobile, "mob").unwrap();
         assert!(mobile.join("src/lib.rs").is_file());
-        assert!(
-            read(&mobile, "Cargo.toml").contains("crate-type = [\"cdylib\"]")
-        );
+        assert!(read(&mobile, "Cargo.toml").contains("crate-type = [\"cdylib\"]"));
 
         let desktop = scaffold_app("deskapp", AppStyle::Rust);
         assert!(!desktop.join("src/lib.rs").exists());

@@ -2,7 +2,7 @@
 //!
 //! This is `url_launcher`'s question — "show this `https://` in a browser,
 //! this `mailto:` in a mail app, this `tel:` in a dialer" — and it is the
-//! catalog's A2 (`docs/plugin-catalog.md`): the implementation half of the
+//! catalog's A2 (`docs/plugins.md`): the implementation half of the
 //! handoff doc's C4 decision, which deleted the `OPEN_URL` capability bit
 //! because a bit with no operation behind it is a promise nothing keeps.
 //!

@@ -1,5 +1,5 @@
 use floom_design::{
-    ControlSize, InteractionState, Props, StyleSetBuilder, StyleSetExt, Variant, composite_over,
+    composite_over, ControlSize, InteractionState, Props, StyleSetBuilder, StyleSetExt, Variant,
 };
 use floom_style::{StyleProps, StyleSet};
 use floom_types::Color;

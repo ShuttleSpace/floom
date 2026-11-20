@@ -6,12 +6,12 @@ use floom_types::Color as PaintColor;
 use floom_widgets::text_input::{shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, VectorIcon};
 
+use crate::widgets::icon::{MdIcon, MD_ICON_VIEW_BOX};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::rating::RatingProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
-use crate::widgets::icon::{MdIcon, MD_ICON_VIEW_BOX};
 use floom_widget_runtime::theme_signal;
 
 const STAR: &str = "star";

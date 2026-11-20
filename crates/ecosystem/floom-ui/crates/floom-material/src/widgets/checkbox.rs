@@ -1,6 +1,7 @@
 use floom_signal::{RwSignal, SignalGet};
 use floom_types::Color as PaintColor;
 
+use crate::widgets::icon::MdIcon;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::checkbox::CheckboxProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -9,7 +10,6 @@ use floom_core_theme::tokens::color::Color;
 use floom_core_theme::tokens::color_ext::with_alpha;
 use floom_ui_composites::state::{LayerShape, StateLayer};
 use floom_ui_composites::{Checkbox, CheckboxStyle};
-use crate::widgets::icon::MdIcon;
 use floom_widget_runtime::theme_signal;
 
 const LABEL_GAP: f32 = 8.0;

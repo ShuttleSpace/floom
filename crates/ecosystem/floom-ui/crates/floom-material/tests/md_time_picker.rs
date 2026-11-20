@@ -10,7 +10,9 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::time_picker::TimeValue as ThemeTimeValue;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_material::widgets::time_picker::{MaterialTimePicker, MaterialTimePickerStyle, TimeValue};
+use floom_material::widgets::time_picker::{
+    MaterialTimePicker, MaterialTimePickerStyle, TimeValue,
+};
 
 /// The field's box, in the tests' coordinate space.
 const FIELD: Rect = Rect {

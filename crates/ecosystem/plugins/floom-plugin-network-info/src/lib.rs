@@ -1,7 +1,7 @@
 //! The current Wi-Fi network's name, and this device's address on it.
 //!
 //! This is `network_info_plus`'s territory, and the catalog's A7
-//! (`docs/plugin-catalog.md`) — with one design correction the Flutter
+//! (`docs/plugins.md`) — with one design correction the Flutter
 //! package invites: it conflates **two questions with different privacy
 //! profiles** under one "network info" roof.
 //!

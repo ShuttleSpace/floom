@@ -5,6 +5,10 @@
 //! but no native bridge is wired, so actions cannot reach the OS.
 
 pub mod accessibility;
+// The JNI bridge is Android-only: the `jni` crate is a target-gated dependency.
+#[cfg(target_os = "android")]
+pub mod jni;
+pub mod packages;
 
 use floom_platform::{HostPlatform, PlatformCapabilities};
 use floom_types::PlatformId;

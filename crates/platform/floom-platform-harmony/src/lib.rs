@@ -159,7 +159,9 @@ pub unsafe extern "C" fn floom_harmony_present_frame(
 pub fn present(frame: &[u8], width: u32, height: u32) -> bool {
     // SAFETY: `frame` is a live slice, so its pointer/len are valid; the bound
     // native window's validity is the host's contract (checked inside the callee).
-    unsafe { floom_harmony_present_frame(frame.as_ptr(), frame.len(), width as c_int, height as c_int) }
+    unsafe {
+        floom_harmony_present_frame(frame.as_ptr(), frame.len(), width as c_int, height as c_int)
+    }
 }
 
 /// Release the bound native window (XComponent `OnSurfaceDestroyed`).

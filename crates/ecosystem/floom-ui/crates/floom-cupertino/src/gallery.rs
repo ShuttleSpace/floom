@@ -1,5 +1,5 @@
 use floom_design::{
-    CellPaint, DepthField, button_gallery_labels as shared_labels, button_gallery_scene,
+    button_gallery_labels as shared_labels, button_gallery_scene, CellPaint, DepthField,
 };
 use floom_scene::Scene;
 

@@ -4,6 +4,8 @@
 # tree of ours (crates/, examples/, docs/, scripts/, ecosystem/) stays on.
 
 [default.extend-words]
+# `BUI` is a product name (a competitor GUI SDK), not the word `BUY`.
+BUI = "BUI"
 # `mis-` is an English prefix, not a truncation of `miss`: mis-recovery,
 # mis-emitted, mis-routed.
 mis = "mis"

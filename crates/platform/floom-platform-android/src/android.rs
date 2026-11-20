@@ -44,12 +44,12 @@ use winit::window::{
     ImeRequest, ImeRequestData, Window as WinitWindow, WindowAttributes, WindowId as WinitWindowId,
 };
 
+/// What the IME produced, as read back from the anchor view.
+use crate::packages::keyboard::soft_input::ImeInput as SoftInput;
 use floom_platform::{
     Capability, Clipboard, Ime, KeyCode, Platform, PlatformCapabilities, PlatformEvent,
     PointerButton, SurfaceConfig, SurfaceTarget, Window, WindowConfig, WindowState,
 };
-/// What the IME produced, as read back from the anchor view.
-use floom_platform_mobile::packages::keyboard::soft_input::ImeInput as SoftInput;
 use floom_types::{
     DisplayInfo, Modifiers, PlatformId, Point, ScaleFactor, Size, SurfaceId, WindowId,
 };
@@ -302,7 +302,7 @@ impl AndroidPlatform {
             return;
         };
 
-        for input in floom_platform_mobile::packages::keyboard::soft_input::take_ime_input() {
+        for input in crate::packages::keyboard::soft_input::take_ime_input() {
             match input {
                 SoftInput::Commit(text) => {
                     self.events.push(PlatformEvent::ImeCommit { window, text })
@@ -503,7 +503,7 @@ impl Platform for AndroidPlatform {
 
 /// Clipboard on Android goes through the system `ClipboardManager`. There is no
 /// NDK clipboard API, so the call itself is JNI — it lives in
-/// [`floom_platform_mobile::packages::clipboard`], next to the `jni` crate and
+/// [`crate::packages::clipboard`], next to the `jni` crate and
 /// the `JavaVM`/activity handover it needs (see [`hand_over_jni_bridge`]).
 ///
 /// The trait's shape (`Option<String>` / `bool`) predates the richer
@@ -512,7 +512,7 @@ impl Platform for AndroidPlatform {
 /// that cannot act differently on them anyway.
 impl Clipboard for AndroidPlatform {
     fn get_text(&mut self) -> Option<String> {
-        match floom_platform_mobile::packages::clipboard::get_text() {
+        match crate::packages::clipboard::get_text() {
             Ok(text) => text,
             Err(err) => {
                 eprintln!("floom2-android: clipboard read failed: {err}");
@@ -522,7 +522,7 @@ impl Clipboard for AndroidPlatform {
     }
 
     fn set_text(&mut self, text: &str) -> bool {
-        match floom_platform_mobile::packages::clipboard::set_text(text) {
+        match crate::packages::clipboard::set_text(text) {
             Ok(()) => true,
             Err(err) => {
                 eprintln!("floom2-android: clipboard write failed: {err}");
@@ -548,7 +548,7 @@ impl Clipboard for AndroidPlatform {
 ///
 /// `showSoftInput` needs a view the IME can serve, and a `NativeActivity` has
 /// none. So the keyboard is driven the way Java apps do it — through a hidden
-/// anchor view that `floom-platform-mobile`'s soft-input package owns and
+/// anchor view that this crate's soft-input package owns and
 /// attaches to the activity. That package is also where the live keyboard
 /// height/visibility are read back from.
 impl Ime for AndroidPlatform {
@@ -561,10 +561,7 @@ impl Ime for AndroidPlatform {
         // follows the compile-time `log::max_level`, so a `log::warn!` here
         // routinely never reaches logcat. stderr always does, tagged
         // `RustStdoutStderr`.
-        if let Err(err) =
-            floom_platform_mobile::packages::keyboard::soft_input::set_soft_keyboard_visible(
-                enabled,
-            )
+        if let Err(err) = crate::packages::keyboard::soft_input::set_soft_keyboard_visible(enabled)
         {
             let what = if enabled { "show" } else { "hide" };
             eprintln!("floom2-android: soft keyboard {what} failed: {err}");
@@ -740,7 +737,7 @@ fn get_android_app() -> AndroidApp {
         .expect("android_main must call set_android_app before run")
 }
 
-/// Hand the `JavaVM` and activity over to [`floom_platform_mobile::jni`].
+/// Hand the `JavaVM` and activity over to [`crate::jni`].
 ///
 /// Android exposes the clipboard, `InputMethodManager`, vibration, location …
 /// only as Java APIs, so every one of those capabilities needs a JVM. The
@@ -754,8 +751,8 @@ fn get_android_app() -> AndroidApp {
 /// function called from [`run`] rather than an inline pair of calls a later
 /// refactor could drop.
 fn hand_over_jni_bridge(app: &AndroidApp) {
-    floom_platform_mobile::jni::set_java_vm(app.vm_as_ptr());
-    floom_platform_mobile::jni::set_activity(app.activity_as_ptr());
+    crate::jni::set_java_vm(app.vm_as_ptr());
+    crate::jni::set_activity(app.activity_as_ptr());
 }
 
 fn logical_size(size: winit::dpi::PhysicalSize<u32>, scale: f64) -> Size {

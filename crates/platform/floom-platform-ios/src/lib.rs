@@ -27,6 +27,51 @@
 //! only the Apple SDK's libc — no `objc2`/UIKit symbols are needed in Rust, so
 //! the staticlib link is checkable with `xcrun` on this machine. All the UIKit
 //! work (creating the context, refreshing the layer) stays on the host side.
+//!
+//! The window-level packages (clipboard, safe area, system chrome, soft
+//! keyboard) live in [`packages`]. They use objc2/UIKit for the reads Rust can
+//! do on its own, and a C ABI seam for facts UIKit only delivers to the host
+//! (keyboard notifications, IME text) — see `packages/keyboard/soft_input`.
+
+pub mod packages;
+
+/// Host entry point: publish safe-area insets (logical points) read from
+/// `UIView.safeAreaInsets`. No-op off iOS.
+#[unsafe(no_mangle)]
+pub extern "C" fn floom_ios_set_safe_area_insets(top: f64, right: f64, bottom: f64, left: f64) {
+    #[cfg(target_os = "ios")]
+    packages::safe_area::set_safe_area_insets(floom_types::Insets {
+        top,
+        right,
+        bottom,
+        left,
+    });
+    #[cfg(not(target_os = "ios"))]
+    let _ = (top, right, bottom, left);
+}
+
+/// Host entry point: publish soft-keyboard visibility and height (logical
+/// points) from `keyboardWillShow/Hide`. No-op off iOS.
+#[unsafe(no_mangle)]
+pub extern "C" fn floom_ios_set_keyboard_state(visible: bool, height: f64) {
+    #[cfg(target_os = "ios")]
+    packages::keyboard::soft_input::set_keyboard_state(visible, height);
+    #[cfg(not(target_os = "ios"))]
+    let _ = (visible, height);
+}
+
+/// Host entry point: publish IME text. `committed` distinguishes a finished
+/// commit from a preedit; `text` is a NUL-terminated UTF-8 string.
+///
+/// # Safety
+/// `text` must point to a NUL-terminated UTF-8 string valid for the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn floom_ios_push_ime_input(committed: bool, text: *const std::ffi::c_char) {
+    #[cfg(target_os = "ios")]
+    packages::keyboard::soft_input::push_ime_input(committed, text);
+    #[cfg(not(target_os = "ios"))]
+    let _ = (committed, text);
+}
 
 use std::ffi::{c_int, c_void};
 use std::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
@@ -176,7 +221,12 @@ mod tests {
         let mut drawable = vec![0xEEu8; 16 * 2];
         // SAFETY: `drawable` outlives the two calls and has 32 writable bytes.
         unsafe {
-            assert!(floom_ios_bind_drawable(drawable.as_mut_ptr().cast(), 16, 2, 2));
+            assert!(floom_ios_bind_drawable(
+                drawable.as_mut_ptr().cast(),
+                16,
+                2,
+                2
+            ));
             assert!(floom_ios_present_frame(src.as_ptr(), src.len(), 2, 2));
         }
         assert_eq!(&drawable[0..8], &src[0..8]);

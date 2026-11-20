@@ -16,7 +16,7 @@ jobs:
   # Floom 2.0's mobile platform code lives behind `#[cfg(target_os = "android")]`,
   # so nothing in `ci-core.yml` compiles it: the `floom-2.0` job builds the *host*
   # arm of every crate, which for these two crates is a headless stand-in. That
-  # gap is not hypothetical. `floom-platform-mobile`'s entire Android half (the
+  # gap is not hypothetical. `floom-platform-android`'s Android half (the
   # JNI bridge plus every capability package's `android.rs`) and
   # `floom-platform-android`'s whole winit-backed `android` module had never been
   # compiled by CI, and a JNI module sitting there with five hard errors went
@@ -73,7 +73,6 @@ jobs:
       - name: Check the Android arms of the platform crates
         run: >
           cargo check
-          --package=floom-platform-mobile
           --package=floom-platform-android
           --target aarch64-linux-android
 

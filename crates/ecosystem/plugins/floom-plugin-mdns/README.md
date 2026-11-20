@@ -6,7 +6,7 @@
 Discover services on the local network — the mDNS / DNS-SD question.
 
 This is `multicast_dns`'s question, and the catalog's C6
-(`docs/plugin-catalog.md`): "who on this LAN is serving `_http._tcp`?" —
+(`docs/plugins.md`): "who on this LAN is serving `_http._tcp`?" —
 find the printer, the cast target, the other player, without knowing an
 address beforehand.
 
@@ -109,7 +109,7 @@ The public Rust surface (mirrored by `index.d.ts`):
 ## Layout
 
 This plugin follows the capability-plugin template in
-[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#the-layout):
+[`docs/plugins.md`](../../../../docs/plugins.md):
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.

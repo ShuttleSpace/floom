@@ -1,43 +1,32 @@
 # Floom
 
-> Floom is a native Rust UI library with fine-grained reactivity and great ergonomics, the "Floom 2.0" workspace. It is a self-drawn, retained-mode, GPU-accelerated GUI framework with no browser dependency. Edition 2024, MSRV 1.91, workspace version 0.2.0 (pre-1.0). Licensed MIT. The 1.0 definition is gated by budgets and conformance suites, not by copying competitor feature counts.
+> Floom is a native Rust GUI library: self-drawn, retained-mode, GPU-accelerated, no browser dependency, with fine-grained reactivity. "Floom 2.0" workspace: edition 2024, MSRV 1.91, workspace version 0.2.0 (pre-1.0), MIT. The 1.0 bar is budgets + conformance suites, not competitor feature counts.
 
-## Orientation (read in this order)
-- [README](README.md)
-- [Release policy](docs/release-policy.md)
-- [1.0 launch milestone](docs/1.0-launch-milestone.md)
-- [Competitive analysis](docs/competitive-analysis.md)
-- [Architecture](docs/architecture.md)
+## Read in this order
 
-## API surface & design systems
+- [Docs index](docs/README.md) — the map, the status dashboard, the doc rules
+- [Vision](docs/vision.md) — goal, what we borrow from which competitor, moat, non-goals
+- [Architecture](docs/architecture.md) — layers, three ABIs, contributor guide
+- [Performance](docs/performance.md) — metric ledger (size, CPU, memory, GPU, frame time), current numbers, gates
+- [Developer experience](docs/developer-experience.md) — `floom` CLI lifecycle, `run --watch`, devtools
+- [AI first](docs/ai-first.md) — the agent protocol that already exists, and what is missing
+- [Platforms](docs/platforms.md) — 9 targets and per-platform capability bindings in one table
+- [Components](docs/components.md) — widget inventory, design-system conformance, component contract
+- [Plugins](docs/plugins.md) — provider vtable contract, 22-plugin matrix
+- [Roadmap](docs/roadmap.md) — the 13 gates to 1.0, current gaps, ordering, risks
+- [Release policy](docs/release-policy.md) — versioning, supported-target authority, release steps
+- [Renderers](docs/renderer-backend-support.md) — per-backend coverage, including what is deliberately counted-not-drawn
+- [Examples](docs/examples.md) — golden examples (read by `docs_parity.rs` and `scripts/run-golden-examples.sh`)
+- [Per-target gates](docs/gates/) — 8 items per platform, `pass`/`fail`/`n/a` with line-level evidence
 - [Workspace conventions](docs/workspace-conventions.md)
-- [Plugin catalog](docs/plugin-catalog.md) and [plugin usage priority](docs/plugin-usage-priority.md)
-- [Platform & plugins](docs/platform-and-plugins.md)
-- [Renderer backend support](docs/renderer-backend-support.md)
-- [Devtools](docs/devtools.md)
-- [Hot reload](docs/hot-reload.md) — `floom run --watch` file-level hot *restart* (not stateful in-window reload), latency harness
-- [Ecosystem](docs/ecosystem.md)
-
-## Platforms & conformance
-- [Per-target gates](docs/gates/)
-- [Cross-platform a11y/IME test](docs/cross_platform_a11y_ime_test.md)
-- [Host embedding](docs/host-embedding.md), [iOS](docs/ios.md), [OpenHarmony](docs/ohos.md), [Embedder](docs/embedder.md)
-- [Examples](docs/examples.md)
-
-## Performance, size, correctness gates (the 1.0 hard requirement)
-- Size baseline: [floom-2-size-baseline.json](docs/superpowers/benchmarks/floom-2-size-baseline.json)
-- Perf baseline: [floom-2-budget-baseline.json](docs/superpowers/benchmarks/floom-2-budget-baseline.json)
-- [Motion gap](docs/motion-gap.md)
-- [Plugin & renderer audit](docs/plugin-and-renderer-audit.md)
-
-## Plans & specs (docs/superpowers/)
-- [Floom 2.0 implementation plan](docs/superpowers/plans/2026-09-02-floom-2-complete-implementation-plan.md)
-- [TSX .d.ts plan](docs/superpowers/plans/2026-11-06-floom-tsx-dts.md)
-- [API notes](docs/api/)
 
 ## Quick facts for an agent
-- Crate map: `crates/{core,system,widgets,platform,render,native,devtools,app,frontend}`; the public facade is `crates/app/floom`
-- API/ABI surface tests that must keep compiling live in `crates/app/floom/tests/` (`prelude_surface.rs`, `feature_graph.rs`, `docs_parity.rs`)
-- Toolchain: `mise.toml` provisions rust 1.99.1; `rust-toolchain.toml` is the cargo-level pin. Run checks via the `just` recipes in `justfile` (e.g. `just gate`)
-- Platform reality: only `aarch64-apple-darwin` is "tested"; the other 8 targets are device-/target-gated (see the release-policy targets table)
-- TypeScript: `npm/@types/floom/index.d.ts` is the published TSX declaration surface.
+
+- Layout: `crates/{core,system,widgets,platform,render,native,devtools,frontend,app}`; the public facade is `crates/app/floom`. Design systems and the editor are separate workspaces under `crates/ecosystem/` and are **not** in the 1.0 surface.
+- Tests that must keep compiling: `crates/app/floom/tests/{prelude_surface,feature_graph,docs_parity}.rs`. `docs_parity.rs` cross-checks `docs/examples.md` ↔ `examples/`, `docs/architecture.md` ↔ `scripts/check-architecture-deps.sh`, and every path named in `docs/release-policy.md`.
+- Gates: run `just gate` (local). The `justfile` recipes are the real gate; `.github/workflows/` cannot run from this origin, so no CI badge means anything yet.
+- Platform reality: only `aarch64-apple-darwin` is "tested". The other 8 targets are device- or target-gated — see the targets table in `docs/release-policy.md`.
+- Agent protocol (already implemented, `crates/system/floom-accuracy/src/agent/`): commands `Tree`, `Semantics`, `Scene`, `Screenshot`, `Performance`, `Schema`, actions `Tap`, `TypeText`, `Drag`; selectors are `Label`/`Role` only (never a `NodeId`); transports are in-process and `127.0.0.1`-only with a dev token.
+- Component schema: `component_schema()` yields slots, properties (`style`/`layout`/`widget` + closed domains), events, tokens, and a runnable example per widget kind.
+- Benchmarks: `scripts/check-perf-budgets.sh` (10% budgets, single-machine baseline — deliberately not a CI gate) and `just gate size` (3 tiers).
+- TypeScript: there is **no** published `npm/@types/floom`; `floom-tsx` generates Rust from TSX in-tree.

@@ -6,10 +6,10 @@ use floom_widgets::testkit::{AllocatingCreateContext, PaintOp, SceneRecorder};
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_ui_composites::ValidationMessagesList;
 use floom_material::widgets::validation_messages::{
     MaterialValidationMessages, MaterialValidationMessagesStyle,
 };
+use floom_ui_composites::ValidationMessagesList;
 
 const BOX: Rect = Rect {
     x0: 0.0,

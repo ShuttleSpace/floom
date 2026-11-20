@@ -145,8 +145,14 @@ fn the_initial_selection_is_readable_through_both_accessors() {
     let widget = three_rows()
         .selected(2)
         .view(None::<fn(usize)>, None::<fn(Vec<usize>)>);
-    assert_eq!(floom_material::widgets::item_group::selected(&widget), Some(2));
-    assert_eq!(floom_material::widgets::item_group::selected_multi(&widget), vec![2]);
+    assert_eq!(
+        floom_material::widgets::item_group::selected(&widget),
+        Some(2)
+    );
+    assert_eq!(
+        floom_material::widgets::item_group::selected_multi(&widget),
+        vec![2]
+    );
 }
 
 #[test]

@@ -22,7 +22,7 @@ mod ios;
 #[cfg(target_env = "ohos")]
 mod ohos;
 // Desktop arms: macOS, Windows and Linux (Linux minus OHOS — see the OHOS
-// contract in `docs/ohos.md`, where OHOS is `target_os = "linux"`) share one
+// contract in `docs/platforms.md`, where OHOS is `target_os = "linux"`) share one
 // `std`-only implementation. Web (`wasm32`) has no `UdpSocket`, so it keeps the
 // inert fallback below rather than reaching for a browser API.
 #[cfg(all(

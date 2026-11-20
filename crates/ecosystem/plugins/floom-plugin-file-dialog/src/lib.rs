@@ -33,7 +33,7 @@ macro_rules! dialog_arms {
         /// This is the query the deleted `Capability::FILE_DIALOG` bit would
         /// have been, kept where the implementation is: `floom-platform`'s
         /// bit set is answered by the platform adapters, and no adapter can
-        /// see whether this plugin is linked (see `docs/plugin-catalog.md`
+        /// see whether this plugin is linked (see `docs/plugins.md`
         /// §8.3). The compile-time form of the same question is "is this crate
         /// in the caller's `Cargo.toml`".
         pub const SUPPORTED: bool =

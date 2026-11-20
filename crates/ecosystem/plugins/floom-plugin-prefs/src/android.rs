@@ -3,7 +3,7 @@
 //! The capability is Java: `SharedPreferences` is an Android API, and
 //! `PrefsPlugin` owns it. This file only carries the ask across JNI.
 
-use floom_platform_mobile::jni::{self as bridge, JniExt};
+use floom_platform_android::jni::{self as bridge, JniExt};
 use jni::objects::JValue;
 use jni::strings::JNIString;
 

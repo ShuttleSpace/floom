@@ -11,7 +11,9 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::navigation_drawer::NavigationDrawerSide;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_fluent::widgets::navigation_drawer::{FluentNavigationDrawer, FluentNavigationDrawerStyle};
+use floom_fluent::widgets::navigation_drawer::{
+    FluentNavigationDrawer, FluentNavigationDrawerStyle,
+};
 
 const BOX: Rect = Rect {
     x0: 0.0,

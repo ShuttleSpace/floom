@@ -22,7 +22,7 @@
 //! example prints.
 
 use super::SensorKind;
-use floom_platform_mobile::jni::{self as bridge, JniExt};
+use floom_platform_android::jni::{self as bridge, JniExt};
 use jni::objects::JValue;
 
 /// `SensorsPlugin`'s class, as `ClassLoader.loadClass` expects it.

@@ -18,7 +18,7 @@ use floom_native_ffi::floom_native::{
     NativeCapabilities, NativeCapture, NativeCompositionMode, NativeError, NativeSnapshot,
     NativeState, NativeViewKind, NativeViewProvider,
 };
-use floom_platform_mobile::jni as jni_helpers;
+use floom_platform_android::jni as jni_helpers;
 
 /// The Java `FloomWebView` class, as `ClassLoader.loadClass` expects it.
 const CLASS: &str = "dev.floom.plugin.webview.FloomWebView";

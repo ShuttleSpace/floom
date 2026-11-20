@@ -12,7 +12,9 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::date_picker::DateValue as ThemeDateValue;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_material::widgets::date_picker::{DateValue, MaterialDatePicker, MaterialDatePickerStyle};
+use floom_material::widgets::date_picker::{
+    DateValue, MaterialDatePicker, MaterialDatePickerStyle,
+};
 
 /// The field's box, in the tests' coordinate space.
 const FIELD: Rect = Rect {

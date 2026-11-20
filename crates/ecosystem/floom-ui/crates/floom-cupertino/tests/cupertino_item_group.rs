@@ -135,7 +135,10 @@ fn one_widget_answers_both_accessors() {
     let widget = group()
         .row("One", || Box::new(floom_widgets::Text::new("one")))
         .view(None::<fn(usize)>, None::<fn(Vec<usize>)>);
-    assert_eq!(floom_cupertino::widgets::item_group::selected(&widget), None);
+    assert_eq!(
+        floom_cupertino::widgets::item_group::selected(&widget),
+        None
+    );
     assert_eq!(
         floom_cupertino::widgets::item_group::selected_multi(&widget),
         Vec::<usize>::new()

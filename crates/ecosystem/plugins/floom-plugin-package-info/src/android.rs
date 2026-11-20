@@ -18,7 +18,7 @@
 //! Adapted from `gpui-mobile` (Apache-2.0).
 
 use super::AppInfo;
-use floom_platform_mobile::jni::{self as jni_helpers, JniExt, obj};
+use floom_platform_android::jni::{self as jni_helpers, JniExt, obj};
 use jni::objects::{JObject, JString};
 use jni::strings::JNIString;
 

@@ -33,7 +33,7 @@
 //! the wrong time — worse than not seeing it.
 
 use super::Notification;
-use floom_platform_mobile::jni::{self as bridge, JniExt};
+use floom_platform_android::jni::{self as bridge, JniExt};
 use jni::objects::JValue;
 
 /// `NotificationsPlugin`'s class, as `ClassLoader.loadClass` expects it.

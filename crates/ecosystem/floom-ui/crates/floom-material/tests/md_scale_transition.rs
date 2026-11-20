@@ -7,7 +7,9 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_material::widgets::scale_transition::{MaterialScaleTransition, MaterialScaleTransitionStyle};
+use floom_material::widgets::scale_transition::{
+    MaterialScaleTransition, MaterialScaleTransitionStyle,
+};
 
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Material);

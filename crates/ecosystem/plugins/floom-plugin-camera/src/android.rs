@@ -17,7 +17,7 @@ use floom_native_ffi::floom_native::{
     NativeCapabilities, NativeCompositionMode, NativeError, NativeState, NativeViewKind,
     NativeViewProvider,
 };
-use floom_platform_mobile::jni as jni_helpers;
+use floom_platform_android::jni as jni_helpers;
 
 use crate::common::PLUGIN_NAME;
 

@@ -9,7 +9,7 @@
 //! | `Cache` | `getCacheDir()` | internal cache, evictable |
 //! | `Downloads` | — | redirected at [`super::external_files_dir`]'s territory; no internal equivalent |
 //!
-//! Every read goes through the JNI bridge `floom-platform-mobile` owns, and
+//! Every read goes through the JNI bridge `floom-platform-android` owns, and
 //! every failure is a `None` rather than an `Err`: "this app's directory on
 //! this device" is a question the caller cannot retry into a different answer,
 //! and a missing-but-expected directory is an answer, not a failure.
@@ -22,7 +22,7 @@
 //! distinguish from a broken bridge.
 
 use super::AppDirectory;
-use floom_platform_mobile::jni::{self as jni_helpers, JniExt};
+use floom_platform_android::jni::{self as jni_helpers, JniExt};
 use jni::objects::JObject;
 use jni::strings::JNIString;
 use std::path::PathBuf;

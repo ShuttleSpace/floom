@@ -10,11 +10,11 @@
 | desktop | `src/lib.rs` | inert: `NotDetermined`, `false`, and named refusals |
 
 This plugin keeps its platform code in Rust (`Shape A` in
-[`docs/plugin-catalog.md` §8.1](../../../../../docs/plugin-catalog.md#81-新插件走哪套形状教义与代码已分叉)),
+[`docs/plugins.md` §8.1](../../../../../docs/plugins.md#4-新增插件的-checklist)),
 so `build.rs` compiles no native source and `native/common/` holds only the C
 ABI contract — the shape a native half would implement if one is added. The
 Rust arms are listed in the table above; the contract header is checked against
 the crate name by `scripts/check-plugin-templates.sh`.
 
 The generic layout is documented in
-[`docs/platform-and-plugins.md`](../../../../../docs/platform-and-plugins.md#the-layout).
+[`docs/plugins.md`](../../../../../docs/plugins.md).

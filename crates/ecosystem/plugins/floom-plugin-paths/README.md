@@ -7,7 +7,7 @@ The app's own directories: application support, documents, cache, downloads.
 
 This is `path_provider`'s question — "where may this app write" — and it is
 the first thing almost every app that persists anything needs, which is why
-it opens the catalog's Tier A (`docs/plugin-catalog.md`, A1).
+it opens the catalog's Tier A (`docs/plugins.md`, A1).
 
 A **capability plugin**: one capability, one crate, opt-in by dependency.
 
@@ -94,7 +94,7 @@ The public Rust surface (mirrored by `index.d.ts`):
 ## Layout
 
 This plugin follows the capability-plugin template in
-[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#the-layout):
+[`docs/plugins.md`](../../../../docs/plugins.md):
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.

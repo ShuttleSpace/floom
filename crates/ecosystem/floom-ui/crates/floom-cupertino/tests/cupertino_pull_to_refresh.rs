@@ -14,7 +14,9 @@ use floom_widgets::testkit::{
 use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_cupertino::widgets::pull_to_refresh::{CupertinoPullToRefresh, CupertinoPullToRefreshStyle};
+use floom_cupertino::widgets::pull_to_refresh::{
+    CupertinoPullToRefresh, CupertinoPullToRefreshStyle,
+};
 
 const BOX: Rect = Rect {
     x0: 0.0,

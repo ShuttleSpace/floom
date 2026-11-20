@@ -107,7 +107,6 @@ FLOOM2_PACKAGES=(
   --package=floom-platform --package=floom-platform-desktop
   --package=floom-platform-android
   --package=floom-platform-web
-  --package=floom-platform-mobile
   --package=floom-text
   --package=floom-layout --package=floom-style --package=floom-virtual
   --package=floom-native --package=floom-native-ffi
@@ -583,7 +582,7 @@ has_check plugin-facades && run_check plugin-facades "" plugin_facades_check
 android_check() {
   local p
   cargo check --target aarch64-linux-android \
-    -p floom-platform-mobile -p floom-platform-android || return 1
+    -p floom-platform-android || return 1
   for p in "${MOBILE_CAPABILITY_PLUGINS[@]}"; do
     cargo check --manifest-path "$PLUGIN_MANIFEST" \
       --target aarch64-linux-android -p "$p" || return 1

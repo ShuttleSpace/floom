@@ -4,7 +4,7 @@
 //! `NetworkInfoPlugin` owns it. This file only carries the ask across JNI.
 
 use super::WifiInfo;
-use floom_platform_mobile::jni::{self as bridge, JniExt};
+use floom_platform_android::jni::{self as bridge, JniExt};
 use jni::objects::{JObjectArray, JValue};
 
 /// `NetworkInfoPlugin`'s class, as `ClassLoader.loadClass` expects it.

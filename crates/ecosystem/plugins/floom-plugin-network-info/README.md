@@ -6,7 +6,7 @@
 The current Wi-Fi network's name, and this device's address on it.
 
 This is `network_info_plus`'s territory, and the catalog's A7
-(`docs/plugin-catalog.md`) — with one design correction the Flutter
+(`docs/plugins.md`) — with one design correction the Flutter
 package invites: it conflates **two questions with different privacy
 profiles** under one "network info" roof.
 
@@ -97,7 +97,7 @@ The public Rust surface (mirrored by `index.d.ts`):
 ## Layout
 
 This plugin follows the capability-plugin template in
-[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#the-layout):
+[`docs/plugins.md`](../../../../docs/plugins.md):
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.

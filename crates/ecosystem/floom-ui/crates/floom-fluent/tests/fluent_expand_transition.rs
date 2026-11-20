@@ -9,7 +9,9 @@ use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::global_theme::{set_design_system, DesignSystem};
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_fluent::widgets::expand_transition::{FluentExpandTransition, FluentExpandTransitionStyle};
+use floom_fluent::widgets::expand_transition::{
+    FluentExpandTransition, FluentExpandTransitionStyle,
+};
 
 fn theme() -> MultiTheme {
     floom_core_theme::global_theme::set_design_system(DesignSystem::Fluent);

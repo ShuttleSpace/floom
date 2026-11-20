@@ -9,12 +9,12 @@ pub use floom_ui_composites::ConfirmEdit;
 use floom_ui_composites::{ConfirmEditGlyphs, ConfirmEditStyle};
 use floom_widgets::{read_flag, shared_flag, SharedBuffer, SharedFlag};
 
+use crate::widgets::icon::{FluentIcon, VIEW_BOX};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::confirm_edit::ConfirmEditProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 use floom_core_theme::tokens::color::to_engine_color as to_paint;
 use floom_core_theme::tokens::color::Color;
-use crate::widgets::icon::{FluentIcon, VIEW_BOX};
 
 const GLYPH_SIZE: f32 = 16.0;
 const BUTTON_PADDING: f32 = 8.0;

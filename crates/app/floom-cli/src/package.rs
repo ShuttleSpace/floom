@@ -22,9 +22,7 @@ struct PackageFlags {
 
 /// Split `package` args into the shared lifecycle options and the
 /// package-only flags, then parse the shared ones with `parse_lifecycle`.
-fn parse_package(
-    args: &[String],
-) -> Result<(crate::LifecycleOpts, PackageFlags), String> {
+fn parse_package(args: &[String]) -> Result<(crate::LifecycleOpts, PackageFlags), String> {
     let mut shared: Vec<String> = Vec::new();
     let mut flags = PackageFlags::default();
     let mut i = 0;
@@ -63,7 +61,10 @@ pub fn run(args: &[String]) -> Result<(), String> {
     let project = crate::pack::shared::inspect(&lc.dir)?;
 
     let Some(platform) = lc.platform.clone() else {
-        println!("built release binary for `{}` (host).", project.package_name);
+        println!(
+            "built release binary for `{}` (host).",
+            project.package_name
+        );
         println!(
             "  for a platform artifact, run `floom package --platform <macos|windows|linux|android|ios|ohos|web>`"
         );

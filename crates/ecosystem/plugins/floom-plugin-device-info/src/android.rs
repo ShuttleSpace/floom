@@ -19,7 +19,7 @@
 //! otherwise be told the truth about the wrong machine.
 
 use super::DeviceInfo;
-use floom_platform_mobile::jni::{self as bridge, JniExt};
+use floom_platform_android::jni::{self as bridge, JniExt};
 use jni::objects::JObjectArray;
 
 /// `DeviceInfoPlugin`'s class, as `ClassLoader.loadClass` expects it.

@@ -124,9 +124,7 @@ pub enum SdkPrecondition {
 impl SdkPrecondition {
     pub fn is_satisfied(&self) -> bool {
         match self {
-            SdkPrecondition::AndroidSdk => {
-                crate::native_project::detect_android_sdk().is_some()
-            }
+            SdkPrecondition::AndroidSdk => crate::native_project::detect_android_sdk().is_some(),
             SdkPrecondition::Jdk => command_succeeds("java", &["-version"]),
             SdkPrecondition::Gradle => command_succeeds("gradle", &["--version"]),
             SdkPrecondition::Xcode => command_succeeds("xcode-select", &["-p"]),
@@ -267,7 +265,12 @@ mod tests {
         assert!(SdkPrecondition::Gradle.hint().contains("gradle"));
         assert!(SdkPrecondition::Xcode.hint().contains("xcode-select"));
         assert!(SdkPrecondition::Hvigor.hint().contains("DEVECO_SDK_HOME"));
-        assert!(SdkPrecondition::Cmake.hint().to_lowercase().contains("cmake"));
+        assert!(
+            SdkPrecondition::Cmake
+                .hint()
+                .to_lowercase()
+                .contains("cmake")
+        );
     }
 
     #[test]

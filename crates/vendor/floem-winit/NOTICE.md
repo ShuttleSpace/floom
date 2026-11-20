@@ -29,4 +29,4 @@ iOS share gate passes against the published crate.
 
 ## See also
 
-- `docs/ios.md` — "Step 8b" describes the fork and the `set_on_open_url` contract.
+- `docs/platforms.md` — "Step 8b" describes the fork and the `set_on_open_url` contract.

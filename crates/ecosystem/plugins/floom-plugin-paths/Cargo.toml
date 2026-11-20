@@ -16,7 +16,7 @@ publish = false
 # the JNI bridge the platform layer owns. The plugin reaches down to the
 # platform; the platform never reaches up.
 [target.'cfg(target_os = "android")'.dependencies]
-floom-platform-mobile = { path = "../../../platform/floom-platform-mobile", version = "0.2.0" }
+floom-platform-android = { path = "../../../platform/floom-platform-android", version = "0.2.0" }
 jni = "0.22"
 
 # iOS and macOS answer through `NSSearchPathForDirectoriesInDomains`, which is

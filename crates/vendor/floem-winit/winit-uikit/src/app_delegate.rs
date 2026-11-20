@@ -35,15 +35,15 @@ use std::sync::Mutex;
 
 use dispatch2::MainThreadBound;
 use objc2::define_class;
-use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObjectProtocol};
+use objc2::MainThreadMarker;
 use objc2::{ClassType, DefinedClass, MainThreadOnly};
 use objc2_foundation::{NSDictionary, NSObject, NSString, NSURL};
 use objc2_ui_kit::{
     UIApplication, UIApplicationDelegate, UIApplicationLaunchOptionsKey,
-    UIApplicationLaunchOptionsURLKey, UIApplicationOpenURLOptionsKey, UIScene, UISceneConfiguration,
-    UISceneConnectionOptions, UISceneDelegate, UISceneSession, UIWindowScene,
+    UIApplicationLaunchOptionsURLKey, UIApplicationOpenURLOptionsKey, UIScene,
+    UISceneConfiguration, UISceneConnectionOptions, UISceneDelegate, UISceneSession, UIWindowScene,
 };
 
 // floom registers a single `unsafe extern "C" fn(*mut c_void)` callback. The
@@ -168,8 +168,8 @@ define_class!(
             connecting_scene_session: &UISceneSession,
             _options: &UISceneConnectionOptions,
         ) -> Retained<UISceneConfiguration> {
-            let mtm = MainThreadMarker::new()
-                .expect("scene session callbacks arrive on the main thread");
+            let mtm =
+                MainThreadMarker::new().expect("scene session callbacks arrive on the main thread");
             let configuration = UISceneConfiguration::configurationWithName_sessionRole(
                 None,
                 &connecting_scene_session.role(),
@@ -207,8 +207,7 @@ define_class!(
             _session: &UISceneSession,
             _options: &UISceneConnectionOptions,
         ) {
-            let mtm = MainThreadMarker::new()
-                .expect("scene callbacks arrive on the main thread");
+            let mtm = MainThreadMarker::new().expect("scene callbacks arrive on the main thread");
             // `Retained::retain` gives a `Retained<UIScene>` we can downcast
             // into the `UIWindowScene` our configuration requested.
             // SAFETY: `scene` is alive for the duration of the selector call
@@ -229,7 +228,8 @@ define_class!(
                         // `UIApplication.windows()`). Attach the freshly
                         // connected scene to every window we remembered in
                         // [`EARLY_WINDOWS`] instead.
-                        let early_windows = std::mem::take(&mut *EARLY_WINDOWS.get(mtm).borrow_mut());
+                        let early_windows =
+                            std::mem::take(&mut *EARLY_WINDOWS.get(mtm).borrow_mut());
                         for window in early_windows {
                             // SAFETY: plain setters on live, main-thread UIKit
                             // objects.
@@ -238,20 +238,19 @@ define_class!(
                                 window.makeKeyAndVisible();
                             }
                         }
-                    }
+                    },
                     // The configuration forces `UIWindowScene`, so the downcast
                     // cannot fail; drop the impossible error value silently.
                     Err(scene) => {
                         let _ = scene;
-                    }
+                    },
                 }
             }
         }
 
         #[unsafe(method(sceneDidDisconnect:))]
         fn scene_did_disconnect(&self, _scene: &UIScene) {
-            let mtm = MainThreadMarker::new()
-                .expect("scene callbacks arrive on the main thread");
+            let mtm = MainThreadMarker::new().expect("scene callbacks arrive on the main thread");
             WINDOW_SCENE.get(mtm).set(None);
         }
     }

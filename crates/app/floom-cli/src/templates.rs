@@ -45,12 +45,7 @@ fn features_literal() -> String {
         .join(", ")
 }
 
-pub fn cargo_toml(
-    name: &str,
-    floom_crate: &str,
-    floom_path: Option<&str>,
-    mobile: bool,
-) -> String {
+pub fn cargo_toml(name: &str, floom_crate: &str, floom_path: Option<&str>, mobile: bool) -> String {
     let dep = match floom_path {
         Some(p) => format!(
             "{f} = {{ path = \"{p}\", features = [{features}] }}\n\
@@ -192,7 +187,7 @@ pub fn platform_readme(label: &str, opener: &str) -> String {
          - The native host project that embeds the compiled Floom binary.\n\
          - Kotlin/Java or Swift host libraries for any plugin capability\n\
            (camera, sensors, ...), called from Rust over a narrow `extern \"C\"`\n\
-           ABI. See `docs/platform-and-plugins.md`.\n\
+           ABI. See `docs/plugins.md`.\n\
          \n\
          Application logic does not belong in this directory — it belongs in\n\
          `src/`, so it stays cross-platform.\n"
@@ -847,7 +842,7 @@ pub fn plugin_android_rs(name: &str) -> String {
 //! string, so a rename shows up on the device as a `ClassNotFoundException`
 //! rather than as a compile error.
 
-use floom_platform_mobile::jni::{{self as bridge, JniExt}};
+use floom_platform_android::jni::{{self as bridge, JniExt}};
 use jni::objects::JValue;
 
 const CLASS: &str = "{package}/{class}";
@@ -918,13 +913,13 @@ pub fn plugin_cargo_toml(name: &str, floom_path: Option<&str>, platforms: &[Stri
         let mobile = match floom_path.and_then(|p| {
             std::path::Path::new(p)
                 .parent()
-                .map(|dir| dir.join("floom-platform-mobile"))
+                .map(|dir| dir.join("floom-platform-android"))
         }) {
             Some(path) => format!(
-                "floom-platform-mobile = {{ path = \"{}\" }}",
+                "floom-platform-android = {{ path = \"{}\" }}",
                 path.display()
             ),
-            None => "floom-platform-mobile = { version = \"0.2\" }".to_string(),
+            None => "floom-platform-android = { version = \"0.2\" }".to_string(),
         };
         format!(
             "\n\
@@ -2281,19 +2276,61 @@ final class FloomViewController: UIViewController {{
         super.viewDidLayoutSubviews()
         metalView?.frame = view.bounds
         metalView?.draw()
+        // The safe area is a fact about this view, so publish it on every
+        // layout (orientation changes, cutouts). UIKit gives points, which is
+        // what the Rust side stores.
+        let s = view.safeAreaInsets
+        floomSetSafeArea(s.top, s.right, s.bottom, s.left)
+    }}
+
+    override func viewWillAppear(_ animated: Bool) {{
+        super.viewWillAppear(animated)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillShow(_:)),
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillHide(_:)),
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil)
+    }}
+
+    override func viewWillDisappear(_ animated: Bool) {{
+        super.viewWillDisappear(animated)
+        NotificationCenter.default.removeObserver(self)
+    }}
+
+    @objc private func keyboardWillShow(_ note: Notification) {{
+        guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {{ return }}
+        floomSetKeyboard(true, Double(frame.height))
+    }}
+
+    @objc private func keyboardWillHide(_ note: Notification) {{
+        floomSetKeyboard(false, 0)
     }}
 }}
 
 /// The C ABI, exposed to Swift through the bridging header.
 ///
-/// These four functions are what the whole iOS host is: attach a layer, run the
-/// loop, resize, shut down. Everything else is Rust.
+/// These functions are what the whole iOS host is: attach a layer, run the
+/// loop, resize, shut down, and forward UIKit facts Rust cannot read itself.
+/// The window-level hooks are declared here so Swift can call them directly
+/// once the staticlib is linked; the bridging header includes `floom.h`.
 enum Floom {{
     static func start() {{}}
     static func shutdown() {{}}
     static func attach(_ layer: CAMetalLayer) {{}}
     static func run(_ title: String) {{}}
 }}
+
+/// Window-level facts Rust reads through C ABI seams (see floom-platform-ios).
+/// Declared by symbol name so the generated app needs no extra header entry.
+@_silgen_name("floom_ios_set_safe_area_insets")
+private func floomSetSafeArea(_ top: Double, _ right: Double, _ bottom: Double, _ left: Double) -> Void
+@_silgen_name("floom_ios_set_keyboard_state")
+private func floomSetKeyboard(_ visible: Bool, _ height: Double) -> Void
 "#,
         name = name
     )

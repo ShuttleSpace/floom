@@ -56,8 +56,7 @@ pub fn pack_ohos(project: &Project, opts: &PackOpts) -> Result<PackResult, Strin
     let so = shared::newest_artifact(&project.target_dir, "so")
         .ok_or_else(|| "cargo build produced no .so".to_string())?;
     let libs = project.root.join("ohos/entry/libs/arm64-v8a");
-    std::fs::create_dir_all(&libs)
-        .map_err(|e| format!("cannot create {}: {e}", libs.display()))?;
+    std::fs::create_dir_all(&libs).map_err(|e| format!("cannot create {}: {e}", libs.display()))?;
     let dest = libs.join(so.file_name().unwrap());
     std::fs::copy(&so, &dest).map_err(|e| format!("cannot stage .so into hvigor project: {e}"))?;
 

@@ -34,7 +34,7 @@
 //!   report `Ok` for a prompt that never appears.
 
 use super::{Location, LocationAuthorization};
-use floom_platform_mobile::jni::{self as bridge, JniExt};
+use floom_platform_android::jni::{self as bridge, JniExt};
 use jni::objects::JValue;
 
 /// `LocationPlugin`'s class, as `ClassLoader.loadClass` expects it.

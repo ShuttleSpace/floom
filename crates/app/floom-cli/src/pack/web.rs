@@ -28,11 +28,7 @@ pub fn wasm_build_argv(opts: &PackOpts) -> Vec<String> {
 /// The `wasm-bindgen --target web` argv for a built `.wasm`, emitting JS/glue
 /// into the project's `web/pkg`.
 pub fn wasm_bindgen_argv(project: &Project, wasm: &Path, _opts: &PackOpts) -> Vec<String> {
-    let out = project
-        .root
-        .join("web/pkg")
-        .to_string_lossy()
-        .into_owned();
+    let out = project.root.join("web/pkg").to_string_lossy().into_owned();
     vec![
         "--target".to_string(),
         "web".to_string(),

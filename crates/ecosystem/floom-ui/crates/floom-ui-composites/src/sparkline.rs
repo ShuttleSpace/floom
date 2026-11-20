@@ -94,11 +94,7 @@ impl Sparkline {
         let inner_w = (bounds.width() - self.padding * 2.0).max(0.0);
         let inner_h = (bounds.height() - self.padding * 2.0).max(0.0);
         let n = self.data.len();
-        let step_x = if n > 1 {
-            inner_w / (n - 1) as f64
-        } else {
-            0.0
-        };
+        let step_x = if n > 1 { inner_w / (n - 1) as f64 } else { 0.0 };
         let y = |v: f32| -> f64 {
             if span == 0.0 {
                 bounds.y0 + self.padding + inner_h / 2.0
@@ -111,9 +107,7 @@ impl Sparkline {
             self.data
                 .iter()
                 .enumerate()
-                .map(|(i, v)| {
-                    Point::new(bounds.x0 + self.padding + i as f64 * step_x, y(*v))
-                })
+                .map(|(i, v)| Point::new(bounds.x0 + self.padding + i as f64 * step_x, y(*v)))
                 .collect(),
         )
     }

@@ -17,10 +17,7 @@ use crate::toolchain::SdkPrecondition;
 pub fn cmake_configure_argv(platform_dir: &Path) -> Vec<String> {
     vec![
         "-B".to_string(),
-        platform_dir
-            .join("build")
-            .to_string_lossy()
-            .into_owned(),
+        platform_dir.join("build").to_string_lossy().into_owned(),
     ]
 }
 
@@ -29,10 +26,7 @@ pub fn cmake_configure_argv(platform_dir: &Path) -> Vec<String> {
 pub fn cmake_build_argv(platform_dir: &Path, opts: &PackOpts) -> Vec<String> {
     let mut argv = vec![
         "--build".to_string(),
-        platform_dir
-            .join("build")
-            .to_string_lossy()
-            .into_owned(),
+        platform_dir.join("build").to_string_lossy().into_owned(),
     ];
     if opts.release {
         argv.push("--config".to_string());
@@ -65,7 +59,11 @@ fn find_artifact(build: &Path, name: &str) -> Option<std::path::PathBuf> {
 
 /// Package a desktop platform by configuring and building its CMake project.
 /// Missing CMake → `blocked`; the produced binary is the artifact.
-pub fn pack_desktop(platform: &str, project: &Project, opts: &PackOpts) -> Result<PackResult, String> {
+pub fn pack_desktop(
+    platform: &str,
+    project: &Project,
+    opts: &PackOpts,
+) -> Result<PackResult, String> {
     if let Err(blocked) = shared::require_sdks_blocked(&[SdkPrecondition::Cmake]) {
         return Ok(blocked);
     }
@@ -81,8 +79,13 @@ pub fn pack_desktop(platform: &str, project: &Project, opts: &PackOpts) -> Resul
     let b_ref: Vec<&str> = b.iter().map(String::as_str).collect();
     shared::run("cmake", &b_ref, &platform_dir)?;
 
-    let artifact = find_artifact(&build, &project.package_name)
-        .ok_or_else(|| format!("cmake produced no `{}` artifact in {}", project.package_name, build.display()))?;
+    let artifact = find_artifact(&build, &project.package_name).ok_or_else(|| {
+        format!(
+            "cmake produced no `{}` artifact in {}",
+            project.package_name,
+            build.display()
+        )
+    })?;
     Ok(PackResult {
         tier: Tier::Artifact,
         artifact: Some(artifact),

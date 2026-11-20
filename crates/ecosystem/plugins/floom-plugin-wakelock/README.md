@@ -6,7 +6,7 @@
 Keep the screen awake while the app is in the foreground.
 
 This is `wakelock_plus`'s question, and the catalog's A6
-(`docs/plugin-catalog.md`): a video is playing, a recipe is on screen
+(`docs/plugins.md`): a video is playing, a recipe is on screen
 with hands busy, a turn-by-turn map is showing — the app asks the OS not
 to sleep the display, and *only* the display; this crate does not touch
 CPU or network idle policy, which are different questions with different
@@ -85,7 +85,7 @@ The public Rust surface (mirrored by `index.d.ts`):
 ## Layout
 
 This plugin follows the capability-plugin template in
-[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#the-layout):
+[`docs/plugins.md`](../../../../docs/plugins.md):
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.

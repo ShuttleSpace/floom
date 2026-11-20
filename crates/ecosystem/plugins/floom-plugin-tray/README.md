@@ -7,7 +7,7 @@ A tray icon with a menu: the app's presence in the system tray or menu bar.
 
 This is `tray_manager`'s question — an app that keeps running with its
 windows closed still needs a way to be found — and the batch recorded in
-`docs/plugin-catalog.md` §10.
+`docs/plugins.md` §10.
 
 [`Tray::show`] puts an icon in the tray and a menu behind it;
 [`Tray::events`] drains what the user did; dropping the [`Tray`] removes the
@@ -108,7 +108,7 @@ The public Rust surface (mirrored by `index.d.ts`):
 ## Layout
 
 This plugin follows the capability-plugin template in
-[`docs/platform-and-plugins.md`](../../../../docs/platform-and-plugins.md#the-layout):
+[`docs/plugins.md`](../../../../docs/plugins.md):
 
 - `src/lib.rs` — the unified Rust API and the per-target dispatch.
 - `src/<target>.rs` — each target's arm; see `native/README.md` for the mapping.

@@ -92,3 +92,7 @@ pub trait Ime {
     fn set_enabled(&mut self, window: WindowId, enabled: bool);
     fn set_cursor_area(&mut self, window: WindowId, origin: Point, size: Size);
 }
+
+// Runtime target detection (migrated from floom-platform-mobile).
+pub mod mobile;
+pub mod target_platform;

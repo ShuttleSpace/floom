@@ -120,7 +120,7 @@ crates/ecosystem/floom-ui（satellite，9 members）
 - [ ] `floom generate` CLI generator（自动生成组件模板）
 - [ ] 文档站点
 
-> 以上 P3 属差异化/生态，非 1.0 阻塞项；按 `docs/competitive-analysis.md` 的 P2 批次口径是 1.1+。
+> 以上 P3 属差异化/生态，非 1.0 阻塞项；按 `docs/vision.md` 的 P2 批次口径是 1.1+。
 
 ## 4. 仍然有效的约定（沿用 `SKILL.md` / 旧计划，与架构无关的部分）
 

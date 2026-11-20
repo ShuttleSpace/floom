@@ -3,7 +3,7 @@
 # SPDX-FileCopyrightText: The Floom Authors
 #
 # Checks every capability plugin against the layout in
-# `docs/platform-and-plugins.md` §"The layout".
+# `docs/plugins.md` §"The layout".
 #
 # The plugin workspace's member list is a glob, so a directory can join it
 # without carrying the files the template promises. `gate.sh` lints the

@@ -161,7 +161,7 @@ fn build_app(crate_dir: &Path, target_dir: &Path, release: bool) -> Result<PathB
 /// and relaunch — a hot *restart* (the window closes and reopens; app state is
 /// lost). This is honest about its boundary versus stateful in-window hot
 /// reload, which `floom-hot-reload`'s `UiPatch` does not yet bridge to a live
-/// host (see `docs/hot-reload.md`).
+/// host (see `docs/developer-experience.md`).
 ///
 /// `--no-relaunch` keeps the watch loop but skips the spawn, so the latency
 /// harness measures save→rebuild without needing a display — the only part

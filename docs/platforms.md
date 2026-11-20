@@ -1,0 +1,83 @@
+<!-- SPDX-License-Identifier: MIT -->
+<!-- SPDX-FileCopyrightText: The Floem Authors -->
+# 平台与能力绑定
+
+两件事必须分开看：**能编译**（`cargo build --target`）与**能跑**（有输入、有人在上机按过）。
+[release-policy.md](release-policy.md) 的 targets 表是状态的**权威源**；本文件回答的是"每个平台的能力到底从哪条路进来"。
+
+## 1. Target 矩阵（摘要，权威见 release-policy）
+
+| target | 后端 | 状态 | 门禁账本 |
+| --- | --- | --- | --- |
+| `aarch64-apple-darwin` | `floom-platform-desktop`（winit）+ `floom-renderer-vello`（Metal） | **tested**（macOS 26.6.2 / M4 Pro / rustc 1.98.0） | [gates/macos.md](gates/macos.md) 8/8 pass |
+| `x86_64-apple-darwin` | 同上 | **untested**（无 Intel 机器） | — |
+| `x86_64-pc-windows-msvc` | `floom-platform-desktop` | device-gated（Phase 16.2），只到 `cargo build` | [gates/windows.md](gates/windows.md) 8 项全 gated |
+| `x86_64-unknown-linux-gnu` | `floom-platform-desktop` | device-gated（Phase 16.2），只到 `cargo build` | [gates/linux.md](gates/linux.md) 8 项全 gated |
+| `aarch64-linux-android` | `floom-platform-android`（JNI + winit-android） | device-gated（Phase 17）：启停/IME/CJK/剪贴板已在模拟器验过 | [gates/android.md](gates/android.md) 4 pass / 1 partial |
+| `aarch64-apple-ios` | `floom-platform-ios`（UIKit staticlib） | device-gated（Phase 17）：启动/点按/剪贴板 pass，CJK 渲染与 a11y 未过 | [gates/ios.md](gates/ios.md) 3 pass / 1 partial / 1 fail |
+| OpenHarmony（手机/平板/PC 统一 OS） | `floom-platform-harmony`（N-API cdylib + 软件渲染） | device-gated（Phase 19）：启动 + 点按 pass，IME/a11y/剪贴板/文件/安全区/焦点未做 | [gates/ohos.md](gates/ohos.md) 2 pass |
+| `wasm32-unknown-unknown` | `floom-platform-web` + `floom-renderer-web` | target-gated（Phase 19），headless WASM harness 未做 | — |
+| no-std / bare metal | `floom-platform`（`embedded` feature） | target-gated（Phase 19） | — |
+
+> 陈旧处：release-policy 里把 iOS/HarmonyOS 写成 `floom-platform` 的 feature，实际早已是独立 crate（`crates/platform/floom-platform-ios`、`-harmony`）。gate 文档里的 `crates/floom/src/...` 路径同样是旧的，实际是 `crates/app/floom/src/...`。
+
+## 2. 能力绑定真相表（这张表才是"接平台"的清单）
+
+| 能力 | macOS | Windows/Linux | Android | iOS | OHOS | Web/TUI |
+| --- | --- | --- | --- | --- | --- | --- |
+| 上屏 | winit + Metal/vello | winit + vello | Vulkan（模拟器经验证 `GPU adapter: Apple M4 Pro (Vulkan)`） | `floom_ios_bind_drawable` 像素指针 + Metal surface | `floom_harmony_bind_surface` + `present_frame`（软件 blit） | canvas blit / 字符网格 |
+| 指针/触摸 | winit | winit | winit-android → ui-events | **UIKit 侧**（gate 用 `idb ui tap` 验过，Rust 侧无 touch 导出） | **无**（见 §4） | winit-web / TUI 键鼠 |
+| 键盘 | winit | winit | winit-android keycodes（`Keycode::Tab → Key::Named(Tab)`，`winit-android/src/keycodes.rs:312`） | UIKit | **无** | 有 |
+| IME | winit IME + `crates/platform/floom-platform-desktop/src/ime/` | 同左（Win32 组合桥未完成） | 锚点 `EditText.Editable` + `BaseInputConnection` 组合区 → `ImeCommit`/`ImePreedit` | 隐藏 `UITextField` → `floom_ios_push_ime_input`（拉丁 pass，CJK 提交成功） | **无** | 部分 |
+| 剪贴板 | `floom-platform-desktop/src/clipboard.rs`（107 行，**仅 NSPasteboard**） | **进程内占位**（诚实但不可用） | JNI ClipboardService（双向 pass，需先获得焦点） | objc2 `UIPasteboard`（双向 pass，含系统粘贴同意） | **无** | 无 |
+| 无障碍 | 语义树在进程内，**无 NSAccessibility 桥** | 无 AT-SPI / 无 UIA | `CapabilityLimitedAccessibilityAdapter`，`NATIVE_BRIDGE` 故意不置位 | 标签进了 OS 树但**所有 frame 为 0** | 无 | 无 |
+| 文件选择 | **无 trait**（平台层还没这个抽象） | 同左 | SAF 代码完整，结果回传需要 `FloomNativeActivity` 子类 | `ios_file.rs`/`ios_receive.rs` 有，example 未接 | 无 | — |
+| 安全区 | n/a | n/a | 无公开 `WindowHandle::safe_area()` | 有 read + `apply_safe_area(true)`，无公开读回 | 无 | — |
+| 声明能力位 | WINDOWING/TOUCH/IME/CLIPBOARD/A11Y 视 feature | 同左 | `android_default()` = WINDOWING\|TOUCH\|IME\|SOFTWARE_RENDER\|**WEBGPU** | `ios_default()` = WINDOWING\|TOUCH\|NATIVE_VIEW\|SOFTWARE_RENDER | `harmony_default()` = WINDOWING\|TOUCH\|NATIVE_VIEW\|SOFTWARE_RENDER | 各自 |
+
+能力位在 `crates/platform/floom-platform/src/capabilities.rs`。**规则：只声明已有通路的能力。** 当前违反的项在 §4/§5。
+
+## 3. 三套 ABI 与各自的导出面
+
+1. **widget/renderer ABI**：纯 Rust trait（`floom-renderer` 的提交路径、`floom-platform` 的 windowing）。
+2. **native view / 插件 provider ABI**：C vtable `FloomNativeProviderV1`，注册函数 `floom_<name>_register_provider(provider: *const FloomNativeProviderV1)`。见 [plugins.md](plugins.md)。
+3. **平台宿主 ABI**（宿主拥有窗口，Rust 只画）：
+   - iOS：`floom_ios_set_safe_area_insets`、`floom_ios_set_keyboard_state`、`floom_ios_push_ime_input`、`floom_ios_bind_drawable`、`floom_ios_present_frame`、`floom_ios_release_drawable`。
+   - OHOS：`floom_harmony_bind_surface`、`floom_harmony_present_frame`、`floom_harmony_release_surface`。**只有三个。**
+   - Android：无 `#[no_mangle]`，全部走 JNI（`Java_dev_floom_*` 入口 + `AndroidJni::with_env`）。
+
+## 4. OHOS：已定位缺陷（按严重度）
+
+1. **没有输入入口**。`floom-platform-harmony` 只导出上屏三件套，没有 touch/key/IME/剪贴板/安全区导出；ArkTS 侧无处可送事件。而 `harmony_default()` 声明了 `TOUCH`。
+2. **有输入能力的那一层被弃用**：`crates/vendor/floom-winit-ohos/`（3,049 行，含 touch `.notify_touch`、mouse `.notify_mouse`、键盘、`request_ime_update`）**没有任何 crate 依赖它**，只有 workspace 声明（`Cargo.toml:184`）与一句注释。当前在用的是无输入的 N-API 上屏层。
+3. **缓冲队列泄漏**：`RequestBuffer` 之后的所有早退路径（handle 空 / `stride<=0` / `size<=0` / `fd<0` / `mmap` 失败）都直接返回，**从不 `OH_NativeWindow_NativeWindowAbortBuffer`**，队列会泄漏并最终卡死。
+4. **脏帧上屏**：`copy_rgba_with_stride` 失败时仍先 `Flush` 再返回错误。
+5. **状态非成组**：`SURFACE` / `SURFACE_W` / `SURFACE_H` 是三个独立 atomic，与 `release_surface` 竞争可撕裂或释放后使用（无锁）。
+6. **尺寸必须精确相等**：`present_frame` 拒绝宽高与 bind 时不等的帧，旋转/分屏竞态下静默丢帧。
+7. **`stride` 单位可疑**：按"字节/行"使用；若 `BufferHandle.stride` 是像素数，则 `dst_stride < row` 恒真 → **每帧被拒 → 黑屏**。需上机确认。
+
+**决策点（必须先定，再动手）**：OHOS 走 `floom-winit-ohos`（有事件循环、输入、IME，但需要把 N-API 的单模块约束接上）还是继续 `floom-platform-harmony`（只有上屏，要补约 5 个 C 导出 + 事件注入）？两条路不能并行维护——这正是当前两个半成品并存的原因。
+
+## 5. iOS：已定位缺陷
+
+1. **CJK 渲染成豆腐**（`gates/ios.md` item 2 partial）：`parley`/`fontique` 在 iOS 找不到汉字字体，首帧 `你好世界` 即 tofu。OHOS 已有同款修复：`crates/app/floom/src/platform/ohos_font.rs` 扫 `/system/fonts` 注册字体族，从 `crates/app/floom/src/text/layout.rs` 的 `FONT_CONTEXT` 调用；iOS 缺一个 `target_os = "ios"` 的对应路径。
+2. **a11y 零 frame**（item 3 fail）：`idb ui describe-all` 有 label，但每个节点 frame 为 0，VoiceOver 无法命中——中立 a11y 层没有把布局包围盒转发给 `UIAccessibilityElement`。`ios_capabilities().accessibility` 仍为 `false`，这一条是**诚实**的，但意味着 iOS 无障碍为零。
+3. 能力位声明 `TOUCH`，而 Rust 侧没有任何 touch 导出——触摸完全由 UIKit 侧驱动，Rust 侧的能力位属"声明"，不是"可实现"。
+
+## 6. Android：已定位缺陷与教训
+
+- a11y：`crates/platform/floom-platform-android/src/accessibility.rs` 是 `CapabilityLimitedAccessibilityAdapter`，`perform_action` 恒 `false`（能力位也如实不置 `NATIVE_BRIDGE`）。
+- 文件选择：SAF 代码完整，结果回传需要 `FloomNativeActivity` 子类 + Gradle/AGP 集成，未做。
+- **已修复但必须记住的坑**：吞掉 JNI `Err` 不 `exception_clear()` 是**延迟进程中止**——异常挂在线程上，几秒后任意一次无关 JNI 调用即 `No pending exception expected: java.lang.ClassNotFoundException: dev.floom.android.FloomAccessibilityView`。修复在 `AndroidJni::with_env` 出口清异常；`Java_dev_floom_*`（Java 调进来）故意保留异常给调用方。
+- 声明了 `WEBGPU`：vello/wgpu 在 Android 上确实跑起来了，但这条与 OHOS 的 `SOFTWARE_RENDER` 不对称，写 capability 时要解释清楚原因。
+
+## 7. 桌面（mac, Windows, Linux）
+
+- 剪贴板只有 macOS 真实现；Linux/Windows 是**进程内占位**——复制粘贴出不了应用。这是三个桌面 target 里最容易踩的"看起来能用"。
+- 无障碍：语义树保留、无 OS 桥（mac 无 NSAccessibility、Linux 无 AT-SPI、Windows 无 UIA）。
+- 文件选择：**平台层根本没有 file-picker trait**，所以"每个桌面 target 都缺"不是 Linux/Windows 的特别问题。
+- Windows/Linux 的 native-view 合成（Phase 16.2）未完成，`cargo test` 在 CI 上只跑到 build。
+
+## 8. 门禁账本
+
+[gates/](gates/) 每平台 8 项（启停与交互 / IME 拉丁+CJK / a11y label+Default action / 剪贴板双向 / 文件选择 / 安全区 / 焦点与键盘导航 / CI 编译），值只有 `pass`/`fail`/`n/a`，每行带逐行证据（logcat、hilog、`idb`、`simctl` 原始输出）。**tag 1.0 时不允许任何 `fail`**；`SKIP ≠ PASS`，跳过的必须打印原因。

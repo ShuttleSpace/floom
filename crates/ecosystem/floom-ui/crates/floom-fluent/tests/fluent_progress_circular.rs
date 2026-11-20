@@ -10,7 +10,9 @@ use floom_core_theme::global_theme::DesignSystem;
 use floom_core_theme::props::progress_circular::ProgressCircularProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
 
-use floom_fluent::widgets::progress_circular::{FluentProgressCircular, FluentProgressCircularStyle};
+use floom_fluent::widgets::progress_circular::{
+    FluentProgressCircular, FluentProgressCircularStyle,
+};
 
 const BOX: Rect = Rect {
     x0: 0.0,
