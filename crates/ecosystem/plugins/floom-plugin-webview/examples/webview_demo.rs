@@ -1,4 +1,8 @@
 //! A **web view** in a real window, with a JS ↔ Rust bridge, staying up until
+
+// The whole file reaches AppKit and WebKit through `objc2`; on any other
+// target it compiles to nothing rather than to a hundred unresolved imports.
+#![cfg(target_os = "macos")]
 //! you close it.
 //!
 //! Where `native_view` proves the ABI one call at a time and then exits, this

@@ -1,4 +1,8 @@
 //! A **web view**, contributed by an Objective-C plugin, inside a real window.
+
+// The whole file reaches AppKit and WebKit through `objc2`; on any other
+// target it compiles to nothing rather than to a hundred unresolved imports.
+#![cfg(target_os = "macos")]
 //!
 //! The plugin's native half is Objective-C and reaches AppKit and WebKit. This
 //! example is the whole chain, end to end:

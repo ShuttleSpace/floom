@@ -31,15 +31,17 @@ use floom_dsl::ui_ir::NodeKind;
 
 /// The satellite's kit crates, as the component names the gallery uses.
 fn satellite_components() -> Vec<String> {
+    // One crate per design system since the floom-ui merge: the components are
+    // the modules of `floom-material/src/widgets/`, not `md-*` crates.
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../crates/ecosystem/floom-ui/crates/material");
+        .join("../../../crates/ecosystem/floom-ui/crates/floom-material/src/widgets");
     let mut names: Vec<String> = std::fs::read_dir(&root)
-        .expect("the satellite's material kits")
+        .expect("the satellite's material widgets")
         .filter_map(|entry| {
             let name = entry.ok()?.file_name().into_string().ok()?;
-            let rest = name.strip_prefix("md-")?;
-            if std::path::Path::new(&root.join(&name).join("src").join("lib.rs")).is_file() {
-                Some(rest.to_string())
+            let rest = name.strip_suffix(".rs")?.to_string();
+            if std::path::Path::new(&root.join(&name)).is_file() {
+                Some(rest)
             } else {
                 None
             }

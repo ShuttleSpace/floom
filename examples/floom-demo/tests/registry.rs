@@ -15,9 +15,18 @@ fn the_registry_holds_one_page_per_component() {
 
 #[test]
 fn every_component_of_the_satellite_has_exactly_one_page() {
-    let mut keyed: Vec<&str> = registry::pages().iter().map(|p| p.component).collect();
+    // The satellite names a component `text-field`; a page module is
+    // `text_field`. The assertion is about the set, so both sides are compared
+    // under one spelling rather than pinning either convention.
+    let mut keyed: Vec<String> = registry::pages()
+        .iter()
+        .map(|p| p.component.replace('-', "_"))
+        .collect();
     keyed.sort_unstable();
-    let mut expected: Vec<&str> = floom_demo::ds::material::COMPONENT_KEYS.to_vec();
+    let mut expected: Vec<String> = floom_demo::ds::material::COMPONENT_KEYS
+        .iter()
+        .map(|k| k.replace('-', "_"))
+        .collect();
     expected.sort_unstable();
     assert_eq!(
         keyed, expected,
