@@ -43,11 +43,7 @@ pub fn xcodebuild_argv(project: &Project, opts: &PackOpts) -> Vec<String> {
         "-configuration".to_string(),
         plan.configuration.to_string(),
         "-derivedDataPath".to_string(),
-        project
-            .root
-            .join("ios/build")
-            .to_string_lossy()
-            .into_owned(),
+        shared::arg(project.root.join("ios/build")),
         "build".to_string(),
     ]
 }
@@ -89,7 +85,7 @@ pub fn pack_ios(project: &Project, opts: &PackOpts) -> Result<PackResult, String
             ),
         })
     } else {
-        let app_str = app.to_string_lossy().into_owned();
+        let app_str = shared::arg(&app);
         shared::run(
             "codesign",
             &["--force", "--deep", "--sign", "-", &app_str],

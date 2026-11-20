@@ -15,10 +15,7 @@ use crate::toolchain::SdkPrecondition;
 /// The `cmake -B <build>` configure argv. The build tree lives under the
 /// platform dir so each platform stays isolated.
 pub fn cmake_configure_argv(platform_dir: &Path) -> Vec<String> {
-    vec![
-        "-B".to_string(),
-        platform_dir.join("build").to_string_lossy().into_owned(),
-    ]
+    vec!["-B".to_string(), shared::arg(platform_dir.join("build"))]
 }
 
 /// The `cmake --build <build>` argv. On multi-config generators (Visual Studio,
@@ -26,7 +23,7 @@ pub fn cmake_configure_argv(platform_dir: &Path) -> Vec<String> {
 pub fn cmake_build_argv(platform_dir: &Path, opts: &PackOpts) -> Vec<String> {
     let mut argv = vec![
         "--build".to_string(),
-        platform_dir.join("build").to_string_lossy().into_owned(),
+        shared::arg(platform_dir.join("build")),
     ];
     if opts.release {
         argv.push("--config".to_string());

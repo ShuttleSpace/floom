@@ -117,10 +117,11 @@ fn default_linux_interface() -> Option<String> {
         let _destination = fields.next()?;
         let _gateway = fields.next()?;
         let flags = fields.next()?;
-        if let Ok(flags) = u16::from_str_radix(flags, 16) {
-            if flags & 0x2 != 0 {
-                return Some(iface.to_string());
-            }
+        // 0x2 is RTF_UP: the route is usable, which is what "connected" means.
+        if let Ok(flags) = u16::from_str_radix(flags, 16)
+            && flags & 0x2 != 0
+        {
+            return Some(iface.to_string());
         }
     }
     None

@@ -18,11 +18,7 @@ const DEFAULT_ABI: &str = "arm64-v8a";
 /// The `adb install` argv for a built APK (`-r` keeps the data of an existing
 /// install). Pure so the command is pinned without touching a device.
 pub fn adb_install_argv(apk: &Path) -> Vec<String> {
-    vec![
-        "install".to_string(),
-        "-r".to_string(),
-        apk.to_string_lossy().into_owned(),
-    ]
+    vec!["install".to_string(), "-r".to_string(), shared::arg(apk)]
 }
 
 /// The exact `cargo ndk` argv. Pure so its flags are pinned without a real
@@ -30,11 +26,7 @@ pub fn adb_install_argv(apk: &Path) -> Vec<String> {
 /// lands in the Gradle project's `jniLibs` dir where AGP picks it up.
 pub fn ndk_argv(project: &Project, opts: &PackOpts) -> Vec<String> {
     let abi = opts.abi.clone().unwrap_or_else(|| DEFAULT_ABI.to_string());
-    let out = project
-        .root
-        .join("android/app/src/main/jniLibs")
-        .to_string_lossy()
-        .into_owned();
+    let out = shared::arg(project.root.join("android/app/src/main/jniLibs"));
     let mut argv = vec![
         "ndk".to_string(),
         "-t".to_string(),

@@ -535,3 +535,12 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
+
+/// A path as one argument to an external tool.
+///
+/// Forward slashes on every host: cmake, gradle, cargo-ndk, wasm-bindgen and
+/// codesign all accept them, and a single spelling keeps the argv comparable in
+/// tests without a per-host branch. Human-facing messages keep `display()`.
+pub fn arg(path: impl AsRef<Path>) -> String {
+    path.as_ref().to_string_lossy().replace('\\', "/")
+}

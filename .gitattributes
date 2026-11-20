@@ -1,0 +1,11 @@
+# The Windows runner checks out with `core.autocrlf=true` system-wide, which
+# rewrites every text file to CRLF. Goldens, generated `.d.ts` files and fixture
+# round-trips compare bytes, so a CRLF checkout fails tests that have nothing to
+# do with Windows. One line, LF everywhere, on every host.
+* text=auto eol=lf
+
+# Deliberately not text: the graph and the PNG goldens are bytes.
+*.png -text
+*.snap text eol=lf
+*.d.ts text eol=lf
+*.ets text eol=lf

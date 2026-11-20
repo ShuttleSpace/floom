@@ -61,14 +61,25 @@ fn scratch_crate(name: &str, lib_rs: &str) -> PathBuf {
          floom-widgets = {{ path = \"{}/crates/widgets/floom-widgets\" }}\n\
          floom-ui-composites = {{ path = \"{}/crates/ecosystem/floom-ui/crates/floom-ui-composites\" }}\n\n\
          [workspace]\n",
-        root.display(),
-        root.display(),
-        root.display(),
-        root.display()
+        // Forward slashes and no `\\?\` prefix: a TOML basic string treats a
+        // backslash as an escape, and Windows' `Path::display()` hands out both
+        // (`"\\?\D:\a\floom/crates/..."`) -- which cargo then rejects as an
+        // invalid escape, not as a bad path.
+        toml_path(&root),
+        toml_path(&root),
+        toml_path(&root),
+        toml_path(&root)
     );
     std::fs::write(crate_dir.join("Cargo.toml"), manifest).expect("write manifest");
     std::fs::write(crate_dir.join("src/lib.rs"), lib_rs).expect("write lib.rs");
     crate_dir
+}
+
+/// A path as TOML wants it: forward slashes, no verbatim prefix.
+fn toml_path(path: &Path) -> String {
+    path.to_string_lossy()
+        .trim_start_matches(r"\\?\")
+        .replace('\\', "/")
 }
 
 /// Run `cargo check` over the scratch crate with a dedicated target dir.
