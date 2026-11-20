@@ -16,6 +16,12 @@
 //! views at the same time would each see the other's. One test owns the
 //! numbers; the others never create anything.
 
+//! On Linux the same boundary exists (WebKitGTK), but `enable()` initialises
+//! GTK, which needs a display server this harness does not have: what CI checks
+//! for that half is that it compiles and links. Running it is a manual step on
+//! a desktop.
+#![cfg(target_os = "macos")]
+
 use floom_native_ffi::floom_native::{
     NativeCompositionMode, NativeError, NativeViewController, NativeViewId, NativeViewKind,
     NativeViewProvider,

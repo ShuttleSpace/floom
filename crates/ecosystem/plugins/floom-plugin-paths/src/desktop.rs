@@ -27,8 +27,23 @@ use std::path::PathBuf;
 pub fn app_dir(dir: AppDirectory) -> Option<PathBuf> {
     match dir {
         AppDirectory::ApplicationSupport => dirs::data_dir(),
-        AppDirectory::Documents => dirs::document_dir(),
+        // `dirs` answers these only through the user-dirs config, which a
+        // container or a freshly provisioned account does not have. The table
+        // above promises `~/Documents` / `~/Downloads` when the XDG variable is
+        // unset, and that is what a person on such a machine means by them.
+        AppDirectory::Documents => {
+            dirs::document_dir().or_else(|| home().map(|h| h.join("Documents")))
+        }
         AppDirectory::Cache => dirs::cache_dir(),
-        AppDirectory::Downloads => dirs::download_dir(),
+        AppDirectory::Downloads => {
+            dirs::download_dir().or_else(|| home().map(|h| h.join("Downloads")))
+        }
     }
+}
+
+/// The home directory, from the variable the platform actually sets.
+fn home() -> Option<PathBuf> {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
 }
