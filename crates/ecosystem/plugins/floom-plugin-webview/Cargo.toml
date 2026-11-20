@@ -25,7 +25,9 @@ cc = "1"
 # it; the default feature set ships no terminal backend.
 tui = []
 
-[dev-dependencies]
+# The demo and the tests are AppKit; on any other host these would pull the
+# whole Objective-C stack into a build that cannot link it.
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dev-dependencies]
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
 objc2-app-kit = { version = "0.3", default-features = false, features = [
     "std",

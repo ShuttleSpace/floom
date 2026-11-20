@@ -30,7 +30,7 @@ pub use abi::{
 // Re-exported because they are part of the ABI's vocabulary: a provider
 // implementing `NativeViewProvider` needs them and should not have to guess
 // which crate they came from.
-pub use floom_types::{NativeViewId, Rect, ResourceId};
+pub use floom_types::{NativeCapture, NativeViewId, Rect, ResourceId};
 
 pub use controller::NativeViewController;
 pub use fake::{FakeNativeProvider, NativeCommand, NativeCommandLog};

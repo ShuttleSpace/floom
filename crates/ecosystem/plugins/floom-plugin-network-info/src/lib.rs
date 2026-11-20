@@ -174,8 +174,11 @@ mod tests {
             }
             Err(reason) => {
                 assert!(
-                    reason.contains("CNCopyCurrentNetworkInfo"),
-                    "the refusal must name the API it could not get past: {reason}"
+                    reason.contains("CNCopy"),
+                    "the refusal must name the CaptiveNetwork API it could not get \
+                     past -- `CNCopySupportedInterfaces` when the interface list is \
+                     unreadable (a CI runner with no Wi-Fi), `CNCopyCurrentNetworkInfo` \
+                     when the SSID itself is withheld: {reason}"
                 );
             }
         }
