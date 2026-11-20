@@ -57,13 +57,14 @@ mod macos {
     use objc2::runtime::NSObject;
     use objc2::{AllocAnyThread, MainThreadMarker, define_class, msg_send};
     use objc2_app_kit::{
-        NSApplication, NSApplicationActivationPolicy, NSBackingStoreType, NSWindow, NSWindowStyleMask,
-        NSWindowWillCloseNotification,
+        NSApplication, NSApplicationActivationPolicy, NSBackingStoreType, NSWindow,
+        NSWindowStyleMask, NSWindowWillCloseNotification,
     };
     use objc2_foundation::{NSNotification, NSNotificationCenter, NSPoint, NSRect, NSSize};
 
     use floom_native_ffi::floom_native::{
-        NativeCompositionMode, NativeState, NativeViewController, NativeViewId, NativeViewKind, Rect,
+        NativeCompositionMode, NativeState, NativeViewController, NativeViewId, NativeViewKind,
+        Rect,
     };
 
     use floom_plugin_webview::{diagnostics, load_url, provider};
@@ -340,7 +341,5 @@ fn main() {
 
 #[cfg(not(target_os = "macos"))]
 fn main() {
-    eprintln!(
-        "the native_view example drives AppKit's WKWebView; build it on macOS"
-    );
+    eprintln!("the native_view example drives AppKit's WKWebView; build it on macOS");
 }

@@ -69,17 +69,22 @@ mod macos {
     use objc2::runtime::NSObject;
     use objc2::{AllocAnyThread, DefinedClass, MainThreadMarker, define_class, msg_send};
     use objc2_app_kit::{
-        NSApplication, NSApplicationActivationPolicy, NSAutoresizingMaskOptions, NSBackingStoreType,
-        NSButton, NSControl, NSTextField, NSWindow, NSWindowStyleMask, NSWindowWillCloseNotification,
+        NSApplication, NSApplicationActivationPolicy, NSAutoresizingMaskOptions,
+        NSBackingStoreType, NSButton, NSControl, NSTextField, NSWindow, NSWindowStyleMask,
+        NSWindowWillCloseNotification,
     };
-    use objc2_foundation::{NSNotification, NSNotificationCenter, NSPoint, NSRect, NSSize, NSString};
+    use objc2_foundation::{
+        NSNotification, NSNotificationCenter, NSPoint, NSRect, NSSize, NSString,
+    };
 
     use floom_native_ffi::floom_native::{
         NativeCompositionMode, NativeSlot, NativeState, NativeViewController, NativeViewId,
         NativeViewKind, Rect,
     };
 
-    use floom_plugin_webview::{diagnostics, load_url, post_message, provider, set_message_callback};
+    use floom_plugin_webview::{
+        diagnostics, load_url, post_message, provider, set_message_callback,
+    };
 
     /// The page loaded when no URL is given on the command line.
     ///
@@ -462,7 +467,5 @@ fn main() {
 
 #[cfg(not(target_os = "macos"))]
 fn main() {
-    eprintln!(
-        "the webview_demo example drives AppKit's WKWebView; build it on macOS"
-    );
+    eprintln!("the webview_demo example drives AppKit's WKWebView; build it on macOS");
 }
