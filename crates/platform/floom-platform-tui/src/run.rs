@@ -208,8 +208,12 @@ impl TerminalGuard {
 
 impl Drop for TerminalGuard {
     fn drop(&mut self) {
-        // Off unix `engage` never took the terminal over; the `engaged` check
-        // keeps a piped run from emitting restore escapes it never wrote.
+        // Off unix `engage` never took the terminal over: read the flag anyway
+        // so the field is not dead there, then restore nothing.
+        #[cfg(not(unix))]
+        let _ = self.engaged;
+        // On unix, the `engaged` check keeps a piped run from emitting restore
+        // escapes it never wrote.
         #[cfg(unix)]
         if self.engaged {
             // Restore attributes, leave the alternate screen, show the cursor.

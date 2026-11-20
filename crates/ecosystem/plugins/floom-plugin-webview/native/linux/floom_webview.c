@@ -40,6 +40,7 @@
  */
 
 #include <gtk/gtk.h>
+#include <gtk/gtkplug.h>
 /* WebKit2GTK 4.1, the GTK3 build: `webkit/webkit.h` is WebKit 6.0's GTK4
  * header, and everything below howls for GTK3 (`gtk_fixed_put`,
  * `gtk_window_resize`), so the two cannot be mixed. */
@@ -310,7 +311,7 @@ static int32_t webview_create(void *self, FloomNativeSlot slot, uint32_t kind,
 
     view->web = webkit_web_view_new_with_user_content_manager(ucm);
     /* The view holds its own reference to the manager; ours goes here. */
-    webkit_user_content_manager_unref(ucm);
+    g_object_unref(ucm);
 
     /*
      * Spoof a desktop Chrome UA. A bare WebKitGTK UA makes YouTube (and
@@ -470,6 +471,56 @@ static void webview_blur(void *self, FloomNativeSlot slot) {
     if (GTK_IS_WIDGET(parent)) {
         gtk_widget_grab_focus(parent);
     }
+}
+
+/*
+ * The host's window, given once.
+ *
+ * Two shapes reach here: a container the plugin can parent a child into
+ * (`GtkFixed`, `GtkLayout`, any `GtkContainer`) and a `GtkPlug` built from an
+ * X11 `Window` id. A `GtkPlug` is itself a widget, so the plug is asked about
+ * first — otherwise every plug would be treated as a plain container and the
+ * view would be parented into it as if it were a box.
+ */
+static int32_t webview_attach(void *self, const void *host_window) {
+    (void)self;
+    if (host_window == NULL) {
+        g_host_is_widget = 0;
+        g_host_widget = NULL;
+        g_host_plug = NULL;
+        return 0;
+    }
+    GtkWidget *widget = (GtkWidget *)host_window;
+    if (GTK_IS_PLUG(widget)) {
+        g_host_plug = GTK_PLUG(widget);
+        g_host_widget = NULL;
+        g_host_is_widget = 0;
+    } else {
+        g_host_widget = widget;
+        g_host_plug = NULL;
+        g_host_is_widget = 1;
+    }
+    return 0;
+}
+
+static FloomNativeCapabilities webview_capabilities(void *self) {
+    (void)self;
+    FloomNativeCapabilities caps;
+    memset(&caps, 0, sizeof(caps));
+    /* Overlay only: the web view is a GTK child of the host's widget (or of a
+     * plug), so it composites above Floom's own surface and never inside it. */
+    caps.modes[0] = FLOOM_NATIVE_MODE_OVERLAY;
+    caps.mode_count = 1;
+    caps.snapshot = 0;
+    /* The pointer belongs to the page: links, selection and scrolling all need
+     * clicks to arrive. A passthrough web view is a picture. */
+    caps.input_passthrough = 0;
+    caps.input_capture = 1;
+    caps.focusable = 1;
+    /* GTK crops a child's allocation when the parent clips it, so a rect that
+     * is smaller than the view is honoured rather than rescaled. */
+    caps.clip = FLOOM_NATIVE_CLIP_PLATFORM;
+    return caps;
 }
 
 static FloomNativeProviderV1 g_provider = {
