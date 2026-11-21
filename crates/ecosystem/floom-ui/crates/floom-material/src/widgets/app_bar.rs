@@ -162,7 +162,7 @@ impl MaterialAppBar {
             .background(bar_color);
         if elevation > 0 {
             bar = bar.shadow(Shadow {
-                color: to_paint(with_alpha(Color::rgba(0, 0, 0, 255), 30)),
+                color: to_paint(with_alpha(Color::BLACK, 30)),
                 blur: 2.0 + 2.0 * f64::from(elevation),
                 offset_x: 0.0,
                 offset_y: 0.0,

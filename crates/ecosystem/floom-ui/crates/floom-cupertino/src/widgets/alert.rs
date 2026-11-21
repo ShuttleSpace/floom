@@ -9,6 +9,7 @@ use floom_types::{Color as PaintColor, FontWeight};
 
 use floom_widgets::{Align, Axis, Pressable, Stack, Surface, Text};
 
+use crate::tokens::{INFO, SUCCESS, WARNING};
 use crate::widgets::icon::CupertinoIcon;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::alert::{AlertProps, AlertVariant};
@@ -48,9 +49,9 @@ pub fn to_engine_weight(w: ThemeFontWeight) -> FontWeight {
 pub fn alert_accent(theme: &MultiTheme, variant: AlertVariant) -> Color {
     match variant {
         AlertVariant::Error => theme.colors().error,
-        AlertVariant::Info => Color::rgb(0, 122, 255),
-        AlertVariant::Success => Color::rgb(52, 199, 89),
-        AlertVariant::Warning => Color::rgb(255, 149, 0),
+        AlertVariant::Info => INFO,
+        AlertVariant::Success => SUCCESS,
+        AlertVariant::Warning => WARNING,
     }
 }
 

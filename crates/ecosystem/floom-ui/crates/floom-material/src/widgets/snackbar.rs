@@ -155,7 +155,7 @@ impl MaterialSnackbar {
             action_font_weight: ThemeFontWeight::Medium,
             action_padding_horizontal: ACTION_PADDING_HORIZONTAL as f32,
             shadow: Shadow {
-                color: to_paint(with_alpha(Color::rgba(0, 0, 0, 255), 40)),
+                color: to_paint(with_alpha(Color::BLACK, 40)),
                 blur: 16.0,
                 offset_x: 0.0,
                 offset_y: 0.0,

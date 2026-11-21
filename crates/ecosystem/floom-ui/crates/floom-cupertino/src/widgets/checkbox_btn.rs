@@ -188,7 +188,7 @@ impl CupertinoCheckboxBtn {
             disabled_mark_color: with_alpha(c.on_surface, DISABLED_ALPHA),
             // v1 drew the unchecked mark transparent, and wrote the disabled tint
             // *inside* the checked branch -- so an unchecked and disabled button
-            unchecked_mark_color: Color::rgba(0, 0, 0, 0),
+            unchecked_mark_color: Color::TRANSPARENT,
             unchecked_disabled_mark_color: with_alpha(c.on_surface, DISABLED_ALPHA),
             label_color: c.on_surface,
             disabled_label_color: with_alpha(c.on_surface, DISABLED_ALPHA),

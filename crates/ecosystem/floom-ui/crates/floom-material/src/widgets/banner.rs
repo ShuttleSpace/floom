@@ -7,6 +7,7 @@ use floom_types::Insets;
 
 use floom_widgets::{Align, Axis, Pressable, Stack, Surface, Text};
 
+use crate::tokens::{INFO, SUCCESS, WARNING};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::banner::{BannerProps, BannerVariant};
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -20,9 +21,9 @@ const ACTION_PADDING: f64 = 4.0;
 pub fn banner_accent(theme: &MultiTheme, variant: BannerVariant) -> Color {
     match variant {
         BannerVariant::Error => theme.colors().error,
-        BannerVariant::Info => Color::rgb(33, 150, 243),
-        BannerVariant::Success => Color::rgb(76, 175, 80),
-        BannerVariant::Warning => Color::rgb(255, 152, 0),
+        BannerVariant::Info => INFO,
+        BannerVariant::Success => SUCCESS,
+        BannerVariant::Warning => WARNING,
     }
 }
 

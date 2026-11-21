@@ -1,6 +1,28 @@
+use floom_core_theme::tokens::color::Color as ThemeColor;
 use floom_design::{readable_on, tonal_ramp};
 use floom_theme::{ColorScheme, Theme};
 use floom_types::Color;
+
+/// The status colours a design system defines but the shared token struct does not.
+///
+/// `floom_theme::ColorTokens` carries the seven roles every system agrees on.
+/// "Info" and "Warning" are not among them: Material has no such pair in its
+/// scheme, Cupertino names them `systemBlue`/`systemOrange`, Fluent
+/// `#0078D4`/`#FFB900`. Keeping one copy of each here is what makes them
+/// comparable — the alternative was the same literal in `alert.rs` and
+/// `banner.rs`, which is how they drift apart.
+
+/// Material's blue 500, the colour `Info` variants are drawn in.
+pub(crate) const INFO: ThemeColor = ThemeColor::rgb(33, 150, 243);
+
+/// Material's green 500.
+pub(crate) const SUCCESS: ThemeColor = ThemeColor::rgb(76, 175, 80);
+
+/// Material's orange 500.
+pub(crate) const WARNING: ThemeColor = ThemeColor::rgb(255, 152, 0);
+
+/// The colour a `ColorPicker` starts on.
+pub(crate) const COLOR_PICKER_DEFAULT: Color = Color::rgb(33, 150, 243);
 
 /// The Material 3 colour roles this crate styles against.
 ///

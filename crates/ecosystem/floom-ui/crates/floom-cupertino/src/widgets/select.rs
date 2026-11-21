@@ -108,8 +108,8 @@ impl CupertinoSelect {
             placeholder: to_paint(with_alpha(on_surface, 140)),
             chevron: to_paint(with_alpha(on_surface, 140)),
             // v1's Cupertino panel drew no border at all.
-            panel_border: to_paint(Color::rgba(0, 0, 0, 0)),
-            panel_shadow: to_paint(Color::rgba(0, 0, 0, 24)),
+            panel_border: to_paint(Color::TRANSPARENT),
+            panel_shadow: to_paint(with_alpha(Color::BLACK, 24)),
 
             // This is the kit's one real disagreement with Material: a hovered
             // row is `primary`@12 here and `on_surface`@8 there.

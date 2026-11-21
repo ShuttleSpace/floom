@@ -114,7 +114,7 @@ impl CupertinoPagination {
             selected_bg: theme.colors().primary,
             selected_fg: theme.colors().on_primary,
             // v1's unselected page: a transparent fill.
-            unselected_bg: Color::rgba(0, 0, 0, 0),
+            unselected_bg: Color::TRANSPARENT,
             unselected_fg: theme.colors().on_surface,
             arrow_fg: theme.colors().on_surface,
             // v1's disabled arrow: the same ink at alpha 38.

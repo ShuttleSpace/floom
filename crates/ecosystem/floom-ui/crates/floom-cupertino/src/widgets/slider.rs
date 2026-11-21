@@ -120,7 +120,7 @@ impl CupertinoSlider {
 
             shadow_blur: THUMB_SHADOW_BLUR,
             shadow_spread: THUMB_SHADOW_SPREAD,
-            shadow_color: to_paint(with_alpha(Color::rgba(0, 0, 0, 255), THUMB_SHADOW_ALPHA)),
+            shadow_color: to_paint(with_alpha(Color::BLACK, THUMB_SHADOW_ALPHA)),
         }
     }
 

@@ -112,6 +112,9 @@ jobs:
           key: ecosystem-check
           save-if: ${{ github.event_name != 'merge_group' }}
 
+      - name: Check design tokens
+        run: ./scripts/check-design-tokens.sh
+
       - name: Run the satellite tests
         run: |
           status=0

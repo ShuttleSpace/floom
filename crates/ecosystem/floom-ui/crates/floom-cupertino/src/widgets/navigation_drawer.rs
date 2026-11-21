@@ -179,7 +179,7 @@ impl CupertinoNavigationDrawer {
             border_color: with_alpha(theme.colors().on_surface, BORDER_ALPHA),
             shadow_blur: f32::from(self.props.elevation) * 4.0,
             shadow_spread: 0.0,
-            shadow_color: with_alpha(Color::rgba(0, 0, 0, 255), SHADOW_ALPHA),
+            shadow_color: with_alpha(Color::BLACK, SHADOW_ALPHA),
         }
     }
 

@@ -146,7 +146,7 @@ impl MaterialFloatingActionButton {
             .background(to_paint(style.background))
             .radius(style.border_radius)
             .shadow(Shadow {
-                color: to_paint(with_alpha(Color::rgba(0, 0, 0, 255), 30)),
+                color: to_paint(with_alpha(Color::BLACK, 30)),
                 blur: 2.0 + f64::from(style.elevation),
                 offset_x: 0.0,
                 offset_y: 0.0,

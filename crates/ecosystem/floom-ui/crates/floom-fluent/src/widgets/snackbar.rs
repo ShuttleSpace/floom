@@ -141,7 +141,7 @@ impl FluentSnackbar {
             action_font_weight: ThemeFontWeight::SemiBold,
             action_padding_horizontal: ACTION_PADDING_HORIZONTAL as f32,
             shadow: Shadow {
-                color: to_paint(with_alpha(Color::rgba(0, 0, 0, 255), 25)),
+                color: to_paint(with_alpha(Color::BLACK, 25)),
                 blur: 16.0,
                 offset_x: 0.0,
                 offset_y: 0.0,

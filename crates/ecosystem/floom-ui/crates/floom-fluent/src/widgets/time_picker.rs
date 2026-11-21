@@ -156,7 +156,7 @@ impl FluentTimePicker {
             panel_padding: 12.0,
             panel_border_alpha: 120,
             panel_shadow: Shadow {
-                color: to_paint(with_alpha(Color::rgba(0, 0, 0, 255), 24)),
+                color: to_paint(with_alpha(Color::BLACK, 24)),
                 blur: 12.0,
                 offset_x: 0.0,
                 offset_y: 0.0,

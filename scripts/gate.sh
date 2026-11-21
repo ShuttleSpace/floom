@@ -351,6 +351,7 @@ windows    the plugins with real Windows arms compile for x86_64-pc-windows-msvc
 ohos       the HarmonyOS backend + plugins compile for aarch64-unknown-linux-ohos
 golden     the pixel-golden examples
 size       release binary sizes within 10% of the checked-in baseline
+style      no colour literals in the design-system widget trees
 EOF
   exit 0
 fi
@@ -641,6 +642,11 @@ has_check golden && run_check golden "" ./scripts/run-golden-examples.sh
 # someone may have read. Single-host baseline, so this runs locally rather than
 # as a PR merge gate — see docs/release-policy.md.
 has_check size && run_check size "" ./scripts/check-size-budgets.sh
+
+# --- design tokens (S2.3) ----------------------------------------------------
+# A widget that paints `Color::rgb(...)` ignores the theme it was given. The
+# palette lives in each crate's tokens.rs; this keeps it there.
+has_check style && run_check style "" ./scripts/check-design-tokens.sh
 
 echo
 if [ "$FAIL" -eq 0 ]; then

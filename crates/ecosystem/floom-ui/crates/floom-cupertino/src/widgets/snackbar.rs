@@ -199,7 +199,7 @@ impl CupertinoSnackbar {
             // v1: `box_shadow_blur(16.0).box_shadow_spread(1.0)
             // .box_shadow_color(with_alpha(black, 40))`.
             shadow: Shadow {
-                color: to_paint(with_alpha(Color::rgba(0, 0, 0, 255), 40)),
+                color: to_paint(with_alpha(Color::BLACK, 40)),
                 blur: 16.0,
                 offset_x: 0.0,
                 offset_y: 0.0,

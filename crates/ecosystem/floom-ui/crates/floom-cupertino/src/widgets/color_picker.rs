@@ -11,6 +11,7 @@ use floom_types::Color as PaintColor;
 use floom_ui_composites::{ColorPicker, ColorPickerStyle};
 use floom_widgets::Surface;
 
+use crate::tokens::COLOR_PICKER_DEFAULT;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::color_picker::ColorPickerProps;
 use floom_core_theme::theme::{MultiTheme, Theme};
@@ -31,7 +32,7 @@ pub type SharedColor = floom_ui_composites::SharedColor;
 pub type SharedHex = floom_ui_composites::SharedHex;
 
 /// The colour v1 started on.
-const DEFAULT_COLOR: PaintColor = PaintColor::rgb(33, 150, 243);
+const DEFAULT_COLOR: PaintColor = COLOR_PICKER_DEFAULT;
 
 /// The colour picker's appearance, in the terms v1 used.
 ///

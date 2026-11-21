@@ -6,6 +6,7 @@ use floom_types::{Color as PaintColor, FontWeight};
 
 use floom_widgets::{Align, Axis, Pressable, Stack, Surface, Text};
 
+use crate::tokens::{INFO, SUCCESS, WARNING};
 use crate::widgets::icon::MdIcon;
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::alert::{AlertProps, AlertVariant};
@@ -32,9 +33,9 @@ pub fn to_engine_weight(w: ThemeFontWeight) -> FontWeight {
 pub fn alert_accent(theme: &MultiTheme, variant: AlertVariant) -> Color {
     match variant {
         AlertVariant::Error => theme.colors().error,
-        AlertVariant::Info => Color::rgb(33, 150, 243),
-        AlertVariant::Success => Color::rgb(76, 175, 80),
-        AlertVariant::Warning => Color::rgb(255, 152, 0),
+        AlertVariant::Info => INFO,
+        AlertVariant::Success => SUCCESS,
+        AlertVariant::Warning => WARNING,
     }
 }
 

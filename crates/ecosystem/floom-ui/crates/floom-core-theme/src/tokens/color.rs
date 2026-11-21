@@ -34,6 +34,12 @@ pub struct Color {
 }
 
 impl Color {
+    /// Nothing painted. A transparent fill, not an absent one: the shape keeps
+    /// its geometry and stops covering what is behind it.
+    pub const TRANSPARENT: Self = Self::rgba(0, 0, 0, 0);
+    /// Opaque black, the base of every scrim and shadow.
+    pub const BLACK: Self = Self::rgb(0, 0, 0);
+
     pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }

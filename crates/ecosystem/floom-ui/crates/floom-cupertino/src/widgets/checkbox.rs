@@ -159,7 +159,7 @@ impl CupertinoCheckbox {
             // overwritten with `on_surface`@12 while disabled. Splitting that
             // one conditional into three independent fields is the whole reason
             container_color: to_paint(colors.primary),
-            container_color_unchecked: to_paint(Color::rgba(0, 0, 0, 0)),
+            container_color_unchecked: to_paint(Color::TRANSPARENT),
             container_color_disabled: to_paint(with_alpha(
                 colors.on_surface,
                 DISABLED_CONTAINER_ALPHA,
@@ -172,7 +172,7 @@ impl CupertinoCheckbox {
             border_color_disabled: to_paint(with_alpha(colors.on_surface, DISABLED_ALPHA)),
 
             mark_color: to_paint(colors.on_primary),
-            mark_color_unchecked: to_paint(Color::rgba(0, 0, 0, 0)),
+            mark_color_unchecked: to_paint(Color::TRANSPARENT),
             mark_color_disabled: to_paint(with_alpha(colors.on_surface, DISABLED_ALPHA)),
             mark_scale: MARK_SCALE,
 

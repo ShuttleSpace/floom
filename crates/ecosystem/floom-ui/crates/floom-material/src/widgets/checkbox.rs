@@ -91,7 +91,7 @@ impl MdCheckbox {
             label_font_size: theme.typography().body.medium.font_size,
 
             container_color: to_paint(colors.primary),
-            container_color_unchecked: to_paint(Color::rgba(0, 0, 0, 0)),
+            container_color_unchecked: to_paint(Color::TRANSPARENT),
             container_color_disabled: to_paint(with_alpha(
                 colors.on_surface,
                 DISABLED_CONTAINER_ALPHA,
@@ -101,7 +101,7 @@ impl MdCheckbox {
             border_color_disabled: to_paint(with_alpha(colors.on_surface, DISABLED_ALPHA)),
 
             mark_color: to_paint(colors.on_primary),
-            mark_color_unchecked: to_paint(Color::rgba(0, 0, 0, 0)),
+            mark_color_unchecked: to_paint(Color::TRANSPARENT),
             mark_color_disabled: to_paint(with_alpha(colors.on_surface, DISABLED_ALPHA)),
             mark_scale: MARK_SCALE,
 

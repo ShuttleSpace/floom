@@ -9,6 +9,7 @@ use floom_types::Color as PaintColor;
 use floom_widgets::text_input::{shared_flag, write_flag, SharedFlag};
 use floom_widgets::{Align, Axis, Conditional, Pressable, Stack, VectorIcon};
 
+use crate::tokens::RATING_ACTIVE;
 use crate::widgets::icon::{cupertino_icon_path, VIEW_BOX};
 use floom_core_theme::component_tokens::{ComponentId, ComponentTokens};
 use floom_core_theme::props::rating::RatingProps;
@@ -154,8 +155,7 @@ impl CupertinoRating {
         };
         CupertinoRatingStyle {
             design_system: DESIGN_SYSTEM,
-            // v1's literal: the system yellow, not a theme colour.
-            active_color: Color::rgb(255, 204, 0),
+            active_color: RATING_ACTIVE,
             inactive_color: theme.colors().outline,
             star_size: tokens.star_size,
             gap: tokens.gap,

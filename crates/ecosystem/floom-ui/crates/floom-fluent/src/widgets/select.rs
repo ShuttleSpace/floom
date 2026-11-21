@@ -95,8 +95,8 @@ impl FluentSelect {
             outline: to_paint(on_surface),
             placeholder: to_paint(on_surface),
             chevron: to_paint(with_alpha(on_surface, 160)),
-            panel_border: to_paint(Color::rgba(0, 0, 0, 0)),
-            panel_shadow: to_paint(Color::rgba(0, 0, 0, 20)),
+            panel_border: to_paint(Color::TRANSPARENT),
+            panel_shadow: to_paint(with_alpha(Color::BLACK, 20)),
 
             hover_row: to_paint(with_alpha(on_surface, 8)),
             selected_row: to_paint(with_alpha(on_surface, 8)),

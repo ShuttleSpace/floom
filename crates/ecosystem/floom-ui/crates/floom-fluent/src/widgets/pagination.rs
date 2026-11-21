@@ -92,7 +92,7 @@ impl FluentPagination {
             design_system: "fluent",
             selected_bg: theme.colors().primary,
             selected_fg: theme.colors().on_primary,
-            unselected_bg: Color::rgba(0, 0, 0, 0),
+            unselected_bg: Color::TRANSPARENT,
             unselected_fg: theme.colors().on_surface,
             arrow_fg: theme.colors().on_surface,
             disabled_arrow_fg: with_alpha(theme.colors().on_surface, 38),

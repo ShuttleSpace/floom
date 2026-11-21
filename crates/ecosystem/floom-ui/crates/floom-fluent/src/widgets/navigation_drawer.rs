@@ -135,7 +135,7 @@ impl FluentNavigationDrawer {
             accent_color: theme.colors().primary,
             shadow_blur: f32::from(self.props.elevation) * 3.0,
             shadow_spread: 1.0,
-            shadow_color: with_alpha(Color::rgba(0, 0, 0, 255), SHADOW_ALPHA),
+            shadow_color: with_alpha(Color::BLACK, SHADOW_ALPHA),
         }
     }
 

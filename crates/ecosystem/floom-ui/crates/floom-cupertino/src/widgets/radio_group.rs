@@ -146,15 +146,15 @@ impl CupertinoRadioGroup {
                 // v1's row: `items_center()`.
                 content_placement: ContentPlacement::Centred,
                 // The row itself has no fill and no outline: the ring is the
-                background: PaintColor::rgba(0, 0, 0, 0),
-                foreground: PaintColor::rgba(0, 0, 0, 0),
+                background: PaintColor::TRANSPARENT,
+                foreground: PaintColor::TRANSPARENT,
                 border_width: 0.0,
-                border_color: PaintColor::rgba(0, 0, 0, 0),
+                border_color: PaintColor::TRANSPARENT,
                 // The row has no corner of its own: the ring is the outline.
                 radius: 0.0,
-                selected_background: PaintColor::rgba(0, 0, 0, 0),
-                selected_foreground: PaintColor::rgba(0, 0, 0, 0),
-                selected_border_color: PaintColor::rgba(0, 0, 0, 0),
+                selected_background: PaintColor::TRANSPARENT,
+                selected_foreground: PaintColor::TRANSPARENT,
+                selected_border_color: PaintColor::TRANSPARENT,
                 // A radio keeps its choice: tapping the chosen option leaves it
                 toggles_off_in_single_mode: false,
                 mandatory_in_multiple_mode: false,

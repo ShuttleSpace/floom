@@ -135,16 +135,31 @@ fn three_accents_are_fixed_literals_and_one_is_the_themes_error() {
         ),
         (
             floom_core_theme::props::banner::BannerVariant::Warning,
-            (247, 206, 0),
+            (255, 185, 0),
         ),
     ] {
         let (r, g, b) = rgb;
         assert_eq!(
             banner_accent(&theme, variant),
             floom_core_theme::tokens::color::Color::rgb(r, g, b),
-            "{variant:?}: v1's literal"
+            "{variant:?}: Fluent's own status colour"
         );
     }
+    // The banner used to be #F7CE00 while the alert was #FFB900: one system, two
+    // yellows for the same variant. They now read from one token, so this is the
+    // assertion that keeps them from drifting apart again.
+    #[cfg(feature = "alert")]
+    assert_eq!(
+        banner_accent(
+            &theme,
+            floom_core_theme::props::banner::BannerVariant::Warning
+        ),
+        floom_fluent::widgets::alert::alert_accent(
+            &theme,
+            floom_core_theme::props::alert::AlertVariant::Warning
+        ),
+        "a banner and an alert of the same variant cannot disagree about its colour"
+    );
 }
 
 #[test]

@@ -199,9 +199,7 @@ fn base_colors(theme: &MultiTheme, variant: ButtonVariant, disabled: bool) -> (C
             theme.colors().on_secondary_container,
         ),
         ButtonVariant::Danger => (theme.colors().error, theme.colors().on_error),
-        ButtonVariant::Ghost | ButtonVariant::Text => {
-            (Color::rgba(0, 0, 0, 0), theme.colors().primary)
-        }
+        ButtonVariant::Ghost | ButtonVariant::Text => (Color::TRANSPARENT, theme.colors().primary),
     }
 }
 
