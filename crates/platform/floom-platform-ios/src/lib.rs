@@ -203,6 +203,11 @@ pub extern "C" fn floom_ios_release_drawable() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    /// The drawable is one process-wide slot; two tests that bind it must not
+    /// interleave, or one releases what the other is about to blit into.
+    static DRAWABLE: Mutex<()> = Mutex::new(());
 
     #[test]
     fn ios_is_not_an_embedded_board() {
@@ -216,6 +221,7 @@ mod tests {
 
     #[test]
     fn present_blits_into_a_strided_drawable() {
+        let _guard = DRAWABLE.lock().unwrap_or_else(|e| e.into_inner());
         // 2x2 RGBA8, CGBitmapContext row stride 16 (= 8 pixel bytes + pad).
         let src: Vec<u8> = (0..16).collect();
         let mut drawable = vec![0xEEu8; 16 * 2];
@@ -237,6 +243,7 @@ mod tests {
 
     #[test]
     fn present_rejects_a_null_frame_wrong_size_or_unbound_drawable() {
+        let _guard = DRAWABLE.lock().unwrap_or_else(|e| e.into_inner());
         floom_ios_release_drawable();
         let frame = [0u8; 16];
         // SAFETY: `frame` is live; the `0xDEAD` drawable is never dereferenced
