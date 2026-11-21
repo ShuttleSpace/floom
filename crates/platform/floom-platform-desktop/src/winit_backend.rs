@@ -806,34 +806,23 @@ impl Platform for WinitPlatform {
 }
 
 impl Clipboard for WinitPlatform {
-    /// macOS reads the **system** pasteboard (`NSPasteboard`), so text copied
-    /// here is pasteable in any other app and vice versa. See
-    /// [`crate::clipboard`] for why the difference is not cosmetic: a
-    /// process-local `String` passes every test a clipboard can be asked to
-    /// pass, while being unusable.
+    /// The **system** clipboard, so text copied here is pasteable in any other
+    /// app and vice versa. See [`crate::clipboard`] for why the difference is
+    /// not cosmetic: a process-local `String` passes every test a clipboard can
+    /// be asked to pass, while being unusable.
     ///
-    /// Every other desktop target keeps the in-process placeholder, which is
-    /// honest about its own reach (`None` until something is written here, and
-    /// invisible outside this process) rather than claiming to be the OS's.
-    #[cfg(target_os = "macos")]
+    /// The in-process copy stays as the fallback, because a headless session
+    /// has no clipboard to reach: there, a value written and read back inside
+    /// this process beats `None`.
     fn get_text(&mut self) -> Option<String> {
-        crate::clipboard::system_read_text()
+        crate::clipboard::system_read_text().or_else(|| Some(self.clipboard.clone()))
     }
 
-    #[cfg(target_os = "macos")]
-    fn set_text(&mut self, text: &str) -> bool {
-        crate::clipboard::system_write_text(text)
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    fn get_text(&mut self) -> Option<String> {
-        Some(self.clipboard.clone())
-    }
-
-    #[cfg(not(target_os = "macos"))]
+    /// Keeps the in-process copy and reports whether the *desktop* took it, so
+    /// a caller can tell "copied" from "copied into this process only".
     fn set_text(&mut self, text: &str) -> bool {
         self.clipboard = text.to_string();
-        true
+        crate::clipboard::system_write_text(text)
     }
 }
 

@@ -99,7 +99,7 @@
 | S1.3 | iOS CJK 字体 | 未开始 | 配方：`docs/platforms.md` §5（`ohos_font.rs`） | — |
 | S1.4 | iOS a11y frame | 未开始 | 证据：`docs/gates/ios.md` item3 `fail` | — |
 | S1.5 | Android a11y + 焦点环 | 未开始 | 证据：`docs/gates/android.md` item3/item7 | — |
-| S1.6 | 桌面剪贴板 / a11y / file-picker | 未开始 | `crates/platform/floom-platform-desktop/src/{clipboard,accessibility}.rs` | —（往返测试在无 pasteboard 守护进程的会话里以 `changeCount == 0` 判为跳过并打印原因，本机仍真跑） |
+| S1.6 | 桌面剪贴板 / a11y / file-picker | 进行中 | `crates/platform/floom-platform-desktop/src/{clipboard,accessibility}.rs` | 剪贴板三平台齐了（macOS `NSPasteboard`、Windows `CF_UNICODETEXT`、Linux 走 `wl-copy`/`xclip`/`xsel`）；a11y 桥与 `file-picker` trait 未开始 |
 | S1.7 | ≥3 target tested（G1） | 未开始 | `docs/release-policy.md` targets 表 | — |
 | S1.8 | Windows 文本半像素换行（新发现） | 未开始 | `crates/app/floom-app/tests/text_weight.rs` 的 `cfg_attr(ignore)` 与理由 | 2026-11-20 |
 | S1.9 | Windows/Linux 组件 golden | 完成 | `crates/devtools/floom-snapshot/tests/widgets.rs`（Ahem 注册 + 重生成 golden）；证据 = 三系统 CI 无 `ignored` | 2026-11-21 |

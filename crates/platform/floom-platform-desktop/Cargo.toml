@@ -71,4 +71,15 @@ objc2-foundation = { version = "0.3", default-features = false, features = [
     "NSEnumerator",
 ] }
 
+# The Win32 clipboard (Phase 20, S1.6). `windows-sys` is already in the lock at
+# this version — the desktop plugins pin it for `ShellExecuteW`,
+# `SetThreadExecutionState` and the file dialog — so this adds no download, and
+# the feature list is the three modules the clipboard calls need.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_DataExchange",
+    "Win32_System_Memory",
+] }
+
 [dev-dependencies]
