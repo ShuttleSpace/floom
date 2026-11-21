@@ -537,7 +537,12 @@ pub mod ios_host {
         let mut platform = HostPlatform::new()
             .with_id(floom_platform_ios::IOS_PLATFORM_ID)
             .with_capabilities(floom_platform_ios::capabilities())
-            .with_scale_factor(if scale > 0.0 { scale } else { 1.0 });
+            .with_scale_factor(if scale > 0.0 { scale } else { 1.0 })
+            // The Swift host installs the sink in `viewDidMoveToWindow`; until
+            // then the adapter keeps the tree and publishes nothing.
+            .with_accessibility(Box::new(
+                floom_platform_ios::accessibility::IosAccessibility::new(),
+            ));
         let window = platform.create_window(WindowConfig {
             title: request.title,
             size: request.size,

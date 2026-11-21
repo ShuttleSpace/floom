@@ -2374,6 +2374,61 @@ private func floomAppTouch(_ x: Double, _ y: Double, _ phase: UInt32) -> Bool
 private func floomSetSafeArea(_ top: Double, _ right: Double, _ bottom: Double, _ left: Double)
 @_silgen_name("floom_ios_set_keyboard_state")
 private func floomSetKeyboard(_ visible: Bool, _ height: Double)
+@_silgen_name("floom_ios_set_a11y_sink")
+private func floomSetA11ySink(_ sink: FloomA11ySink?)
+
+/// One accessible element as the Rust side lays it out. Mirrors
+/// `A11yNode` in `floom-platform-ios/src/accessibility.rs`; change both.
+struct FloomA11yNode {
+    let label: UnsafePointer<CChar>?
+    let role: UInt32
+    let x: Float
+    let y: Float
+    let width: Float
+    let height: Float
+    let enabled: Bool
+    let selected: Bool
+    let focused: Bool
+}
+
+/// Raw bytes rather than `UnsafePointer<FloomA11yNode>`: a Swift struct is not
+/// C-representable, and `@convention(c)` rejects it. The layout is checked
+/// below before the first read.
+typealias FloomA11ySink = @convention(c) (UnsafeRawPointer?, Int) -> Void
+
+/// Role codes from `role_code()` in the same Rust file.
+private func traits(for role: UInt32) -> UIAccessibilityTraits {
+    switch role {
+    case 1: return .button
+    case 2: return .button
+    case 3: return .button
+    case 4: return .button
+    case 5: return .adjustable
+    case 6, 7: return .none
+    case 8, 9: return .image
+    case 10: return .link
+    case 11: return .header
+    case 12: return .staticText
+    case 13, 14: return .none
+    case 16: return .none
+    case 17: return .updatesFrequently
+    case 18, 19: return .button
+    case 20: return .none
+    case 21: return .button
+    default: return .none
+    }
+}
+
+/// The C function pointer cannot capture the view, so the live one is kept here.
+private weak var a11yTarget: FloomView?
+
+private func floomA11ySink(_ bytes: UnsafeRawPointer?, _ count: Int) {
+    guard let bytes else { return }
+    assert(
+        MemoryLayout<FloomA11yNode>.stride == 32,
+        "FloomA11yNode must match A11yNode in floom-platform-ios")
+    a11yTarget?.updateAccessibility(bytes.assumingMemoryBound(to: FloomA11yNode.self), count)
+}
 
 final class FloomViewController: UIViewController {
 
@@ -2431,6 +2486,7 @@ final class FloomView: UIView {
     private var context: CGContext?
     private var displayLink: CADisplayLink?
     private var scale: Double = 1
+    private var a11yElements: [UIAccessibilityElement] = []
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -2462,6 +2518,8 @@ final class FloomView: UIView {
             return
         }
         scale = Double(traitCollection.displayScale)
+        a11yTarget = self
+        floomSetA11ySink(floomA11ySink)
         rebind()
         let link = CADisplayLink(target: self, selector: #selector(tick))
         link.add(to: .main, forMode: .common)
@@ -2492,6 +2550,36 @@ final class FloomView: UIView {
         // it pixels would build a tree three times too large on a retina screen.
         let started = floomAppStart(Double(bounds.width), Double(bounds.height), scale)
         NSLog("floom: bound=\(bound) started=\(started) size=\(widthPx)x\(heightPx) scale=\(scale)")
+    }
+
+    /// Rebuild the accessible elements Rust just published. The view itself is
+    /// a container, not an element: VoiceOver walks `accessibilityElements`.
+    func updateAccessibility(_ nodes: UnsafePointer<FloomA11yNode>?, _ count: Int) {
+        guard let nodes, count > 0 else {
+            a11yElements = []
+            accessibilityElements = []
+            return
+        }
+        isAccessibilityElement = false
+        a11yElements = (0 ..< count).map { index in
+            let node = nodes[index]
+            let element = UIAccessibilityElement(accessibilityContainer: self)
+            element.accessibilityLabel = node.label.map { String(cString: $0) }
+            element.accessibilityTraits = traits(for: node.role)
+            if !node.enabled {
+                element.accessibilityTraits.insert(.notEnabled)
+            }
+            if node.selected {
+                element.accessibilityTraits.insert(.selected)
+            }
+            // Header/static-text roles carry no action; VoiceOver should not
+            // offer a double-tap that goes nowhere.
+            element.accessibilityFrameInContainerSpace = CGRect(
+                x: CGFloat(node.x), y: CGFloat(node.y),
+                width: CGFloat(node.width), height: CGFloat(node.height))
+            return element
+        }
+        accessibilityElements = a11yElements
     }
 
     @objc private func tick() {

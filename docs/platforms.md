@@ -14,7 +14,7 @@
 | `x86_64-pc-windows-msvc` | `floom-platform-desktop` | device-gated（Phase 16.2），只到 `cargo build` | [gates/windows.md](gates/windows.md) 8 项全 gated |
 | `x86_64-unknown-linux-gnu` | `floom-platform-desktop` | device-gated（Phase 16.2），只到 `cargo build` | [gates/linux.md](gates/linux.md) 8 项全 gated |
 | `aarch64-linux-android` | `floom-platform-android`（JNI + winit-android） | device-gated（Phase 17）：启停/IME/CJK/剪贴板已在模拟器验过 | [gates/android.md](gates/android.md) 4 pass / 1 partial |
-| `aarch64-apple-ios` | `floom-platform-ios`（UIKit staticlib） | 模拟器实测（2026-11-21）：宿主从占位工程换成真 Swift 宿主 + `swiftc` 链接，`floom package --platform ios` 产出可安装的 `.app`，floom 像素上屏；CJK 与 a11y 未过 | [gates/ios.md](gates/ios.md) 3 pass / 1 partial / 1 fail |
+| `aarch64-apple-ios` | `floom-platform-ios`（UIKit staticlib） | 模拟器实测（2026-11-21）：宿主从占位工程换成真 Swift 宿主 + `swiftc` 链接，`floom package --platform ios` 产出可安装的 `.app`，floom 像素上屏；a11y 元素带非零 frame（`idb ui describe-all` 实测）；CJK 未过 | [gates/ios.md](gates/ios.md) 3 pass / 1 partial / 1 fail |
 | OpenHarmony（手机/平板/PC 统一 OS） | `floom-platform-harmony`（N-API cdylib + 软件渲染） | device-gated（Phase 19）：启动 + 点按 pass，IME/a11y/剪贴板/文件/安全区/焦点未做 | [gates/ohos.md](gates/ohos.md) 2 pass |
 | `wasm32-unknown-unknown` | `floom-platform-web` + `floom-renderer-web` | target-gated（Phase 19），headless WASM harness 未做 | — |
 | no-std / bare metal | `floom-platform`（`embedded` feature） | target-gated（Phase 19） | — |
@@ -86,7 +86,8 @@
    `only_the_platforms_without_system_fallback_register_a_face`（macOS 一个字节都不读）、
    `han_text_shapes_to_real_glyphs`（`你好世界` 无 `.notdef`）、`registering_is_safe_on_every_target`。
    真机门槛仍是 `gates/ios.md` item 2。
-2. **a11y 零 frame**（item 3 fail）：`idb ui describe-all` 有 label，但每个节点 frame 为 0，VoiceOver 无法命中。根因有两层，第一层已修（2026-11-21）：`SemanticsNode` 原本**没有几何字段**，适配器拿到节点也不知道它在哪——现在带 `bounds`（由布局填，不是 widget 自报），并且 `Platform::accessibility` 这道门把每帧的 `SemanticsDiff` 交给适配器（`crates/app/floom-app/src/runner.rs` 的 `deliver_semantics`）。第二层仍在：iOS 侧没有 `UIAccessibilityElement` 适配器，所以**这个平台的 frame 依旧为 0**，`ios_capabilities().accessibility` 也依旧 `false`。宿主本身已在 2026-11-21 补齐（`floom create --platforms ios` 现在给出真 Swift 宿主，`floom package --platform ios` 用 `swiftc` 链接 staticlib 产出 `.app`，模拟器上 floom 像素上屏；`idb ui describe-all` 当前只回 1 个 application 节点、无子节点——这就是适配器要填的基线）。
+2. **a11y 零 frame**（item 3 fail）：`idb ui describe-all` 有 label，但每个节点 frame 为 0，VoiceOver 无法命中。根因有两层，第一层已修（2026-11-21）：`SemanticsNode` 原本**没有几何字段**，适配器拿到节点也不知道它在哪——现在带 `bounds`（由布局填，不是 widget 自报），并且 `Platform::accessibility` 这道门把每帧的 `SemanticsDiff` 交给适配器（`crates/app/floom-app/src/runner.rs` 的 `deliver_semantics`）。第二层已修（2026-11-21）：`crates/platform/floom-platform-ios/src/accessibility.rs` 把语义树展平成 `#[repr(C)] A11yNode` 记录（label / 角色码 / 点在容器坐标系的 frame / enabled / selected / focused，按 y 再按 x 排序 = 阅读顺序），经 `floom_ios_set_a11y_sink` 交给 Swift 宿主；宿主把它们变成 `UIAccessibilityElement` 并赋给 `view.accessibilityElements`。模拟器实测（`idb ui describe-all`）：`StaticText | Count: 0 | {0,0,402,14}`、`Button | Increment | {0,22,78,22}` —— frame 不再是 0。
+**未做**：动作回传。`UIAccessibilityElement` 的双击要落到 widget 上，需要一条 "UIKit 激活 → `SemanticsAction::Activate` → 组件回调" 的通路，而 `WidgetHost` 目前没有派发语义动作的入口（`AccessibilityAdapter::perform_action` 只有测试实现），所以适配器如实只声明 `SCREEN_READER | NATIVE_BRIDGE`、不含 `ACTION_INVOKE`。这是 S1.4 的收尾项，不是已完成项。
 3. 能力位声明 `TOUCH`，而 Rust 侧没有任何 touch 导出——触摸完全由 UIKit 侧驱动，Rust 侧的能力位属"声明"，不是"可实现"。
 
 ## 6. Android：已定位缺陷与教训

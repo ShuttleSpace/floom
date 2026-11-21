@@ -76,6 +76,8 @@ pub unsafe extern "C" fn floom_ios_push_ime_input(committed: bool, text: *const 
 use std::ffi::{c_int, c_void};
 use std::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
 
+pub mod accessibility;
+
 use floom_platform::PlatformCapabilities;
 use floom_types::PlatformId;
 

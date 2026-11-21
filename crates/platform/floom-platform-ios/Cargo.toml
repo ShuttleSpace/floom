@@ -21,5 +21,6 @@ crate-type = ["rlib", "staticlib"]
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
 
 [dependencies]
+floom-accessibility = { workspace = true }
 floom-platform = { workspace = true }
 floom-types = { workspace = true }
