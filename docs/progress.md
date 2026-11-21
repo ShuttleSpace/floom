@@ -26,6 +26,7 @@
 | ID | 动作 | 退出判据 | 验证命令 |
 | --- | --- | --- | --- |
 | S0.1 | 把仓库镜像到 CI 可跑的宿主（GitHub）并推现有 workflow，或改用可访问 runner | 一条公开链接的绿 build：macOS + Linux + Windows 三系统 `cargo test` | 打开那条 build 的 URL（必须是别人也能点的链接） |
+| S0.3 | **CI 有效性审计**：绿是真的验证过还是空转 | 每个 job 的「声称 vs 实际命令」有账本；注入缺陷能被抓到，或明确记录抓不到 | 变异测试 2 抓 1 漏（漏的是 CI 包清单缺 harmony/ios/embedded）；已补 3 个 crate 进清单 + macOS `--features desktop` 一步 + ubuntu `bundles` job；账本在 `developer-experience.md` 的「CI 到底证明了什么」 |
 | S0.2 | 把 `deny`/`perf`/`size` 接进同一套门禁口径（`gate.sh --list` 与实际 CI 步骤一致） | `gate.sh --list` 与 CI 步骤集合相同，缺一即红 | `bash scripts/gate.sh --list`，逐条比对 workflow |
 
 ### S1 平台 binding 从"声明"到"实测"
@@ -90,6 +91,7 @@
 | A.0 | 代码审计：OHOS / android+ios binding / 插件 / 组件风格 | 完成 | `docs/platforms.md`（OHOS 7 + iOS 3 + Android 3 条）、`docs/plugins.md` §3、`docs/components.md`（82 处） | 2026-11-20 |
 | S0.1 | CI 真的会跑 | 完成 | 23 个 job 全绿：https://github.com/ShuttleSpace/floom/actions/runs/44806694423（CI core，含 Rust on macOS/ubuntu/windows 三系统 `cargo test` + Floom 2.0 ×3 + clippy ×3 + MSRV + fmt + typos + deny ×2 + arch）、…/runs/44806694390（plugins）、…/runs/44806694366（platform: android/iOS 交叉检查 + device probe）、…/runs/44806694311（docs → Pages）。共修既有缺陷 21 类，详见 git log 2026-11-20 | 2026-11-20 |
 | S0.2 | 门禁口径一致 | 未开始 | — | — |
+| S0.3 | CI 有效性审计 | 完成 | 变异测试：text pen 累加与 no-backend 报错两个注入缺陷被抓到；harmony 的 `stride_bytes` 单测存在但 CI 包清单里没有该 crate。已补 `floom-platform-{harmony,ios,embedded}` 进 `FLOOM2_PACKAGES`、macOS 加 `cargo test -p floom --features desktop`、ubuntu 新增 `bundles` job（desktop/tui/full） | `gh run view <id>` 里 `Floom bundles on ubuntu-24.04` 与 macOS 那一步为 success；账本见 `developer-experience.md` |
 | S1.1 | OHOS 后端选型（A：复活 `floom-winit-ohos`） | 待验证（设备） | 驱动 `crates/app/floom/src/platform/ohos_winit.rs`：Rust 拥有 surface/loop/tree/blit，导出 `ohos_winit_runtime_*`；`floom::ohos_app!(build)` 是应用唯一入口；`floom::run` 在这条路径上返回明确错误。CI 已 **check + build + link**（`#[link(name="native_window")]` 真链通过）。**未上机**：`tests/floom-ohos-demo` 的 C++ 桥仍走旧三函数 | 绿：https://github.com/ShuttleSpace/floom/actions/runs/44863051614 （job `Floom 2.0 for aarch64-unknown-linux-ohos`）；上机待 `S1.1b` |
 | S1.1b | 把 `tests/floom-ohos-demo` 的 C++ 桥从旧三函数切到 `ohos_winit_runtime_*`（surface/touch/frame） | 设备上出现真实 floom 树（不是渐变），点击 +/- 改值 | 上机；`hilog` 无 `surface_created` 之外的告警 |
 | S1.3 | iOS CJK 豆腐 | 待验证（设备） | `crates/widgets/floom-text/src/system_fonts.rs`：扫 `/System/Library/Fonts`(+`Supplemental`) 按前缀挑 CJK 面注册进 `FontContext`，`TextShaper::new()` 与编辑器线程 `FONT_CONTEXT` 各调一次。宿主实测 bare `FontContext` 查不到 `PingFang SC`（能查到 `Arial Unicode MS`，所以 macOS 一直没暴露） | `cargo test -p floom-text` 28 passed（含 3 个新测）；真机待 `gates/ios.md` item 2 |

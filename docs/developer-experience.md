@@ -58,6 +58,38 @@
 - `floom-dsl`：`codegen` + `ui_ir` 两个模块；IR 是 agent 与热重载的共同底座。
 - `floom-editor`：卫星 crate，富文本/代码编辑，不在 1.0 锁定面。
 
+## CI 到底证明了什么
+
+绿不等于验证过。下面是 2026-11-21 的实测账本：每条"CI 声称的"后面跟的是它**实际**执行的命令，以及命令覆盖不到的东西。
+
+| CI 里看到的名字 | 实际命令 | 覆盖不到 |
+| --- | --- | --- |
+| `Floom 2.0 on {macOS,ubuntu-24.04,windows}` | `cargo test $FLOOM2_PACKAGES` —— 门面 `floom` 的 `default = []`，所以**没有任何后端被编译** | 门面 8 个 bundle（`desktop`/`tui`/`web`/`devtools`/`testkit`/`snapshot`/`renderer-gpu`/`full`）的运行时接线。2026-11-21 起补了 macOS 的 `--features desktop` 一步与 ubuntu 的 `bundles` job |
+| `build` | `cargo build` + `cargo nextest run --workspace` | 同上（default features）；`crates/ecosystem/*` 是独立 workspace，不在此列 |
+| MSRV | `cargo check --workspace --all-features`（ubuntu，1.91） | 只**编译**不运行。全 cfg 的编译覆盖靠它，运行时覆盖靠不住它 |
+| `CI platform`（android/iOS/OHOS） | `cargo check --target ...` / `cargo build`+`link`（OHOS） | 交叉分支从不**执行**：android/ios 的错误处理、JNI 调用、a11y 适配逻辑一个断言都没跑 |
+| `CI plugins` | 该 workspace 的 `cargo test` + `fmt` | 插件的原生半只在"能编译能链接"这一层被证明 |
+| 像素/渲染 | **无** | 9 个 GPU 像素测试与 3 个文本 golden 全是 `#[ignore]`/`cfg_attr(ignore)`（`crates/render/floom-renderer-vello/tests/gpu_pixels.rs`、`crates/devtools/floom-snapshot/tests/widgets.rs`）→ 渲染正确性在 CI 里零证据 |
+| 体积/性能/资源（G11/G12/G13） | **无** | `just gate size` / `scripts/check-perf-budgets.sh` 只在本地跑 |
+
+### 变异测试：测试是真的会红，还是只是跑过
+
+只读命令列表说明不了问题，所以往代码里注入了三个真实缺陷，跑一遍 CI 等价命令：
+
+| 注入的缺陷 | 捕获情况 |
+| --- | --- |
+| `crates/widgets/floom-text/src/layout.rs`：丢掉 pen 累加（所有 glyph 叠在原点） | **抓到**，`tests/shaping.rs::glyph_positions_advance_across_the_run` 红 |
+| `crates/app/floom/src/platform.rs`：无后端时 `run()` 返回 `Ok(())` 而不是解释缺什么 | **抓到**，`platform::tests::a_run_without_a_backend_explains_what_to_enable` 红 |
+| `crates/platform/floom-platform-harmony/src/stride_bytes`：永远返回行宽（像素/字节读法失效） | 单测**存在且会红**，但 CI 的包清单里**没有**这个 crate（`FLOOM2_PACKAGES` 只列了 desktop/android/tui/web）→ CI 里永远跑不到。2026-11-21 起已把 harmony / ios / embedded 三个 crate 加进清单 |
+
+结论：单元层是真的（几千个测试，注入的缺陷会红），**薄在运行时的平台接缝**——交叉编译分支、后端 bundle 的级联、渲染像素、以及自己承诺的预算门槛。
+
+### 为什么这些洞会一直存在
+
+- 交叉目标只能 `check`：一台 ubuntu runner 跑不了 Android 的 JNI、iOS 的 UIKit、OHOS 的 NAPI。**这不可修**，只能靠 `gates/*.md` 的设备账本诚实标注 device-gated。
+- GPU 像素测试需要 GPU：GitHub 的 macOS runner 有 Metal，但跑起来要几十分钟且 flaky。当前取舍是"渲染正确性只在本地/设备上验"，并把这件事写在 `docs/performance.md` 的证据列里，而不是假装 CI 覆盖了。
+- 门槛脚本（size/perf）依赖具体宿主，异构 runner 上会假红——`1.0-launch-milestone.md` 里有明确记录，所以它们留在本地 `just gate`。
+
 ## 目标数字（要写进 release notes 的）
 
 | 项 | 目标 |
