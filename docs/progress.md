@@ -49,7 +49,7 @@
 | --- | --- | --- | --- |
 | S2.1 | 插件 `abi_version`（核实为**早已成立**，本步降级为核验台账） | 每条台账前提都被命令验证过；假缺口删除 | `crates/native/floom-native-ffi/tests/c_vtable.rs` 的旧 ABI 负例 |
 | S2.2 | 资源门禁（RSS / GPU 时间；逐帧分配、峰值内存、首帧、输入延迟已由测试落地） | `just gate resources` 能绿能红 | 故意把阈值调小 → 红；恢复 → 绿 |
-| S2.3 | 清零 82 处硬编码颜色（material 26 / cupertino 29 / fluent 27） | 三个 `*/src/widgets/` 目录 0 处 `Color::rgb*`；`just gate style` 存在且绿 | `rg -c "Color::r(gb\|gba)\|srgb_u8" crates/ecosystem/floom-ui/crates/*/src/widgets/` |
+| S2.3 | **完成**：82 处字面量清零——36 处 `rgba(0,0,0,0)` → `Color::TRANSPARENT`（主题自己的 `Color` 类型补了该常量）、22 处 `rgba(0,0,0,255)` → `Color::BLACK`（scrim/shadow 的 alpha 本来就叠在它上面）、14 处状态色（info/success/warning、cupertino 的 rating 黄、三个 color-picker 默认色）移进各 crate 的 `src/tokens.rs`；顺带统一 fluent banner 的 Warning（原 `#F7CE00`，与 alert 的 `#FFB900` 不一致） | 三个 `*/src/widgets/` 0 处 `Color::rgb*`；`gate.sh style` 绿，注入一个字面量即红 | `bash scripts/gate.sh style`；变异验证：往 `floom-material/src/widgets/badge.rs` 加一行 `Color::rgb(1,2,3)` → 退出码 1 |
 | S2.4 | 组件契约门禁：`ComponentSchema` 校验 token/属性/事件齐全 | 门禁能对新增组件报错 | `just gate components` 对一个故意缺 token 的组件变红 |
 
 ### S3 开发者表面
@@ -105,7 +105,7 @@
 | S1.9 | Windows/Linux 组件 golden | 完成 | `crates/devtools/floom-snapshot/tests/widgets.rs`（Ahem 注册 + 重生成 golden）；证据 = 三系统 CI 无 `ignored` | 2026-11-21 |
 | S2.1 | 插件 `abi_version` | 完成（核验） | `crates/native/floom-native-ffi/src/abi.rs:46` ABI_VERSION=1、`provider.rs:196` 注册校验、`tests/c_vtable.rs:317` 旧版本被拒 | 2026-11-21 核实，原台账是 grep 误报 |
 | S2.2 | 资源门禁（G12） | 进行中 | P6 峰值 RSS、P8 逐帧分配、P10 首帧、P11 输入延迟均已有门禁（`tests/memory.rs`、`tests/allocation.rs`、`tests/latency.rs`）；只剩 GPU/VRAM 无 | 顺带修掉 S1.3 引入的 236 MiB 字体拷贝 |
-| S2.3 | 组件 token 清零 + 门禁 | 未开始 | 82 处（26/29/27） | — |
+| S2.3 | 组件 token 清零 + 门禁 | 完成 | 82 处清零（36 透明 / 22 黑 / 14 状态色进 tokens.rs）；`scripts/check-design-tokens.sh` + `gate.sh style`；fluent banner Warning 与 alert 统一为 `#FFB900` | 2026-11-21 |
 | S2.4 | 组件契约门禁 | 未开始 | `component_schema()` 无消费者 | — |
 | S3.1 | CLI check/test/doctor | 未开始 | `crates/app/floom-cli/src/main.rs`（cargo 转发） | — |
 | S3.2 | 热重载保留状态 | 未开始 | 文件级热重启 | — |

@@ -48,12 +48,14 @@
 ## 4. 建议门禁（最小可执行）
 
 ```sh
-just gate style   # floom-{material,cupertino,fluent}/src/widgets/** 出现颜色字面量即失败（tokens.rs 白名单）
-just gate a11y    # 每个公开组件至少一条 semantics 断言
+bash scripts/gate.sh style   # 三个 DS 的 src/widgets/** 出现颜色字面量即失败（2026-11-21 起在 CI 与本地门禁里）
+bash scripts/gate.sh a11y    # 尚未存在：每个公开组件至少一条 semantics 断言
 ```
 
+`style` 已生效：82 处字面量清零（36 透明、22 黑、14 状态色移进各 crate 的 `src/tokens.rs`），
+`scripts/check-design-tokens.sh` 对注入的 `Color::rgb(1,2,3)` 返回 1。
 违反现状：#2、#3 无强制；#5 只有部分断言；#9 有 snapshot 能力但未逐组件覆盖。
-**建议顺序**：先上 `style` 门禁（把 82 处字面量清零，机械活），再补语义断言（每个组件一条，能和 `floom-accuracy` 的 `Semantics` 命令复用）。
+**下一步**：补语义断言（每个组件一条，复用 `floom-accuracy` 的 `Semantics` 命令）。
 
 ## 5. 缺口
 
