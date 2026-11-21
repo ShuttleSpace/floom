@@ -134,7 +134,9 @@ fn a_stack_of_three_widgets_is_golden_as_a_composite() {
 
 #[test]
 fn button_semantics_matches_golden() {
-    let host = mounted(BOX, Button::new("Save"));
+    // The snapshot carries the node's bounds since 2026-11-21, so the label has
+    // to be measured the same way on every host.
+    let host = mounted_in_test_font(BOX, Button::new("Save"));
     let snap = SemanticsSnapshot::of(host.semantics());
     assert!(
         snap.text.contains("Save"),

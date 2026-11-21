@@ -1,1 +1,1 @@
-  0@1/0: SemanticsNode { role: Button, label: "Save", value: "", hint: "", state: SemanticsState(ENABLED | FOCUSABLE), actions: [], children: [] }
+  0@1/0: SemanticsNode { role: Button, bounds: Rect { x0: 0.0, y0: 0.0, x1: 72.0, y1: 22.0 }, label: "Save", value: "", hint: "", state: SemanticsState(ENABLED | FOCUSABLE), actions: [], children: [] }

@@ -1,2 +1,2 @@
-  1@1/1: SemanticsNode { role: StaticText, label: "hello", value: "", hint: "", state: SemanticsState(0x0), actions: [], children: [] }
-  2@1/2: SemanticsNode { role: Button, label: "ok", value: "", hint: "", state: SemanticsState(0x0), actions: [], children: [] }
+  1@1/1: SemanticsNode { role: StaticText, bounds: Rect { x0: 0.0, y0: 0.0, x1: 0.0, y1: 0.0 }, label: "hello", value: "", hint: "", state: SemanticsState(0x0), actions: [], children: [] }
+  2@1/2: SemanticsNode { role: Button, bounds: Rect { x0: 0.0, y0: 0.0, x1: 0.0, y1: 0.0 }, label: "ok", value: "", hint: "", state: SemanticsState(0x0), actions: [], children: [] }
