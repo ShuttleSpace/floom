@@ -261,7 +261,7 @@ jobs:
         run: |
           echo "native: ${{ steps.ohos.outputs.ohos_sdk_native }}"
           ls "${{ steps.ohos.outputs.ohos_sdk_native }}"
-          ls "${{ steps.ohos.outputs.ohos_sdk_native }}/sysroot/usr/lib/aarch64-linux-ohos" | head -20
+          find "${{ steps.ohos.outputs.ohos_sdk_native }}/sysroot/usr/lib/aarch64-linux-ohos" -maxdepth 1 | head -20
 
       - name: Link the HarmonyOS backend
         env:
