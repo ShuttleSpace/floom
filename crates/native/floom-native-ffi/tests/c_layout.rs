@@ -79,8 +79,16 @@ fn which(name: &str) -> bool {
 
 /// Compile the probe and run it, returning its `key=value` output.
 fn probe(compiler: &str) -> HashMap<String, String> {
+    use std::sync::atomic::{AtomicU32, Ordering};
     let dir = scratch();
-    let binary = dir.join("layout_probe");
+    // Both tests here compile a probe, and `scratch()` is one directory for the
+    // whole binary: a shared output name lets one of them exec the file the
+    // other is still writing ("No such file or directory" from a fresh run).
+    static NEXT: AtomicU32 = AtomicU32::new(0);
+    let binary = dir.join(format!(
+        "layout_probe_{}",
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    ));
     let status = Command::new(compiler)
         .arg(fixture())
         .arg("-I")
