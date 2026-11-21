@@ -107,7 +107,7 @@
 | S2.2 | 资源门禁（G12） | 进行中 | P6 峰值 RSS、P8 逐帧分配、P10 首帧、P11 输入延迟均已有门禁（`tests/memory.rs`、`tests/allocation.rs`、`tests/latency.rs`）；只剩 GPU/VRAM 无 | 顺带修掉 S1.3 引入的 236 MiB 字体拷贝 |
 | S2.3 | 组件 token 清零 + 门禁 | 完成 | 82 处清零（36 透明 / 22 黑 / 14 状态色进 tokens.rs）；`scripts/check-design-tokens.sh` + `gate.sh style`；fluent banner Warning 与 alert 统一为 `#FFB900` | 2026-11-21 |
 | S2.4 | 组件契约门禁 | 未开始 | `component_schema()` 无消费者 | — |
-| S3.1 | CLI check/test/doctor | 未开始 | `crates/app/floom-cli/src/main.rs`（cargo 转发） | — |
+| S3.1 | CLI check/test/doctor | 进行中 | `doctor` 已落地（`crates/app/floom-cli/src/doctor.rs`，`cargo test -p floom-cli` 110 passed）；`check` 加了前置校验（无 `Cargo.toml` 时给出下一步，单测 `check_explains_a_directory_that_holds_no_project`）；`test` 仍是裸转发 | `bash scripts/gate.sh` |
 | S3.2 | 热重载保留状态 | 未开始 | 文件级热重启 | — |
 | S3.3 | DevTools 计算值 | 未开始 | Style 行无计算值 | — |
 | S4.1 | agent 口进真实 app | 未开始 | Task 25.3 未做 | — |

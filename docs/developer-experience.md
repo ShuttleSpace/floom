@@ -7,19 +7,19 @@
 ## 单 CLI 全生命周期
 
 `floom` CLI 在 `crates/app/floom-cli`。对标 nsh 的 `nsh test --trace`、tauri 的 `tauri dev`、makepad 的 `cargo-makepad`。
-子命令在 `crates/app/floom-cli/src/main.rs:103-109`：`run` / `create` / `init` / `check` / `test` / `package`。
+子命令在 `crates/app/floom-cli/src/main.rs`：`run` / `create` / `init` / `check` / `test` / `package` / `doctor`。
 
 | 子命令 | 作用 | 状态 |
 | --- | --- | --- |
 | `floom create` / `init` | 从模板建工程（`--template app`或`plugin`、`--style rust`或`tsx`、`--platforms`） | 有，模板真实可用 |
 | `floom run` | 构建 + 启动 | 有 |
 | `floom run --watch` | 监听文件，改动后重建并重启 | 有（**文件级热重启**，非状态保留） |
-| `floom check` | 转发 `cargo check`（带 `--features`） | 有，但**只是转发**：不跑门禁子集、不查文档漂移 |
+| `floom check` | 先看目录里有没有工程，再转发 `cargo check`（带 `--features`） | 有；仍**只是转发** cargo，不串门禁子集与 `docs_parity` |
 | `floom test` | 转发 `cargo test` | 有，但**只是转发**：不输出 ops/mount/nodes 级 trace |
 | `floom package` | 按平台打包（`--platform <target>`，`pack::pack`，自包含，不依赖仓内 `scripts/build.sh`） | 有，真实实现 |
-| `floom doctor` | 环境自检（GPU、字体、SDK、设备） | **缺** |
+| `floom doctor` | 报 rustc/cargo/host、每个平台所需 target 是否安装、工程钉住的 floom 版本；`--platform X` 让该平台缺 target 变成失败 | 有（2026-11-21）；**不查** GPU、字体、SDK、设备信任 |
 
-所以 G5 的真实缺口不是"命令没有"，而是 **`check`/`test` 还是空壳**：没有把门禁子集、`docs_parity`、snapshot 与 trace 串进去；以及没有 `doctor`。这是"开发便利 3 分 → 5 分"的主要差距。
+所以 G5 的真实缺口不是"命令没有"：`doctor` 已经有了（只回答"这台机器能不能构建这个平台"，判据是 target 是否安装），`check` 会在 cargo 之前先把"这个目录里没有工程"说成人话。剩下的缺口是 **`check`/`test` 仍只是 cargo 转发**——没有把门禁子集、`docs_parity`、snapshot 与 trace 串进去。这是"开发便利 3 分 → 5 分"的主要差距。
 
 ## 热重载
 

@@ -4,6 +4,7 @@
 //! Stage 1 ships `floom create`, which scaffolds a Flutter-style project: a
 //! Rust core under `src/` plus one directory per target platform.
 
+mod doctor;
 mod native_project;
 mod pack;
 mod package;
@@ -31,6 +32,7 @@ COMMANDS:
     init <NAME>      Scaffold a new Floom app in the current directory
     check <DIR>      Type-check the project in <DIR> (default: .)
     test <DIR>       Run the project's tests in <DIR> (default: .)
+    doctor <DIR>     Report which platforms this machine can build, and why not
     package <DIR>    Build a release binary (add --platform <P> for a platform artifact)
 OPTIONS (run):
     --release              Build the app in release mode
@@ -105,6 +107,7 @@ fn run(args: &[String]) -> Result<(), String> {
         "init" => init(&args[1..]),
         "check" => check(&args[1..]),
         "test" => test(&args[1..]),
+        "doctor" => doctor::run(&args[1..]),
         "package" => package::run(&args[1..]),
         "help" | "-h" | "--help" => {
             print!("{USAGE}");
@@ -643,7 +646,23 @@ fn parse_lifecycle(args: &[String]) -> Result<LifecycleOpts, String> {
 /// `floom check <DIR>` — type-check the project without producing a binary.
 fn check(args: &[String]) -> Result<(), String> {
     let opts = parse_lifecycle(args)?;
+    require_manifest(&opts.dir)?;
     cargo_in(&opts.dir, "check", &opts.features, false)
+}
+
+/// Fail before cargo does when there is no project to check.
+///
+/// Cargo's own message names a manifest path *inside* the directory rather than
+/// the directory itself, which reads as "cargo is broken" to someone who just
+/// typed the wrong path.
+fn require_manifest(dir: &Path) -> Result<(), String> {
+    if dir.join("Cargo.toml").is_file() {
+        return Ok(());
+    }
+    Err(format!(
+        "{} has no Cargo.toml — run `floom create <name>` first, or point check at the app's directory",
+        dir.display()
+    ))
 }
 
 /// `floom test <DIR>` — run the project's test suite.
@@ -985,6 +1004,21 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn check_explains_a_directory_that_holds_no_project() {
+        let dir = std::env::temp_dir().join(format!("floom-cli-empty-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let error = require_manifest(&dir).unwrap_err();
+        assert!(error.contains("has no Cargo.toml"), "got: {error}");
+        assert!(error.contains("floom create"), "got: {error}");
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        assert_eq!(require_manifest(&project), Ok(()));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
     use super::*;
 
     /// The repository root, found from this crate's manifest directory.
