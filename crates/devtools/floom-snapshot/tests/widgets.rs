@@ -8,22 +8,19 @@
 //! every fixture is a widget mounted in a real `WidgetHost`, laid out and
 //! painted by the same code path a running app uses.
 //!
-//! Which layer carries which golden is deliberate, and the honest caveat comes
-//! first: **any golden that touches text is pinned to the font stack of the host
-//! that generated it.** A scene node records the shaped advance width (`width:
-//! 78.5791…` for "Hello, Floom"), and that number comes from the system font the
-//! shaper picked. These goldens are reproducible on the reference host — macOS
-//! arm64, the only target the release policy claims as tested — and would need
-//! `UPDATE_SNAPSHOTS=1` on a machine with a different default font. Floom
-//! shipping a bundled fallback font would remove the caveat; until then it is
-//! written down rather than assumed away.
+//! Which layer carries which golden is deliberate. A scene node records the
+//! shaped advance width (`width: 78.5791…` for "Hello, Floom"), and that number
+//! normally comes from whatever font the host's shaper picked — so every golden
+//! here that touches text registers **Ahem** (`fixtures/ahem.ttf`, public
+//! domain: one solid box per glyph, one em per advance) and measures in that.
+//! The goldens therefore record Floom's layout decisions, not the host's font
+//! stack, and are the same on macOS, Linux and Windows.
 //!
-//! * **Semantics goldens** are the portable ones: role, label and state are
-//!   decided by Floom, never by the font stack.
-//! * **Pixel goldens are restricted to glyph-free widgets**, because a pixel
-//!   hash over glyphs is one step further down the same dependency. Text reaches
-//!   the pixel layer in the *within-run* comparisons below, which hold anywhere
-//!   because both sides are shaped on the same host.
+//! * **Semantics goldens**: role, label and state are decided by Floom, never by
+//!   the font.
+//! * **Pixel goldens stay glyph-free**: Ahem pins the advances, but the box each
+//!   glyph paints would still be compared at a size no real font reproduces.
+//!   Text reaches the pixel layer in the *within-run* comparisons below.
 //!
 //! Regenerate with `UPDATE_SNAPSHOTS=1 cargo test -p floom-snapshot --test widgets`.
 
@@ -33,6 +30,7 @@ use floom_layout::LayoutStyle;
 use floom_snapshot::{
     PixelProbe, PixelSnapshot, ReferencePixels, SceneSnapshot, SemanticsSnapshot, snapshots_dir,
 };
+use floom_text::{FontFamily, register_font};
 use floom_types::{Color, Size};
 use floom_widgets::{Button, Container, Stack, Switch, Text, WidgetAny};
 
@@ -55,16 +53,33 @@ fn pixel(host: &WidgetHost, size: Size) -> PixelSnapshot {
 
 const BOX: Size = Size::new(160.0, 40.0);
 
-// Pinned to the reference host's font stack: these goldens record a shaped
-// advance width, and a different default font measures a different number (see
-// the module note). CI runs them on macOS, where they were minted.
-#[cfg_attr(
-    not(target_vendor = "apple"),
-    ignore = "text goldens are pinned to the reference host's font stack"
-)]
+/// Ahem, so a golden over text records layout rather than the host's font.
+const AHEM: &[u8] = include_bytes!("fixtures/ahem.ttf");
+
+/// Mounts like [`mounted`], with the default family pointed at [`AHEM`] first.
+///
+/// Layout asks the thread's shaper and painting asks the host's, so both are
+/// registered: the point is a golden whose numbers come from a bundled font
+/// instead of whichever face the machine happens to call sans-serif.
+fn mounted_in_test_font(size: Size, widget: impl WidgetAny + 'static) -> WidgetHost {
+    assert!(
+        register_font(AHEM.to_vec(), FontFamily::SansSerif) > 0,
+        "Ahem must register, or the golden is host-dependent"
+    );
+    let mut host = WidgetHost::new();
+    assert!(
+        host.register_font(AHEM.to_vec(), FontFamily::SansSerif) > 0,
+        "the host must register Ahem too, or paint and layout disagree"
+    );
+    host.set_size(size);
+    host.mount_root(LayoutStyle::default(), widget);
+    host.frame();
+    host
+}
+
 #[test]
 fn text_scene_matches_golden() {
-    let host = mounted(BOX, Text::new("Hello, Floom"));
+    let host = mounted_in_test_font(BOX, Text::new("Hello, Floom"));
     let snap = SceneSnapshot::of(host.scene());
     assert!(
         !snap.text.trim().is_empty(),
@@ -78,17 +93,10 @@ fn text_scene_matches_golden() {
 /// the scene this file records is now the switch -- the same claim (two
 /// states, a different scene) about the two-state control that is still a
 /// primitive.
-// Pinned to the reference host's font stack: these goldens record a shaped
-// advance width, and a different default font measures a different number (see
-// the module note). CI runs them on macOS, where they were minted.
-#[cfg_attr(
-    not(target_vendor = "apple"),
-    ignore = "text goldens are pinned to the reference host's font stack"
-)]
 #[test]
 fn switch_scene_differs_between_states_and_the_checked_one_is_golden() {
-    let off = mounted(BOX, Switch::new("Remember me").on(false));
-    let on = mounted(BOX, Switch::new("Remember me").on(true));
+    let off = mounted_in_test_font(BOX, Switch::new("Remember me").on(false));
+    let on = mounted_in_test_font(BOX, Switch::new("Remember me").on(true));
     let off_snap = SceneSnapshot::of(off.scene());
     let on_snap = SceneSnapshot::of(on.scene());
     // The control: if these matched, the "on" flag would not be reaching
@@ -100,16 +108,9 @@ fn switch_scene_differs_between_states_and_the_checked_one_is_golden() {
     on_snap.assert(snapshots_dir!(), "widget_switch_checked_scene");
 }
 
-// Pinned to the reference host's font stack: these goldens record a shaped
-// advance width, and a different default font measures a different number (see
-// the module note). CI runs them on macOS, where they were minted.
-#[cfg_attr(
-    not(target_vendor = "apple"),
-    ignore = "text goldens are pinned to the reference host's font stack"
-)]
 #[test]
 fn a_stack_of_three_widgets_is_golden_as_a_composite() {
-    let host = mounted(
+    let host = mounted_in_test_font(
         Size::new(200.0, 120.0),
         Stack::new(Axis::Vertical)
             .gap(8.0)

@@ -32,3 +32,6 @@ floom-core = { workspace = true }
 floom-animation = { workspace = true }
 floom-layout = { workspace = true }
 floom-widgets = { workspace = true }
+# The text goldens point `SansSerif` at a bundled font so they measure the same
+# number on every host; `register_font` lives there.
+floom-text = { workspace = true }

@@ -16,7 +16,9 @@ pub use editor_layout::{CaretAffinity, StyledRun, TextBrush, TextLayout};
 pub use layout::{
     Glyph, GlyphRun, LaidOutText, LineMetrics, TextAlign, TextLayoutOptions, TextShaper,
 };
-pub use measure::{measure, measure_text, measure_weighted_text, measure_weighted_text_in};
+pub use measure::{
+    measure, measure_text, measure_weighted_text, measure_weighted_text_in, register_font,
+};
 
 /// Re-exported because [`TextLayoutOptions::weight`], [`TextLayoutOptions::family`]
 /// and [`measure_weighted_text`] are public API: a caller naming any of them

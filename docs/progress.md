@@ -40,7 +40,7 @@
 | S1.5 | Android：a11y `perform_action` 真实现 + 聚焦元素可见（焦点环） | `gates/android.md` item3/item7 由 `fail`/`partial` 转 `pass` | 设备上 TalkBack 能点击；截图见焦点环 |
 | S1.6 | 桌面：剪贴板非 macOS 实现 + AT-SPI/UIA 桥 + `file-picker` trait | `gates/linux.md`/`windows.md` 首项转 `pass` | 三平台 `cargo test -p floom-platform-desktop` + 手工复制粘贴 |
 | S1.7 | 平台状态表改真：把达标的 target 从 `device-gated` 改 `tested` | ≥3 target `tested` 含 ≥1 移动端（G1 达成） | `grep -c "tested" docs/release-policy.md`；`gates/*.md` 无 `fail` |
-| S1.9 | **Windows/Linux 上的组件 golden**（CI 首次真跑发现）：`floom-snapshot` 的 3 个含文本 golden 记录的是参考宿主的字形 advance，换个默认字体就量得不同（Linux 上 `widget_text_scene` 由 78.5791 变 87.0967），已按文件自身注释里的口径在非 Apple 宿主 `ignore` | 文本度量与 golden 不再依赖宿主字体栈（改用随库分发的 fallback 字体，或 golden 只钉结构不钉字形宽度） | Ubuntu/Windows runner 上 `cargo test -p floom-snapshot --test widgets` 三项为 `ok` 而非 `ignored` |
+| S1.9 | **组件 golden 与宿主字体解耦（完成）**：3 个含文本 golden 改为在随库分发的 Ahem（`crates/devtools/floom-snapshot/tests/fixtures/ahem.ttf`，公有领域，每字形 1em 方块）下取景，`floom_text::register_font` + `WidgetHost::register_font` 把 `SansSerif` 指向它；golden 里的数字现在是 `168.0`（12 字 × 14px）这类可推算值，不再是 `78.5791` | 数字可由字体推算、与宿主无关 | 三系统 CI 上 `cargo test -p floom-snapshot --test widgets` 九项全 `ok` 且无 `ignored`；本机同哈希 |
 | S1.8 | **Windows 文本半像素换行**（CI 首次真跑发现）：`a_label_that_fits_on_one_line_paints_on_one_line` 在 Windows 上实测 1.1499 行——同一字符串在 Segoe UI 下量得够宽，量/画对不齐的旧缺陷在 Windows 上仍在 | 该测试去掉 `cfg_attr(ignore)` 后在 Windows runner 上绿；文本测量改用 fixture 字体而非系统字体 | `gh run view <id> --job <windows 2.0 job>` 里该测试为 `ok` |
 
 ### S2 契约与门禁（锁住已有优势）
@@ -102,7 +102,7 @@
 | S1.6 | 桌面剪贴板 / a11y / file-picker | 未开始 | `crates/platform/floom-platform-desktop/src/{clipboard,accessibility}.rs` | — |
 | S1.7 | ≥3 target tested（G1） | 未开始 | `docs/release-policy.md` targets 表 | — |
 | S1.8 | Windows 文本半像素换行（新发现） | 未开始 | `crates/app/floom-app/tests/text_weight.rs` 的 `cfg_attr(ignore)` 与理由 | 2026-11-20 |
-| S1.9 | Windows/Linux 组件 golden（新发现） | 未开始 | `crates/devtools/floom-snapshot/tests/widgets.rs` 的 `cfg_attr(ignore)` 与理由 | 2026-11-20 |
+| S1.9 | Windows/Linux 组件 golden | 完成 | `crates/devtools/floom-snapshot/tests/widgets.rs`（Ahem 注册 + 重生成 golden）；证据 = 三系统 CI 无 `ignored` | 2026-11-21 |
 | S2.1 | 插件 `abi_version` | 未开始 | 全仓 0 命中 `abi_version` | — |
 | S2.2 | 资源门禁（G12） | 未开始 | `gate.sh --list` 无 resources | — |
 | S2.3 | 组件 token 清零 + 门禁 | 未开始 | 82 处（26/29/27） | — |

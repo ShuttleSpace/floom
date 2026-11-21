@@ -1478,6 +1478,7 @@ dependencies = [
  "floom-renderer",
  "floom-renderer-software",
  "floom-scene",
+ "floom-text",
  "floom-types",
  "floom-widgets",
  "image",

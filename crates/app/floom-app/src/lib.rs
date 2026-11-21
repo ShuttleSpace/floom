@@ -2405,6 +2405,24 @@ impl WidgetHost {
         self.nodes[node.0].scroll_offset
     }
 
+    // --- fonts -------------------------------------------------------------
+
+    /// Registers a font file and points `family` at it, for the text this host
+    /// shapes when it paints.
+    ///
+    /// The measure side has its own shaper ([`floom_text::register_font`]), so a
+    /// caller that wants both to agree registers twice. A host that measured in
+    /// one face and painted in another would size a box for advances it does not
+    /// draw.
+    pub fn register_font(&mut self, data: Vec<u8>, family: floom_types::FontFamily) -> usize {
+        let faces = self.shaper.register_font(data, family);
+        // Every cache below keys on the text, not on the face it was set in.
+        self.glyph_cache.clear();
+        self.styled_glyph_cache.clear();
+        self.text_layout_cache.clear();
+        faces
+    }
+
     // --- viewport ----------------------------------------------------------
 
     pub fn set_size(&mut self, size: Size) {

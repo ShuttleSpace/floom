@@ -1,0 +1,9 @@
+Ahem (ahem.ttf) is public domain.
+
+It is a test font: every glyph is a solid box and every advance is 1em, so a
+golden laid out in it records Floom's layout decisions rather than the font
+stack of the machine that ran the test. Source: the copy shipped with the
+Flutter engine (third_party/txt/third_party/fonts/ahem.ttf), whose name table
+carries the public-domain notice.
+
+Used only by crates/devtools/floom-snapshot/tests/widgets.rs.

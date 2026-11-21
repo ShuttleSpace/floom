@@ -18,6 +18,25 @@ thread_local! {
     static LAYOUT_CACHE: RefCell<LayoutCache> = RefCell::new(LayoutCache::new());
 }
 
+/// Registers a font file and points `family` at it, on the shaper this thread
+/// measures through — the one the widgets use. Returns the faces it added.
+///
+/// Pointing [`FontFamily::SansSerif`] at a bundled font is how a golden stops
+/// depending on the host's default font.
+pub fn register_font(data: Vec<u8>, family: FontFamily) -> usize {
+    // The cache keys on (text, options) alone, so a measure taken before it
+    // would answer with the previous font's width.
+    LAYOUT_CACHE.with(|cache| cache.borrow_mut().clear());
+    let measured = SHAPER.with(|shaper| {
+        shaper
+            .borrow_mut()
+            .register_font(data.clone(), family.clone())
+    });
+    // The editor shapes in its own font context; a label and the editor beside
+    // it must not measure differently.
+    crate::editor_layout::register_font(&data, &family).max(measured)
+}
+
 /// Measures `text` laid out with the default font stack at `font_size`.
 ///
 /// `max_width` bounds line breaking; pass [`f64::INFINITY`] for the intrinsic

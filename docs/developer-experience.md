@@ -69,7 +69,7 @@
 | MSRV | `cargo check --workspace --all-features`（ubuntu，1.91） | 只**编译**不运行。全 cfg 的编译覆盖靠它，运行时覆盖靠不住它 |
 | `CI platform`（android/iOS/OHOS） | `cargo check --target ...` / `cargo build`+`link`（OHOS） | 交叉分支从不**执行**：android/ios 的错误处理、JNI 调用、a11y 适配逻辑一个断言都没跑 |
 | `CI plugins` | 该 workspace 的 `cargo test` + `fmt` | 插件的原生半只在"能编译能链接"这一层被证明 |
-| 像素/渲染 | 2026-11-21 前：**无**。现在：`gpu-pixels` job 在 `macos-latest` 上跑 `cargo test -p floom-renderer-vello --features gpu -- --ignored`（11 个像素测试，Metal） | 3 个文本 golden 仍在非 Apple 宿主 `cfg_attr(ignore)`（宿主字体栈差异）；ubuntu/windows runner 无适配器，渲染在那里仍无证据 |
+| 像素/渲染 | 2026-11-21 前：**无**。现在：`gpu-pixels` job 在 `macos-latest` 上跑 `cargo test -p floom-renderer-vello --features gpu -- --ignored`（11 个像素测试，Metal） | 组件 golden：3 个含文本项改用随库分发的 Ahem（`floom-snapshot/tests/fixtures/ahem.ttf`）取景，已在三系统真跑；大小/拖影类像素仍在 macOS 才验（ubuntu/windows runner 无适配器） |
 | `just gate size` / `perf` 的等价物 | **无** | 体积与帧预算只在本地跑 |
 | 体积/性能/资源（G11/G12/G13） | **无** | `just gate size` / `scripts/check-perf-budgets.sh` 只在本地跑 |
 

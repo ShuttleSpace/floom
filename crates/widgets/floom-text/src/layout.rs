@@ -10,6 +10,41 @@ use parley::style::{
 };
 use parley::{FontContext, LayoutContext};
 
+/// Registers `data` as the face behind `family` in `font_cx`.
+///
+/// Shared with the editor's font context: two font databases in one process is
+/// already one more than ideal, and they must at least agree.
+pub(crate) fn register_font_into(
+    font_cx: &mut FontContext,
+    data: &[u8],
+    family: &FloomFontFamily,
+) -> usize {
+    let Some(generic) = generic_family(family) else {
+        return 0;
+    };
+    let registered = font_cx
+        .collection
+        .register_fonts(parley::fontique::Blob::from(data.to_vec()), None);
+    let faces = registered.iter().map(|(_, infos)| infos.len()).sum();
+    if faces > 0 {
+        let ids = registered.into_iter().map(|(id, _)| id);
+        font_cx.collection.set_generic_families(generic, ids);
+    }
+    faces
+}
+
+/// The parley generic behind a Floom family, or `None` when it names one.
+fn generic_family(family: &FloomFontFamily) -> Option<GenericFamily> {
+    match family {
+        FloomFontFamily::Serif => Some(GenericFamily::Serif),
+        FloomFontFamily::SansSerif => Some(GenericFamily::SansSerif),
+        FloomFontFamily::Monospace => Some(GenericFamily::Monospace),
+        FloomFontFamily::Cursive => Some(GenericFamily::Cursive),
+        FloomFontFamily::Fantasy => Some(GenericFamily::Fantasy),
+        FloomFontFamily::Named(_) => None,
+    }
+}
+
 /// Default font stack, tried left-to-right.
 ///
 /// The generic sans-serif covers Latin, digits and symbols. The remaining
@@ -48,13 +83,13 @@ static DEFAULT_FONT_STACK: &[FontFamily<'static>] = &[
 /// land on the same CJK-capable stack the default does, or a phone with a
 /// Chinese locale renders `你好` as tofu boxes while Latin text looks fine.
 pub(crate) fn font_stack(family: &FloomFontFamily) -> FontStack<'static> {
-    let primary = match family {
-        FloomFontFamily::Serif => FontFamily::Generic(GenericFamily::Serif),
-        FloomFontFamily::SansSerif => FontFamily::Generic(GenericFamily::SansSerif),
-        FloomFontFamily::Monospace => FontFamily::Generic(GenericFamily::Monospace),
-        FloomFontFamily::Cursive => FontFamily::Generic(GenericFamily::Cursive),
-        FloomFontFamily::Fantasy => FontFamily::Generic(GenericFamily::Fantasy),
-        FloomFontFamily::Named(name) => FontFamily::Named(Cow::Owned(name.clone())),
+    let primary = match generic_family(family) {
+        Some(generic) => FontFamily::Generic(generic),
+        None => match family {
+            FloomFontFamily::Named(name) => FontFamily::Named(Cow::Owned(name.clone())),
+            // `generic_family` answers for every variant but `Named`.
+            _ => FontFamily::Generic(GenericFamily::SansSerif),
+        },
     };
     let mut stack = Vec::with_capacity(DEFAULT_FONT_STACK.len() + 1);
     stack.push(primary);
@@ -286,6 +321,17 @@ impl TextShaper {
             lines,
             run_count,
         }
+    }
+
+    /// Registers `data` (a font file) as the face behind `family` on this
+    /// shaper, and returns how many faces it added — 0 means it was not a font
+    /// or `family` names one instead of a generic.
+    ///
+    /// Tests point [`FloomFontFamily::SansSerif`] at a bundled font: a golden
+    /// that records a shaped advance width is reproducible only on the host
+    /// whose default font produced it.
+    pub fn register_font(&mut self, data: Vec<u8>, family: FloomFontFamily) -> usize {
+        register_font_into(&mut self.font_cx, &data, &family)
     }
 
     /// UTF-16-ish selection geometry helper: byte range → first glyph cluster x.

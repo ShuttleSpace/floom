@@ -43,6 +43,17 @@ thread_local! {
         RefCell::new(LayoutContext::new());
 }
 
+/// Registers a font file for the editor's shaping as well as the shaper's.
+///
+/// The resolved faces are cached in `LAYOUT_CONTEXT`, so a registration after
+/// the first layout replaces it.
+pub(crate) fn register_font(data: &[u8], family: &floom_types::FontFamily) -> usize {
+    let faces = FONT_CONTEXT
+        .with(|cx| crate::layout::register_font_into(&mut cx.borrow_mut(), data, family));
+    LAYOUT_CONTEXT.with(|cx| *cx.borrow_mut() = LayoutContext::new());
+    faces
+}
+
 /// Where the caret lands when it sits on a boundary.
 ///
 /// A byte offset is a *position between characters*, and on a boundary between
