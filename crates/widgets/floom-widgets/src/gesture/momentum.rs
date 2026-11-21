@@ -79,11 +79,16 @@ impl VelocityTracker {
 
     /// Record a pointer position in logical pixels. Call on every move event.
     pub fn record(&mut self, x: f32, y: f32) {
-        self.samples[self.index] = Some(Sample {
-            x,
-            y,
-            time: Instant::now(),
-        });
+        self.record_at(x, y, Instant::now());
+    }
+
+    /// [`Self::record`] with the clock supplied.
+    ///
+    /// The velocity is a function of *when* the pointer was at each position, so
+    /// a caller replaying recorded input — or a test, which must not depend on
+    /// how long a sleep actually took — needs to say when.
+    pub fn record_at(&mut self, x: f32, y: f32, time: Instant) {
+        self.samples[self.index] = Some(Sample { x, y, time });
         self.index = (self.index + 1) % MAX_SAMPLES;
         self.count += 1;
     }
@@ -95,8 +100,11 @@ impl VelocityTracker {
     /// emphasizes the most recent (fastest) portion of the gesture.
     /// Returns `(vx, vy)`.
     pub fn velocity(&self) -> (f32, f32) {
-        let now = Instant::now();
+        self.velocity_at(Instant::now())
+    }
 
+    /// [`Self::velocity`] measured against a supplied `now`.
+    pub fn velocity_at(&self, now: Instant) -> (f32, f32) {
         // Collect recent samples within the velocity window.
         let mut recent: Vec<&Sample> = Vec::with_capacity(MAX_SAMPLES);
         for s in self.samples.iter().flatten() {
@@ -387,27 +395,27 @@ mod tests {
 
     #[test]
     fn velocity_tracker_multiple_samples() {
+        // A ~1000 px/s vertical scroll: 5 px every 5 ms, with the clock supplied
+        // so the answer does not depend on how long a sleep took on the runner.
+        let base = Instant::now();
         let mut tracker = VelocityTracker::new();
-        // Simulate a ~1000 px/s vertical scroll by recording samples
-        // spaced ~5 ms apart.
         for i in 0..10 {
-            tracker.record(100.0, 100.0 + i as f32 * 5.0);
-            thread::sleep(Duration::from_millis(5));
+            let at = base + Duration::from_millis(5 * i);
+            tracker.record_at(100.0, 100.0 + i as f32 * 5.0, at);
         }
-        let (_vx, vy) = tracker.velocity();
-        // We expect vy roughly around 1000 px/s (5 px / 5 ms = 1000 px/s).
-        // Allow very generous tolerance because thread::sleep is extremely
-        // imprecise on CI runners (5 ms sleeps can actually take 30-50 ms).
-        assert!(vy.abs() > 50.0, "vy={vy} should be > 50 px/s");
-        assert!(vy > 0.0, "vy should be positive (scrolling down)");
+        let (_vx, vy) = tracker.velocity_at(base + Duration::from_millis(50));
+        assert!(
+            (vy - 1000.0).abs() < 100.0,
+            "vy={vy} should be about 1000 px/s (5 px per 5 ms)"
+        );
     }
 
     #[test]
     fn velocity_tracker_reset() {
         let mut tracker = VelocityTracker::new();
-        tracker.record(0.0, 0.0);
-        thread::sleep(Duration::from_millis(5));
-        tracker.record(50.0, 50.0);
+        let base = Instant::now();
+        tracker.record_at(0.0, 0.0, base);
+        tracker.record_at(50.0, 50.0, base + Duration::from_millis(5));
         tracker.reset();
         let (vx, vy) = tracker.velocity();
         assert_eq!(vx, 0.0);

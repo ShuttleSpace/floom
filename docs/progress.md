@@ -91,7 +91,7 @@
 | A.0 | 代码审计：OHOS / android+ios binding / 插件 / 组件风格 | 完成 | `docs/platforms.md`（OHOS 7 + iOS 3 + Android 3 条）、`docs/plugins.md` §3、`docs/components.md`（82 处） | 2026-11-20 |
 | S0.1 | CI 真的会跑 | 完成 | 23 个 job 全绿：https://github.com/ShuttleSpace/floom/actions/runs/44806694423（CI core，含 Rust on macOS/ubuntu/windows 三系统 `cargo test` + Floom 2.0 ×3 + clippy ×3 + MSRV + fmt + typos + deny ×2 + arch）、…/runs/44806694390（plugins）、…/runs/44806694366（platform: android/iOS 交叉检查 + device probe）、…/runs/44806694311（docs → Pages）。共修既有缺陷 21 类，详见 git log 2026-11-20 | 2026-11-20 |
 | S0.2 | 门禁口径一致 | 未开始 | — | — |
-| S0.3 | CI 有效性审计 | 完成 | 变异测试：text pen 累加与 no-backend 报错两个注入缺陷被抓到；harmony 的 `stride_bytes` 单测存在但 CI 包清单里没有该 crate。已补 `floom-platform-{harmony,ios,embedded}` 进 `FLOOM2_PACKAGES`、macOS 加 `cargo test -p floom --features desktop`、ubuntu 新增 `bundles` job（desktop/tui/full） | `gh run view <id>` 里 `Floom bundles on ubuntu-24.04` 与 macOS 那一步为 success；另新增 `gpu-pixels` job（macos-latest, Metal）跑 11 个像素测试，并用「不推裁剪层」的变异确认它会红（`a_clip_crops_the_ink_at_its_own_edge`）；账本见 `developer-experience.md` |
+| S0.3 | CI 有效性审计 | 完成 | 变异测试：text pen 累加与 no-backend 报错两个注入缺陷被抓到；harmony 的 `stride_bytes` 单测存在但 CI 包清单里没有该 crate。已补 `floom-platform-{harmony,ios,embedded}` 进 `FLOOM2_PACKAGES`、macOS 加 `cargo test -p floom --features desktop`、ubuntu 新增 `bundles` job（desktop/tui/full） | `gh run view <id>` 里 `Floom bundles on ubuntu-24.04` 与 macOS 那一步为 success；另新增 `gpu-pixels` job（macos-latest, Metal）跑 11 个像素测试，并用「不推裁剪层」的变异确认它会红（`a_clip_crops_the_ink_at_its_own_edge`）；账本见 `developer-experience.md`；另修两处依赖环境/时钟的测试：剪贴板往返按守护进程探测、`VelocityTracker` 加 `record_at`/`velocity_at` 去掉 `thread::sleep` |
 | S1.1 | OHOS 后端选型（A：复活 `floom-winit-ohos`） | 待验证（设备） | 驱动 `crates/app/floom/src/platform/ohos_winit.rs`：Rust 拥有 surface/loop/tree/blit，导出 `ohos_winit_runtime_*`；`floom::ohos_app!(build)` 是应用唯一入口；`floom::run` 在这条路径上返回明确错误。CI 已 **check + build + link**（`#[link(name="native_window")]` 真链通过）。**未上机**：`tests/floom-ohos-demo` 的 C++ 桥仍走旧三函数 | 绿：https://github.com/ShuttleSpace/floom/actions/runs/44863051614 （job `Floom 2.0 for aarch64-unknown-linux-ohos`）；上机待 `S1.1b` |
 | S1.1b | 把 `tests/floom-ohos-demo` 的 C++ 桥从旧三函数切到 `ohos_winit_runtime_*`（surface/touch/frame） | 设备上出现真实 floom 树（不是渐变），点击 +/- 改值 | 上机；`hilog` 无 `surface_created` 之外的告警 |
 | S1.3 | iOS CJK 豆腐 | 待验证（设备） | `crates/widgets/floom-text/src/system_fonts.rs`：扫 `/System/Library/Fonts`(+`Supplemental`) 按前缀挑 CJK 面注册进 `FontContext`，`TextShaper::new()` 与编辑器线程 `FONT_CONTEXT` 各调一次。宿主实测 bare `FontContext` 查不到 `PingFang SC`（能查到 `Arial Unicode MS`，所以 macOS 一直没暴露） | `cargo test -p floom-text` 28 passed（含 3 个新测）；真机待 `gates/ios.md` item 2 |
@@ -99,7 +99,7 @@
 | S1.3 | iOS CJK 字体 | 未开始 | 配方：`docs/platforms.md` §5（`ohos_font.rs`） | — |
 | S1.4 | iOS a11y frame | 未开始 | 证据：`docs/gates/ios.md` item3 `fail` | — |
 | S1.5 | Android a11y + 焦点环 | 未开始 | 证据：`docs/gates/android.md` item3/item7 | — |
-| S1.6 | 桌面剪贴板 / a11y / file-picker | 未开始 | `crates/platform/floom-platform-desktop/src/{clipboard,accessibility}.rs` | — |
+| S1.6 | 桌面剪贴板 / a11y / file-picker | 未开始 | `crates/platform/floom-platform-desktop/src/{clipboard,accessibility}.rs` | —（往返测试在无 pasteboard 守护进程的会话里以 `changeCount == 0` 判为跳过并打印原因，本机仍真跑） |
 | S1.7 | ≥3 target tested（G1） | 未开始 | `docs/release-policy.md` targets 表 | — |
 | S1.8 | Windows 文本半像素换行（新发现） | 未开始 | `crates/app/floom-app/tests/text_weight.rs` 的 `cfg_attr(ignore)` 与理由 | 2026-11-20 |
 | S1.9 | Windows/Linux 组件 golden | 完成 | `crates/devtools/floom-snapshot/tests/widgets.rs`（Ahem 注册 + 重生成 golden）；证据 = 三系统 CI 无 `ignored` | 2026-11-21 |
