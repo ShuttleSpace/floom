@@ -29,7 +29,7 @@
 | 指针/触摸 | winit | winit | winit-android → ui-events | **UIKit 侧**（gate 用 `idb ui tap` 验过，Rust 侧无 touch 导出） | **无**（见 §4） | winit-web / TUI 键鼠 |
 | 键盘 | winit | winit | winit-android keycodes（`Keycode::Tab → Key::Named(Tab)`，`winit-android/src/keycodes.rs:312`） | UIKit | **无** | 有 |
 | IME | winit IME + `crates/platform/floom-platform-desktop/src/ime/` | 同左（Win32 组合桥未完成） | 锚点 `EditText.Editable` + `BaseInputConnection` 组合区 → `ImeCommit`/`ImePreedit` | 隐藏 `UITextField` → `floom_ios_push_ime_input`（拉丁 pass，CJK 提交成功） | **无** | 部分 |
-| 剪贴板 | `floom-platform-desktop/src/clipboard.rs`（107 行，**仅 NSPasteboard**） | **进程内占位**（诚实但不可用） | JNI ClipboardService（双向 pass，需先获得焦点） | objc2 `UIPasteboard`（双向 pass，含系统粘贴同意） | **无** | 无 |
+| 剪贴板 | `floom-platform-desktop/src/clipboard.rs`：macOS `NSPasteboard`、Windows `CF_UNICODETEXT`（两者都有往返测试，Windows 在 CI runner 上真跑过含 CJK）、Linux 走 `wl-copy`/`xclip`/`xsel`（只有解析逻辑有测试，赛道里没有可用的会话） | JNI ClipboardService（双向 pass，需先获得焦点） | objc2 `UIPasteboard`（双向 pass，含系统粘贴同意） | **无** | 无 |
 | 无障碍 | 语义树在进程内，**无 NSAccessibility 桥** | 无 AT-SPI / 无 UIA | `CapabilityLimitedAccessibilityAdapter`，`NATIVE_BRIDGE` 故意不置位 | 标签进了 OS 树但**所有 frame 为 0** | 无 | 无 |
 | 文件选择 | **无 trait**（平台层还没这个抽象） | 同左 | SAF 代码完整，结果回传需要 `FloomNativeActivity` 子类 | `ios_file.rs`/`ios_receive.rs` 有，example 未接 | 无 | — |
 | 安全区 | n/a | n/a | 无公开 `WindowHandle::safe_area()` | 有 read + `apply_safe_area(true)`，无公开读回 | 无 | — |
