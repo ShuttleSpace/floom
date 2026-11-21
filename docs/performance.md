@@ -16,13 +16,13 @@
 | P5 | 空闲 CPU | 同上区间的 CPU 时间 | **0.15 s（≈0.5% 核）** | 同上 | 同上 |
 | P6 | RSS / 峰值内存 | 进程常驻与峰值 | **未测** | **无** | — |
 | P7 | GPU 时间 / 显存 | 每帧 submit→present | **未测** | **无** | — |
-| P8 | 逐帧分配 | 稳定态每帧 heap 分配次数 | 有计数能力（`floom-devtools`），**未接真实窗口** | **无** | `crates/devtools/floom-devtools` |
+| P8 | 逐帧分配 | 稳定态每帧 heap 分配次数 | 稳定态帧 **≤8 次分配**，到 100k 节点不随节点增长（10/100/1k/10k 组 × 10 叶） | 有（单测断言） | `crates/app/floom-app/tests/allocation.rs` |
 | P9 | 帧时间 | 热基准 median，10% 阈值 | 9 条预算 best-of-N 全绿，能绿能红 | `scripts/check-perf-budgets.sh` | `floom-2-budget-baseline.json` |
-| P10 | 首帧 | 启动→首次呈现 | **未测** | **无** | — |
-| P11 | 输入延迟 | tap/key → commit | **未测** | **无** | — |
+| P10 | 首帧 | 启动→首次绘制 | 2,000 节点树首帧 **≤1 帧**内全部绘制，之后无欠账（本机 6.4 ms，无头） | 有（帧数） | `crates/app/floom-app/tests/latency.rs` |
+| P11 | 输入延迟 | tap → 画面提交 | tap **不需要额外帧**：点击自身的那一帧就把新状态画进场景（本机 308 µs，无头）；提交后 `needs_frame` 与 damage 均为空 | 有（帧数） | `crates/app/floom-app/tests/latency.rs` |
 | P12 | 损伤面积 | 一帧内脏矩形占比 | `DamageRegion` ≥8 区溢出为整帧；`SceneFrameQueue` 有界、丢最旧 | 隐含在 P4 | `crates/core/floom-scene` |
 
-**判据**：P1–P5、P9 已有门禁；P6/P7/P8/P10/P11 是 1.0 的必达缺口（G11–G13）。P12 只有机制，没有量化。
+**判据**：P1–P5、P8–P11 已有门禁；P6（RSS）、P7（GPU/VRAM）是 1.0 的必达缺口（G12）。P12 只有机制，没有量化。
 
 ## 基准清单（Criterion，9 组预算 + 11 个 bench 目标）
 
@@ -53,7 +53,7 @@
 | flutter | 引擎自带（大） | Impeller 预编译 shader | — | stateful hot reload ~978 ms |
 
 读法：floom 的 P1（0.5 MiB）与 nsh(1.1 MB)/dioxus(<3 MB)/BUI(6.3 MB) 同量级或更优；P4/P5 是 BUI "idle 0% CPU" 的可测等价物；P9 是本清单里最严的性能证据。
-**差距不在引擎，在"预算没接线"**：P6–P8、P10、P11 全缺。
+**差距不在引擎，在"预算没接线"**：P6、P7 全缺；P8、P10、P11 已有帧级/分配级门禁（见上表）。
 
 ## 命令
 
@@ -75,7 +75,7 @@ FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8 \
 
 1. `just gate resources`：RSS / 峰值 / 逐帧分配三类基线与阈值（P6、P8）。
 2. GPU 时间与显存采集（P7）——先做能出数字的探针，再谈门禁。
-3. 首帧与输入延迟基線（P10、P11）——需要 headless 计时器 + 真实窗口两条路都能量。
+3. ~~首帧与输入延迟基线（P10、P11）~~ → 已用**帧数**而非毫秒落地（`tests/latency.rs`）：毫秒数在无头 runner 上不可持守，帧数跨机器成立；真机毫秒仍待设备。
 4. `floom-devtools` 的 `budget_exceeded` / 分配计数从 headless 协议接到真实 window loop（当前 app wiring pending）。
 5. 体积第 4 档（desktop + software 组合）。
 6. 发布记录表：每次发布写六类数字（体积 / 空闲 CPU / 内存 / GPU / 帧时间 / 分配）。

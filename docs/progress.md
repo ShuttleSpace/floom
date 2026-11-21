@@ -47,8 +47,8 @@
 
 | ID | 动作 | 退出判据 | 验证命令 |
 | --- | --- | --- | --- |
-| S2.1 | 插件 `abi_version` 字段 + 运行期校验 | 旧 provider 被拒并提示"重新编译插件" | `cargo test -p floom-plugin-*`，含一条用旧 ABI 的负例 |
-| S2.2 | 资源门禁（RSS / 逐帧分配 / GPU 时间） | `just gate resources` 能绿能红 | 故意把阈值调小 → 红；恢复 → 绿 |
+| S2.1 | 插件 `abi_version`（核实为**早已成立**，本步降级为核验台账） | 每条台账前提都被命令验证过；假缺口删除 | `crates/native/floom-native-ffi/tests/c_vtable.rs` 的旧 ABI 负例 |
+| S2.2 | 资源门禁（RSS / GPU 时间；逐帧分配与首帧/输入延迟已由测试落地） | `just gate resources` 能绿能红 | 故意把阈值调小 → 红；恢复 → 绿 |
 | S2.3 | 清零 82 处硬编码颜色（material 26 / cupertino 29 / fluent 27） | 三个 `*/src/widgets/` 目录 0 处 `Color::rgb*`；`just gate style` 存在且绿 | `rg -c "Color::r(gb\|gba)\|srgb_u8" crates/ecosystem/floom-ui/crates/*/src/widgets/` |
 | S2.4 | 组件契约门禁：`ComponentSchema` 校验 token/属性/事件齐全 | 门禁能对新增组件报错 | `just gate components` 对一个故意缺 token 的组件变红 |
 
@@ -103,8 +103,8 @@
 | S1.7 | ≥3 target tested（G1） | 未开始 | `docs/release-policy.md` targets 表 | — |
 | S1.8 | Windows 文本半像素换行（新发现） | 未开始 | `crates/app/floom-app/tests/text_weight.rs` 的 `cfg_attr(ignore)` 与理由 | 2026-11-20 |
 | S1.9 | Windows/Linux 组件 golden | 完成 | `crates/devtools/floom-snapshot/tests/widgets.rs`（Ahem 注册 + 重生成 golden）；证据 = 三系统 CI 无 `ignored` | 2026-11-21 |
-| S2.1 | 插件 `abi_version` | 未开始 | 全仓 0 命中 `abi_version` | — |
-| S2.2 | 资源门禁（G12） | 未开始 | `gate.sh --list` 无 resources | — |
+| S2.1 | 插件 `abi_version` | 完成（核验） | `crates/native/floom-native-ffi/src/abi.rs:46` ABI_VERSION=1、`provider.rs:196` 注册校验、`tests/c_vtable.rs:317` 旧版本被拒 | 2026-11-21 核实，原台账是 grep 误报 |
+| S2.2 | 资源门禁（G12） | 进行中 | P8 逐帧分配、P10 首帧、P11 输入延迟已有门禁（`tests/allocation.rs`、`tests/latency.rs`）；RSS 与 GPU 仍无 | — |
 | S2.3 | 组件 token 清零 + 门禁 | 未开始 | 82 处（26/29/27） | — |
 | S2.4 | 组件契约门禁 | 未开始 | `component_schema()` 无消费者 | — |
 | S3.1 | CLI check/test/doctor | 未开始 | `crates/app/floom-cli/src/main.rs`（cargo 转发） | — |

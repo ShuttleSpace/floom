@@ -54,7 +54,7 @@
 
 | # | 缺口 | 后果 | 修法 |
 | --- | --- | --- | --- |
-| 1 | **没有插件 ABI 版本串**：全仓 `abi_version` / `PLUGIN_ABI` / `ABI_VERSION` 零命中 | 原生 vtable 只能靠类型名 `FloomNativeProviderV1` 表达版本，breaking 改 vtable 时无法在运行期拒绝旧 provider | vtable 首字段放 `u32 abi_version`，注册时校验并给"需要重新编译插件"的错误 |
+| 1 | ~~没有插件 ABI 版本串~~ **已成立**：`crates/native/floom-native-ffi/src/abi.rs:46` `pub const ABI_VERSION: u32 = 1;`，`FloomNativeProviderV1` 首字段 `abi_version`，`provider.rs:196` 注册时不等即拒，`tests/c_vtable.rs:317` 有负例 | — | 无需再做（本行曾因 grep 参数写错而误报为缺口，2026-11-21 核实） |
 | 2 | 桌面原生覆盖不齐（20 个里 18 个无桌面原生） | 桌面应用得自己写能力，插件生态在桌面是半空 | 按使用率排序补齐（secure-storage/prefs/notifications 优先） |
 | 3 | OHOS 原生几乎为零（仅 camera） | [platforms.md](platforms.md) 的 OHOS 缺口在插件层再放大一次 | 与 OHOS 后端选型（winit-ohos vs N-API）一起定，不要两次改 |
 | 4 | 无插件市场/索引 | 发现成本高，文档即目录 | 1.0 之后；`docs/plugins.md` 这张表就是当前索引 |
