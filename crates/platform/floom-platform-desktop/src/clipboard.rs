@@ -80,23 +80,27 @@ fn string_type() -> &'static NSPasteboardType {
 /// library can offer without reaching into the app's window.
 #[cfg(target_os = "windows")]
 mod win32 {
-    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::Foundation::{GlobalFree, HGLOBAL};
     use windows_sys::Win32::System::DataExchange::{
-        CF_UNICODETEXT, CloseClipboard, EmptyClipboard, GetClipboardData, OpenClipboard,
-        SetClipboardData,
+        CloseClipboard, EmptyClipboard, GetClipboardData, OpenClipboard, SetClipboardData,
     };
     use windows_sys::Win32::System::Memory::{
         GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalUnlock,
     };
+    // `CF_UNICODETEXT` is a clipboard *format*, filed under `Ole` and typed
+    // `CLIPBOARD_FORMAT` (u16); the clipboard calls take a `u32`.
+    use windows_sys::Win32::System::Ole::CF_UNICODETEXT;
+
+    const FORMAT: u32 = CF_UNICODETEXT as u32;
 
     pub(super) fn read() -> Option<String> {
-        // SAFETY: every call is balanced by `CloseClipboard`, and the string is
-        // read out of the block before the clipboard is closed.
+        // SAFETY: `OpenClipboard` is balanced by `CloseClipboard` on every path,
+        // and the text is copied out of the shared block before it is closed.
         unsafe {
             if OpenClipboard(std::ptr::null_mut()) == 0 {
                 return None;
             }
-            let handle = GetClipboardData(CF_UNICODETEXT);
+            let handle = GetClipboardData(FORMAT);
             let text = if handle.is_null() {
                 None
             } else {
@@ -122,27 +126,31 @@ mod win32 {
         let mut utf16: Vec<u16> = text.encode_utf16().collect();
         utf16.push(0);
         let bytes = std::mem::size_of_val(utf16.as_slice());
-        // SAFETY: the buffer outlives `SetClipboardData`, which copies it; on
-        // success the system owns the block, so `GlobalFree` is only correct
-        // after a failure.
+        // SAFETY: the block is allocated, filled and handed over without
+        // escaping this function. `SetClipboardData` takes ownership on success,
+        // so the only correct `GlobalFree` is the one on the failure path.
         unsafe {
             if OpenClipboard(std::ptr::null_mut()) == 0 {
                 return false;
             }
             EmptyClipboard();
-            let block: HANDLE = GlobalAlloc(GMEM_MOVEABLE, bytes);
-            let wrote = if block.is_null() {
-                false
-            } else {
-                let dst = GlobalLock(block) as *mut u16;
-                if dst.is_null() {
-                    false
-                } else {
-                    std::ptr::copy_nonoverlapping(utf16.as_ptr(), dst, utf16.len());
-                    GlobalUnlock(block);
-                    SetClipboardData(CF_UNICODETEXT, block) != 0
-                }
-            };
+            let block: HGLOBAL = GlobalAlloc(GMEM_MOVEABLE, bytes);
+            if block.is_null() {
+                CloseClipboard();
+                return false;
+            }
+            let dst = GlobalLock(block) as *mut u16;
+            if dst.is_null() {
+                GlobalFree(block);
+                CloseClipboard();
+                return false;
+            }
+            std::ptr::copy_nonoverlapping(utf16.as_ptr(), dst, utf16.len());
+            GlobalUnlock(block);
+            let wrote = !SetClipboardData(FORMAT, block).is_null();
+            if !wrote {
+                GlobalFree(block);
+            }
             CloseClipboard();
             wrote
         }
