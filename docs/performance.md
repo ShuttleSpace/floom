@@ -14,7 +14,7 @@
 | P3 | 默认 feature 图 | 默认不链窗口/GPU/工具 | 由 `feature_graph.rs` 守 | `cargo test -p floom --test feature_graph` | `crates/app/floom/tests/feature_graph.rs` |
 | P4 | 空闲帧数 | 无输入 8 s 内的重绘次数 | **2** | 冒烟测试，人工比对 | `FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8 cargo run -p floom-window --features real` |
 | P5 | 空闲 CPU | 同上区间的 CPU 时间 | **0.15 s（≈0.5% 核）** | 同上 | 同上 |
-| P6 | RSS / 峰值内存 | 进程常驻与峰值 | **未测** | **无** | — |
+| P6 | RSS / 峰值内存 | 常驻与峰值 | **峰值 14.8 MiB**（1,000 行树 + 300 帧后 15.0）；`WidgetHost` 基线 9 MiB（字体上下文） | 有（300 帧峰值增长 < 8 MiB） | `crates/app/floom-app/tests/memory.rs` |
 | P7 | GPU 时间 / 显存 | 每帧 submit→present | **未测** | **无** | — |
 | P8 | 逐帧分配 | 稳定态每帧 heap 分配次数 | 稳定态帧 **≤8 次分配**，到 100k 节点不随节点增长（10/100/1k/10k 组 × 10 叶） | 有（单测断言） | `crates/app/floom-app/tests/allocation.rs` |
 | P9 | 帧时间 | 热基准 median，10% 阈值 | 9 条预算 best-of-N 全绿，能绿能红 | `scripts/check-perf-budgets.sh` | `floom-2-budget-baseline.json` |
@@ -22,7 +22,7 @@
 | P11 | 输入延迟 | tap → 画面提交 | tap **不需要额外帧**：点击自身的那一帧就把新状态画进场景（本机 308 µs，无头）；提交后 `needs_frame` 与 damage 均为空 | 有（帧数） | `crates/app/floom-app/tests/latency.rs` |
 | P12 | 损伤面积 | 一帧内脏矩形占比 | `DamageRegion` ≥8 区溢出为整帧；`SceneFrameQueue` 有界、丢最旧 | 隐含在 P4 | `crates/core/floom-scene` |
 
-**判据**：P1–P5、P8–P11 已有门禁；P6（RSS）、P7（GPU/VRAM）是 1.0 的必达缺口（G12）。P12 只有机制，没有量化。
+**判据**：P1–P6、P8–P11 已有门禁；P7（GPU/VRAM）是 1.0 的必达缺口（G12）。P12 只有机制，没有量化。
 
 ## 基准清单（Criterion，9 组预算 + 11 个 bench 目标）
 
@@ -53,7 +53,7 @@
 | flutter | 引擎自带（大） | Impeller 预编译 shader | — | stateful hot reload ~978 ms |
 
 读法：floom 的 P1（0.5 MiB）与 nsh(1.1 MB)/dioxus(<3 MB)/BUI(6.3 MB) 同量级或更优；P4/P5 是 BUI "idle 0% CPU" 的可测等价物；P9 是本清单里最严的性能证据。
-**差距不在引擎，在"预算没接线"**：P6、P7 全缺；P8、P10、P11 已有帧级/分配级门禁（见上表）。
+**差距不在引擎，在"预算没接线"**：只剩 P7（GPU/VRAM）全缺；P6、P8、P10、P11 已有门禁（见上表）。
 
 ## 命令
 

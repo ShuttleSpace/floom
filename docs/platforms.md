@@ -76,11 +76,14 @@
    **从不扫 `/System/Library/Fonts`** —— 而 iPhone/iPad 的汉字覆盖（`PingFang.ttc`、`Songti.ttc`）全在后者。
    macOS 上这个洞被"开发者机器 /Library/Fonts 里常有一个 CJK 字体"掩盖了（本机是 `Arial Unicode.ttf`，
    实测 `PingFang SC` 在 bare `FontContext` 里查不到，`Arial Unicode MS` 能查到）。
-   修法：`crates/widgets/floom-text/src/system_fonts.rs` 扫那两个系统目录，按文件名前缀挑 CJK 面注册进
+   修法：`crates/widgets/floom-text/src/system_fonts.rs` 扫那两个系统目录，按文件名前缀挑 **一个** CJK 面注册进
    `FontContext`；`TextShaper::new()` 与编辑器线程的 `FONT_CONTEXT` 初始化时各调一次（`thread_local!`
-   的初始化表达式里）。只读 CJK 面（`PingFang`/`Hiragino Sans`/`STHeiti`/`Songti`/`Kaiti`/`Apple SD Gothic Neo`/
-   `NotoSansCJK`/`Arial Unicode` 等），因为整个系统目录是几百 MB 而默认字体栈只按名字要那几个族。
-   单测：`the_system_directory_holds_faces_the_backend_cannot_see`（注册后 family 数严格增加）、
+   的初始化表达式里）。**只注册一个**字族（`PingFang` 优先，其余按 `CJK_STEMS` 顺序取第一个存在的），
+   **且只在非 macOS 的 Apple 平台做**：注册一份字体就是把它的字节拷进内存（`Blob`），而系统里
+   `Songti.ttc` 单个文件 67 MB —— 第一版把整个 CJK 清单都读进来，macOS 的 `TextShaper::new()`
+   因此吃到 242 MiB（见 `docs/performance.md` 的回归记录），现在是 9.1 MiB。
+   单测：`the_system_directory_holds_a_cjk_face_the_backend_cannot_see`（该文件确实在、注册后 family 数增加）、
+   `only_the_platforms_without_system_fallback_register_a_face`（macOS 一个字节都不读）、
    `han_text_shapes_to_real_glyphs`（`你好世界` 无 `.notdef`）、`registering_is_safe_on_every_target`。
    真机门槛仍是 `gates/ios.md` item 2。
 2. **a11y 零 frame**（item 3 fail）：`idb ui describe-all` 有 label，但每个节点 frame 为 0，VoiceOver 无法命中——中立 a11y 层没有把布局包围盒转发给 `UIAccessibilityElement`。`ios_capabilities().accessibility` 仍为 `false`，这一条是**诚实**的，但意味着 iOS 无障碍为零。
