@@ -183,6 +183,14 @@ jobs:
       - name: Run tests
         run: cargo nextest run --workspace --no-fail-fast
 
+      # `--workspace` builds this crate with its default features, and the
+      # clipboard lives behind `winit` because that is its only caller. Without
+      # this step the Linux and Windows arms would only ever be type-checked by
+      # the all-features MSRV job.
+      - name: Test the session clipboard
+        if: runner.os != 'macOS'
+        run: cargo test -p floom-platform-desktop --features winit --no-fail-fast
+
       - name: Run doc tests
         # Only run doctests on macOS to improve CI times - macOS is currently the fastest runner
         if: startsWith(matrix.os, 'macos')
