@@ -34,7 +34,7 @@
 | --- | --- | --- | --- |
 | S1.1 | **OHOS 后端选型**：复活 `floom-winit-ohos`（有事件循环/输入/IME）或补齐 `floom-platform-harmony`（补输入导出） | `platforms.md` §4 写下一个决定 + 一条能收 touch 的路径；另一半代码删除或明确标注 deprecated | `grep -rn "floom-winit-ohos" crates/` 只剩一处实现路径 |
 | S1.2 | OHOS 上屏 5 个缺陷：早退不 `AbortBuffer`、失败仍 `Flush`、三 atomic 非成组、尺寸精确相等、`stride` 单位 | 五个缺陷各自有注释指明修法；`stride` 单位有上机结论 | 上机：连续 60 s 无丢帧；日志无 `AbortBuffer missing` |
-| S1.3 | iOS CJK：字体扫描/注册（照 `crates/app/floom/src/platform/ohos_font.rs` 配方） | `你好世界` 首帧非 tofu | `idb screenshot` 与基线截图比对 |
+| S1.3 | iOS CJK：字体扫描/注册——**根因是 fontique 的 Apple 后端不扫 `/System/Library/Fonts`**，不是 iOS 缺汉字字体；现已由 `crates/widgets/floom-text/src/system_fonts.rs` 扫该系统目录按文件名前缀注册 CJK 面 | `你好世界` 首帧非 tofu | `idb screenshot` 与基线截图比对；宿主侧已有 `han_text_shapes_to_real_glyphs` |
 | S1.4 | iOS a11y：把布局帧传给 `UIAccessibilityElement` | `idb ui describe-all` 的 frame 非零 | `idb ui describe-all`，与 `semantics` 树的 bounds 对齐 |
 | S1.5 | Android：a11y `perform_action` 真实现 + 聚焦元素可见（焦点环） | `gates/android.md` item3/item7 由 `fail`/`partial` 转 `pass` | 设备上 TalkBack 能点击；截图见焦点环 |
 | S1.6 | 桌面：剪贴板非 macOS 实现 + AT-SPI/UIA 桥 + `file-picker` trait | `gates/linux.md`/`windows.md` 首项转 `pass` | 三平台 `cargo test -p floom-platform-desktop` + 手工复制粘贴 |
@@ -92,6 +92,7 @@
 | S0.2 | 门禁口径一致 | 未开始 | — | — |
 | S1.1 | OHOS 后端选型（A：复活 `floom-winit-ohos`） | 待验证（设备） | 驱动 `crates/app/floom/src/platform/ohos_winit.rs`：Rust 拥有 surface/loop/tree/blit，导出 `ohos_winit_runtime_*`；`floom::ohos_app!(build)` 是应用唯一入口；`floom::run` 在这条路径上返回明确错误。CI 已 **check + build + link**（`#[link(name="native_window")]` 真链通过）。**未上机**：`tests/floom-ohos-demo` 的 C++ 桥仍走旧三函数 | 绿：https://github.com/ShuttleSpace/floom/actions/runs/44863051614 （job `Floom 2.0 for aarch64-unknown-linux-ohos`）；上机待 `S1.1b` |
 | S1.1b | 把 `tests/floom-ohos-demo` 的 C++ 桥从旧三函数切到 `ohos_winit_runtime_*`（surface/touch/frame） | 设备上出现真实 floom 树（不是渐变），点击 +/- 改值 | 上机；`hilog` 无 `surface_created` 之外的告警 |
+| S1.3 | iOS CJK 豆腐 | 待验证（设备） | `crates/widgets/floom-text/src/system_fonts.rs`：扫 `/System/Library/Fonts`(+`Supplemental`) 按前缀挑 CJK 面注册进 `FontContext`，`TextShaper::new()` 与编辑器线程 `FONT_CONTEXT` 各调一次。宿主实测 bare `FontContext` 查不到 `PingFang SC`（能查到 `Arial Unicode MS`，所以 macOS 一直没暴露） | `cargo test -p floom-text` 28 passed（含 3 个新测）；真机待 `gates/ios.md` item 2 |
 | S1.2 | OHOS 上屏 5 缺陷 | 待验证（设备） | 五条全部改完并各有单元测试：AbortBuffer 归还、失败不 Flush、单一 `Mutex<Option<Bound>>` 跨 blit 持锁、帧自己的尺寸、`stride_bytes` 双读法。**未上机**：连续 60 s 无丢帧与 hilog 无 Abort 告警待真机 | `cargo test -p floom-platform-harmony`（6 passed）；上机待验 |
 | S1.3 | iOS CJK 字体 | 未开始 | 配方：`docs/platforms.md` §5（`ohos_font.rs`） | — |
 | S1.4 | iOS a11y frame | 未开始 | 证据：`docs/gates/ios.md` item3 `fail` | — |

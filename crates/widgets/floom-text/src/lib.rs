@@ -9,6 +9,7 @@ mod editor_layout;
 pub mod glyph;
 mod layout;
 mod measure;
+mod system_fonts;
 
 pub use cache::{DEFAULT_LAYOUT_CACHE_CAPACITY, LayoutCache};
 pub use editor_layout::{CaretAffinity, StyledRun, TextBrush, TextLayout};

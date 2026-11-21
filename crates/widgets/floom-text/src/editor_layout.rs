@@ -31,7 +31,13 @@ thread_local! {
     /// do per layout — and a layout is built on every keystroke, twice (once
     /// for the geometry and once for the paint). One per thread is enough:
     /// the fonts are the same on every thread.
-    static FONT_CONTEXT: RefCell<FontContext> = RefCell::new(FontContext::new());
+    static FONT_CONTEXT: RefCell<FontContext> = RefCell::new({
+        // Same registration the shaper does: without it an editor on iOS draws
+        // `你好` as boxes even though labels are fine.
+        let mut font_cx = FontContext::new();
+        crate::system_fonts::register(&mut font_cx);
+        font_cx
+    });
     /// The shaping context, which keeps the resolved faces between layouts.
     static LAYOUT_CONTEXT: RefCell<LayoutContext<TextBrush>> =
         RefCell::new(LayoutContext::new());

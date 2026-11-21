@@ -190,8 +190,12 @@ impl Default for TextShaper {
 
 impl TextShaper {
     pub fn new() -> Self {
+        let mut font_cx = FontContext::new();
+        // Before anything asks for a family: the CJK faces the platform ships
+        // outside the font backend's scan are what keep `你好` from being tofu.
+        crate::system_fonts::register(&mut font_cx);
         Self {
-            font_cx: FontContext::new(),
+            font_cx,
             layout_cx: LayoutContext::new(),
         }
     }

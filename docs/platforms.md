@@ -70,7 +70,19 @@
 
 ## 5. iOS：已定位缺陷
 
-1. **CJK 渲染成豆腐**（`gates/ios.md` item 2 partial）：`parley`/`fontique` 在 iOS 找不到汉字字体，首帧 `你好世界` 即 tofu。OHOS 已有同款修复：`crates/app/floom/src/platform/ohos_font.rs` 扫 `/system/fonts` 注册字体族，从 `crates/app/floom/src/text/layout.rs` 的 `FONT_CONTEXT` 调用；iOS 缺一个 `target_os = "ios"` 的对应路径。
+1. ~~**CJK 渲染成豆腐**（`gates/ios.md` item 2 partial）：`parley`/`fontique` 在 iOS 找不到汉字字体，首帧 `你好世界` 即 tofu。~~
+   **已修（2026-11-21，待真机）**：根因不是"iOS 没有汉字字体"，而是 fontique 的 Apple 后端只扫
+   `NSSearchPathForDirectoriesInDomains(LibraryDirectory)`（`/Library/Fonts` + `~/Library/Fonts`），
+   **从不扫 `/System/Library/Fonts`** —— 而 iPhone/iPad 的汉字覆盖（`PingFang.ttc`、`Songti.ttc`）全在后者。
+   macOS 上这个洞被"开发者机器 /Library/Fonts 里常有一个 CJK 字体"掩盖了（本机是 `Arial Unicode.ttf`，
+   实测 `PingFang SC` 在 bare `FontContext` 里查不到，`Arial Unicode MS` 能查到）。
+   修法：`crates/widgets/floom-text/src/system_fonts.rs` 扫那两个系统目录，按文件名前缀挑 CJK 面注册进
+   `FontContext`；`TextShaper::new()` 与编辑器线程的 `FONT_CONTEXT` 初始化时各调一次（`thread_local!`
+   的初始化表达式里）。只读 CJK 面（`PingFang`/`Hiragino Sans`/`STHeiti`/`Songti`/`Kaiti`/`Apple SD Gothic Neo`/
+   `NotoSansCJK`/`Arial Unicode` 等），因为整个系统目录是几百 MB 而默认字体栈只按名字要那几个族。
+   单测：`the_system_directory_holds_faces_the_backend_cannot_see`（注册后 family 数严格增加）、
+   `han_text_shapes_to_real_glyphs`（`你好世界` 无 `.notdef`）、`registering_is_safe_on_every_target`。
+   真机门槛仍是 `gates/ios.md` item 2。
 2. **a11y 零 frame**（item 3 fail）：`idb ui describe-all` 有 label，但每个节点 frame 为 0，VoiceOver 无法命中——中立 a11y 层没有把布局包围盒转发给 `UIAccessibilityElement`。`ios_capabilities().accessibility` 仍为 `false`，这一条是**诚实**的，但意味着 iOS 无障碍为零。
 3. 能力位声明 `TOUCH`，而 Rust 侧没有任何 touch 导出——触摸完全由 UIKit 侧驱动，Rust 侧的能力位属"声明"，不是"可实现"。
 
