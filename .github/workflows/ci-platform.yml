@@ -255,11 +255,17 @@ jobs:
         # floom owns the loop, the tree and the blit on this path, and the
         # driver only exists for `target_env = "ohos"`: a host build proves
         # nothing about it.
-        run: >
-          cargo check
-          --package=floom
-          --features harmony,harmony-winit
-          --target aarch64-unknown-linux-ohos
+        #
+        # The C/assembly toolchain is not optional: `psm` (under winit's
+        # backtrace path) runs `cc` on an `.S` file during its build script and
+        # the host compiler cannot target OHOS.
+        env:
+          SDK: ${{ steps.ohos.outputs.ohos_sdk_native }}
+        run: |
+          export CC_aarch64_unknown_linux_ohos="$SDK/llvm/bin/clang"
+          export AR_aarch64_unknown_linux_ohos="$SDK/llvm/bin/llvm-ar"
+          export CFLAGS_aarch64_unknown_linux_ohos="--target=aarch64-linux-ohos --sysroot=$SDK/sysroot"
+          cargo check --package=floom --features harmony,harmony-winit --target aarch64-unknown-linux-ohos
 
       - name: Check the vendored OHOS event loop
         run: >

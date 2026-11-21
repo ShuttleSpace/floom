@@ -214,6 +214,12 @@ pub unsafe fn present_to(
 /// `WindowExtOhos::native_window_ptr`) and must not have been released. A driver
 /// that follows that rule — it clears its handle in `destroy_surfaces` — cannot
 /// pass a dangling one.
+// The lint is right in general — a raw pointer argument can be anything — and
+// wrong here: the caller cannot construct one, it arrives from
+// `WindowExtOhos::native_window_ptr()` on a window this driver owns and clears
+// on `destroy_surfaces`. Making the function `unsafe` instead would push the
+// obligation into the facade, which forbids unsafe code entirely.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn present_into_window(
     window: *mut std::ffi::c_void,
     frame: &[u8],
