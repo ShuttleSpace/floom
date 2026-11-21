@@ -251,21 +251,28 @@ jobs:
           --package=floom-platform
           --target aarch64-unknown-linux-ohos
 
+      # The C toolchain is not optional for anything that links winit: `psm`
+      # (under its backtrace path) runs `cc` on an `.S` file in a build script,
+      # and the host compiler cannot target OHOS. Exported once for every later
+      # step rather than per step, because `cargo build` re-runs those scripts.
+      - name: Point the C toolchain at the SDK
+        run: |
+          SDK="${{ steps.ohos.outputs.ohos_sdk_native }}"
+          {
+            echo "CC_aarch64_unknown_linux_ohos=$SDK/llvm/bin/clang"
+            echo "AR_aarch64_unknown_linux_ohos=$SDK/llvm/bin/llvm-ar"
+            echo "CFLAGS_aarch64_unknown_linux_ohos=--target=aarch64-linux-ohos --sysroot=$SDK/sysroot"
+          } >> "$GITHUB_ENV"
+
       - name: Check the winit driver
         # floom owns the loop, the tree and the blit on this path, and the
         # driver only exists for `target_env = "ohos"`: a host build proves
         # nothing about it.
-        #
-        # The C/assembly toolchain is not optional: `psm` (under winit's
-        # backtrace path) runs `cc` on an `.S` file during its build script and
-        # the host compiler cannot target OHOS.
-        env:
-          SDK: ${{ steps.ohos.outputs.ohos_sdk_native }}
-        run: |
-          export CC_aarch64_unknown_linux_ohos="$SDK/llvm/bin/clang"
-          export AR_aarch64_unknown_linux_ohos="$SDK/llvm/bin/llvm-ar"
-          export CFLAGS_aarch64_unknown_linux_ohos="--target=aarch64-linux-ohos --sysroot=$SDK/sysroot"
-          cargo check --package=floom --features harmony,harmony-winit --target aarch64-unknown-linux-ohos
+        run: >
+          cargo check
+          --package=floom
+          --features harmony,harmony-winit
+          --target aarch64-unknown-linux-ohos
 
       - name: Check the vendored OHOS event loop
         run: >
