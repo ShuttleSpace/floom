@@ -226,6 +226,29 @@ jobs:
             echo "::endgroup::"
           done
 
+  gpu-pixels:
+    # The pixel tests are the only evidence that a clip, a shadow or a filter
+    # actually puts ink where it claims to. They need a real adapter, so the
+    # 3-OS job skips them; this runner has Metal. If it ever stops having one the
+    # tests fail with the module's own "no GPU adapter ... this is a skip, not a
+    # pass" message instead of a green run that drew nothing.
+    name: GPU pixels on macos-latest
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Update toolchain
+        run: rustup update --no-self-update
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: gpu-pixels
+      - name: Fetch dependencies
+        run: cargo fetch
+      - name: Run the pixel tests
+        run: cargo test -p floom-renderer-vello --features gpu -- --ignored --test-threads=1
+
   architecture-deps:
     name: Architecture dependency boundaries
     runs-on: ubuntu-latest
