@@ -81,12 +81,15 @@ fn which(name: &str) -> bool {
 fn probe(compiler: &str) -> HashMap<String, String> {
     use std::sync::atomic::{AtomicU32, Ordering};
     let dir = scratch();
-    // Both tests here compile a probe, and `scratch()` is one directory for the
-    // whole binary: a shared output name lets one of them exec the file the
-    // other is still writing ("No such file or directory" from a fresh run).
+    // Both tests here compile a probe into one shared scratch directory, and a
+    // test runner may run them as separate processes, so the name has to be
+    // unique across processes as well as threads: a shared name lets one exec
+    // the file another is still writing ("No such file or directory", and once
+    // the compile has opened it, "Text file busy").
     static NEXT: AtomicU32 = AtomicU32::new(0);
     let binary = dir.join(format!(
-        "layout_probe_{}",
+        "layout_probe_{}_{}",
+        std::process::id(),
         NEXT.fetch_add(1, Ordering::Relaxed)
     ));
     let status = Command::new(compiler)
