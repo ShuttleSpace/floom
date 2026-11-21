@@ -37,10 +37,9 @@
 //!
 //! ## Not yet wired
 //!
-//! * Clipboard off macOS is still an in-process string — see the note on
-//!   [`Clipboard for WinitPlatform`](Self#impl-Clipboard-for-WinitPlatform):
-//!   macOS reaches the system pasteboard through [`crate::clipboard`], and the
-//!   other desktop targets have not been given that bridge yet.
+//! * The clipboard reaches the desktop on all three targets through
+//!   [`crate::clipboard`]; what is still missing is the accessibility bridge and
+//!   the file picker.
 //! * macOS menu-bar / app-delegate integration lives in the legacy crate.
 
 use std::collections::{HashMap, VecDeque};
@@ -272,10 +271,10 @@ pub struct WinitPlatform {
     /// Requests made before an [`ActiveEventLoop`] was available.
     pending: VecDeque<(WindowId, WindowConfig)>,
     events: Vec<PlatformEvent>,
-    /// Process-local clipboard text. **Not** read on macOS: there the
-    /// system pasteboard is the clipboard, and keeping a second copy here
-    /// would only let the two disagree.
-    #[cfg(not(target_os = "macos"))]
+    /// The last text written here, kept as the fallback for a session whose
+    /// desktop has no clipboard to reach (a headless CI runner, a Linux box
+    /// without `wl-clipboard`/`xclip`/`xsel`). The system clipboard is read
+    /// first everywhere, so this copy never contradicts a real one.
     clipboard: String,
     started: Instant,
     ime_enabled: HashMap<u32, bool>,
@@ -317,7 +316,6 @@ impl WinitPlatform {
             next_window: 0,
             pending: VecDeque::new(),
             events: Vec::new(),
-            #[cfg(not(target_os = "macos"))]
             clipboard: String::new(),
             started: Instant::now(),
             ime_enabled: HashMap::new(),
