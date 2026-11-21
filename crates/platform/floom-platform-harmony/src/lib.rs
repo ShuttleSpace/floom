@@ -493,6 +493,11 @@ mod native {
 mod tests {
     use super::*;
 
+    /// The surface slot is process-wide, so the tests that write it take turns.
+    /// Two of them ran in parallel in CI and one saw another's release between
+    /// its bind and its assertion.
+    static SURFACE_SLOT: Mutex<()> = Mutex::new(());
+
     #[test]
     fn harmony_is_not_an_embedded_board() {
         let caps = capabilities();
@@ -542,6 +547,9 @@ mod tests {
 
     #[test]
     fn a_bound_surface_is_one_value_and_release_clears_it() {
+        let _serial = SURFACE_SLOT
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
         // The extent and the window live in the same slot, so a present can
         // never pair one bind's pointer with another bind's size.
         floom_harmony_release_surface();
@@ -556,6 +564,9 @@ mod tests {
 
     #[test]
     fn c_abi_rejects_a_null_frame_and_unbound_surface() {
+        let _serial = SURFACE_SLOT
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
         floom_harmony_release_surface();
         // SAFETY: the `0x1234` window is never dereferenced — both calls below
         // are rejected (null, then present is inert off-target) before any blit.
