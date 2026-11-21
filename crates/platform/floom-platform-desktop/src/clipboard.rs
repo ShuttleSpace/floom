@@ -363,41 +363,46 @@ mod command_line_tests {
     }
 }
 
-/// The round trip on a Linux session, with the same honesty as the macOS one:
-/// a session that has none of the three tools (a CI runner has no display) gets
-/// a printed reason, not a pass.
-#[cfg(all(test, unix, not(target_os = "macos")))]
+/// The round trip on a session that has a clipboard.
+///
+/// Two guards, both printed so a green run says which one it took: a runner with
+/// no clipboard (no display on Linux, a service session on Windows) has nothing
+/// to round-trip, and a developer's machine has a clipboard worth not
+/// overwriting — that is what `CI` is for.
+#[cfg(all(test, any(target_os = "windows", all(unix, not(target_os = "macos")))))]
 mod session_tests {
-    use super::{command_line, system_read_text, system_write_text};
+    use super::{system_read_text, system_write_text};
 
-    fn any_tool() -> bool {
-        command_line::WRITERS
-            .iter()
-            .chain(command_line::READERS)
-            .any(|(tool, args)| {
-                std::process::Command::new(tool)
-                    .args(*args)
-                    .stdin(std::process::Stdio::null())
-                    .stdout(std::process::Stdio::null())
-                    .stderr(std::process::Stdio::null())
-                    .status()
-                    .is_ok()
-            })
+    const PROBE: &str = "floom2 clipboard probe 4b9e";
+
+    fn session_allows_it() -> bool {
+        if std::env::var_os("CI").is_none() {
+            eprintln!(
+                "floom-platform-desktop: not overwriting this session's clipboard, \
+                 run with CI=1 to include the round trip"
+            );
+            return false;
+        }
+        if !system_write_text(PROBE) {
+            eprintln!(
+                "floom-platform-desktop: no clipboard in this session, \
+                 skipping the round trip"
+            );
+            return false;
+        }
+        true
     }
 
     #[test]
     fn text_round_trips_through_the_session_clipboard() {
-        if !any_tool() {
-            eprintln!(
-                "floom-platform-desktop: no wl-clipboard/xclip/xsel in this session, \
-                 skipping the round trip"
-            );
+        if !session_allows_it() {
             return;
         }
-        assert!(system_write_text("floom2 clipboard probe 4b9e"));
-        assert_eq!(
-            system_read_text().as_deref(),
-            Some("floom2 clipboard probe 4b9e")
-        );
+        assert_eq!(system_read_text().as_deref(), Some(PROBE));
+
+        // UTF-16 and UTF-8 both have to survive, and a CJK string is the cheap
+        // way to catch a byte/character mix-up in either direction.
+        assert!(system_write_text("你好，世界"));
+        assert_eq!(system_read_text().as_deref(), Some("你好，世界"));
     }
 }

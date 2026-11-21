@@ -189,7 +189,7 @@ jobs:
       # the all-features MSRV job.
       - name: Test the session clipboard
         if: runner.os != 'macOS'
-        run: cargo test -p floom-platform-desktop --features winit --no-fail-fast
+        run: cargo test -p floom-platform-desktop --features winit --no-fail-fast -- --nocapture
 
       - name: Run doc tests
         # Only run doctests on macOS to improve CI times - macOS is currently the fastest runner
