@@ -69,7 +69,8 @@
 | MSRV | `cargo check --workspace --all-features`（ubuntu，1.91） | 只**编译**不运行。全 cfg 的编译覆盖靠它，运行时覆盖靠不住它 |
 | `CI platform`（android/iOS/OHOS） | `cargo check --target ...` / `cargo build`+`link`（OHOS） | 交叉分支从不**执行**：android/ios 的错误处理、JNI 调用、a11y 适配逻辑一个断言都没跑 |
 | `CI plugins` | 该 workspace 的 `cargo test` + `fmt` | 插件的原生半只在"能编译能链接"这一层被证明 |
-| 像素/渲染 | **无** | 9 个 GPU 像素测试与 3 个文本 golden 全是 `#[ignore]`/`cfg_attr(ignore)`（`crates/render/floom-renderer-vello/tests/gpu_pixels.rs`、`crates/devtools/floom-snapshot/tests/widgets.rs`）→ 渲染正确性在 CI 里零证据 |
+| 像素/渲染 | 2026-11-21 前：**无**。现在：`gpu-pixels` job 在 `macos-latest` 上跑 `cargo test -p floom-renderer-vello --features gpu -- --ignored`（11 个像素测试，Metal） | 3 个文本 golden 仍在非 Apple 宿主 `cfg_attr(ignore)`（宿主字体栈差异）；ubuntu/windows runner 无适配器，渲染在那里仍无证据 |
+| `just gate size` / `perf` 的等价物 | **无** | 体积与帧预算只在本地跑 |
 | 体积/性能/资源（G11/G12/G13） | **无** | `just gate size` / `scripts/check-perf-budgets.sh` 只在本地跑 |
 
 ### 变异测试：测试是真的会红，还是只是跑过
@@ -87,7 +88,7 @@
 ### 为什么这些洞会一直存在
 
 - 交叉目标只能 `check`：一台 ubuntu runner 跑不了 Android 的 JNI、iOS 的 UIKit、OHOS 的 NAPI。**这不可修**，只能靠 `gates/*.md` 的设备账本诚实标注 device-gated。
-- GPU 像素测试需要 GPU：GitHub 的 macOS runner 有 Metal，但跑起来要几十分钟且 flaky。当前取舍是"渲染正确性只在本地/设备上验"，并把这件事写在 `docs/performance.md` 的证据列里，而不是假装 CI 覆盖了。
+- GPU 像素测试需要 GPU：`macos-latest` 有 Metal，实测 11 个测试 25 s 跑完（2026-11-21 起在 CI 里），ubuntu/windows runner 没有适配器。
 - 门槛脚本（size/perf）依赖具体宿主，异构 runner 上会假红——`1.0-launch-milestone.md` 里有明确记录，所以它们留在本地 `just gate`。
 
 ## 目标数字（要写进 release notes 的）

@@ -13,23 +13,19 @@
 //! that a pixel is empty is worth nothing without the same probe over a scene
 //! whose pixel must be inked.
 //!
-//! ## Why they are `#[ignore]`d
+//! ## Where they run
 //!
-//! They need a working GPU adapter. CI runners have none, and `VelloGpuPresenter::new`
-//! honestly returns `None` rather than panicking — so a gate that ran them
-//! would report "no GPU" as a pass or as a failure depending on how it was
-//! written, and either would be a lie. The skip is spelled out at run time by
-//! [`no_adapter_reason`] instead of being silent, and the gate prints the true
-//! reason it did not run them.
-//!
-//! Run them yourself:
+//! They need a real adapter. The `gpu-pixels` job in `.github/workflows/ci-core.yml`
+//! runs them on `macos-latest` (Metal); the 3-OS job skips them because it has
+//! no adapter to read pixels from. A missing adapter fails the run with
+//! [`no_adapter_reason`] rather than passing with nothing drawn.
 //!
 //! ```text
 //! cargo test -p floom-renderer-vello --features gpu -- --ignored
 //! ```
 //!
-//! Set `FLOOM_BLESS_GOLDENS=1` to rewrite the stored hashes after an
-//! intentional change, and read the diff before committing it.
+//! `FLOOM_BLESS_GOLDENS=1` rewrites the stored hashes after an intentional
+//! change; read the diff before committing it.
 
 #![cfg(feature = "gpu")]
 
