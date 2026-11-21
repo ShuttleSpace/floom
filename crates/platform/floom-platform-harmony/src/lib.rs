@@ -116,6 +116,10 @@ pub fn stride_bytes(reported: i32, width: usize) -> usize {
 /// a `static Mutex` needs `Sync`.
 static SURFACE: Mutex<Option<Bound>> = Mutex::new(None);
 
+// The fields are read only on the OHOS target (`present_frame`'s blit is
+// compiled out elsewhere), but they have to exist on every target: the point of
+// the struct is that bind and release store one value.
+#[allow(dead_code)]
 struct Bound {
     window: usize,
     width: i32,
