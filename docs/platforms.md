@@ -50,11 +50,11 @@
 
 1. **没有输入入口**。`floom-platform-harmony` 只导出上屏三件套，没有 touch/key/IME/剪贴板/安全区导出；ArkTS 侧无处可送事件。而 `harmony_default()` 声明了 `TOUCH`。
 2. **有输入能力的那一层被弃用**：`crates/vendor/floom-winit-ohos/`（3,049 行，含 touch `.notify_touch`、mouse `.notify_mouse`、键盘、`request_ime_update`）**没有任何 crate 依赖它**，只有 workspace 声明（`Cargo.toml:184`）与一句注释。当前在用的是无输入的 N-API 上屏层。
-3. **缓冲队列泄漏**：`RequestBuffer` 之后的所有早退路径（handle 空 / `stride<=0` / `size<=0` / `fd<0` / `mmap` 失败）都直接返回，**从不 `OH_NativeWindow_NativeWindowAbortBuffer`**，队列会泄漏并最终卡死。
-4. **脏帧上屏**：`copy_rgba_with_stride` 失败时仍先 `Flush` 再返回错误。
-5. **状态非成组**：`SURFACE` / `SURFACE_W` / `SURFACE_H` 是三个独立 atomic，与 `release_surface` 竞争可撕裂或释放后使用（无锁）。
-6. **尺寸必须精确相等**：`present_frame` 拒绝宽高与 bind 时不等的帧，旋转/分屏竞态下静默丢帧。
-7. **`stride` 单位可疑**：按"字节/行"使用；若 `BufferHandle.stride` 是像素数，则 `dst_stride < row` 恒真 → **每帧被拒 → 黑屏**。需上机确认。
+3. ~~**缓冲队列泄漏**~~：`RequestBuffer` 之后的所有早退路径（handle 空 / `size<=0` / `fd<0` / `mmap` 失败 / 拷贝失败）现在都 `OH_NativeWindow_NativeWindowAbortBuffer` 归还缓冲；只有成功拷贝才 `Flush`。
+4. ~~**脏帧上屏**~~：拷贝失败改为 abort，不再先把半帧 `Flush` 给合成器。
+5. ~~**状态非成组**~~：三个 atomic 换成一个 `static Mutex<Option<Bound>>`（window 地址 + 宽高同一把锁），且锁**跨整个 blit 持有** —— `release_surface` 会等正在进行的帧画完，window 不可能在帧中途被释放。
+6. ~~**尺寸必须精确相等**~~：`present_frame` 改用**帧自己的**宽高（每次 present 都 `SET_BUFFER_GEOMETRY`），bind 只剩"有没有窗口"这一个作用。旋转/分屏竞态不再丢帧。
+7. ~~**`stride` 单位可疑**~~：`stride_bytes(reported, width)` 先按字节读；小于一行时按像素读（×4）；仍不够则退回行宽，不再把帧拒掉。语义有单元测试，**设备上仍是待验项**（真正读数只有真机才给）。
 
 **决定（2026-11-21）**：走 `floom-winit-ohos`（A 方案）。理由是"谁拥有事件循环"这个选择只能有一个答案——ArkTS 驱动 vsync 时输入要从 ArkUI 手工转进 Rust，每加一个事件类型就要在 C++ 与 Rust 两侧各写一遍；把循环交给 Rust 后，surface/触控/键盘都由 winit 抽象统一，并且 wgpu 能拿到 `native_window` 直接上屏（当前 CPU `mmap` blit 的替代路径）。代价是要写 ArkTS/C++ 胶水，这部分只在设备上验证。
 

@@ -29,7 +29,7 @@
 //! Rust pixel logic is testable on the host.
 
 use std::ffi::{c_int, c_void};
-use std::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
+use std::sync::Mutex;
 
 use floom_platform::PlatformCapabilities;
 use floom_types::PlatformId;
@@ -79,11 +79,48 @@ pub fn copy_rgba_with_stride(
     true
 }
 
+/// Bytes per row, from what `BufferHandle::stride` reports.
+///
+/// The header documents bytes, and some SDK builds report pixels — a frame
+/// whose stride is narrower than one row cannot be blitted either way, so the
+/// two readings are tried in order and the row width is the floor. Getting this
+/// wrong in the naive direction (trusting a pixel count as bytes) rejects every
+/// frame, which looks exactly like a black screen.
+pub fn stride_bytes(reported: i32, width: usize) -> usize {
+    let row = width.saturating_mul(4);
+    if reported <= 0 {
+        return row;
+    }
+    let reported = reported as usize;
+    if reported >= row {
+        reported
+    } else if reported.saturating_mul(4) >= row {
+        // Pixels per row.
+        reported.saturating_mul(4)
+    } else {
+        row
+    }
+}
+
 // --- The native-window handle published by the ArkTS side -------------------
 
-static SURFACE: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
-static SURFACE_W: AtomicI32 = AtomicI32::new(0);
-static SURFACE_H: AtomicI32 = AtomicI32::new(0);
+/// The bound surface, as one value.
+///
+/// Three independent atomics would let `present_frame` read the pointer from one
+/// bind and the extent from the next, or read a window id that
+/// `release_surface` already dropped. One lock covers both the pointer and its
+/// extent, and it is held across the blit so `release_surface` cannot free the
+/// window mid-frame — the same trade the Android and Flutter backends make.
+///
+/// The window is stored as an address because a raw pointer is not `Send`, and
+/// a `static Mutex` needs `Sync`.
+static SURFACE: Mutex<Option<Bound>> = Mutex::new(None);
+
+struct Bound {
+    window: usize,
+    width: i32,
+    height: i32,
+}
 
 /// Bind the `OHNativeWindow*` from `OH_NativeXComponent_GetNativeWindow`.
 ///
@@ -103,10 +140,19 @@ pub unsafe extern "C" fn floom_harmony_bind_surface(
     if window.is_null() || width <= 0 || height <= 0 {
         return false;
     }
-    SURFACE_W.store(width, Ordering::SeqCst);
-    SURFACE_H.store(height, Ordering::SeqCst);
-    SURFACE.store(window, Ordering::SeqCst);
-    true
+    match SURFACE.lock() {
+        Ok(mut bound) => {
+            *bound = Some(Bound {
+                window: window as usize,
+                width,
+                height,
+            });
+            true
+        }
+        // A poisoned lock means a frame panicked mid-blit. Refusing the bind is
+        // better than carrying on with a window nobody can vouch for.
+        Err(_) => false,
+    }
 }
 
 /// Present one RGBA8 frame into the bound native window.
@@ -125,9 +171,11 @@ pub unsafe extern "C" fn floom_harmony_present_frame(
     width: c_int,
     height: c_int,
 ) -> bool {
-    let w = SURFACE_W.load(Ordering::SeqCst);
-    let h = SURFACE_H.load(Ordering::SeqCst);
-    if width != w || height != h || width <= 0 || height <= 0 {
+    // The frame's own extent, not the bind's: the buffer geometry is set from
+    // the frame on every present, so a frame that arrives while a rotation is
+    // still settling draws instead of being dropped. The bind only says whether
+    // there is a window to draw into.
+    if width <= 0 || height <= 0 {
         return false;
     }
     let (w, h) = (width as usize, height as usize);
@@ -135,21 +183,25 @@ pub unsafe extern "C" fn floom_harmony_present_frame(
     if rgba.is_null() || len < need {
         return false;
     }
+    let Ok(bound) = SURFACE.lock() else {
+        return false;
+    };
+    let Some(bound) = bound.as_ref() else {
+        return false;
+    };
     #[cfg(target_env = "ohos")]
     {
-        let window = SURFACE.load(Ordering::SeqCst);
-        if window.is_null() {
-            return false;
-        }
-        // SAFETY: the ArkTS side guarantees the frame has `need` bytes and the
-        // window is alive between bind and release.
+        let window = bound.window as *mut c_void;
+        let _extent = (bound.width, bound.height);
+        // SAFETY: the ArkTS side guarantees the frame has `need` bytes; the
+        // lock keeps the window alive — `release_surface` waits for it.
         let frame = unsafe { std::slice::from_raw_parts(rgba, need) };
         unsafe { native::present(window, frame, w, h) }
     }
     #[cfg(not(target_env = "ohos"))]
     {
         // No device on the host: the C ABI is still exercised, the blit is not.
-        let _ = (rgba, len, w, h);
+        let _ = (rgba, len, bound, w, h);
         false
     }
 }
@@ -234,9 +286,11 @@ pub fn present_into_window(
 /// Release the bound native window (XComponent `OnSurfaceDestroyed`).
 #[unsafe(no_mangle)]
 pub extern "C" fn floom_harmony_release_surface() {
-    SURFACE.store(std::ptr::null_mut(), Ordering::SeqCst);
-    SURFACE_W.store(0, Ordering::SeqCst);
-    SURFACE_H.store(0, Ordering::SeqCst);
+    // Waits for an in-flight blit: the window is about to be destroyed and the
+    // compositor must not be handed a buffer from it.
+    if let Ok(mut bound) = SURFACE.lock() {
+        *bound = None;
+    }
 }
 
 // --- Real OHOS NDK present (compiled only for the target) ------------------
@@ -293,6 +347,10 @@ mod native {
             fence_fd: *mut c_int,
         ) -> c_int;
         fn OH_NativeWindow_GetBufferHandleFromNative(buffer: *mut c_void) -> *mut BufferHandle;
+        fn OH_NativeWindow_NativeWindowAbortBuffer(
+            window: *mut c_void,
+            buffer: *mut c_void,
+        ) -> c_int;
         fn OH_NativeWindow_NativeWindowFlushBuffer(
             window: *mut c_void,
             buffer: *mut c_void,
@@ -314,13 +372,18 @@ mod native {
 
     /// Request a buffer, blit the frame honouring the buffer's stride, flush.
     ///
+    /// Every path that returns after `RequestBuffer` either flushes or aborts
+    /// the buffer: the queue owns it from that moment, and leaving without
+    /// returning it stalls the queue after a few frames (which on a device looks
+    /// like a freeze, not an error).
+    ///
     /// SAFETY: `window` is a live `OHNativeWindow*` borrowed from the
     /// XComponent; `frame` is `w * h * 4` RGBA8 bytes.
     pub(super) unsafe fn present(window: *mut c_void, frame: &[u8], w: usize, h: usize) -> bool {
         // Configure the buffer queue before RequestBuffer: geometry is required
         // by the SDK, and asking for RGBA8888 + CPU-readable/writable DMA makes
         // the returned buffer mmap-able (see Flutter's SetNativeWindowOpt).
-        let rc = unsafe {
+        let geometry = unsafe {
             OH_NativeWindow_NativeWindowHandleOpt(
                 window,
                 SET_BUFFER_GEOMETRY,
@@ -328,13 +391,12 @@ mod native {
                 h as c_int,
             )
         };
-        if rc == 0 {
-            unsafe {
-                OH_NativeWindow_NativeWindowHandleOpt(window, SET_FORMAT, PIXEL_FMT_RGBA_8888);
-                OH_NativeWindow_NativeWindowHandleOpt(window, SET_USAGE, USAGE_CPU_RW_DMA);
-            }
-        }
-        if rc != 0 {
+        let format = unsafe {
+            OH_NativeWindow_NativeWindowHandleOpt(window, SET_FORMAT, PIXEL_FMT_RGBA_8888)
+        };
+        let usage =
+            unsafe { OH_NativeWindow_NativeWindowHandleOpt(window, SET_USAGE, USAGE_CPU_RW_DMA) };
+        if geometry != 0 || format != 0 || usage != 0 {
             return false;
         }
         let mut buffer: *mut c_void = std::ptr::null_mut();
@@ -344,22 +406,72 @@ mod native {
         if rc != 0 || buffer.is_null() {
             return false;
         }
+        // From here on the queue owns `buffer`: abort on every early return.
+        let Some(mapping) = (unsafe { map_buffer(buffer, w, h) }) else {
+            unsafe { OH_NativeWindow_NativeWindowAbortBuffer(window, buffer) };
+            return false;
+        };
+        // SAFETY: `map_buffer` mapped `mapping.len` bytes for CPU writes and
+        // nothing else can reach them: the buffer belongs to this frame until it
+        // is flushed or aborted.
+        let copied = {
+            let dst =
+                unsafe { std::slice::from_raw_parts_mut(mapping.addr.cast::<u8>(), mapping.len) };
+            copy_rgba_with_stride(frame, dst, w, h, mapping.stride)
+        };
+        unsafe { munmap(mapping.addr, mapping.len) };
+        if !copied {
+            // Nothing was drawn into the buffer: flushing it would show the
+            // previous frame's garbage, or a half-copied row.
+            unsafe { OH_NativeWindow_NativeWindowAbortBuffer(window, buffer) };
+            return false;
+        }
+        let region = Region {
+            rects: std::ptr::null_mut(),
+            rect_number: 0,
+        };
+        let rc = unsafe { OH_NativeWindow_NativeWindowFlushBuffer(window, buffer, fence, region) };
+        rc == 0
+    }
+
+    struct Mapped {
+        addr: *mut c_void,
+        len: usize,
+        stride: usize,
+    }
+
+    /// Get the buffer's pixels into address space the CPU may write.
+    ///
+    /// Returns addresses, not a slice: the borrow of a mapped region has no
+    /// lifetime the type system can name, so the caller makes the slice in the
+    /// scope it unmaps in.
+    ///
+    /// SAFETY: `buffer` was just returned by `RequestBuffer` on a live window.
+    unsafe fn map_buffer(buffer: *mut c_void, w: usize, h: usize) -> Option<Mapped> {
         let handle = unsafe { OH_NativeWindow_GetBufferHandleFromNative(buffer) };
         if handle.is_null() {
-            return false;
+            return None;
         }
         let hnd = unsafe { &*handle };
-        if hnd.stride <= 0 || hnd.size <= 0 || hnd.fd < 0 {
-            return false;
+        if hnd.size <= 0 || hnd.fd < 0 {
+            return None;
         }
-        let stride = hnd.stride as usize;
-        let cap = hnd.size as usize;
+        let len = hnd.size as usize;
+        let stride = stride_bytes(hnd.stride, w);
+        // A buffer that cannot hold the frame would be a partial copy presented
+        // as a whole frame.
+        let needed = stride
+            .saturating_mul(h.saturating_sub(1))
+            .saturating_add(w.saturating_mul(4));
+        if needed > len {
+            return None;
+        }
         // The buffer is a dmabuf fd: map it into CPU address space. `virAddr`
         // is a GPU-side address (often null) and must not be used for a CPU blit.
         let addr = unsafe {
             mmap(
                 std::ptr::null_mut(),
-                cap,
+                len,
                 PROT_READ | PROT_WRITE,
                 MAP_SHARED,
                 hnd.fd,
@@ -367,17 +479,9 @@ mod native {
             )
         };
         if addr.is_null() || addr as isize == MAP_FAILED {
-            return false;
+            return None;
         }
-        let dst = unsafe { std::slice::from_raw_parts_mut(addr.cast::<u8>(), cap) };
-        let ok = copy_rgba_with_stride(frame, dst, w, h, stride);
-        unsafe { munmap(addr, cap) };
-        let region = Region {
-            rects: std::ptr::null_mut(),
-            rect_number: 0,
-        };
-        let rc = unsafe { OH_NativeWindow_NativeWindowFlushBuffer(window, buffer, fence, region) };
-        ok && rc == 0
+        Some(Mapped { addr, len, stride })
     }
 }
 
@@ -412,6 +516,38 @@ mod tests {
         assert!(!copy_rgba_with_stride(&[0; 16], &mut [0; 15], 2, 2, 8));
         assert!(!copy_rgba_with_stride(&[0; 16], &mut [0; 100], 2, 2, 7));
         assert!(!copy_rgba_with_stride(&[], &mut [0; 100], 0, 2, 8));
+    }
+
+    #[test]
+    fn a_stride_is_read_as_bytes_then_as_pixels_then_ignored() {
+        // 3 px wide = 12 bytes per row.
+        assert_eq!(stride_bytes(12, 3), 12, "bytes, exactly one row");
+        assert_eq!(stride_bytes(64, 3), 64, "bytes, padded");
+        // A stride narrower than a row can only be a pixel count (some SDK
+        // builds report it that way); trusting it as bytes rejects every frame.
+        assert_eq!(stride_bytes(16, 3), 16);
+        assert_eq!(stride_bytes(4, 3), 16, "4 px per row, reported as pixels");
+        assert_eq!(
+            stride_bytes(1, 3),
+            12,
+            "nonsense: fall back to the row width"
+        );
+        assert_eq!(stride_bytes(0, 3), 12, "absent");
+        assert_eq!(stride_bytes(-8, 3), 12, "negative");
+    }
+
+    #[test]
+    fn a_bound_surface_is_one_value_and_release_clears_it() {
+        // The extent and the window live in the same slot, so a present can
+        // never pair one bind's pointer with another bind's size.
+        floom_harmony_release_surface();
+        // SAFETY: the address is stored, never dereferenced (the host has no
+        // `libnative_window` and `present_frame` is inert off-target).
+        let window = 0x1234 as *mut c_void;
+        assert!(unsafe { floom_harmony_bind_surface(window, 2210, 2416) });
+        assert!(SURFACE.lock().unwrap().is_some());
+        floom_harmony_release_surface();
+        assert!(SURFACE.lock().unwrap().is_none());
     }
 
     #[test]

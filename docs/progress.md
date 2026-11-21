@@ -92,7 +92,7 @@
 | S0.2 | 门禁口径一致 | 未开始 | — | — |
 | S1.1 | OHOS 后端选型（A：复活 `floom-winit-ohos`） | 待验证（设备） | 驱动 `crates/app/floom/src/platform/ohos_winit.rs`：Rust 拥有 surface/loop/tree/blit，导出 `ohos_winit_runtime_*`；`floom::ohos_app!(build)` 是应用唯一入口；`floom::run` 在这条路径上返回明确错误。CI 已 **check + build + link**（`#[link(name="native_window")]` 真链通过）。**未上机**：`tests/floom-ohos-demo` 的 C++ 桥仍走旧三函数 | 绿：https://github.com/ShuttleSpace/floom/actions/runs/44863051614 （job `Floom 2.0 for aarch64-unknown-linux-ohos`）；上机待 `S1.1b` |
 | S1.1b | 把 `tests/floom-ohos-demo` 的 C++ 桥从旧三函数切到 `ohos_winit_runtime_*`（surface/touch/frame） | 设备上出现真实 floom 树（不是渐变），点击 +/- 改值 | 上机；`hilog` 无 `surface_created` 之外的告警 |
-| S1.2 | OHOS 上屏 5 缺陷 | 未开始 | 缺陷清单：`docs/platforms.md` §4；`present_to` 仍是旧的早退/Flush 顺序，只换了调用方 | — |
+| S1.2 | OHOS 上屏 5 缺陷 | 待验证（设备） | 五条全部改完并各有单元测试：AbortBuffer 归还、失败不 Flush、单一 `Mutex<Option<Bound>>` 跨 blit 持锁、帧自己的尺寸、`stride_bytes` 双读法。**未上机**：连续 60 s 无丢帧与 hilog 无 Abort 告警待真机 | `cargo test -p floom-platform-harmony`（6 passed）；上机待验 |
 | S1.3 | iOS CJK 字体 | 未开始 | 配方：`docs/platforms.md` §5（`ohos_font.rs`） | — |
 | S1.4 | iOS a11y frame | 未开始 | 证据：`docs/gates/ios.md` item3 `fail` | — |
 | S1.5 | Android a11y + 焦点环 | 未开始 | 证据：`docs/gates/android.md` item3/item7 | — |
