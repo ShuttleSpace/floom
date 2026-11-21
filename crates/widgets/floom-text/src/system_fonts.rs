@@ -29,7 +29,8 @@ use parley::FontContext;
 /// Whether this target needs the help: Apple, minus macOS.
 ///
 /// A constant rather than a scattered `cfg` so the tests can say what they mean.
-const NEEDS_SYSTEM_FONTS: bool = cfg!(all(target_vendor = "apple", not(target_os = "macos")));
+#[cfg(target_vendor = "apple")]
+const NEEDS_SYSTEM_FONTS: bool = cfg!(not(target_os = "macos"));
 
 #[cfg(target_vendor = "apple")]
 use parley::fontique::Blob;
