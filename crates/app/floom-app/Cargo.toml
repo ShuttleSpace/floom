@@ -34,10 +34,6 @@ smallvec = "1.15"
 
 [dev-dependencies]
 floom-signal = { workspace = true }
-# The memory gate reads peak RSS, which has no std API; `getrusage` is the
-# portable-enough answer (macOS reports bytes, Linux KiB).
-[target.'cfg(unix)'.dev-dependencies]
-libc = "0.2"
 floom-renderer-software = { workspace = true }
 floom-renderer-tui = { workspace = true }
 floom-platform-tui = { workspace = true }
@@ -50,3 +46,9 @@ floom-testkit = { workspace = true }
 floom-hot-reload = { workspace = true }
 # The devtools-demo suite checks the panel wiring against a real host.
 floom-devtools = { workspace = true }
+
+# The memory gate reads peak RSS, which has no std API; `getrusage` is the
+# portable-enough answer (macOS reports bytes, Linux KiB). Windows has neither,
+# so the gate says it skipped there instead of inventing a number.
+[target.'cfg(unix)'.dev-dependencies]
+libc = "0.2"
