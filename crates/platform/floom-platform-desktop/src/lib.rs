@@ -13,15 +13,16 @@ pub mod native;
 #[cfg(target_os = "macos")]
 pub mod native_appkit;
 
-/// The real macOS clipboard (`NSPasteboard`). Split out because it is the one
-/// part of this adapter that must reach AppKit directly: the pasteboard belongs
-/// to the session, not to a window.
+/// The session clipboard: `NSPasteboard` on macOS, the Win32 clipboard on
+/// Windows, a `wl-clipboard`/`xclip`/`xsel` command on Linux. Split out because
+/// it is the one part of this adapter that reaches the session rather than a
+/// window.
 ///
 /// Gated on `winit` because [`crate::winit_backend`] is its only caller: the
 /// headless [`crate::DesktopPlatform`] keeps the in-process placeholder, so
 /// compiling this module without `winit` would produce dead code that no build
 /// could reach.
-#[cfg(all(target_os = "macos", feature = "winit"))]
+#[cfg(feature = "winit")]
 pub mod clipboard;
 
 #[cfg(feature = "winit")]
