@@ -16,6 +16,7 @@
 //! default stack by name only ever asks for a handful of families.
 
 use parley::FontContext;
+#[cfg(target_vendor = "apple")]
 use parley::fontique::Blob;
 
 /// System font directories the backend skips, most specific first.
