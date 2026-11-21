@@ -43,6 +43,54 @@ pub struct OhosRuntime {
 }
 
 pub fn runtime_new(factory: AppFactory) -> *mut OhosRuntime {
+    runtime_new_take(move || factory())
+}
+
+/// Carries a value across one thread boundary without requiring `Send`.
+///
+/// Used only by [`runtime_new_take`], whose docs carry the safety argument: the
+/// value is moved in before anything it captures exists, and the other side
+/// never keeps a handle to it.
+struct Handoff<T>(Option<T>);
+
+// SAFETY: `Handoff` is constructed on the caller's thread, moved into the
+// worker, and unwrapped there before the worker calls it. There is no window in
+// which both threads can reach the value, and the caller holds no other
+// reference to what it captures — it is `FnOnce`, moved, not cloned.
+unsafe impl<T> Send for Handoff<T> {}
+
+impl<T> Handoff<T> {
+    /// Take the value out. A method, not a field access: a `move` closure that
+    /// touched `.0` directly would capture `Option<T>` (disjoint capture) and
+    /// lose the `Send` above.
+    fn take(&mut self) -> Option<T> {
+        self.0.take()
+    }
+}
+
+/// Like [`runtime_new`], with a factory that may own non-`Send` state.
+///
+/// An app's tree holds `Rc`-backed signals, `Box<dyn Fn>` callbacks and raw
+/// platform pointers, so it cannot cross a thread boundary *after* it exists —
+/// but it has to be **built** on the runtime's worker thread, and the closure
+/// that builds it comes from the caller's thread. That is the only value that
+/// crosses, and it does so exactly once, before anything it captures is
+/// touched.
+///
+/// # Safety argument for the unchecked spawn
+///
+/// The closure is moved into the worker and dropped/consumed there; the caller
+/// keeps no handle to it (it is `FnOnce`, moved in). Nothing the closure
+/// captures can be observed by the caller between the hand-off and the call,
+/// because the caller only receives the runtime pointer and returns to its own
+/// loop. The worker then owns every value the closure creates, exclusively. In
+/// other words the thread boundary is crossed *before* the app graph exists,
+/// which is exactly the case `ApplicationHandler` does not require `Send` for
+/// (see the note above on `RuntimeApplication`).
+pub fn runtime_new_take<F>(factory: F) -> *mut OhosRuntime
+where
+    F: FnOnce() -> Box<dyn RuntimeApplication> + 'static,
+{
     let event_loop = match EventLoop::bootstrap() {
         Ok(event_loop) => event_loop,
         Err(_) => return std::ptr::null_mut(),
@@ -56,42 +104,59 @@ pub fn runtime_new(factory: AppFactory) -> *mut OhosRuntime {
     crate::deveco_log("runtime_new: event loop bootstrapped, spawning worker");
 
     let worker_stop = stop_requested.clone();
-    let worker = thread::spawn(move || {
-        let runtime = AssertUnwindSafe(move || {
-            // Floom's core logging (log/tracing) has no subscriber on OHOS, so
-            // panics would otherwise be silent. Log every panic to hilog, then
-            // defer to the previous hook (stderr).
-            let previous_hook = panic::take_hook();
-            panic::set_hook(Box::new(move |info| {
+    // The factory is the one value that crosses; see `Handoff`.
+    let mut handoff = Handoff(Some(factory));
+    let worker = match thread::Builder::new()
+        .name("floom-ohos".to_string())
+        .spawn(move || {
+            let factory = match handoff.take() {
+                Some(factory) => factory,
+                None => return,
+            };
+            let runtime = AssertUnwindSafe(move || {
+                // Floom's core logging (log/tracing) has no subscriber on OHOS, so
+                // panics would otherwise be silent. Log every panic to hilog, then
+                // defer to the previous hook (stderr).
+                let previous_hook = panic::take_hook();
+                panic::set_hook(Box::new(move |info| {
+                    crate::deveco_log_with_level(
+                        crate::OhosLogLevel::Error,
+                        format!("panic: {info}"),
+                    );
+                    previous_hook(info);
+                }));
+                let mut event_loop = event_loop;
+                let mut application = factory();
+                loop {
+                    match event_loop
+                        .pump_app_events(Some(Duration::from_millis(16)), application.as_mut())
+                    {
+                        PumpStatus::Continue if worker_stop.load(Ordering::Acquire) => break,
+                        PumpStatus::Continue => {}
+                        PumpStatus::Exit(_) => break,
+                    }
+                }
+            });
+
+            if let Err(payload) = panic::catch_unwind(runtime) {
                 crate::deveco_log_with_level(
                     crate::OhosLogLevel::Error,
-                    format!("panic: {info}"),
+                    format!(
+                        "floom-winit-ohos runtime worker panicked: {}",
+                        panic_payload_to_string(payload.as_ref())
+                    ),
                 );
-                previous_hook(info);
-            }));
-            let mut event_loop = event_loop;
-            let mut application = factory();
-            loop {
-                match event_loop
-                    .pump_app_events(Some(Duration::from_millis(16)), application.as_mut())
-                {
-                    PumpStatus::Continue if worker_stop.load(Ordering::Acquire) => break,
-                    PumpStatus::Continue => {}
-                    PumpStatus::Exit(_) => break,
-                }
             }
-        });
-
-        if let Err(payload) = panic::catch_unwind(runtime) {
+        }) {
+        Ok(worker) => worker,
+        Err(error) => {
             crate::deveco_log_with_level(
                 crate::OhosLogLevel::Error,
-                format!(
-                    "floom-winit-ohos runtime worker panicked: {}",
-                    panic_payload_to_string(payload.as_ref())
-                ),
+                format!("the OHOS runtime worker could not be spawned: {error}"),
             );
+            return std::ptr::null_mut();
         }
-    });
+    };
 
     Box::into_raw(Box::new(OhosRuntime {
         app,

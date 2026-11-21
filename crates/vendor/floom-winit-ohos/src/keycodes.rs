@@ -1,7 +1,7 @@
-use smol_str::SmolStr;
 use floem_winit_core::keyboard::{
     Key, KeyCode, KeyLocation, NamedKey, NativeKey, NativeKeyCode, PhysicalKey,
 };
+use smol_str::SmolStr;
 
 pub fn to_physical_key(key_code: u32) -> PhysicalKey {
     PhysicalKey::Code(match key_code {

@@ -156,12 +156,73 @@ pub unsafe extern "C" fn floom_harmony_present_frame(
 
 /// Safe Rust wrapper over the C ABI present, for a facade backend that already
 /// holds a frame as a slice.
+///
+/// Use this when the surface was bound through [`floom_harmony_bind_surface`].
+/// A caller that *has* the `OHNativeWindow*` itself — the winit driver does: it
+/// gets one from the window, not from a bind call — passes it to
+/// [`present_to`] instead.
 pub fn present(frame: &[u8], width: u32, height: u32) -> bool {
     // SAFETY: `frame` is a live slice, so its pointer/len are valid; the bound
     // native window's validity is the host's contract (checked inside the callee).
     unsafe {
         floom_harmony_present_frame(frame.as_ptr(), frame.len(), width as c_int, height as c_int)
     }
+}
+
+/// Present one RGBA8 frame into a native window the caller holds.
+///
+/// The same blit as [`present`], without the bound-surface statics: the winit
+/// driver owns the window (`WindowExtOhos::native_window_ptr`) and presents
+/// through this, so a frame never depends on a global that a different thread
+/// may have released. Off-target this is inert and returns false, like
+/// [`present`].
+///
+/// # Safety
+/// `window` must be a live `OHNativeWindow*`, and `frame` must hold
+/// `width * height * 4` bytes.
+pub unsafe fn present_to(
+    window: *mut std::ffi::c_void,
+    frame: &[u8],
+    width: u32,
+    height: u32,
+) -> bool {
+    if window.is_null() || width == 0 || height == 0 {
+        return false;
+    }
+    let need = (width as usize)
+        .saturating_mul(height as usize)
+        .saturating_mul(4);
+    if frame.len() < need {
+        return false;
+    }
+    #[cfg(target_env = "ohos")]
+    {
+        // SAFETY: the caller's contract; `need` bytes are checked above.
+        unsafe { native::present(window, &frame[..need], width as usize, height as usize) }
+    }
+    #[cfg(not(target_env = "ohos"))]
+    {
+        let _ = (window, frame, width, height, need);
+        false
+    }
+}
+
+/// Present one RGBA8 frame into a window the caller holds, safely.
+///
+/// The caller's contract, and the reason this is not `unsafe`: `window` must come
+/// from a live ArkUI surface (the winit driver takes it from
+/// `WindowExtOhos::native_window_ptr`) and must not have been released. A driver
+/// that follows that rule — it clears its handle in `destroy_surfaces` — cannot
+/// pass a dangling one.
+pub fn present_into_window(
+    window: *mut std::ffi::c_void,
+    frame: &[u8],
+    width: u32,
+    height: u32,
+) -> bool {
+    // SAFETY: the contract above; the callee re-checks null/size and never
+    // keeps the pointer.
+    unsafe { present_to(window, frame, width, height) }
 }
 
 /// Release the bound native window (XComponent `OnSurfaceDestroyed`).

@@ -963,6 +963,7 @@ dependencies = [
  "floom-virtual",
  "floom-widgets",
  "floom-widgets-data",
+ "floom-winit-ohos",
 ]
 
 [[package]]
@@ -1623,6 +1624,19 @@ dependencies = [
  "floom-widgets",
  "image",
  "libc",
+]
+
+[[package]]
+name = "floom-winit-ohos"
+version = "0.4.11"
+dependencies = [
+ "bitflags 2.11.0",
+ "dpi 0.1.2",
+ "floem-winit-core",
+ "keyboard-types",
+ "raw-window-handle",
+ "smol_str",
+ "tracing",
 ]
 
 [[package]]

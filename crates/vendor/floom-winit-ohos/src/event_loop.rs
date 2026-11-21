@@ -7,9 +7,6 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use dpi::{PhysicalInsets, PhysicalPosition, PhysicalSize, Position, Size};
-use raw_window_handle as rwh_06;
-use smol_str::SmolStr;
-use tracing::warn;
 use floem_winit_core::application::ApplicationHandler;
 use floem_winit_core::cursor::{Cursor, CustomCursor, CustomCursorSource};
 use floem_winit_core::error::{EventLoopError, NotSupportedError, RequestError};
@@ -32,6 +29,9 @@ use floem_winit_core::window::{
     ResizeDirection, Theme, Window as CoreWindow, WindowAttributes, WindowButtons, WindowId,
     WindowLevel,
 };
+use raw_window_handle as rwh_06;
+use smol_str::SmolStr;
+use tracing::warn;
 
 use crate::app::{
     HostEvent, MouseEvent, OhosApp, OhosKeyAction, OhosMouseAction, OhosMouseButton,
@@ -1259,8 +1259,8 @@ mod tests {
     use std::sync::{Mutex, OnceLock};
 
     use crate::WindowExtOhos;
-    use raw_window_handle::{HandleError, HasWindowHandle};
     use floem_winit_core::event_loop::pump_events::PumpStatus;
+    use raw_window_handle::{HandleError, HasWindowHandle};
 
     #[derive(Default)]
     struct RecordingApp {

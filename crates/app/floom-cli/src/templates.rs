@@ -98,9 +98,18 @@ pub const MOBILE_LIB_RS: &str = r#"// SPDX-License-Identifier: MIT
 // (`cargo ndk` -> jniLibs, `cargo-ios`/Xcode -> the app bundle).
 //
 // Wire the platform's entry point here (e.g. `#[no_mangle] pub extern "C"`
-// `android_main`), calling the same widget tree as `src/main.rs`. The stub
-// intentionally exports nothing yet: it exists so the crate type is a cdylib
-// and packaging has a `.so` to bundle.
+// `android_main`), calling the same widget tree as `src/main.rs`.
+//
+// OpenHarmony is the one target with a ready-made entry: enable the `harmony`
+// and `harmony-winit` features and export the app core with
+//
+//     #[cfg(target_env = "ohos")]
+//     floom::ohos_app!(build);   // `build` moved into a shared `mod app`
+//
+// which generates the `ohos_winit_runtime_*` symbols the XComponent bridge in
+// `entry/src/main/cpp/` calls (surface, touch, vsync). Android and iOS have no
+// such macro yet: their hosts still call their own `android_main` / UIKit
+// delegate.
 "#;
 
 /// The Rust core entry point, targeting the Floom 2.0 widget API.

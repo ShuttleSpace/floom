@@ -198,6 +198,14 @@ pub fn current() -> &'static dyn PlatformBackend {
     {
         return &ios::IosBackend;
     }
+    // `harmony-winit` puts the event loop in Rust; plain `harmony` leaves the
+    // frame clock with the ArkTS host. Both are real builds, so the newer one
+    // wins only when it was asked for.
+    #[cfg(all(feature = "harmony-winit", target_env = "ohos"))]
+    #[allow(unreachable_code)]
+    {
+        return &ohos_winit::OhosWinitBackend;
+    }
     #[cfg(all(feature = "harmony", target_env = "ohos"))]
     #[allow(unreachable_code)]
     {
@@ -492,6 +500,10 @@ mod ios {
         }
     }
 }
+
+/// The OHOS driver that owns the event loop in Rust (see the module docs).
+#[cfg(all(feature = "harmony-winit", target_env = "ohos"))]
+pub mod ohos_winit;
 
 #[cfg(all(feature = "harmony", target_env = "ohos"))]
 mod harmony {

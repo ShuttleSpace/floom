@@ -131,6 +131,12 @@ pub struct HostPlatform {
     /// Last caret rectangle reported to the IME bridge (`set_cursor_area`),
     /// kept so tests can assert the runner's caret-area handshake fired.
     ime_cursor_area: Option<(Point, Size)>,
+    /// Set while a redraw is queued or was asked for during the current pump.
+    /// A host-driven loop (the OHOS winit driver asks its window each idle
+    /// turn) needs to tell "the tree wants another frame" from "nothing moves",
+    /// and the event queue alone cannot: it is drained by the same pump that
+    /// renders.
+    frame_wanted: bool,
 }
 
 /// Alias kept for existing contract tests.
@@ -161,6 +167,7 @@ impl HostPlatform {
             ime_enabled: HashMap::new(),
             scale: 1.0,
             ime_cursor_area: None,
+            frame_wanted: false,
         }
     }
 
@@ -250,6 +257,16 @@ impl HostPlatform {
         self.events.push(PlatformEvent::Resumed);
     }
 
+    /// Whether a redraw was asked for since the last [`Platform::poll_events`].
+    ///
+    /// A host-driven loop renders on the OS's own frame callback, so between
+    /// calls it asks this: `true` means the tree is still moving and the window
+    /// should be told to redraw, `false` means stay idle (an animation that
+    /// keeps requesting frames keeps this `true` on its own).
+    pub fn wants_frame(&self) -> bool {
+        self.frame_wanted
+    }
+
     /// The last caret rectangle the IME bridge was told about (`set_cursor_area`),
     /// or `None` if no caret-area handshake has happened yet.
     pub fn ime_cursor_area(&self) -> Option<(Point, Size)> {
@@ -335,10 +352,14 @@ impl Platform for HostPlatform {
     }
 
     fn poll_events(&mut self, out: &mut Vec<PlatformEvent>) {
+        // The queue is drained here, so the flag restarts from "nothing
+        // pending": whatever the pump below asks for sets it again.
+        self.frame_wanted = false;
         out.append(&mut self.events);
     }
 
     fn request_frame(&mut self, window: WindowId) {
+        self.frame_wanted = true;
         self.events.push(PlatformEvent::RedrawRequested { window });
     }
 

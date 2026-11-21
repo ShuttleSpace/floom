@@ -18,7 +18,17 @@ pub use crate::log::{
     DEFAULT_LOG_DOMAIN, DEFAULT_LOG_TAG, LOG_PREFIX, OhosLogLevel, deveco_log, deveco_log_with,
     deveco_log_with_level,
 };
-pub use floem_winit_core::event_loop::EventLoopProxy;
+pub use floem_winit_core::application::ApplicationHandler;
+pub use floem_winit_core::event::{
+    ButtonSource, ElementState, Ime, KeyEvent, MouseButton, MouseScrollDelta, PointerSource,
+    WindowEvent,
+};
+pub use floem_winit_core::event_loop::{
+    ActiveEventLoop as RootActiveEventLoop, ControlFlow, EventLoopProxy,
+};
+pub use floem_winit_core::window::{
+    Window as CoreWindow, WindowAttributes, WindowId as WinitWindowId,
+};
 
 /// Event-loop proxy of the runtime created by the most recent
 /// `ohos_winit_runtime_new()` call.
@@ -43,7 +53,6 @@ use std::ffi::c_void;
 use std::sync::Mutex;
 
 use floem_winit_core::event_loop::ActiveEventLoop as CoreActiveEventLoop;
-use floem_winit_core::window::Window as CoreWindow;
 
 pub trait ActiveEventLoopExtOhos {
     fn ohos_app(&self) -> &OhosApp;
@@ -97,14 +106,12 @@ impl WindowExtOhos for dyn CoreWindow + '_ {
 
 #[macro_export]
 macro_rules! export_ohos_winit_app {
-    ($factory:path) => {
-        fn __floom_winit_ohos_factory() -> Box<dyn $crate::ffi::RuntimeApplication> {
-            Box::new($factory())
-        }
-
+    // An expression, not just a path: the factory may be a closure carrying the
+    // app's tree builder, which cannot be a plain `fn` because it owns state.
+    ($factory:expr) => {
         #[unsafe(no_mangle)]
         pub extern "C" fn ohos_winit_runtime_new() -> *mut ::std::ffi::c_void {
-            $crate::ffi::runtime_new(__floom_winit_ohos_factory) as *mut ::std::ffi::c_void
+            $crate::ffi::runtime_new_take($factory) as *mut ::std::ffi::c_void
         }
 
         #[unsafe(no_mangle)]

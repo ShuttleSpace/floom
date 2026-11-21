@@ -174,6 +174,49 @@ pub use floom_renderer_vello;
 #[cfg(feature = "web")]
 pub use floom_renderer_web::WebPresenter;
 
+/// Re-exported so an app crate can reach it through `floom::` only.
+#[cfg(all(feature = "harmony-winit", target_env = "ohos"))]
+pub use floom_winit_ohos::export_ohos_winit_app;
+
+/// The OpenHarmony entry point, in one line.
+///
+/// An app crate's `src/lib.rs` (the cdylib `floom package` builds into a HAP)
+/// writes:
+///
+/// ```ignore
+/// #[cfg(target_env = "ohos")]
+/// floom::ohos_app!(build);
+/// ```
+///
+/// and the C++ bridge creates the runtime with `ohos_winit_runtime_new` and
+/// then feeds it the `ohos_winit_runtime_*` surface/touch/vsync symbols — touch,
+/// surface lifecycle and vsync come from ArkUI, the loop and the tree from Rust.
+/// The tree is the same `build` the app passes to `floom::run` on every other
+/// target.
+///
+/// The window size is the surface's: ArkUI owns the XComponent's geometry, so
+/// the placeholder request below is only a title and a resizability.
+#[cfg(all(feature = "harmony-winit", target_env = "ohos"))]
+#[macro_export]
+macro_rules! ohos_app {
+    ($build:expr) => {
+        // The whole entry surface: `ohos_winit_runtime_new` creates the runtime
+        // (and with it the worker thread), the rest of the `ohos_winit_runtime_*`
+        // symbols feed it touch, surface and vsync events from the XComponent
+        // callback. One symbol to call from the C++ bridge.
+        $crate::export_ohos_winit_app!(move || {
+            $crate::platform::ohos_winit::handler(
+                $crate::platform::AppRequest {
+                    title: ::std::string::String::from("Floom"),
+                    size: $crate::floom_types::Size::new(1.0, 1.0),
+                    resizable: true,
+                },
+                ::std::boxed::Box::new($build),
+            )
+        });
+    };
+}
+
 /// Run a Floom app — the one unified entry point.
 ///
 /// `build` mounts the app's widget tree into the host; the rest (the backend's

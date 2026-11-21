@@ -44,6 +44,11 @@ embedded = [
 # bundles so an `embedded` build never drags them in and vice versa.
 ios = ["dep:floom-platform-ios", "dep:floom-renderer-software"]
 harmony = ["dep:floom-platform-harmony", "dep:floom-renderer-software"]
+# The OHOS driver where Rust owns the loop (`crates/app/floom/src/platform/
+# ohos_winit.rs`) instead of ArkTS pumping frames into `present_frame`. Opt-in
+# because it needs the C++ bridge to forward XComponent callbacks
+# (`ohos_winit_runtime_*`); the plain `harmony` bundle keeps working.
+harmony-winit = ["harmony", "dep:floom-winit-ohos"]
 # Terminal (character-grid) backend: the L4 platform + renderer that turn a
 # terminal into a live Floom window. Off by default so a default build stays
 # headless; `--features tui` adds exactly these two crates.
@@ -94,6 +99,7 @@ floom-renderer-tui = { workspace = true, optional = true }
 floom-platform-embedded = { workspace = true, optional = true }
 floom-platform-ios = { workspace = true, optional = true }
 floom-platform-harmony = { workspace = true, optional = true }
+floom-winit-ohos = { workspace = true, optional = true }
 floom-renderer-vello = { workspace = true, optional = true }
 floom-renderer-software = { workspace = true, optional = true }
 floom-devtools = { workspace = true, optional = true }

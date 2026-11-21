@@ -107,3 +107,25 @@ fn core_manifest_has_no_os_backends() {
         );
     }
 }
+
+#[test]
+fn a_requested_frame_is_pending_until_the_queue_is_drained() {
+    // The OHOS driver asks this every iteration to decide whether to request a
+    // redraw: an idle tree has to look idle, or the app paints at the vsync
+    // rate forever.
+    let mut p = FakePlatform::new();
+    let win = p.create_window(WindowConfig {
+        title: "pending".into(),
+        size: Size::new(320.0, 240.0),
+        resizable: false,
+    });
+    let mut events = Vec::new();
+    p.poll_events(&mut events);
+    assert!(!p.wants_frame(), "a drained queue asks for nothing");
+
+    p.request_frame(win);
+    assert!(p.wants_frame(), "a requested frame is pending");
+
+    p.poll_events(&mut events);
+    assert!(!p.wants_frame(), "draining the queue clears it");
+}

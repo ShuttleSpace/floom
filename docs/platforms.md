@@ -56,7 +56,17 @@
 6. **尺寸必须精确相等**：`present_frame` 拒绝宽高与 bind 时不等的帧，旋转/分屏竞态下静默丢帧。
 7. **`stride` 单位可疑**：按"字节/行"使用；若 `BufferHandle.stride` 是像素数，则 `dst_stride < row` 恒真 → **每帧被拒 → 黑屏**。需上机确认。
 
-**决策点（必须先定，再动手）**：OHOS 走 `floom-winit-ohos`（有事件循环、输入、IME，但需要把 N-API 的单模块约束接上）还是继续 `floom-platform-harmony`（只有上屏，要补约 5 个 C 导出 + 事件注入）？两条路不能并行维护——这正是当前两个半成品并存的原因。
+**决定（2026-11-21）**：走 `floom-winit-ohos`（A 方案）。理由是"谁拥有事件循环"这个选择只能有一个答案——ArkTS 驱动 vsync 时输入要从 ArkUI 手工转进 Rust，每加一个事件类型就要在 C++ 与 Rust 两侧各写一遍；把循环交给 Rust 后，surface/触控/键盘都由 winit 抽象统一，并且 wgpu 能拿到 `native_window` 直接上屏（当前 CPU `mmap` blit 的替代路径）。代价是要写 ArkTS/C++ 胶水，这部分只在设备上验证。
+
+落地形态（`crates/app/floom/src/platform/ohos_winit.rs`，feature `harmony,harmony-winit`）：
+
+- 应用入口唯一：`floom::ohos_app!(build)` 导出 `ohos_winit_runtime_*`（surface 生命周期、touch、mouse、key、frame、focus、visibility），C++ 桥先调 `ohos_winit_runtime_new()` 拿运行时指针，其余事件原样转发。
+- 树在 worker 线程上构建（floom 的树从诞生起就持有 `Rc`，只能生在它要活着的线程），因此工厂是闭包 + 一次性 `Handoff`，不是 `fn` 指针。
+- 帧循环由 Rust 自己决定：`about_to_wait` 只在 `platform.wants_frame()` 为真时 `request_redraw()`，静态界面零帧。
+- `floom::run` 在这条路径上**返回错误**（事件循环归 ArkUI 所有，从这里再起一个没人泵的循环只会画出黑窗），错误信息直接指向 `ohos_app!`。
+- 上屏仍走 `floom_platform_harmony::present_into_window` → `native::present`（`OH_NativeWindow_*` + `mmap`），§4 的 5 个上屏缺陷（第 3–7 条）因此尚未修，它们是 `S1.2` 的内容。
+
+旧路径 `floom-platform-harmony` 的 N-API 三件套保留（`floom_harmony_bind_surface`/`present_frame`/`release_surface`），`tests/floom-ohos-demo` 的 C++ 桥目前仍调它们；切桥是 `S1.1b`，届时旧三件套标 deprecated。
 
 ## 5. iOS：已定位缺陷
 
