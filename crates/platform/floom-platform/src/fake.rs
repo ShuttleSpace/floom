@@ -111,6 +111,20 @@ impl Window for FakeWindow {
     }
 }
 
+/// The adapter door, spelled as a newtype so [`HostPlatform`] keeps its derived
+/// `Debug` without requiring `AccessibilityAdapter: Debug`.
+struct AdapterSlot(Option<Box<dyn floom_accessibility::AccessibilityAdapter>>);
+
+impl std::fmt::Debug for AdapterSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(if self.0.is_some() {
+            "AdapterSlot(<adapter>)"
+        } else {
+            "AdapterSlot(none)"
+        })
+    }
+}
+
 /// In-memory host implementing [`Platform`], [`Clipboard`], and [`Ime`].
 ///
 /// Used as the contract test double (`FakePlatform`) and as the headless
@@ -123,6 +137,9 @@ pub struct HostPlatform {
     next_window: u32,
     events: Vec<PlatformEvent>,
     clipboard: String,
+    /// Where drained semantics diffs go. `None` means the backend retains the
+    /// tree and delivers nothing, which is what a headless stand-in should do.
+    accessibility: AdapterSlot,
     started: Instant,
     ime_enabled: HashMap<u32, bool>,
     /// Device-pixel scale handed to windows this backend creates. Lets a test
@@ -163,6 +180,7 @@ impl HostPlatform {
             next_window: 0,
             events: Vec::new(),
             clipboard: String::new(),
+            accessibility: AdapterSlot(None),
             started: Instant::now(),
             ime_enabled: HashMap::new(),
             scale: 1.0,
@@ -221,6 +239,15 @@ impl HostPlatform {
         }
         self.events
             .push(PlatformEvent::WindowResized { window, size });
+    }
+
+    /// Attach the adapter that receives this platform's semantics diffs.
+    pub fn with_accessibility(
+        mut self,
+        adapter: Box<dyn floom_accessibility::AccessibilityAdapter>,
+    ) -> Self {
+        self.accessibility = AdapterSlot(Some(adapter));
+        self
     }
 
     pub fn with_capabilities(mut self, caps: PlatformCapabilities) -> Self {
@@ -300,6 +327,13 @@ impl HostPlatform {
 }
 
 impl Platform for HostPlatform {
+    fn accessibility(&mut self) -> Option<&mut dyn floom_accessibility::AccessibilityAdapter> {
+        match self.accessibility.0.as_mut() {
+            Some(adapter) => Some(&mut **adapter),
+            None => None,
+        }
+    }
+
     fn id(&self) -> PlatformId {
         self.id
     }

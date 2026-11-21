@@ -240,7 +240,23 @@ impl<R: Presenter> AppRunner<R> {
             self.stats.events += 1;
             self.handle(platform, event);
         }
+        self.deliver_semantics(platform);
         self.stats
+    }
+
+    /// Hand this frame's semantics changes to the platform's adapter.
+    ///
+    /// Called once per pump rather than per event: a backend that owns its
+    /// window loop drains once per frame that way, and a burst of input events
+    /// produces one diff instead of one per event.
+    fn deliver_semantics<P: Platform>(&mut self, platform: &mut P) {
+        let diff = self.host.semantics_updates();
+        if diff.is_empty() {
+            return;
+        }
+        if let Some(adapter) = platform.accessibility() {
+            adapter.update(&diff);
+        }
     }
 
     /// Process one platform event.

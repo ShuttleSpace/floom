@@ -97,7 +97,7 @@
 | S1.3 | iOS CJK 豆腐 | 待验证（设备） | `crates/widgets/floom-text/src/system_fonts.rs`：扫 `/System/Library/Fonts`(+`Supplemental`) 按前缀挑 CJK 面注册进 `FontContext`，`TextShaper::new()` 与编辑器线程 `FONT_CONTEXT` 各调一次。宿主实测 bare `FontContext` 查不到 `PingFang SC`（能查到 `Arial Unicode MS`，所以 macOS 一直没暴露） | `cargo test -p floom-text` 28 passed（含 3 个新测）；真机待 `gates/ios.md` item 2 |
 | S1.2 | OHOS 上屏 5 缺陷 | 待验证（设备） | 五条全部改完并各有单元测试：AbortBuffer 归还、失败不 Flush、单一 `Mutex<Option<Bound>>` 跨 blit 持锁、帧自己的尺寸、`stride_bytes` 双读法。**未上机**：连续 60 s 无丢帧与 hilog 无 Abort 告警待真机 | `cargo test -p floom-platform-harmony`（6 passed）；上机待验 |
 | S1.3 | iOS CJK 字体 | 未开始 | 配方：`docs/platforms.md` §5（`ohos_font.rs`） | — |
-| S1.4 | iOS a11y frame | 未开始 | 证据：`docs/gates/ios.md` item3 `fail` | — |
+| S1.4 | iOS a11y frame | 进行中 | 中立层已补齐（`SemanticsNode::bounds` + `Platform::accessibility` 门 + `deliver_semantics`，`cargo test -p floom-app --test semantics` 2 passed）；剩下的只有 iOS 的 `UIAccessibilityElement` 适配器本身（需模拟器验证） | `idb ui describe-all` 的 frame 非零；本机 `idb` 未安装 |
 | S1.5 | Android a11y + 焦点环 | 未开始 | 证据：`docs/gates/android.md` item3/item7 | — |
 | S1.6 | 桌面剪贴板 / a11y / file-picker | 进行中 | `crates/platform/floom-platform-desktop/src/{clipboard,accessibility}.rs` | 剪贴板三平台齐了：macOS `NSPasteboard`、Windows `CF_UNICODETEXT`（CI runner 上真往返，含 CJK）、Linux `wl-copy`/`xclip`/`xsel`（解析有单测，会话里未验证——ubuntu runner 无 display，日志打印 `no clipboard in this session` 后跳过）；a11y 桥与 `file-picker` trait 未开始 |
 | S1.7 | ≥3 target tested（G1） | 未开始 | `docs/release-policy.md` targets 表 | — |

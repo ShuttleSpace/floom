@@ -3430,7 +3430,12 @@ impl WidgetHost {
             .map(|hint| to_a11y_state(hint.state))
             .unwrap_or_else(floom_accessibility::SemanticsState::empty);
 
-        let mut semantics_node = SemanticsNode::new(role).with_state(state);
+        // Bounds come from layout, not from the widget: a widget reports what it
+        // *is*, and only the host knows where the layout put it. Without this an
+        // adapter can name an element and cannot place it.
+        let mut semantics_node = SemanticsNode::new(role)
+            .with_state(state)
+            .with_bounds(node.bounds);
         if let Some(label) = hint.and_then(|hint| hint.label) {
             semantics_node = semantics_node.with_label(label);
         }
@@ -4506,6 +4511,16 @@ impl WidgetHost {
     pub fn register_image_decoded(&mut self, bytes: &[u8]) -> Option<ResourceId> {
         let decoded = image_codec::decode_image(bytes)?;
         self.register_image(decoded.width, decoded.height, decoded.pixels)
+    }
+
+    /// Drain the semantics changes since the last drain, for the platform's
+    /// adapter.
+    ///
+    /// The diff is *pulled* rather than pushed: the host knows when the tree
+    /// changed, and a platform that has no adapter must not pay for a delivery
+    /// door it cannot open.
+    pub fn semantics_updates(&mut self) -> floom_accessibility::SemanticsDiff {
+        self.semantics.collect_updates()
     }
 
     pub fn semantics(&self) -> &SemanticsTree {

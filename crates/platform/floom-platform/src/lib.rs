@@ -79,6 +79,16 @@ pub trait Platform {
     fn ime(&mut self, _window: WindowId) -> Option<&mut dyn Ime> {
         None
     }
+
+    /// The accessibility adapter for this backend, if it has one.
+    ///
+    /// The runner hands every drained [`SemanticsDiff`] here. Backends without
+    /// a native bridge return `None` — which is not the same as "no
+    /// accessibility": the tree is still built and still diffed, so a host can
+    /// attach an adapter later without touching the runner.
+    fn accessibility(&mut self) -> Option<&mut dyn floom_accessibility::AccessibilityAdapter> {
+        None
+    }
 }
 
 /// Clipboard service (capability-gated).

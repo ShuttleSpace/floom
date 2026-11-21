@@ -7,7 +7,7 @@
 use std::collections::{HashMap, HashSet};
 
 use bitflags::bitflags;
-use floom_types::ElementId;
+use floom_types::{ElementId, Rect};
 
 /// Accessible role of a semantics node.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -74,6 +74,12 @@ pub enum SemanticsAction {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SemanticsNode {
     pub role: SemanticsRole,
+    /// Where the element is, in the window's logical points.
+    ///
+    /// Without this an adapter knows *what* is on screen and not *where*, which
+    /// is the shape of a node a screen reader can name but not touch: the iOS
+    /// gate recorded exactly that — labels present, every frame zero.
+    pub bounds: Rect,
     pub label: String,
     pub value: String,
     pub hint: String,
@@ -86,6 +92,7 @@ impl SemanticsNode {
     pub fn new(role: SemanticsRole) -> Self {
         Self {
             role,
+            bounds: Rect::default(),
             label: String::new(),
             value: String::new(),
             hint: String::new(),
@@ -93,6 +100,11 @@ impl SemanticsNode {
             actions: Vec::new(),
             children: Vec::new(),
         }
+    }
+
+    pub fn with_bounds(mut self, bounds: Rect) -> Self {
+        self.bounds = bounds;
+        self
     }
 
     pub fn with_label(mut self, label: impl Into<String>) -> Self {

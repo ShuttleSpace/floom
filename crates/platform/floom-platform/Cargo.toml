@@ -12,17 +12,18 @@ floom-types = { workspace = true }
 bitflags = "2.9"
 # Handle descriptors only — no windowing or GPU library. See `src/surface.rs`.
 raw-window-handle = { workspace = true }
-# Only the stand-in backends (`ios`/`embedded`/`harmony`) need the semantics
-# schema; the default OS-neutral ABI does not, so it stays optional.
-floom-accessibility = { workspace = true, optional = true }
+# The `AccessibilityAdapter` door on the `Platform` trait. Core-layer crate:
+# bitflags plus `floom-types`, so every backend can afford it unconditionally.
+floom-accessibility = { workspace = true }
 
 [features]
 default = []
 # OS-free stand-in backends folded in from the former `floom-platform-ios`,
-# `floom-platform-embedded` and `floom-platform-harmony` crates. Each turns on
-# exactly the accessibility adapter it bridges to.
-ios = ["dep:floom-accessibility"]
-embedded = ["dep:floom-accessibility"]
-harmony = ["dep:floom-accessibility"]
+# `floom-platform-embedded` and `floom-platform-harmony` crates. They exist so a
+# dependent can name the backend it means; the accessibility schema they used to
+# pull in is now unconditional (see the `Platform::accessibility` door).
+ios = []
+embedded = []
+harmony = []
 
 [dev-dependencies]

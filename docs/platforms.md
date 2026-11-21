@@ -30,7 +30,7 @@
 | 键盘 | winit | winit | winit-android keycodes（`Keycode::Tab → Key::Named(Tab)`，`winit-android/src/keycodes.rs:312`） | UIKit | **无** | 有 |
 | IME | winit IME + `crates/platform/floom-platform-desktop/src/ime/` | 同左（Win32 组合桥未完成） | 锚点 `EditText.Editable` + `BaseInputConnection` 组合区 → `ImeCommit`/`ImePreedit` | 隐藏 `UITextField` → `floom_ios_push_ime_input`（拉丁 pass，CJK 提交成功） | **无** | 部分 |
 | 剪贴板 | `floom-platform-desktop/src/clipboard.rs`：macOS `NSPasteboard`、Windows `CF_UNICODETEXT`（两者都有往返测试，Windows 在 CI runner 上真跑过含 CJK）、Linux 走 `wl-copy`/`xclip`/`xsel`（只有解析逻辑有测试，赛道里没有可用的会话） | JNI ClipboardService（双向 pass，需先获得焦点） | objc2 `UIPasteboard`（双向 pass，含系统粘贴同意） | **无** | 无 |
-| 无障碍 | 语义树在进程内，**无 NSAccessibility 桥** | 无 AT-SPI / 无 UIA | `CapabilityLimitedAccessibilityAdapter`，`NATIVE_BRIDGE` 故意不置位 | 标签进了 OS 树但**所有 frame 为 0** | 无 | 无 |
+| 无障碍 | 语义树在进程内，**无 NSAccessibility 桥** | 无 AT-SPI / 无 UIA | `CapabilityLimitedAccessibilityAdapter`，`NATIVE_BRIDGE` 故意不置位 | 无原生适配器（frame 仍为 0） | 无 | 无 |
 | 文件选择 | **无 trait**（平台层还没这个抽象） | 同左 | SAF 代码完整，结果回传需要 `FloomNativeActivity` 子类 | `ios_file.rs`/`ios_receive.rs` 有，example 未接 | 无 | — |
 | 安全区 | n/a | n/a | 无公开 `WindowHandle::safe_area()` | 有 read + `apply_safe_area(true)`，无公开读回 | 无 | — |
 | 声明能力位 | WINDOWING/TOUCH/IME/CLIPBOARD/A11Y 视 feature | 同左 | `android_default()` = WINDOWING\|TOUCH\|IME\|SOFTWARE_RENDER\|**WEBGPU** | `ios_default()` = WINDOWING\|TOUCH\|NATIVE_VIEW\|SOFTWARE_RENDER | `harmony_default()` = WINDOWING\|TOUCH\|NATIVE_VIEW\|SOFTWARE_RENDER | 各自 |
@@ -86,7 +86,7 @@
    `only_the_platforms_without_system_fallback_register_a_face`（macOS 一个字节都不读）、
    `han_text_shapes_to_real_glyphs`（`你好世界` 无 `.notdef`）、`registering_is_safe_on_every_target`。
    真机门槛仍是 `gates/ios.md` item 2。
-2. **a11y 零 frame**（item 3 fail）：`idb ui describe-all` 有 label，但每个节点 frame 为 0，VoiceOver 无法命中——中立 a11y 层没有把布局包围盒转发给 `UIAccessibilityElement`。`ios_capabilities().accessibility` 仍为 `false`，这一条是**诚实**的，但意味着 iOS 无障碍为零。
+2. **a11y 零 frame**（item 3 fail）：`idb ui describe-all` 有 label，但每个节点 frame 为 0，VoiceOver 无法命中。根因有两层，第一层已修（2026-11-21）：`SemanticsNode` 原本**没有几何字段**，适配器拿到节点也不知道它在哪——现在带 `bounds`（由布局填，不是 widget 自报），并且 `Platform::accessibility` 这道门把每帧的 `SemanticsDiff` 交给适配器（`crates/app/floom-app/src/runner.rs` 的 `deliver_semantics`）。第二层仍在：iOS 侧没有 `UIAccessibilityElement` 适配器，所以**这个平台的 frame 依旧为 0**，`ios_capabilities().accessibility` 也依旧 `false`。
 3. 能力位声明 `TOUCH`，而 Rust 侧没有任何 touch 导出——触摸完全由 UIKit 侧驱动，Rust 侧的能力位属"声明"，不是"可实现"。
 
 ## 6. Android：已定位缺陷与教训
