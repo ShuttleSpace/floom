@@ -173,6 +173,27 @@ pub fn run(program: &str, args: &[&str], dir: &Path) -> Result<(), String> {
     }
 }
 
+/// Run `program` and return its trimmed stdout. For the questions only a
+/// toolchain can answer — where the SDK is, which device is booted — where the
+/// answer is one line and an error must name the argv.
+pub fn capture(program: &str, args: &[&str], dir: &Path) -> Result<String, String> {
+    let output = Command::new(program)
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .map_err(|e| format!("cannot run `{} {}`: {e}", program, args.join(" ")))?;
+    if !output.status.success() {
+        return Err(format!(
+            "`{} {}` failed ({}): {}",
+            program,
+            args.join(" "),
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
 /// Find the most-recently-modified file under `dir` whose name ends with
 /// `.{ext}` (ext given without the dot). Returns `None` if nothing matches.
 /// Used to locate the artifact a native build dropped, regardless of where the

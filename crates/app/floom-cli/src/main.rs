@@ -397,6 +397,7 @@ fn create_rust_app(opts: &CreateOpts, root: &Path, name: &str) -> Result<(), Str
         .platforms
         .iter()
         .any(|p| matches!(p.as_str(), "android" | "ios" | "ohos"));
+    let ios = opts.platforms.iter().any(|p| p == "ios");
     write(
         &root.join("Cargo.toml"),
         &templates::cargo_toml(
@@ -404,6 +405,7 @@ fn create_rust_app(opts: &CreateOpts, root: &Path, name: &str) -> Result<(), Str
             &opts.floom_crate,
             opts.floom_path.as_deref(),
             mobile,
+            ios,
         ),
     )?;
     write(
@@ -412,7 +414,18 @@ fn create_rust_app(opts: &CreateOpts, root: &Path, name: &str) -> Result<(), Str
             .replace("{{TITLE}}", name)
             .replace("{{FLOOM}}", &opts.floom_crate),
     )?;
-    if mobile {
+    write(
+        &root.join("src/app.rs"),
+        &templates::APP_RS
+            .replace("{{TITLE}}", name)
+            .replace("{{FLOOM}}", &opts.floom_crate),
+    )?;
+    if ios {
+        write(
+            &root.join("src/lib.rs"),
+            &templates::IOS_LIB_RS.replace("{{FLOOM}}", &opts.floom_crate),
+        )?;
+    } else if mobile {
         write(&root.join("src/lib.rs"), templates::MOBILE_LIB_RS)?;
     }
     write(
@@ -690,6 +703,10 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
         .copied()
         .unwrap_or((platform, platform, "an editor"));
 
+    // Platforms whose host is real write their own README; the generic one says
+    // the directory is a placeholder, which is only true for the rest.
+    let mut readme_override: Option<String> = None;
+
     match platform {
         "android" => {
             write(
@@ -782,10 +799,10 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
             )?;
         }
         "ios" => {
-            // An iOS app is a bundle, not a binary: it needs an `Info.plist`, a
-            // bundle id and a build configuration that can be signed. That is an
-            // Xcode project, and it is emitted as one — see `ios/README.md` for
-            // what to open and `build` for the phase that generates the pbxproj.
+            // An iOS app is a bundle: `Info.plist`, a bundle id, a Swift host and
+            // the Rust static library. `floom package --platform ios` links them
+            // with `swiftc`, so there is no `.xcodeproj` to emit.
+            readme_override = Some(templates::ios_readme(&opts.name));
             write(
                 &dir.join("Info.plist"),
                 &templates::ios_info_plist(&opts.org, &opts.name),
@@ -839,11 +856,10 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
     }
 
     // Every platform gets a README, but after its project files rather than
-    // instead of them: it now explains how to build a thing that exists.
-    write(
-        &dir.join("README.md"),
-        &templates::platform_readme(label, opener),
-    )
+    // instead of them: it now explains how to build a thing that exists. A
+    // platform with a real host overrides the placeholder text.
+    let readme = readme_override.unwrap_or_else(|| templates::platform_readme(label, opener));
+    write(&dir.join("README.md"), &readme)
 }
 
 /// Writes the native half of one platform of a **plugin**.
@@ -1545,15 +1561,25 @@ mod tests {
 
     #[test]
     fn mobile_scaffold_emits_a_cdylib_lib_target() {
-        let mobile = templates::cargo_toml("my_app", "floom", None, true);
+        let mobile = templates::cargo_toml("my_app", "floom", None, true, false);
         assert!(mobile.contains("[lib]"), "{mobile}");
         assert!(mobile.contains("crate-type = [\"cdylib\"]"), "{mobile}");
         assert!(mobile.contains("name = \"my_app\""), "{mobile}");
         assert!(mobile.contains("path = \"src/lib.rs\""), "{mobile}");
 
-        let desktop = templates::cargo_toml("my_app", "floom", None, false);
+        let desktop = templates::cargo_toml("my_app", "floom", None, false, false);
         assert!(!desktop.contains("[lib]"), "{desktop}");
         assert!(!desktop.contains("cdylib"), "{desktop}");
+    }
+
+    #[test]
+    fn an_ios_scaffold_is_a_static_library_with_the_ios_bundle() {
+        // iOS has no dynamic loader for Rust: the host links a static library,
+        // and the feature bundle has to be on or the crate has no platform.
+        let ios = templates::cargo_toml("my_app", "floom", None, true, true);
+        assert!(ios.contains("crate-type = [\"staticlib\"]"), "{ios}");
+        assert!(ios.contains("\"ios\""), "{ios}");
+        assert!(!ios.contains("cdylib"), "{ios}");
     }
 
     #[test]

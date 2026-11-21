@@ -501,6 +501,108 @@ mod ios {
     }
 }
 
+/// The iOS host-driven path: UIKit owns the run loop and asks for each frame,
+/// the way the ArkTS shell does on HarmonyOS. The blocking [`crate::run`] is
+/// the wrong door here — a `UIApplicationMain` that never returns cannot be
+/// pumped from inside itself.
+#[cfg(all(feature = "ios", target_os = "ios"))]
+pub mod ios_host {
+    use std::cell::RefCell;
+
+    use floom_app::{AppRunner, WidgetHost};
+    use floom_platform::{
+        HostPlatform, Modifiers, Platform, PlatformEvent, PointerButton, WindowConfig, WindowId,
+    };
+    use floom_renderer_software::SoftwarePresenter;
+    use floom_types::Point;
+
+    use super::{AppRequest, BuildFn};
+
+    /// The live app. Thread-local because UIKit calls every export from its own
+    /// thread and none of this is `Send`.
+    struct Hosted {
+        platform: HostPlatform,
+        runner: AppRunner<SoftwarePresenter>,
+        window: WindowId,
+    }
+
+    thread_local! {
+        static APP: RefCell<Option<Hosted>> = const { RefCell::new(None) };
+    }
+
+    /// Build the tree and paint the first frame. `scale` is
+    /// `UIScreen.main.scale`: UIKit hands out points, the host wants pixels.
+    pub fn start(request: AppRequest, build: BuildFn, scale: f64) -> bool {
+        let built = build;
+        let mut platform = HostPlatform::new()
+            .with_id(floom_platform_ios::IOS_PLATFORM_ID)
+            .with_capabilities(floom_platform_ios::capabilities())
+            .with_scale_factor(if scale > 0.0 { scale } else { 1.0 });
+        let window = platform.create_window(WindowConfig {
+            title: request.title,
+            size: request.size,
+            resizable: request.resizable,
+        });
+        let mut host = WidgetHost::new();
+        built(&mut host);
+        let runner = AppRunner::new(host, SoftwarePresenter::new());
+        platform.request_frame(window);
+        APP.with(|slot| {
+            *slot.borrow_mut() = Some(Hosted {
+                platform,
+                runner,
+                window,
+            })
+        });
+        pump()
+    }
+
+    /// Run one frame: dispatch whatever the host queued, paint, blit.
+    pub fn pump() -> bool {
+        APP.with(|slot| {
+            let mut slot = slot.borrow_mut();
+            let Some(app) = slot.as_mut() else {
+                return false;
+            };
+            app.runner.pump(&mut app.platform);
+            let presenter = app.runner.presenter();
+            let (width, height) = (presenter.width(), presenter.height());
+            let painted = floom_platform_ios::present(presenter.pixels(), width, height);
+            app.platform.request_frame(app.window);
+            painted
+        })
+    }
+
+    /// Forward one UIKit touch. `phase` is 0 down, 1 move, 2 up, 3 cancel;
+    /// coordinates are pixels, so the caller multiplies points by the scale.
+    pub fn touch(x: f64, y: f64, phase: u32) -> bool {
+        APP.with(|slot| {
+            let mut slot = slot.borrow_mut();
+            let Some(app) = slot.as_mut() else {
+                return false;
+            };
+            let position = Point::new(x, y);
+            let window = app.window;
+            app.platform.push_event(PlatformEvent::PointerMoved {
+                window,
+                position,
+                modifiers: Modifiers::empty(),
+            });
+            if phase == 0 || phase == 2 {
+                app.platform.push_event(PlatformEvent::PointerButton {
+                    window,
+                    position,
+                    button: PointerButton::Primary,
+                    pressed: phase == 0,
+                    modifiers: Modifiers::empty(),
+                });
+            }
+            app.platform.request_frame(window);
+            true
+        })
+    }
+}
+
 /// The OHOS driver that owns the event loop in Rust (see the module docs).
 #[cfg(all(feature = "harmony-winit", target_env = "ohos"))]
 pub mod ohos_winit;

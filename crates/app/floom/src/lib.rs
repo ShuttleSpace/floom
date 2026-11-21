@@ -178,6 +178,54 @@ pub use floom_renderer_web::WebPresenter;
 #[cfg(all(feature = "harmony-winit", target_env = "ohos"))]
 pub use floom_winit_ohos::export_ohos_winit_app;
 
+/// The iOS entry point, in one line.
+///
+/// An app crate's `src/lib.rs` (the staticlib the Xcode host links) writes:
+///
+/// ```ignore
+/// #[cfg(target_os = "ios")]
+/// floom::ios_app!(build);
+/// ```
+///
+/// and the Swift host calls `floom_ios_app_start(width, height, scale)` from
+/// `viewDidAppear`, then `floom_ios_app_pump()` from a display link and
+/// `floom_ios_app_touch(x, y, phase)` from the touches. `build` is the same
+/// tree every other target gets. Width and height are pixels of the bound
+/// `CGBitmapContext`; `scale` is `UIScreen.main.scale`.
+#[cfg(all(feature = "ios", target_os = "ios"))]
+#[macro_export]
+macro_rules! ios_app {
+    ($build:expr) => {
+        /// Build the tree and paint the first frame. Returns false when no
+        /// drawable is bound yet.
+        #[unsafe(no_mangle)]
+        pub extern "C" fn floom_ios_app_start(width: f64, height: f64, scale: f64) -> bool {
+            let size = $crate::types::Size::new(width, height);
+            $crate::platform::ios_host::start(
+                $crate::platform::AppRequest {
+                    title: env!("CARGO_PKG_NAME").to_string(),
+                    size,
+                    resizable: true,
+                },
+                Box::new($build),
+                scale,
+            )
+        }
+
+        /// Paint one frame. The host calls this once per display-link tick.
+        #[unsafe(no_mangle)]
+        pub extern "C" fn floom_ios_app_pump() -> bool {
+            $crate::platform::ios_host::pump()
+        }
+
+        /// Forward one touch in pixels: 0 down, 1 move, 2 up, 3 cancel.
+        #[unsafe(no_mangle)]
+        pub extern "C" fn floom_ios_app_touch(x: f64, y: f64, phase: u32) -> bool {
+            $crate::platform::ios_host::touch(x, y, phase)
+        }
+    };
+}
+
 /// The OpenHarmony entry point, in one line.
 ///
 /// An app crate's `src/lib.rs` (the cdylib `floom package` builds into a HAP)

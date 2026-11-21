@@ -37,15 +37,26 @@ pub const PLATFORM_NOTES: &[(&str, &str, &str)] = &[
 /// Without both, `floom::run_desktop` does not exist.
 pub const DEFAULT_FEATURES: &[&str] = &["desktop", "renderer-gpu"];
 
-fn features_literal() -> String {
-    DEFAULT_FEATURES
+fn features_literal(ios: bool) -> String {
+    let mut features: Vec<String> = DEFAULT_FEATURES
         .iter()
         .map(|f| format!("\"{f}\""))
-        .collect::<Vec<_>>()
-        .join(", ")
+        .collect();
+    if ios {
+        // The iOS backend is its own feature bundle; without it the static
+        // library has no platform and `run` reports "no backend".
+        features.push("\"ios\"".to_string());
+    }
+    features.join(", ")
 }
 
-pub fn cargo_toml(name: &str, floom_crate: &str, floom_path: Option<&str>, mobile: bool) -> String {
+pub fn cargo_toml(
+    name: &str,
+    floom_crate: &str,
+    floom_path: Option<&str>,
+    mobile: bool,
+    ios: bool,
+) -> String {
     let dep = match floom_path {
         Some(p) => format!(
             "{f} = {{ path = \"{p}\", features = [{features}] }}\n\
@@ -53,24 +64,28 @@ pub fn cargo_toml(name: &str, floom_crate: &str, floom_path: Option<&str>, mobil
              # {f} = {{ version = \"0.2\", features = [{features}] }}",
             f = floom_crate,
             p = p,
-            features = features_literal()
+            features = features_literal(ios)
         ),
         None => format!(
             "{f} = {{ version = \"0.2\", features = [{features}] }}",
             f = floom_crate,
-            features = features_literal()
+            features = features_literal(ios)
         ),
     };
     // Mobile hosts load a shared library, not an executable: `cargo ndk`
     // copies the cdylib into jniLibs, and `cargo-ios`/Xcode links it. A
     // bin-only crate would produce an executable and leave nothing to
     // package. Desktop scaffolds keep the bin-only shape.
-    let lib = if mobile {
+    // iOS links a **static** library (there is no dynamic loader for Rust on
+    // iOS); Android loads a cdylib through JNI. Both need a `[lib]`, a bin-only
+    // crate would produce an executable and leave nothing to package.
+    let lib = if mobile || ios {
+        let kind = if ios { "staticlib" } else { "cdylib" };
         format!(
             "\n[lib]\n\
              name = \"{lib_name}\"\n\
              path = \"src/lib.rs\"\n\
-             crate-type = [\"cdylib\"]\n",
+             crate-type = [\"{kind}\"]\n",
             lib_name = name.replace('-', "_")
         )
     } else {
@@ -107,17 +122,19 @@ pub const MOBILE_LIB_RS: &str = r#"// SPDX-License-Identifier: MIT
 //     floom::ohos_app!(build);   // `build` moved into a shared `mod app`
 //
 // which generates the `ohos_winit_runtime_*` symbols the XComponent bridge in
-// `entry/src/main/cpp/` calls (surface, touch, vsync). Android and iOS have no
-// such macro yet: their hosts still call their own `android_main` / UIKit
-// delegate.
+// `entry/src/main/cpp/` calls (surface, touch, vsync). iOS has the same shape:
+//
+//     #[cfg(target_os = "ios")]
+//     floom::ios_app!(build);    // generates floom_ios_app_{start,pump,touch}
+//
+// which the Swift host in `ios/src/` calls from a display link. Android still
+// goes through its own `android_main`.
 "#;
 
-/// The Rust core entry point, targeting the Floom 2.0 widget API.
-pub const MAIN_RS: &str = r#"// Floom application core.
-//
-// All cross-platform logic lives here. The platform directories hold only the
-// thin native host projects that embed this binary; they should not contain
-// application logic.
+/// The widget tree, shared by every target: the desktop entry and each mobile
+/// host build this one function.
+pub const APP_RS: &str = r#"// The widget tree. Every target mounts this: `src/main.rs` on desktop, and the
+// mobile hosts through their own entry symbol.
 
 use std::sync::atomic::{AtomicI64, Ordering};
 
@@ -125,19 +142,9 @@ use {{FLOOM}}::prelude::*;
 
 static COUNT: AtomicI64 = AtomicI64::new(0);
 
-fn main() {
-    // `run_desktop` opens a window and pumps the event loop until it closes.
-    // Other targets have one-call equivalents: `run_android`, `run_web`,
-    // `run_tui`.
-    if let Err(e) = {{FLOOM}}::run_desktop("{{TITLE}}", Size::new(360.0, 240.0), build) {
-        eprintln!("floom: {e}");
-        std::process::exit(1);
-    }
-}
-
 /// Builds the widget tree. `host` owns the live widgets: they are described
 /// here and mutated through `host.widget_mut::<T>(node)`.
-fn build(host: &mut WidgetHost) {
+pub fn build(host: &mut WidgetHost) {
     let root = Stack::new(Axis::Vertical)
         .gap(8.0)
         .child(Child::new(ChildKey::index(0), LayoutRequest::new(), || {
@@ -163,6 +170,49 @@ fn build(host: &mut WidgetHost) {
 // `on_click` callbacks must be `'static` and so cannot capture `host`; keep
 // shared state in a static or an `Arc`, then reconcile it from a frame
 // callback.
+"#;
+
+/// The desktop entry point. The tree lives in `src/app.rs` so the mobile hosts
+/// can mount the same one.
+pub const MAIN_RS: &str = r#"// Floom desktop entry point. The platform directories hold only the thin
+// native hosts; all cross-platform logic is in `src/app.rs`.
+
+mod app;
+
+use {{FLOOM}}::prelude::*;
+
+fn main() {
+    // `run_desktop` opens a window and pumps the event loop until it closes.
+    // Other targets have one-call equivalents: `run_web`, `run_tui`, and the
+    // mobile hosts in their own platform directories.
+    if let Err(e) =
+        {{FLOOM}}::run_desktop("{{TITLE}}", Size::new(360.0, 240.0), app::build)
+    {
+        eprintln!("floom: {e}");
+        std::process::exit(1);
+    }
+}
+"#;
+
+/// `src/lib.rs` for an iOS app: the entry symbols the Swift host calls.
+pub const IOS_LIB_RS: &str = r#"// SPDX-License-Identifier: MIT
+// iOS entry point. The Swift host in `ios/src/` binds the drawable, drives a
+// display link and forwards touches; this expands to the three symbols it
+// calls: `floom_ios_app_start`, `floom_ios_app_pump`, `floom_ios_app_touch`.
+
+mod app;
+
+#[cfg(target_os = "ios")]
+{{FLOOM}}::ios_app!(app::build);
+
+// Desktops build this crate too (the `[lib]` target is the same file), where
+// there is no host to call in. Keeping the module referenced stops `cargo
+// check` on the host from warning about an empty crate.
+#[cfg(not(target_os = "ios"))]
+#[allow(dead_code)]
+fn unused_tree() {
+    let _ = app::build;
+}
 "#;
 
 pub const INDEX_HTML: &str = r#"<!DOCTYPE html>
@@ -199,6 +249,42 @@ pub fn platform_readme(label: &str, opener: &str) -> String {
            ABI. See `docs/plugins.md`.\n\
          \n\
          Application logic does not belong in this directory — it belongs in\n\
+         `src/`, so it stays cross-platform.\n"
+    )
+}
+
+/// `ios/README.md` — how the host is built and what each file is. The generic
+/// placeholder text would be wrong here: iOS has a working host.
+pub fn ios_readme(name: &str) -> String {
+    format!(
+        "# iOS / iPadOS target\n\
+         \n\
+         Opened with: **the files below, not an Xcode project.** `floom package\n\
+         --platform ios` builds the static library and links it with `swiftc`; there\n\
+         is no `.xcodeproj` to keep in step with the SDK.\n\
+         \n\
+         ## Build and run\n\
+         \n\
+         ```\n\
+         floom package --platform ios\n\
+         xcrun simctl install booted ios/build/{name}.app\n\
+         xcrun simctl launch booted com.example.{name}\n\
+         ```\n\
+         \n\
+         `--device` builds for a phone instead of the simulator, and stops at\n\
+         `blocked`: installing needs a signing identity this CLI cannot provision.\n\
+         \n\
+         ## What is here\n\
+         \n\
+         - `Info.plist` — bundle manifest. The scene manifest entry is not optional:\n\
+           current SDKs refuse to launch an app that only implements\n\
+           `UIApplicationDelegate`.\n\
+         - `src/AppDelegate.swift` — the app and scene delegates. UIKit owns the run\n\
+           loop; nothing here draws.\n\
+         - `src/ViewController.swift` — `FloomView`: a `CGBitmapContext` whose memory\n\
+           Rust writes, a display link that asks for frames, and touch forwarding.\n\
+         \n\
+         Rust owns every pixel inside that view. Application logic belongs in\n\
          `src/`, so it stays cross-platform.\n"
     )
 }
@@ -2180,6 +2266,14 @@ pub fn ios_info_plist(org: &str, name: &str) -> String {
     <string>1</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <!-- Required by current SDKs: an app that only implements
+         UIApplicationDelegate is refused at launch with "UIScene life cycle is
+         required for apps built with this SDK". -->
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+        <key>UIApplicationSupportsMultipleScenes</key>
+        <false/>
+    </dict>
     <key>UILaunchScreen</key>
     <dict/>
     <key>UISupportedInterfaceOrientations</key>
@@ -2198,39 +2292,54 @@ pub fn ios_info_plist(org: &str, name: &str) -> String {
     )
 }
 
-/// `ios/src/AppDelegate.swift` — starts Rust and hands over the window.
+/// `ios/src/AppDelegate.swift` — the app and scene delegates.
+///
+/// UIKit owns the run loop: nothing here draws. The scene delegate builds the
+/// window and hands its content to `FloomViewController`, which is where Rust
+/// gets its pixels.
 pub fn ios_app_delegate_swift(name: &str) -> String {
     let _ = name;
     r#"import UIKit
 
-/// The UIKit host.
-///
-/// Creates the window and gives Rust the `CAMetalLayer` to draw into. It makes no
-/// layout decisions: the widget tree is in Rust, and anything drawn here would
-/// be composited over or under it with no defined order.
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate {
-
-    var window: UIWindow?
 
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
-        let window = UIWindow(frame: UIScreen.main.bounds)
-        let controller = FloomViewController()
-        window.rootViewController = controller
-        window.makeKeyAndVisible()
-        self.window = window
-
-        // Direct call into the Rust static library, resolved at link time. The
-        // controller's layer is attached below; Rust owns everything drawn in it.
-        Floom.start()
-        return true
+        true
     }
 
-    func applicationWillTerminate(_ application: UIApplication) {
-        Floom.shutdown()
+    /// The scene lifecycle is not optional on current SDKs: without it the app
+    /// is refused at launch before any of our code runs.
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(
+            name: "Default Configuration",
+            sessionRole: connectingSceneSession.role)
+        configuration.delegateClass = SceneDelegate.self
+        return configuration
+    }
+}
+
+final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+
+    var window: UIWindow?
+
+    func scene(
+        _ scene: UIScene,
+        willConnectTo session: UISceneSession,
+        options connectionOptions: UIScene.ConnectionOptions
+    ) {
+        guard let windowScene = scene as? UIWindowScene else { return }
+        let window = UIWindow(windowScene: windowScene)
+        window.rootViewController = FloomViewController()
+        window.makeKeyAndVisible()
+        self.window = window
     }
 }
 "#
@@ -2238,61 +2347,50 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 
 /// `ios/src/ViewController.swift` — the surface Rust renders into.
-pub fn ios_view_controller_swift(name: &str) -> String {
-    format!(
-        r#"import UIKit
-import MetalKit
-
-/// Hosts the Rust widget tree.
 ///
-/// The view is a `MTKView` because Rust presents through Metal, and a
-/// `CAMetalLayer` is what a Metal texture draws into. A `UIView` with a
-/// `CALayer` would work and would be slower for no reason.
-final class FloomViewController: UIViewController {{
+/// Rust writes RGBA8 into a `CGBitmapContext` this view owns and blits it into
+/// the layer; UIKit forwards touches and the display link drives the frames.
+/// Both halves are needed: Rust has no clock on iOS and UIKit cannot see the
+/// widget tree.
+pub fn ios_view_controller_swift(name: &str) -> String {
+    let _ = name;
+    r#"import UIKit
+import QuartzCore
 
-    private var metalView: MTKView?
+/// The C ABI the static library exports. Declared by symbol name so the host
+/// needs no bridging header — the linker resolves them out of `lib<crate>.a`.
+@_silgen_name("floom_ios_bind_drawable")
+private func floomBindDrawable(
+    _ pixels: UnsafeMutableRawPointer?, _ stride: Int32, _ width: Int32, _ height: Int32) -> Bool
+@_silgen_name("floom_ios_release_drawable")
+private func floomReleaseDrawable()
+@_silgen_name("floom_ios_app_start")
+private func floomAppStart(_ width: Double, _ height: Double, _ scale: Double) -> Bool
+@_silgen_name("floom_ios_app_pump")
+private func floomAppPump() -> Bool
+@_silgen_name("floom_ios_app_touch")
+private func floomAppTouch(_ x: Double, _ y: Double, _ phase: UInt32) -> Bool
+@_silgen_name("floom_ios_set_safe_area_insets")
+private func floomSetSafeArea(_ top: Double, _ right: Double, _ bottom: Double, _ left: Double)
+@_silgen_name("floom_ios_set_keyboard_state")
+private func floomSetKeyboard(_ visible: Bool, _ height: Double)
 
-    override func loadView() {{
-        // A device is created here rather than injected so the view controller
-        // is constructible from a storyboard; `MTLCreateSystemDefaultDevice`
-        // returning nil means no Metal support, which is a real case on old
-        // hardware and is surfaced rather than assumed away.
-        guard let device = MTLCreateSystemDefaultDevice() else {{
-            view = UIView()
-            NSLog("floom: no Metal device; the widget tree will not render")
-            return
-        }}
-        let metal = MTKView(frame: .zero, device: device)
-        metal.colorPixelFormat = .bgra8Unorm
-        metal.framebufferOnly = true
-        // Rust drives the frame loop through its own clock, so the view must not
-        // also ask for display-link frames — two loops would each wait on the
-        // other.
-        metal.isPaused = true
-        metal.enableSetNeedsDisplay = true
-        view = metal
-        metalView = metal
-    }}
+final class FloomViewController: UIViewController {
 
-    override func viewDidAppear(_ animated: Bool) {{
-        super.viewDidAppear(animated)
-        guard let metal = metalView, let layer = metal.layer as? CAMetalLayer else {{ return }}
-        Floom.attach(layer)
-        Floom.run("{name}")
-    }}
+    override func loadView() {
+        view = FloomView(frame: .zero)
+    }
 
-    override func viewDidLayoutSubviews() {{
+    override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        metalView?.frame = view.bounds
-        metalView?.draw()
-        // The safe area is a fact about this view, so publish it on every
-        // layout (orientation changes, cutouts). UIKit gives points, which is
-        // what the Rust side stores.
-        let s = view.safeAreaInsets
-        floomSetSafeArea(s.top, s.right, s.bottom, s.left)
-    }}
+        // The safe area is a fact about this view, so it is published on every
+        // layout: rotation, cutouts and the keyboard all move it.
+        let insets = view.safeAreaInsets
+        floomSetSafeArea(insets.top, insets.right, insets.bottom, insets.left)
+        (view as? FloomView)?.layoutChanged()
+    }
 
-    override func viewWillAppear(_ animated: Bool) {{
+    override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         NotificationCenter.default.addObserver(
             self,
@@ -2304,43 +2402,124 @@ final class FloomViewController: UIViewController {{
             selector: #selector(keyboardWillHide(_:)),
             name: UIResponder.keyboardWillHideNotification,
             object: nil)
-    }}
+    }
 
-    override func viewWillDisappear(_ animated: Bool) {{
+    override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         NotificationCenter.default.removeObserver(self)
-    }}
+    }
 
-    @objc private func keyboardWillShow(_ note: Notification) {{
-        guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {{ return }}
+    @objc private func keyboardWillShow(_ note: Notification) {
+        guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+            return
+        }
         floomSetKeyboard(true, Double(frame.height))
-    }}
+    }
 
-    @objc private func keyboardWillHide(_ note: Notification) {{
+    @objc private func keyboardWillHide(_ note: Notification) {
         floomSetKeyboard(false, 0)
-    }}
-}}
+    }
+}
 
-/// The C ABI, exposed to Swift through the bridging header.
+/// The pixel surface: a bitmap whose memory Rust writes and whose image the
+/// layer shows.
 ///
-/// These functions are what the whole iOS host is: attach a layer, run the
-/// loop, resize, shut down, and forward UIKit facts Rust cannot read itself.
-/// The window-level hooks are declared here so Swift can call them directly
-/// once the staticlib is linked; the bridging header includes `floom.h`.
-enum Floom {{
-    static func start() {{}}
-    static func shutdown() {{}}
-    static func attach(_ layer: CAMetalLayer) {{}}
-    static func run(_ title: String) {{}}
-}}
+/// A `CGBitmapContext` rather than a `CAMetalLayer` because the software
+/// renderer is what the iOS backend has; the buffer is the seam either way.
+final class FloomView: UIView {
 
-/// Window-level facts Rust reads through C ABI seams (see floom-platform-ios).
-/// Declared by symbol name so the generated app needs no extra header entry.
-@_silgen_name("floom_ios_set_safe_area_insets")
-private func floomSetSafeArea(_ top: Double, _ right: Double, _ bottom: Double, _ left: Double) -> Void
-@_silgen_name("floom_ios_set_keyboard_state")
-private func floomSetKeyboard(_ visible: Bool, _ height: Double) -> Void
-"#,
-        name = name
-    )
+    private var context: CGContext?
+    private var displayLink: CADisplayLink?
+    private var scale: Double = 1
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        layer.contentsGravity = .resize
+        backgroundColor = .white
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("FloomView is created in code, not from a nib")
+    }
+
+    /// Called when the view's size may have changed; rebinding recreates the
+    /// buffer because the pixel width changed with it.
+    func layoutChanged() {
+        guard bounds.width > 0, bounds.height > 0 else { return }
+        let widthPx = Int(bounds.width * scale)
+        let heightPx = Int(bounds.height * scale)
+        if let context, context.width == widthPx, context.height == heightPx { return }
+        rebind()
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        guard window != nil else {
+            displayLink?.invalidate()
+            displayLink = nil
+            floomReleaseDrawable()
+            context = nil
+            return
+        }
+        scale = Double(traitCollection.displayScale)
+        rebind()
+        let link = CADisplayLink(target: self, selector: #selector(tick))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    private func rebind() {
+        let widthPx = Int(bounds.width * scale)
+        let heightPx = Int(bounds.height * scale)
+        guard widthPx > 0, heightPx > 0 else { return }
+        guard let created = CGContext(
+            data: nil,
+            width: widthPx,
+            height: heightPx,
+            bitsPerComponent: 8,
+            bytesPerRow: widthPx * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else {
+            NSLog("floom: no bitmap context at \(widthPx)x\(heightPx)")
+            return
+        }
+        context = created
+        layer.contentsScale = CGFloat(scale)
+        let bound = floomBindDrawable(
+            created.data, Int32(created.bytesPerRow), Int32(widthPx), Int32(heightPx))
+        // Points, not pixels: the platform scales by `scale` itself, so handing
+        // it pixels would build a tree three times too large on a retina screen.
+        let started = floomAppStart(Double(bounds.width), Double(bounds.height), scale)
+        NSLog("floom: bound=\(bound) started=\(started) size=\(widthPx)x\(heightPx) scale=\(scale)")
+    }
+
+    @objc private func tick() {
+        guard floomAppPump(), let context, let image = context.makeImage() else { return }
+        layer.contents = image
+    }
+
+    private func forward(_ touches: Set<UITouch>, _ phase: UInt32) {
+        guard let point = touches.first?.location(in: self) else { return }
+        _ = floomAppTouch(Double(point.x) * scale, Double(point.y) * scale, phase)
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forward(touches, 0)
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forward(touches, 1)
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forward(touches, 2)
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        forward(touches, 3)
+    }
+}
+"#
+    .to_string()
 }
