@@ -196,3 +196,78 @@ jobs:
 
       - name: Check the device probe against the real backend
         run: cargo check -p floom-probe --features real
+
+  # The same gap again, on the third mobile target — and a worse one, because
+  # nothing in the repository even claims to cover it: `floom-platform-harmony`
+  # is a `cdylib` whose whole body is `#[cfg(target_env = "ohos")]`, so every
+  # host build compiles the stub and the real arm goes unchecked. Its FFI half
+  # also carries `#[link(name = "native_window")]`, which only a *link* can
+  # check: `cargo check` never asks the linker whether that library exists.
+  #
+  # `aarch64-unknown-linux-ohos` is a std target, so the check needs no SDK.
+  # The link does, hence the SDK action; it gives the NDK's clang and sysroot,
+  # which is what turns "the symbols resolve on the device" from a claim into a
+  # gate.
+  #
+  # `crates/vendor/floom-winit-ohos` is named here for a different reason: it is
+  # excluded from the workspace, so no `cargo check` in this repository ever
+  # reaches it, and it sat there — 3,049 lines of the only OHOS input handling
+  # that exists — while the platform crate grew a second, input-less path
+  # beside it. Checking it keeps the choice between the two honest until one of
+  # them is deleted.
+  ohos-check:
+    name: Floom 2.0 for aarch64-unknown-linux-ohos
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Update toolchain & add the OHOS target
+        run: |
+          rustup update --no-self-update
+          rustup target add aarch64-unknown-linux-ohos
+
+      - name: Setup OpenHarmony SDK
+        id: ohos
+        uses: openharmony-rs/setup-ohos-sdk@v1.0.0
+        with:
+          # The device gate was run on HarmonyOS 7.0.0 / API 26 (docs/platforms.md).
+          version: "7.0"
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ohos-check
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: Fetch dependencies
+        run: cargo fetch --target aarch64-unknown-linux-ohos
+
+      - name: Check the HarmonyOS arms of the platform crates
+        run: >
+          cargo check
+          --package=floom-platform-harmony
+          --package=floom-platform
+          --target aarch64-unknown-linux-ohos
+
+      - name: Check the vendored OHOS event loop
+        run: >
+          cargo check
+          --manifest-path crates/vendor/floom-winit-ohos/Cargo.toml
+          --target aarch64-unknown-linux-ohos
+
+      - name: Show the SDK layout
+        run: |
+          echo "native: ${{ steps.ohos.outputs.ohos_sdk_native }}"
+          ls "${{ steps.ohos.outputs.ohos_sdk_native }}"
+          ls "${{ steps.ohos.outputs.ohos_sdk_native }}/sysroot/usr/lib/aarch64-linux-ohos" | head -20
+
+      - name: Link the HarmonyOS backend
+        env:
+          SDK: ${{ steps.ohos.outputs.ohos_sdk_native }}
+        run: |
+          export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_OHOS_LINKER="$SDK/llvm/bin/clang"
+          export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_OHOS_RUSTFLAGS="-C link-arg=--target=aarch64-linux-ohos -C link-arg=--sysroot=$SDK/sysroot"
+          export LIBRARY_PATH="$SDK/sysroot/usr/lib/aarch64-linux-ohos"
+          cargo build --package=floom-platform-harmony --target aarch64-unknown-linux-ohos
