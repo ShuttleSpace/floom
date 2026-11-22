@@ -509,6 +509,8 @@ pub struct WidgetHost {
     /// Mounted node indices whose widget reported dirty since the last frame
     /// and whose semantics entry therefore needs an incremental refresh.
     semantics_stale: Vec<usize>,
+    /// Per-frame reconciliation hooks; see [`WidgetHost::on_frame`].
+    frame_callbacks: Vec<Box<dyn FnMut(&mut WidgetHost)>>,
     /// Scratch buffers reused across `run_layout` passes: taffy reports
     /// parent-relative rects, and accumulating them into absolute ones needs
     /// one slot per node. Resized (not reallocated) per pass.
@@ -535,6 +537,9 @@ pub struct WidgetHost {
     /// suspended it: animation clocks stop advancing (see
     /// [`WidgetHost::set_paused`]), and the runner drops frame requests.
     paused: bool,
+    /// Area the OS owns (notch, status bar, home indicator), as of the last
+    /// [`Self::set_content_insets`].
+    content_insets: floom_types::Insets,
     focus: FocusManager,
     scope: FocusScopeId,
     /// True when focus was last moved by keyboard navigation (Tab), so a focus
@@ -904,6 +909,7 @@ impl WidgetHost {
             semantics_dirty: true,
             rebuild_reactive: false,
             semantics_stale: Vec::new(),
+            frame_callbacks: Vec::new(),
             // Reused across layout passes so a re-layout does not allocate a
             // fresh `Vec<Option<Rect>>` per pass (grown to node count below).
             layout_relative: Vec::new(),
@@ -912,6 +918,7 @@ impl WidgetHost {
             content_stack: Vec::new(),
             scroll_inherited: Vec::new(),
             paused: false,
+            content_insets: floom_types::Insets::ZERO,
             focus,
             scope,
             keyboard_navigation: false,
@@ -1825,6 +1832,16 @@ impl WidgetHost {
     /// even without a platform event. The mark is conservative — a borrow that
     /// ends up changing nothing costs one extra settling frame, and the frame
     /// loop clears it once it has run.
+    /// Runs `callback` at the start of every frame, with the host in hand.
+    ///
+    /// Event handlers (`Button::on_click`) are `'static` and cannot capture the
+    /// host, so state they touch has to be reconciled somewhere: this is that
+    /// somewhere. Keep it cheap — it runs once per frame even when nothing
+    /// changed.
+    pub fn on_frame(&mut self, callback: impl FnMut(&mut WidgetHost) + 'static) {
+        self.frame_callbacks.push(Box::new(callback));
+    }
+
     pub fn widget_mut<T: WidgetAny + 'static>(&mut self, node: NodeId) -> Option<&mut T> {
         let widget = self
             .nodes
@@ -2464,6 +2481,24 @@ impl WidgetHost {
         }
     }
 
+    /// Reserves area the OS owns — a notch, a status bar, a home indicator.
+    ///
+    /// Applied as padding on the root for the duration of a layout pass rather
+    /// than written into the root's stored style, so the app's own backgrounds
+    /// still paint edge to edge while its content stays clear of the system
+    /// chrome.
+    pub fn set_content_insets(&mut self, insets: floom_types::Insets) {
+        if self.content_insets != insets {
+            self.content_insets = insets;
+            self.layout_dirty = true;
+        }
+    }
+
+    /// The insets the last layout respected.
+    pub fn content_insets(&self) -> floom_types::Insets {
+        self.content_insets
+    }
+
     /// This host's tree, as plain data an inspector can describe into its own
     /// shape.
     ///
@@ -2567,6 +2602,16 @@ impl WidgetHost {
     /// Runs one full frame: update → layout → paint → semantics.
     pub fn frame(&mut self) -> FrameStats {
         let mut stats = FrameStats::default();
+
+        // Frame callbacks run first, so a state change they notice lands in
+        // *this* frame rather than the next one.
+        if !self.frame_callbacks.is_empty() {
+            let mut callbacks = std::mem::take(&mut self.frame_callbacks);
+            for callback in callbacks.iter_mut() {
+                callback(self);
+            }
+            self.frame_callbacks = callbacks;
+        }
 
         // Advance the overlay animations first so update, layout and paint all
         // see the same sampled value — and so an overlay that opened since the
@@ -2717,6 +2762,13 @@ impl WidgetHost {
             self.run_layout();
             self.layout_dirty = false;
             stats.relaid = true;
+            // Geometry can move while the tree does not change shape — a
+            // window resize, a safe-area inset, an animation. Semantics carry
+            // the frame they were published at, so a moved node must re-publish
+            // or a screen reader keeps pointing at where it used to be.
+            if self.semantics_moved() {
+                self.semantics_dirty = true;
+            }
         }
         // Overlays lay out against the viewport independently of the main tree.
         self.layout_overlays();
@@ -2814,6 +2866,17 @@ impl WidgetHost {
         }
         if root_style.height.is_none() {
             root_style.height = Some(Length::Px(self.size.height as f32));
+        }
+        // A widget may ask for its own padding; the OS's reserved area is a
+        // floor on each side, never a replacement.
+        let owned = self.content_insets;
+        if owned != floom_types::Insets::ZERO {
+            root_style.padding = floom_types::Insets {
+                top: root_style.padding.top.max(owned.top),
+                right: root_style.padding.right.max(owned.right),
+                bottom: root_style.padding.bottom.max(owned.bottom),
+                left: root_style.padding.left.max(owned.left),
+            };
         }
         self.layout.set_style(root_node, root_style);
         self.layout.compute(root_node, self.size);
@@ -4557,6 +4620,18 @@ impl WidgetHost {
 
     pub fn semantics(&self) -> &SemanticsTree {
         &self.semantics
+    }
+
+    /// Whether any published semantic node's box no longer matches layout.
+    fn semantics_moved(&self) -> bool {
+        self.semantics.iter().any(|(id, node)| {
+            match self.node_at(id.index() as usize) {
+                Some(live) => self.bounds(live) != node.bounds,
+                // The node was removed this frame; the structural pass will
+                // notice, and reporting a move for it would be noise.
+                None => false,
+            }
+        })
     }
 
     pub fn last_stats(&self) -> FrameStats {

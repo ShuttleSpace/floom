@@ -524,6 +524,8 @@ pub mod ios_host {
         platform: HostPlatform,
         runner: AppRunner<SoftwarePresenter>,
         window: WindowId,
+        /// Device pixels per logical point, as UIKit reported it.
+        scale: f64,
     }
 
     thread_local! {
@@ -553,11 +555,14 @@ pub mod ios_host {
         let runner = AppRunner::new(host, SoftwarePresenter::new());
         platform.request_frame(window);
         APP.with(|slot| {
-            *slot.borrow_mut() = Some(Hosted {
+            let mut hosted = Hosted {
                 platform,
                 runner,
                 window,
-            })
+                scale: if scale > 0.0 { scale } else { 1.0 },
+            };
+            apply_safe_area(&mut hosted);
+            *slot.borrow_mut() = Some(hosted)
         });
         // UIKit reaches the widget tree only through here: the adapter knows the
         // node's id, and the id is resolved by the host that owns it.
@@ -575,12 +580,23 @@ pub mod ios_host {
     }
 
     /// Run one frame: dispatch whatever the host queued, paint, blit.
+    /// The insets UIKit reports are a floor on the root's padding, so content
+    /// clears the status bar and the home indicator while backgrounds still
+    /// paint edge to edge.
+    fn apply_safe_area(hosted: &mut Hosted) {
+        hosted
+            .runner
+            .host_mut()
+            .set_content_insets(floom_platform_ios::packages::safe_area::safe_area_insets());
+    }
+
     pub fn pump() -> bool {
         APP.with(|slot| {
             let mut slot = slot.borrow_mut();
             let Some(app) = slot.as_mut() else {
                 return false;
             };
+            apply_safe_area(app);
             app.runner.pump(&mut app.platform);
             let presenter = app.runner.presenter();
             let (width, height) = (presenter.width(), presenter.height());
@@ -598,7 +614,10 @@ pub mod ios_host {
             let Some(app) = slot.as_mut() else {
                 return false;
             };
-            let position = Point::new(x, y);
+            // UIKit hands us device pixels; layout and hit testing are in
+            // logical points, so the platform's own scale is divided out here.
+            let scale = if app.scale > 0.0 { app.scale } else { 1.0 };
+            let position = Point::new(x / scale, y / scale);
             let window = app.window;
             app.platform.push_event(PlatformEvent::PointerMoved {
                 window,

@@ -26,13 +26,13 @@
 | 能力 | macOS | Windows/Linux | Android | iOS | OHOS | Web/TUI |
 | --- | --- | --- | --- | --- | --- | --- |
 | 上屏 | winit + Metal/vello | winit + vello | Vulkan（模拟器经验证 `GPU adapter: Apple M4 Pro (Vulkan)`） | `floom_ios_bind_drawable` 像素指针 + Metal surface | `floom_harmony_bind_surface` + `present_frame`（软件 blit） | canvas blit / 字符网格 |
-| 指针/触摸 | winit | winit | winit-android → ui-events | **UIKit 侧**（gate 用 `idb ui tap` 验过，Rust 侧无 touch 导出） | **无**（见 §4） | winit-web / TUI 键鼠 |
+| 指针/触摸 | winit | winit | winit-android → ui-events | UIKit 侧驱动 → `floom_ios_app_touch`（设备像素，Rust 除以 scale 进逻辑点；`idb ui tap` 实测能改状态） | **无**（见 §4） | winit-web / TUI 键鼠 |
 | 键盘 | winit | winit | winit-android keycodes（`Keycode::Tab → Key::Named(Tab)`，`winit-android/src/keycodes.rs:312`） | UIKit | **无** | 有 |
 | IME | winit IME + `crates/platform/floom-platform-desktop/src/ime/` | 同左（Win32 组合桥未完成） | 锚点 `EditText.Editable` + `BaseInputConnection` 组合区 → `ImeCommit`/`ImePreedit` | 隐藏 `UITextField` → `floom_ios_push_ime_input`（拉丁 pass，CJK 提交成功） | **无** | 部分 |
 | 剪贴板 | `floom-platform-desktop/src/clipboard.rs`：macOS `NSPasteboard`、Windows `CF_UNICODETEXT`（两者都有往返测试，Windows 在 CI runner 上真跑过含 CJK）、Linux 走 `wl-copy`/`xclip`/`xsel`（只有解析逻辑有测试，赛道里没有可用的会话） | JNI ClipboardService（双向 pass，需先获得焦点） | objc2 `UIPasteboard`（双向 pass，含系统粘贴同意） | **无** | 无 |
 | 无障碍 | 语义树在进程内，**无 NSAccessibility 桥** | 无 AT-SPI / 无 UIA | `CapabilityLimitedAccessibilityAdapter`，`NATIVE_BRIDGE` 故意不置位 | 无原生适配器（frame 仍为 0） | 无 | 无 |
 | 文件选择 | **无 trait**（平台层还没这个抽象） | 同左 | SAF 代码完整，结果回传需要 `FloomNativeActivity` 子类 | `ios_file.rs`/`ios_receive.rs` 有，example 未接 | 无 | — |
-| 安全区 | n/a | n/a | 无公开 `WindowHandle::safe_area()` | 有 read + `apply_safe_area(true)`，无公开读回 | 无 | — |
+| 安全区 | n/a | n/a | 无公开 `WindowHandle::safe_area()` | **已接**（2026-11-22）：UIKit 的 `safeAreaInsets` 经 `floom_ios_set_safe_area_insets` 进 Rust，宿主每帧 `WidgetHost::set_content_insets` 作为根内边距；模拟器实测内容从 y=0 移到 y=62 | 无 | — |
 | 声明能力位 | WINDOWING/TOUCH/IME/CLIPBOARD/A11Y 视 feature | 同左 | `android_default()` = WINDOWING\|TOUCH\|IME\|SOFTWARE_RENDER\|**WEBGPU** | `ios_default()` = WINDOWING\|TOUCH\|NATIVE_VIEW\|SOFTWARE_RENDER | `harmony_default()` = WINDOWING\|TOUCH\|NATIVE_VIEW\|SOFTWARE_RENDER | 各自 |
 
 能力位在 `crates/platform/floom-platform/src/capabilities.rs`。**规则：只声明已有通路的能力。** 当前违反的项在 §4/§5。
@@ -89,7 +89,8 @@
 2. **a11y 零 frame**（item 3 fail）：`idb ui describe-all` 有 label，但每个节点 frame 为 0，VoiceOver 无法命中。根因有两层，第一层已修（2026-11-21）：`SemanticsNode` 原本**没有几何字段**，适配器拿到节点也不知道它在哪——现在带 `bounds`（由布局填，不是 widget 自报），并且 `Platform::accessibility` 这道门把每帧的 `SemanticsDiff` 交给适配器（`crates/app/floom-app/src/runner.rs` 的 `deliver_semantics`）。第二层已修（2026-11-21）：`crates/platform/floom-platform-ios/src/accessibility.rs` 把语义树展平成 `#[repr(C)] A11yNode` 记录（label / 角色码 / 点在容器坐标系的 frame / enabled / selected / focused，按 y 再按 x 排序 = 阅读顺序），经 `floom_ios_set_a11y_sink` 交给 Swift 宿主；宿主把它们变成 `UIAccessibilityElement` 并赋给 `view.accessibilityElements`。模拟器实测（`idb ui describe-all`）：`StaticText | Count: 0 | {0,0,402,14}`、`Button | Increment | {0,22,78,22}` —— frame 不再是 0。
 动作回传（2026-11-22）：`WidgetHost::activate(ElementId)` 把激活当作**元素中心的点击**派发——屏幕阅读器要够到的就是那个 click handler，另开一条"无障碍激活"通路只会让两者说法不一致。`UIAccessibilityElement` 的子类带着下标回调 `floom_ios_a11y_activate(index)`，适配器把下标换成 `ElementId` 再交给 `ios_host` 注册的处理器（它才拿得到 widget 树）。能力位现在含 `ACTION_INVOKE`；`SetValue`/`ScrollIntoView` 仍如实报 `false`。
 **证据分级**（按"CI 有效性"规则）：Rust 两条腿有测试（`floom-app` 的 `activating_a_semantics_node_runs_what_a_click_would` 证明回调真的跑了一次；`floom-platform-ios` 的 `the_host_activates_the_node_behind_the_index_it_was_given` 证明下标→id→处理器）；UIKit 那一腿（`accessibilityActivate`）**没有机器验证**——`idb` 只能注入触摸，不能触发 VoiceOver 的双击，所以这一条要么在真机上手动验，要么等 VoiceOver 自动化。
-3. 能力位声明 `TOUCH`，而 Rust 侧没有任何 touch 导出——触摸完全由 UIKit 侧驱动，Rust 侧的能力位属"声明"，不是"可实现"。
+3. 能力位的 `TOUCH` 由 UIKit 侧兑现：`floom_ios_app_touch` 收设备像素、除以 `displayScale` 后进逻辑点空间（`crates/app/floom/src/platform.rs` 的 `ios_host::touch`）。漏掉这次除法时命中测试全部落空——这是首次上机发现的问题。
+4. **safe-area 曾经只是"读得到、没人用"**（2026-11-22 修）：`floom-platform-ios` 的 `safe_area_insets()` 一直在，但全仓没有消费方，于是内容画到状态栏下面。现在 `WidgetHost::set_content_insets(Insets)` 把它当作每趟布局的根内边距（每个方向取 `max`，widget 自己的 padding 是更高的下限），宿主在 `start` 与每帧 `pump` 各同步一次。单测 `crates/app/floom-app/tests/insets.rs`（2 个）。与它一起修的两个连带缺陷：布局移动后已发布的语义 bounds 不会刷新（`WidgetHost::semantics_moved` 现在会触发重建），以及事件处理器拿不到 host —— 新增 `WidgetHost::on_frame`（`crates/app/floom-app/tests/frame_callbacks.rs`），`floom create` 生成的示例因此能真的显示点击次数。
 
 ## 6. Android：已定位缺陷与教训
 

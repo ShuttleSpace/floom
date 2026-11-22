@@ -141,6 +141,7 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use {{FLOOM}}::prelude::*;
 
 static COUNT: AtomicI64 = AtomicI64::new(0);
+static SHOWN: AtomicI64 = AtomicI64::new(0);
 
 /// Builds the widget tree. `host` owns the live widgets: they are described
 /// here and mutated through `host.widget_mut::<T>(node)`.
@@ -152,24 +153,28 @@ pub fn build(host: &mut WidgetHost) {
         }))
         .child(Child::new(ChildKey::index(1), LayoutRequest::new(), || {
             Box::new(Button::new("Increment").on_click(|| {
-                let n = COUNT.fetch_add(1, Ordering::Relaxed) + 1;
-                println!("count = {n}");
+                COUNT.fetch_add(1, Ordering::Relaxed);
             }))
         }));
 
     host.mount_root(LayoutStyle::default(), root);
+
+    // `on_click` is `'static` and cannot capture the host, so the label reads
+    // the counter back here instead: child 0 of the root is the `Text`.
+    host.on_frame(|host| {
+        let count = COUNT.load(Ordering::Relaxed);
+        if SHOWN.load(Ordering::Relaxed) == count {
+            return;
+        }
+        if let Some(node) = host.node_at(1)
+            && let Some(text) = host.widget_mut::<Text>(node)
+        {
+            text.set_content(format!("Count: {count}"));
+            SHOWN.store(count, Ordering::Relaxed);
+        }
+    });
     host.frame();
 }
-
-// To drive the UI from state, mutate the mounted node and pump a frame:
-//
-//   let node = host.node_at(0).unwrap();
-//   host.widget_mut::<Text>(node).unwrap().set_content("Count: 1");
-//   host.frame();
-//
-// `on_click` callbacks must be `'static` and so cannot capture `host`; keep
-// shared state in a static or an `Arc`, then reconcile it from a frame
-// callback.
 "#;
 
 /// The desktop entry point. The tree lives in `src/app.rs` so the mobile hosts

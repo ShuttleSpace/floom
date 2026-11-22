@@ -1319,6 +1319,7 @@ dependencies = [
 name = "floom-platform-ios"
 version = "0.2.0"
 dependencies = [
+ "floom-accessibility",
  "floom-platform",
  "floom-types",
  "objc2",
