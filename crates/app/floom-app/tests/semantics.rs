@@ -120,3 +120,40 @@ fn a_backend_without_an_adapter_keeps_the_tree_instead_of_panicking() {
     let (_, node) = tree.iter().next().expect("one node");
     assert!(node.bounds.width() > 0.0);
 }
+
+#[test]
+fn activating_a_semantics_node_runs_what_a_click_would() {
+    // The whole point of a screen reader is that its double-tap reaches the
+    // same handler a finger would. Deliver it as a click at the node's centre,
+    // so a widget needs no a11y-specific path that could drift from its own.
+    use std::cell::Cell;
+
+    let hits = Rc::new(Cell::new(0));
+    let counter = hits.clone();
+    let mut host = floom_app::WidgetHost::new();
+    host.mount_root(
+        LayoutStyle {
+            width: Some(Length::Px(200.0)),
+            height: Some(Length::Px(32.0)),
+            ..LayoutStyle::default()
+        },
+        Button::new("Ping").on_click(move || counter.set(counter.get() + 1)),
+    );
+    host.frame();
+
+    let (id, _) = host
+        .semantics()
+        .iter()
+        .next()
+        .map(|(id, node)| (id, node.clone()))
+        .expect("the button publishes itself");
+    assert!(
+        host.activate(id),
+        "an accessible button must report the activation"
+    );
+    assert_eq!(hits.get(), 1, "the click handler must have run once");
+    assert!(
+        !host.activate(ElementId::new(9999, 1)),
+        "a node that is gone must not report a delivery"
+    );
+}

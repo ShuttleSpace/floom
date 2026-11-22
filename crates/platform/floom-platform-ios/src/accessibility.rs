@@ -42,6 +42,40 @@ pub type Sink = unsafe extern "C" fn(nodes: *const A11yNode, count: usize);
 
 static SINK: Mutex<Option<Sink>> = Mutex::new(None);
 
+/// The ids behind the last published list, in the same order: UIKit hands back
+/// an index, and an index is only meaningful while this list is current.
+static ORDER: Mutex<Vec<ElementId>> = Mutex::new(Vec::new());
+
+/// What runs when UIKit activates an element. Registered by the host owner
+/// (`floom::platform::ios_host`), because only it can reach the widget tree.
+static ACTIVATE: Mutex<Option<Box<dyn Fn(ElementId) -> bool + Send>>> = Mutex::new(None);
+
+/// Installs the handler behind [`floom_ios_a11y_activate`].
+pub fn set_activate_sink(handler: Box<dyn Fn(ElementId) -> bool + Send>) {
+    *ACTIVATE.lock().unwrap_or_else(|e| e.into_inner()) = Some(handler);
+}
+
+/// Called by the Swift host from `UIAccessibilityElement.accessibilityActivate`.
+///
+/// Returns whether a widget consumed it, which is what UIKit expects a failed
+/// activation to look like.
+#[unsafe(no_mangle)]
+pub extern "C" fn floom_ios_a11y_activate(index: usize) -> bool {
+    let id = ORDER
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get(index)
+        .copied();
+    let Some(id) = id else {
+        return false;
+    };
+    let handler = ACTIVATE.lock().unwrap_or_else(|e| e.into_inner());
+    match handler.as_ref() {
+        Some(activate) => activate(id),
+        None => false,
+    }
+}
+
 /// Called by the Swift host once, with a function that rebuilds its elements.
 ///
 /// # Safety
@@ -133,6 +167,8 @@ impl IosAccessibility {
                 CString::new(node.label.as_str()).unwrap_or_else(|_| CString::default())
             })
             .collect();
+        *ORDER.lock().unwrap_or_else(|e| e.into_inner()) =
+            nodes.iter().map(|(id, _)| **id).collect();
         let records: Vec<A11yNode> = nodes
             .iter()
             .zip(&labels)
@@ -167,13 +203,22 @@ impl AccessibilityAdapter for IosAccessibility {
     }
 
     fn capabilities(&self) -> AccessibilityCapabilities {
-        // Actions are not delivered yet: UIKit would need to call back into the
-        // element's handler, which no host hook exists for.
-        AccessibilityCapabilities::SCREEN_READER | AccessibilityCapabilities::NATIVE_BRIDGE
+        AccessibilityCapabilities::SCREEN_READER
+            | AccessibilityCapabilities::NATIVE_BRIDGE
+            | AccessibilityCapabilities::ACTION_INVOKE
     }
 
-    fn perform_action(&mut self, _node: ElementId, _action: SemanticsAction) -> bool {
-        false
+    fn perform_action(&mut self, node: ElementId, action: SemanticsAction) -> bool {
+        match action {
+            SemanticsAction::Activate => {
+                let handler = ACTIVATE.lock().unwrap_or_else(|e| e.into_inner());
+                handler.as_ref().is_some_and(|activate| activate(node))
+            }
+            // Setting a value and scrolling have no UIKit path yet; reporting
+            // them as delivered would make a screen reader look successful
+            // while nothing moved.
+            _ => false,
+        }
     }
 
     fn reset(&mut self) {
@@ -298,6 +343,47 @@ mod tests {
         let seen = SEEN.lock().unwrap_or_else(|e| e.into_inner()).clone();
         assert_eq!(seen.len(), 1, "{seen:?}");
         assert_eq!(seen[0].0, "visible");
+        // SAFETY: as above.
+        unsafe { floom_ios_set_a11y_sink(None) };
+    }
+
+    #[test]
+    fn the_host_activates_the_node_behind_the_index_it_was_given() {
+        let _guard = slot();
+        // SAFETY: as above.
+        unsafe { floom_ios_set_a11y_sink(Some(record)) };
+        static ASKED: StdMutex<Vec<u64>> = StdMutex::new(Vec::new());
+        set_activate_sink(Box::new(|id| {
+            ASKED
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .push(id.raw());
+            true
+        }));
+        let mut adapter = IosAccessibility::new();
+        let second = ElementId::new(7, 1);
+        adapter.update(&diff(vec![
+            (
+                ElementId::new(2, 1),
+                node(SemanticsRole::StaticText, "top", 0.0, 0.0, 10.0, 10.0),
+            ),
+            (
+                second,
+                node(SemanticsRole::Button, "bottom", 0.0, 20.0, 10.0, 10.0),
+            ),
+        ]));
+
+        assert!(floom_ios_a11y_activate(1), "index 1 is the second node");
+        assert_eq!(
+            ASKED.lock().unwrap_or_else(|e| e.into_inner()).as_slice(),
+            [second.raw()]
+        );
+        assert!(
+            !floom_ios_a11y_activate(9),
+            "an index past the list must not activate anything"
+        );
+        // The sink is process-wide; leave nothing behind for the next test.
+        *ACTIVATE.lock().unwrap_or_else(|e| e.into_inner()) = None;
         // SAFETY: as above.
         unsafe { floom_ios_set_a11y_sink(None) };
     }

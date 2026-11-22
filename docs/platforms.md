@@ -87,7 +87,8 @@
    `han_text_shapes_to_real_glyphs`（`你好世界` 无 `.notdef`）、`registering_is_safe_on_every_target`。
    真机门槛仍是 `gates/ios.md` item 2。
 2. **a11y 零 frame**（item 3 fail）：`idb ui describe-all` 有 label，但每个节点 frame 为 0，VoiceOver 无法命中。根因有两层，第一层已修（2026-11-21）：`SemanticsNode` 原本**没有几何字段**，适配器拿到节点也不知道它在哪——现在带 `bounds`（由布局填，不是 widget 自报），并且 `Platform::accessibility` 这道门把每帧的 `SemanticsDiff` 交给适配器（`crates/app/floom-app/src/runner.rs` 的 `deliver_semantics`）。第二层已修（2026-11-21）：`crates/platform/floom-platform-ios/src/accessibility.rs` 把语义树展平成 `#[repr(C)] A11yNode` 记录（label / 角色码 / 点在容器坐标系的 frame / enabled / selected / focused，按 y 再按 x 排序 = 阅读顺序），经 `floom_ios_set_a11y_sink` 交给 Swift 宿主；宿主把它们变成 `UIAccessibilityElement` 并赋给 `view.accessibilityElements`。模拟器实测（`idb ui describe-all`）：`StaticText | Count: 0 | {0,0,402,14}`、`Button | Increment | {0,22,78,22}` —— frame 不再是 0。
-**未做**：动作回传。`UIAccessibilityElement` 的双击要落到 widget 上，需要一条 "UIKit 激活 → `SemanticsAction::Activate` → 组件回调" 的通路，而 `WidgetHost` 目前没有派发语义动作的入口（`AccessibilityAdapter::perform_action` 只有测试实现），所以适配器如实只声明 `SCREEN_READER | NATIVE_BRIDGE`、不含 `ACTION_INVOKE`。这是 S1.4 的收尾项，不是已完成项。
+动作回传（2026-11-22）：`WidgetHost::activate(ElementId)` 把激活当作**元素中心的点击**派发——屏幕阅读器要够到的就是那个 click handler，另开一条"无障碍激活"通路只会让两者说法不一致。`UIAccessibilityElement` 的子类带着下标回调 `floom_ios_a11y_activate(index)`，适配器把下标换成 `ElementId` 再交给 `ios_host` 注册的处理器（它才拿得到 widget 树）。能力位现在含 `ACTION_INVOKE`；`SetValue`/`ScrollIntoView` 仍如实报 `false`。
+**证据分级**（按"CI 有效性"规则）：Rust 两条腿有测试（`floom-app` 的 `activating_a_semantics_node_runs_what_a_click_would` 证明回调真的跑了一次；`floom-platform-ios` 的 `the_host_activates_the_node_behind_the_index_it_was_given` 证明下标→id→处理器）；UIKit 那一腿（`accessibilityActivate`）**没有机器验证**——`idb` 只能注入触摸，不能触发 VoiceOver 的双击，所以这一条要么在真机上手动验，要么等 VoiceOver 自动化。
 3. 能力位声明 `TOUCH`，而 Rust 侧没有任何 touch 导出——触摸完全由 UIKit 侧驱动，Rust 侧的能力位属"声明"，不是"可实现"。
 
 ## 6. Android：已定位缺陷与教训

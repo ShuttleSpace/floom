@@ -41,8 +41,8 @@ use floom_core::{
     Align, AnimationSpec, Axis, Child, ChildKey, CreateContext, ElementId, Event, EventContext,
     FontWeight, Key, KeyEvent, KeyPhase, LayoutRequest, Length, Modifiers, NamedKey, NativeGrant,
     NativeRequest, NativeSnapshot, OverlayHandle, OverlayKind, OverlayRequest, PaintContext, Point,
-    PointerPhase, Position, Rect, ResourceId, ScrollOffset, SemanticsHint, SemanticsRole, Size,
-    UpdateContext,
+    PointerEvent, PointerKind, PointerPhase, Position, Rect, ResourceId, ScrollOffset,
+    SemanticsHint, SemanticsRole, Size, UpdateContext,
 };
 pub use floom_core::{HostedKind, HostedNode};
 use floom_layout::{
@@ -2363,6 +2363,38 @@ impl WidgetHost {
 
     pub fn bounds(&self, node: NodeId) -> Rect {
         self.nodes[node.0].bounds
+    }
+
+    /// Delivers an assistive technology's activation to `element`.
+    ///
+    /// Routed as a click at the element's centre rather than through a second
+    /// activation path: the click handler *is* what a screen reader is reaching
+    /// for, and a separate path would let the two disagree about what the
+    /// widget does. Returns whether any widget consumed it.
+    pub fn activate(&mut self, element: floom_types::ElementId) -> bool {
+        let Some(node) = self.node_at(element.index() as usize) else {
+            return false;
+        };
+        let bounds = self.bounds(node);
+        if bounds.width() <= 0.0 || bounds.height() <= 0.0 {
+            return false;
+        }
+        let at = crate::Point::new((bounds.x0 + bounds.x1) / 2.0, (bounds.y0 + bounds.y1) / 2.0);
+        let mut handled = false;
+        for phase in [PointerPhase::Down, PointerPhase::Up] {
+            handled |= self.dispatch(
+                PointerEvent {
+                    phase,
+                    kind: PointerKind::Mouse,
+                    button: Some(floom_types::PointerButton::Primary),
+                    position: at,
+                    modifiers: crate::Modifiers::NONE,
+                    click_count: 1,
+                }
+                .into(),
+            );
+        }
+        handled
     }
 
     pub fn parent(&self, node: NodeId) -> Option<NodeId> {

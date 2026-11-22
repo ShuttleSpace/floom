@@ -2376,6 +2376,8 @@ private func floomSetSafeArea(_ top: Double, _ right: Double, _ bottom: Double, 
 private func floomSetKeyboard(_ visible: Bool, _ height: Double)
 @_silgen_name("floom_ios_set_a11y_sink")
 private func floomSetA11ySink(_ sink: FloomA11ySink?)
+@_silgen_name("floom_ios_a11y_activate")
+private func floomA11yActivate(_ index: Int) -> Bool
 
 /// One accessible element as the Rust side lays it out. Mirrors
 /// `A11yNode` in `floom-platform-ios/src/accessibility.rs`; change both.
@@ -2416,6 +2418,21 @@ private func traits(for role: UInt32) -> UIAccessibilityTraits {
     case 20: return .none
     case 21: return .button
     default: return .none
+    }
+}
+
+/// An element that knows which node it stands for, so a double-tap can reach
+/// the widget's own click handler instead of a parallel implementation.
+final class FloomA11yElement: UIAccessibilityElement {
+    let node: Int
+
+    init(index: Int, container: Any) {
+        node = index
+        super.init(accessibilityContainer: container)
+    }
+
+    override func accessibilityActivate() -> Bool {
+        floomA11yActivate(node)
     }
 }
 
@@ -2563,7 +2580,7 @@ final class FloomView: UIView {
         isAccessibilityElement = false
         a11yElements = (0 ..< count).map { index in
             let node = nodes[index]
-            let element = UIAccessibilityElement(accessibilityContainer: self)
+            let element = FloomA11yElement(index: index, container: self)
             element.accessibilityLabel = node.label.map { String(cString: $0) }
             element.accessibilityTraits = traits(for: node.role)
             if !node.enabled {

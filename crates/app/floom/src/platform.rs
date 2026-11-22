@@ -559,6 +559,18 @@ pub mod ios_host {
                 window,
             })
         });
+        // UIKit reaches the widget tree only through here: the adapter knows the
+        // node's id, and the id is resolved by the host that owns it.
+        floom_platform_ios::accessibility::set_activate_sink(Box::new(|id| {
+            APP.with(|slot| match slot.try_borrow_mut() {
+                Ok(mut live) => live
+                    .as_mut()
+                    .is_some_and(|hosted| hosted.runner.host_mut().activate(id)),
+                // A frame is on the stack right now; the activation is dropped
+                // rather than queued, because UIKit's caller expects an answer.
+                Err(_) => false,
+            })
+        }));
         pump()
     }
 
