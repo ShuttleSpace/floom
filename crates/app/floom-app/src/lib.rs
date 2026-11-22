@@ -2762,13 +2762,6 @@ impl WidgetHost {
             self.run_layout();
             self.layout_dirty = false;
             stats.relaid = true;
-            // Geometry can move while the tree does not change shape — a
-            // window resize, a safe-area inset, an animation. Semantics carry
-            // the frame they were published at, so a moved node must re-publish
-            // or a screen reader keeps pointing at where it used to be.
-            if self.semantics_moved() {
-                self.semantics_dirty = true;
-            }
         }
         // Overlays lay out against the viewport independently of the main tree.
         self.layout_overlays();
@@ -4623,15 +4616,15 @@ impl WidgetHost {
     }
 
     /// Whether any published semantic node's box no longer matches layout.
-    fn semantics_moved(&self) -> bool {
-        self.semantics.iter().any(|(id, node)| {
-            match self.node_at(id.index() as usize) {
-                Some(live) => self.bounds(live) != node.bounds,
-                // The node was removed this frame; the structural pass will
-                // notice, and reporting a move for it would be noise.
-                None => false,
-            }
-        })
+    /// Rebuilds the semantics tree on the next frame.
+    ///
+    /// Structure and content changes already do this. This is for a host that
+    /// moved everything at once — a safe-area inset, a resize — and would
+    /// otherwise leave the published frames pointing where the widgets used to
+    /// be. It is a rebuild, not a per-frame habit: animations move nodes
+    /// without it, and nobody needs an element's frame mid-transition.
+    pub fn refresh_semantics(&mut self) {
+        self.semantics_dirty = true;
     }
 
     pub fn last_stats(&self) -> FrameStats {

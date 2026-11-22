@@ -526,6 +526,8 @@ pub mod ios_host {
         window: WindowId,
         /// Device pixels per logical point, as UIKit reported it.
         scale: f64,
+        /// The safe area the host last pushed into layout.
+        insets: floom_types::Insets,
     }
 
     thread_local! {
@@ -560,6 +562,7 @@ pub mod ios_host {
                 runner,
                 window,
                 scale: if scale > 0.0 { scale } else { 1.0 },
+                insets: floom_types::Insets::ZERO,
             };
             apply_safe_area(&mut hosted);
             *slot.borrow_mut() = Some(hosted)
@@ -584,10 +587,16 @@ pub mod ios_host {
     /// clears the status bar and the home indicator while backgrounds still
     /// paint edge to edge.
     fn apply_safe_area(hosted: &mut Hosted) {
-        hosted
-            .runner
-            .host_mut()
-            .set_content_insets(floom_platform_ios::packages::safe_area::safe_area_insets());
+        let insets = floom_platform_ios::packages::safe_area::safe_area_insets();
+        if insets == hosted.insets {
+            return;
+        }
+        hosted.insets = insets;
+        let host = hosted.runner.host_mut();
+        host.set_content_insets(insets);
+        // Everything moved at once, so the published frames are now wrong and
+        // no widget is going to report dirty for it.
+        host.refresh_semantics();
     }
 
     pub fn pump() -> bool {
