@@ -7,6 +7,9 @@
 //! decides *what* the tree looks like — reading order, labels, frames — and
 //! hands it over in one call per change.
 //!
+//! On a device the publisher stores the encoded tree, and the host's
+//! `dev.floom.android.FloomA11y` pulls it whenever `AccessibilityNodeProvider`
+//! asks for children — pulling matches who decides *when* the tree is needed.
 //! Without a publisher the adapter still retains the tree (tooling and tests
 //! read it), but [`AccessibilityAdapter::perform_action`] reports `false` and
 //! `NATIVE_BRIDGE` stays unset: there is no JVM to deliver to.
@@ -42,6 +45,48 @@ type Activate = Box<dyn Fn(ElementId) -> bool + Send>;
 static ORDER: Mutex<Vec<ElementId>> = Mutex::new(Vec::new());
 
 static ACTIVATE: Mutex<Option<Activate>> = Mutex::new(None);
+
+/// The tree as the JVM half reads it: one node per line, tab separated.
+///
+/// Stored rather than pushed so the host can pull on the accessibility
+/// thread at the moment `AccessibilityNodeProvider` needs children, instead of
+/// marshalling to the UI thread on every change.
+static PUBLISHED: Mutex<String> = Mutex::new(String::new());
+
+/// `index`, `role`, `label`, `x`, `y`, `width`, `height`, then three flags.
+///
+/// Tabs and newlines inside a label become spaces: the format's separator is
+/// the only thing the JVM half parses against.
+fn encode(nodes: &[Node]) -> String {
+    let mut out = String::with_capacity(nodes.len() * 64);
+    for node in nodes {
+        let label: String = node
+            .label
+            .chars()
+            .map(|c| {
+                if c == '\t' || c == '\n' || c == '\r' {
+                    ' '
+                } else {
+                    c
+                }
+            })
+            .collect();
+        out.push_str(&format!(
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+            node.index,
+            node.role,
+            label,
+            node.bounds.x0,
+            node.bounds.y0,
+            node.bounds.width(),
+            node.bounds.height(),
+            u8::from(node.enabled),
+            u8::from(node.selected),
+            u8::from(node.focused),
+        ));
+    }
+    out
+}
 
 /// Registers the host's activation handler — the only thing that holds the tree.
 pub fn set_activate_sink(sink: Activate) {
@@ -105,7 +150,7 @@ impl AndroidAccessibility {
     pub fn new() -> Self {
         Self {
             frame: AccessibilityFrame::default(),
-            publisher: None,
+            publisher: default_publisher(),
         }
     }
 
@@ -216,6 +261,78 @@ impl AccessibilityAdapter for AndroidAccessibility {
     }
 }
 
+/// The publisher a device needs: store the encoded tree for the JVM half.
+///
+/// `None` on the host, where there is no JVM to pull it — and where a stored
+/// tree would only make `NATIVE_BRIDGE` a lie.
+fn default_publisher() -> Option<Publisher> {
+    #[cfg(target_os = "android")]
+    {
+        Some(Box::new(store))
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        None
+    }
+}
+
+/// Keep the latest tree where [`jvm::Java_dev_floom_android_FloomA11y_pull`]
+/// can read it.
+fn store(nodes: &[Node]) {
+    if let Ok(mut published) = PUBLISHED.lock() {
+        published.clear();
+        published.push_str(&encode(nodes));
+    }
+}
+
+/// The JNI entries `dev.floom.android.FloomA11y` declares as `external fun`s.
+///
+/// Names are mangled by hand because the class is fixed: the scaffold ships it
+/// as part of the Android project, so its path is not the app's to choose. The
+/// first parameter is [`jni::EnvUnowned`], which is what JNI actually passes —
+/// `jni::Env` is not FFI safe and taking it by value dereferences a bogus
+/// pointer.
+#[cfg(target_os = "android")]
+mod jvm {
+    use super::{PUBLISHED, activate};
+    use jni::objects::{JClass, JString};
+    use jni::sys::{JNI_FALSE, JNI_TRUE, jboolean, jint};
+
+    /// The tree the provider should show, or null when there is none yet.
+    #[unsafe(no_mangle)]
+    pub extern "system" fn Java_dev_floom_android_FloomA11y_pull<'local>(
+        mut unowned_env: jni::EnvUnowned<'local>,
+        _class: JClass<'local>,
+    ) -> JString<'local> {
+        unowned_env
+            .with_env(|env| {
+                let payload = match PUBLISHED.lock() {
+                    Ok(published) => published.clone(),
+                    Err(_) => String::new(),
+                };
+                JString::from_str(env, payload)
+            })
+            .resolve::<jni::errors::ThrowRuntimeExAndDefault>()
+    }
+
+    /// `performAction(ACTION_CLICK)` for node `index`; false when nothing ran.
+    #[unsafe(no_mangle)]
+    pub extern "system" fn Java_dev_floom_android_FloomA11y_activate(
+        _env: jni::EnvUnowned,
+        _class: JClass,
+        index: jint,
+    ) -> jboolean {
+        if index < 0 {
+            return JNI_FALSE;
+        }
+        if activate(index as usize) {
+            JNI_TRUE
+        } else {
+            JNI_FALSE
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::cell::RefCell;
@@ -246,6 +363,30 @@ mod tests {
                 .collect(),
             ..SemanticsDiff::default()
         }
+    }
+
+    #[test]
+    fn the_encoded_tree_is_one_line_per_node() {
+        let nodes = vec![Node {
+            index: 0,
+            label: "Increment\tx\ny".to_string(),
+            role: "button",
+            bounds: Rect {
+                x0: 0.0,
+                y0: 24.0,
+                x1: 78.0,
+                y1: 46.0,
+            },
+            enabled: true,
+            selected: false,
+            focused: false,
+        }];
+        // Tabs and newlines in a label are flattened: the line's own tabs are
+        // the only separators the JVM half parses against.
+        assert_eq!(
+            encode(&nodes),
+            "0\tbutton\tIncrement x y\t0\t24\t78\t22\t1\t0\t0\n"
+        );
     }
 
     #[test]

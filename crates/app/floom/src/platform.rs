@@ -838,6 +838,10 @@ mod android {
                 /// The window size the insets were read at, so rotation and the
                 /// navigation bar switching mode re-read them exactly once.
                 insets_for: Option<floom_types::Size>,
+                /// Frames spent asking. `getRootWindowInsets` returns null until
+                /// the window is attached, which is a frame or two after the
+                /// first event, so the first few frames always re-read.
+                insets_probes: u8,
             }
 
             /// Move the content clear of the status and navigation bars.
@@ -848,12 +852,14 @@ mod android {
             /// navigation bar switching between gesture and three-button).
             fn apply_safe_area(
                 insets_for: &mut Option<floom_types::Size>,
+                insets_probes: &mut u8,
                 runner: &mut AppRunner<VelloGpuPresenter>,
             ) {
                 let size = runner.host().size();
-                if *insets_for == Some(size) {
+                if *insets_probes >= 3 && *insets_for == Some(size) {
                     return;
                 }
+                *insets_probes = insets_probes.saturating_add(1);
                 *insets_for = Some(size);
                 runner.host_mut().set_content_insets(
                     floom_platform_android::packages::safe_area::safe_area_insets(),
@@ -874,14 +880,14 @@ mod android {
                         self.runner = Some(AppRunner::new(host, presenter));
                     }
                     if let Some(runner) = self.runner.as_mut() {
-                        apply_safe_area(&mut self.insets_for, runner);
+                        apply_safe_area(&mut self.insets_for, &mut self.insets_probes, runner);
                         runner.pump(platform);
                     }
                 }
 
                 fn about_to_wait(&mut self, platform: &mut AndroidPlatform) {
                     if let Some(runner) = self.runner.as_mut() {
-                        apply_safe_area(&mut self.insets_for, runner);
+                        apply_safe_area(&mut self.insets_for, &mut self.insets_probes, runner);
                         runner.pump(platform);
                     }
                 }
@@ -897,6 +903,7 @@ mod android {
                     build: Some(build),
                     runner: None,
                     insets_for: None,
+                    insets_probes: 0,
                 },
                 windows,
             )

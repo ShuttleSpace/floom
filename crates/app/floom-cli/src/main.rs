@@ -775,6 +775,13 @@ fn emit_app_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Result<(
                 &native_project::android_main_activity(&opts.org, &opts.name, &lib),
             )?;
             write(
+                // `dev.floom.android.FloomA11y` is a fixed path: the Rust half
+                // exports `Java_dev_floom_android_FloomA11y_*`, which is the
+                // class path spelled in the symbol name.
+                &dir.join("app/src/main/java/dev/floom/android/FloomA11y.java"),
+                &native_project::android_a11y_java(&lib),
+            )?;
+            write(
                 &dir.join("app/src/main/res/values/strings.xml"),
                 &native_project::android_strings_xml(&opts.name),
             )?;

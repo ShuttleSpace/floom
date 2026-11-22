@@ -728,6 +728,7 @@ pub fn android_main_activity(_org: &str, name: &str, lib: &str) -> String {
 
 import android.app.NativeActivity
 import android.os.Bundle
+import dev.floom.android.FloomA11y
 
 /**
  * The Android host for `{name}`.
@@ -747,6 +748,257 @@ import android.os.Bundle
 class {class}Activity : NativeActivity() {{
     override fun onCreate(savedInstanceState: Bundle?) {{
         super.onCreate(savedInstanceState)
+        // The semantics tree comes from Rust; the delegate answers the
+        // accessibility queries on the surface's own view, so no second view
+        // sits on top of it taking the touches this activity needs.
+        FloomA11y.attach(window.decorView)
+    }}
+}}
+"#
+    )
+}
+
+/// The JVM half of accessibility for an app: `dev/floom/android/FloomA11y.java`.
+///
+/// `AccessibilityNodeProvider` cannot be built from native code, so Rust
+/// publishes the tree as one tab-separated line per node and this turns it into
+/// virtual nodes. JNI names the methods after a class path, so this file has to
+/// live at `dev.floom.android.FloomA11y` — the Rust side exports
+/// `Java_dev_floom_android_FloomA11y_pull` / `_activate` to match.
+///
+/// Pulled, not pushed: a provider is asked for children when a screen reader
+/// needs them, so nothing has to hop to the UI thread on every change.
+pub fn android_a11y_java(lib: &str) -> String {
+    format!(
+        r#"package dev.floom.android;
+
+import android.graphics.Rect;
+import android.os.Bundle;
+import android.view.View;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityNodeProvider;
+
+/**
+ * The JVM half of Floom's accessibility.
+ *
+ * Rust owns the semantics tree and the hit testing; this owns the two things
+ * only a JVM object can: being an {{@link AccessibilityNodeProvider}}, and
+ * handing a screen reader nodes with real bounds.
+ */
+public final class FloomA11y {{
+    static {{
+        System.loadLibrary("{lib}");
+    }}
+
+    private FloomA11y() {{}}
+
+    /** The tree, one tab-separated line per node; null before the first frame. */
+    private static native String pull();
+
+    /** Runs the node's click handler; false when the node is gone. */
+    private static native boolean activate(int index);
+
+    /**
+     * Installs the provider on the window's decor view.
+     *
+     * A delegate rather than a view on top: an overlay would receive the
+     * touches the native surface needs. {{@code decorView}} is the root, so its
+     * children include the surface the Rust loop draws into.
+     */
+    public static void attach(View decorView) {{
+        decorView.setAccessibilityDelegate(new Delegate(decorView));
+    }}
+
+    private static final class Delegate extends View.AccessibilityDelegate {{
+        private final Provider provider;
+
+        Delegate(View host) {{
+            provider = new Provider(host);
+        }}
+
+        @Override
+        public AccessibilityNodeProvider getAccessibilityNodeProvider(View host) {{
+            return provider;
+        }}
+    }}
+
+    private static final class Provider extends AccessibilityNodeProvider {{
+        private final View host;
+        private final int[] origin = new int[2];
+
+        Provider(View host) {{
+            this.host = host;
+        }}
+
+        @Override
+        public AccessibilityNodeInfo createAccessibilityNodeInfo(int virtualViewId) {{
+            Node[] nodes = nodes();
+            if (virtualViewId == HOST_VIEW_ID) {{
+                AccessibilityNodeInfo root = AccessibilityNodeInfo.obtain(host);
+                host.onInitializeAccessibilityNodeInfo(root);
+                for (Node node : nodes) {{
+                    root.addChild(host, node.index);
+                }}
+                return root;
+            }}
+            for (Node node : nodes) {{
+                if (node.index == virtualViewId) {{
+                    return info(node);
+                }}
+            }}
+            return null;
+        }}
+
+        @Override
+        public boolean performAction(int virtualViewId, int action, Bundle arguments) {{
+            if (virtualViewId == HOST_VIEW_ID) {{
+                return false;
+            }}
+            if (action != AccessibilityNodeInfo.ACTION_CLICK) {{
+                return false;
+            }}
+            return activate(virtualViewId);
+        }}
+
+        private AccessibilityNodeInfo info(Node node) {{
+            AccessibilityNodeInfo info = AccessibilityNodeInfo.obtain();
+            info.setSource(host, node.index);
+            info.setPackageName(host.getContext().getPackageName());
+            info.setClassName(className(node.role));
+            info.setContentDescription(node.label);
+            info.setText(node.label);
+            info.setEnabled(node.enabled);
+            info.setSelected(node.selected);
+            info.setFocusable(true);
+            info.setVisibleToUser(true);
+
+            // The tree is in logical pixels; the platform wants device pixels
+            // relative to the screen, so both the density and the host's own
+            // position have to be applied.
+            host.getLocationOnScreen(origin);
+            float density = host.getResources().getDisplayMetrics().density;
+            Rect bounds = new Rect(
+                    origin[0] + Math.round(node.x * density),
+                    origin[1] + Math.round(node.y * density),
+                    origin[0] + Math.round((node.x + node.width) * density),
+                    origin[1] + Math.round((node.y + node.height) * density));
+            info.setBoundsInScreen(bounds);
+
+            if (clickable(node.role)) {{
+                info.setClickable(true);
+                info.addAction(AccessibilityNodeInfo.ACTION_CLICK);
+            }}
+            return info;
+        }}
+
+        private static boolean clickable(String role) {{
+            switch (role) {{
+                case "button":
+                case "check_box":
+                case "radio":
+                case "switch":
+                case "tab":
+                case "menu_item":
+                case "image_button":
+                    return true;
+                default:
+                    return false;
+            }}
+        }}
+
+        private static String className(String role) {{
+            switch (role) {{
+                case "button":
+                case "image_button":
+                    return "android.widget.Button";
+                case "check_box":
+                    return "android.widget.CheckBox";
+                case "radio":
+                    return "android.widget.RadioButton";
+                case "switch":
+                    return "android.widget.Switch";
+                case "slider":
+                    return "android.widget.SeekBar";
+                case "text_field":
+                    return "android.widget.EditText";
+                case "list":
+                    return "android.widget.ListView";
+                case "scrollable":
+                    return "android.widget.ScrollView";
+                case "progress_bar":
+                    return "android.widget.ProgressBar";
+                default:
+                    return "android.widget.TextView";
+            }}
+        }}
+
+        private static Node[] nodes() {{
+            String payload = pull();
+            if (payload == null || payload.isEmpty()) {{
+                return new Node[0];
+            }}
+            String[] lines = payload.split("\n");
+            Node[] nodes = new Node[lines.length];
+            int count = 0;
+            for (String line : lines) {{
+                Node node = Node.parse(line);
+                if (node != null) {{
+                    nodes[count++] = node;
+                }}
+            }}
+            if (count == nodes.length) {{
+                return nodes;
+            }}
+            Node[] trimmed = new Node[count];
+            System.arraycopy(nodes, 0, trimmed, 0, count);
+            return trimmed;
+        }}
+    }}
+
+    private static final class Node {{
+        final int index;
+        final String role;
+        final String label;
+        final float x;
+        final float y;
+        final float width;
+        final float height;
+        final boolean enabled;
+        final boolean selected;
+
+        private Node(int index, String role, String label, float x, float y, float width,
+                float height, boolean enabled, boolean selected) {{
+            this.index = index;
+            this.role = role;
+            this.label = label;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+            this.enabled = enabled;
+            this.selected = selected;
+        }}
+
+        static Node parse(String line) {{
+            String[] fields = line.split("\t", -1);
+            if (fields.length < 10) {{
+                return null;
+            }}
+            try {{
+                return new Node(
+                        Integer.parseInt(fields[0]),
+                        fields[1],
+                        fields[2],
+                        Float.parseFloat(fields[3]),
+                        Float.parseFloat(fields[4]),
+                        Float.parseFloat(fields[5]),
+                        Float.parseFloat(fields[6]),
+                        fields[7].equals("1"),
+                        fields[8].equals("1"));
+            }} catch (NumberFormatException invalid) {{
+                return null;
+            }}
+        }}
     }}
 }}
 "#
@@ -1300,6 +1552,22 @@ mod tests {
         let id = android_app_id("com.example", "my_app");
         let activity = android_main_activity("com.example", "my_app", "floom_my_app");
         let manifest = android_app_manifest("com.example", "my_app");
+        let a11y = android_a11y_java("floom_my_app");
+        assert!(a11y.contains("package dev.floom.android;"), "{a11y}");
+        assert!(
+            a11y.contains("System.loadLibrary(\"floom_my_app\")"),
+            "{a11y}"
+        );
+        // The Rust half exports exactly these two symbols, so the declarations
+        // have to stay native, static, and in this class.
+        assert!(
+            a11y.contains("private static native String pull();"),
+            "{a11y}"
+        );
+        assert!(
+            a11y.contains("private static native boolean activate(int index);"),
+            "{a11y}"
+        );
 
         // The source's `package` statement is dotted; only the *directory* uses
         // slashes. A source that says `package com/example/demo` fails with four
