@@ -51,12 +51,15 @@ static ACTIVATE: Mutex<Option<Activate>> = Mutex::new(None);
 /// Stored rather than pushed so the host can pull on the accessibility
 /// thread at the moment `AccessibilityNodeProvider` needs children, instead of
 /// marshalling to the UI thread on every change.
+#[cfg(target_os = "android")]
 static PUBLISHED: Mutex<String> = Mutex::new(String::new());
 
 /// `index`, `role`, `label`, `x`, `y`, `width`, `height`, then three flags.
 ///
 /// Tabs and newlines inside a label become spaces: the format's separator is
 /// the only thing the JVM half parses against.
+// Only the JVM half reads the encoding, so on a host this exists for the test.
+#[cfg(any(target_os = "android", test))]
 fn encode(nodes: &[Node]) -> String {
     let mut out = String::with_capacity(nodes.len() * 64);
     for node in nodes {
@@ -278,6 +281,7 @@ fn default_publisher() -> Option<Publisher> {
 
 /// Keep the latest tree where [`jvm::Java_dev_floom_android_FloomA11y_pull`]
 /// can read it.
+#[cfg(target_os = "android")]
 fn store(nodes: &[Node]) {
     if let Ok(mut published) = PUBLISHED.lock() {
         published.clear();
