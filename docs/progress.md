@@ -26,6 +26,7 @@
 | ID | 动作 | 退出判据 | 验证命令 |
 | --- | --- | --- | --- |
 | S0.1 | 把仓库镜像到 CI 可跑的宿主（GitHub）并推现有 workflow，或改用可访问 runner | 一条公开链接的绿 build：macOS + Linux + Windows 三系统 `cargo test` | 打开那条 build 的 URL（必须是别人也能点的链接） |
+| S0.4 | **组织与约定对齐 tessera**：`mod.rs` → `name.rs`、`AGENTS.md`、依赖策略注释 | 仓库里不再出现 `mod.rs`；`AGENTS.md` 存在且指向 `docs/`；门禁能抓住回归 | 29 个 `mod.rs` 全量改名（`cargo check --workspace --all-targets` 四个 workspace 全清）；`scripts/check-module-paths.sh` + `just gate module-paths` + CI 一步，注入 `mod.rs` 实测会红；根 `AGENTS.md`（70 行）；`Cargo.toml` 补依赖策略注释 |
 | S0.3 | **CI 有效性审计**：绿是真的验证过还是空转 | 每个 job 的「声称 vs 实际命令」有账本；注入缺陷能被抓到，或明确记录抓不到 | 变异测试 2 抓 1 漏（漏的是 CI 包清单缺 harmony/ios/embedded）；已补 3 个 crate 进清单 + macOS `--features desktop` 一步 + ubuntu `bundles` job；账本在 `developer-experience.md` 的「CI 到底证明了什么」 |
 | S0.2 | 把 `deny`/`perf`/`size` 接进同一套门禁口径（`gate.sh --list` 与实际 CI 步骤一致） | `gate.sh --list` 与 CI 步骤集合相同，缺一即红 | `bash scripts/gate.sh --list`，逐条比对 workflow |
 

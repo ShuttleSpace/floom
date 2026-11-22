@@ -352,6 +352,7 @@ ohos       the HarmonyOS backend + plugins compile for aarch64-unknown-linux-oho
 golden     the pixel-golden examples
 size       release binary sizes within 10% of the checked-in baseline
 style      no colour literals in the design-system widget trees
+module-paths  every module is a src/name.rs, never a src/name/mod.rs
 EOF
   exit 0
 fi
@@ -647,6 +648,7 @@ has_check size && run_check size "" ./scripts/check-size-budgets.sh
 # A widget that paints `Color::rgb(...)` ignores the theme it was given. The
 # palette lives in each crate's tokens.rs; this keeps it there.
 has_check style && run_check style "" ./scripts/check-design-tokens.sh
+has_check module-paths && run_check module-paths "" ./scripts/check-module-paths.sh
 
 echo
 if [ "$FAIL" -eq 0 ]; then

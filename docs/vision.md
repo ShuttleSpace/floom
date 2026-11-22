@@ -27,6 +27,7 @@
 | xilem/masonry | view diff 最小化更新 | 元素树 + 脏传播 | 有 |
 | gpui/gpui-kit | hybrid immediate+retained、75+ 组件 | 保留模式 + 设计系统三套 | 有 |
 | rinf | 零拷贝、零隐藏线程 | 帧队列有界、无后台隐藏线程 | 有 |
+| [tessera](https://github.com/tessera-ui/tessera) | 文件与代码组织：`src/name.rs` 禁用 `mod.rs`、每层一个职责 crate、`AGENTS.md` + 随 CLI 分发的 skill、错误码各有文档、依赖版本策略写进 `Cargo.toml` 注释、`scripts/check-imports.rs` 拒跨设计系统引用 | 29 个 `mod.rs` 全部改成 `name.rs` + `just gate module-paths`；新增根 `AGENTS.md`；`Cargo.toml` 补依赖策略注释 | 组织与注释已抄；`AGENTS.md`/门禁**新加**；随 CLI 分发的 skill、错误码文档**无** |
 
 ## 六维现状（1–5，推断；来自 2026-11 竞品评估，已归档）
 
@@ -38,6 +39,8 @@
 | ④ 开发便利 | 3 | flutter、tauri、nsh、dioxus、freya、gpui-kit | 三者共享：`llms.txt`（已有）、单 CLI（缺 package/check/test）、热重载（有热重启） |
 | ⑤ 扩展能力 | 5 | （floom 并列最强） | 22 插件 + provider vtable，缺 ABI 版本串 |
 | ⑥ 生态地基 | 3 | flutter、tauri、slint | 治理最细但仍是 0.2.0；无 1.0 版本承诺 |
+
+对照 [tessera](https://github.com/tessera-ui/tessera)（285 star，Apache-2.0，2025-05 起，同为 wgpu + 声明式 + 响应式 + 移动端）：它的 ① 与我们同档（有 `crates/tessera-mobile` + `cargo tessera` 打包，但同样没有逐平台 CI 实测），② 与我们同档（自绘 + 自维护 glyphon/cosmic-text fork），③ 领先（`md3` 全套 + `experiment::hig`），④ 领先（`cargo tessera` 的 dev/check/package/headless + 随 CLI 发 skill），⑤ 弱于我们（插件是 crate 内 feature，不是独立 vtable 插件），⑥ 领先（v3.0.0 已发、双许可、NOTICE、`pr-title.yml`）。**它的优势全部在"人读得懂、agent 改得动"这一层**，所以本仓的对应动作不是加功能，而是补组织与约定。
 
 **结论**：③⑤ 已是一线，② 靠证据而非体感，①④⑥ 都是工程接线，不是重做引擎。
 

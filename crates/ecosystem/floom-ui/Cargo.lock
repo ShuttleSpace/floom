@@ -290,6 +290,7 @@ name = "floom-platform"
 version = "0.2.0"
 dependencies = [
  "bitflags",
+ "floom-accessibility",
  "floom-types",
  "raw-window-handle",
 ]

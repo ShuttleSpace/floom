@@ -1277,6 +1277,7 @@ dependencies = [
  "floom-platform",
  "floom-types",
  "jni 0.22.4",
+ "log",
  "ndk",
 ]
 

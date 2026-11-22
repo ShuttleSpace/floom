@@ -115,6 +115,11 @@ jobs:
       - name: Check architecture dependency boundaries
         run: ./scripts/check-architecture-deps.sh
 
+      # Structural, so it needs no toolchain: a module is a `src/name.rs`, and
+      # a `mod.rs` creeping back is the one thing the compiler cannot object to.
+      - name: Check module paths
+        run: ./scripts/check-module-paths.sh
+
       # The native-view plugin's native half is Objective-C and reaches AppKit,
       # so the window half of its verification only runs on macOS. The
       # framework-side half -- the C ABI, the provider, the lifecycle -- is

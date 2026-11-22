@@ -111,6 +111,16 @@ edition = "2024"
 rust-version = "1.91"
 repository = "https://gitee.com/floem/floem"
 
+# Dependency requirements.
+#
+# - Caret by default (`"1.2"`), so a patch fix reaches us without a change here;
+#   pin `major.minor.patch` only where a patch changed an API we use.
+# - No open (`"*"`) or upper-bounded (`">=1, <2"`) ranges: two requirements that
+#   resolve to different versions of a type we pass across a crate boundary is a
+#   build error one day and a silent second copy the next.
+# - A crate's types that appear in another crate's public API must resolve to
+#   one shared version; `crates/vendor` forks are patched in as workspace
+#   members, not pulled from the registry.
 [workspace.dependencies]
 floom = { path = "crates/app/floom", version = "0.2.0" }
 floom-accessibility = { path = "crates/core/floom-accessibility", version = "0.2.0" }

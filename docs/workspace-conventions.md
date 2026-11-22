@@ -125,3 +125,15 @@ consistent metadata and dependency versions. Crates reference shared deps with
 - Do not fork a crate without a `NOTICE.md` and a `[patch]` entry.
 - Do not let a `legacy/` crate gain new dependents from 2.0 code; 2.0 should
   depend only on 2.0 crates.
+
+## 7. 组织与风格约定（2026-11-22 起，参照 tessera）
+
+`tessera-ui/tessera` 与本项目定位几乎相同（wgpu + 声明式 + 响应式 + 移动端），它的文件组织与注释纪律比我们严，故直接采用；API 设计与引擎选型仍按本仓自己的判断，不跟随。
+
+- **模块路径**：`src/name.rs`，不用 `src/name/mod.rs`。2026-11-22 把 29 个 `mod.rs` 全量改名（编译器保证等价），并由 `scripts/check-module-paths.sh` 守住——两种写法都能编译，只有脚本能发现"又退化成两套约定"。`crates/vendor` 例外：保持上游布局，便于再同步。
+- **`AGENTS.md`**：根目录一份，写给改代码的 agent 与人：分层、语言、风格、门禁、两条常设规则。内容只写"这个仓库的判断"，通用的 Rust 建议不写；指向 `docs/` 而不是复制。
+- **依赖版本策略**写在 `Cargo.toml` 的 `[workspace.dependencies]` 上方注释里：默认 caret、不用开区间与上界区间、跨 crate 边界的类型必须解析到同一版本。
+- **注释只写理由**：一段 ≤3 行；删掉复述代码的；"暂时没做"要写明什么时候该补（`shortcut:` 前缀）。
+- **每个结构不变量一条脚本**：`check-design-tokens.sh`（颜色字面量）、`check-module-paths.sh`（`mod.rs`）、`check-architecture-deps.sh`（层间依赖）。脚本必须能证明它会红（注入一次再撤）。
+
+未抄的（有意）：tessera 要求全英文文档，本仓 `docs/` 面向中文读者；它的 `error_codes/T0001.md` 一码一档、随 CLI 分发的 `skills/` 目录，本仓尚无对应物，已记在 `progress.md` 的 S0.4 未做项里。
