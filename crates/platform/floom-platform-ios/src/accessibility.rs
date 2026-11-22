@@ -9,13 +9,12 @@
 //! Frames are in the layout's units, which are points — the same units the host
 //! passes to `floom_ios_app_start`.
 
-use std::collections::HashMap;
 use std::ffi::{CString, c_char};
 use std::sync::Mutex;
 
 use floom_accessibility::{
     AccessibilityAdapter, AccessibilityCapabilities, AccessibilityFrame, SemanticsAction,
-    SemanticsDiff, SemanticsNode, SemanticsRole, SemanticsState,
+    SemanticsDiff, SemanticsRole, SemanticsState,
 };
 use floom_types::ElementId;
 
@@ -188,6 +187,7 @@ mod tests {
     use std::sync::Mutex as StdMutex;
 
     use super::*;
+    use floom_accessibility::SemanticsNode;
     use floom_types::Rect;
 
     static SEEN: StdMutex<Vec<(String, u32, f32, f32)>> = StdMutex::new(Vec::new());
