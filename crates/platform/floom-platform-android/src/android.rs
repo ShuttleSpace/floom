@@ -196,6 +196,9 @@ pub struct AndroidPlatform {
     /// `set_cursor_area` may arrive before or after the enable and must not
     /// forward an `Update` for a field that was never enabled.
     ime_enabled: HashMap<u32, bool>,
+    /// The semantics tree in the shape the JVM half consumes. Retained even
+    /// when no publisher is attached, so tooling and tests can read it.
+    accessibility: crate::accessibility::AndroidAccessibility,
     started: Instant,
 }
 
@@ -215,6 +218,7 @@ impl AndroidPlatform {
             pending: Vec::new(),
             events: Vec::new(),
             ime_enabled: HashMap::new(),
+            accessibility: crate::accessibility::AndroidAccessibility::new(),
             started: Instant::now(),
         }
     }
@@ -465,8 +469,9 @@ impl Platform for AndroidPlatform {
     fn capabilities(&self) -> PlatformCapabilities {
         // Windowing and touch are real, and so are the soft keyboard and the
         // clipboard: the platform polls the anchor view's `Editable` for
-        // typed text and reaches `ClipboardManager` over JNI. a11y remains the
-        // mobile L-stub — that is the one capability still absent.
+        // typed text and reaches `ClipboardManager` over JNI. a11y stays the
+        // stub bit set: the adapter exists and receives the tree, but no
+        // `AccessibilityNodeProvider` is wired, so nothing reaches TalkBack.
         let mut caps = PlatformCapabilities::unsupported_a11y_stub();
         caps.caps |= Capability::IME | Capability::CLIPBOARD;
         caps
@@ -486,6 +491,11 @@ impl Platform for AndroidPlatform {
             return None;
         }
         Some(w as &mut dyn Window)
+    }
+    fn accessibility(&mut self) -> Option<&mut dyn floom_accessibility::AccessibilityAdapter> {
+        // The adapter is wired; the JVM half that would consume it is the piece
+        // still missing, so it publishes to nobody and claims no bridge.
+        Some(&mut self.accessibility)
     }
     fn poll_events(&mut self, out: &mut Vec<PlatformEvent>) {
         self.pump_ime_text();

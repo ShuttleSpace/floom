@@ -30,7 +30,7 @@
 | 键盘 | winit | winit | winit-android keycodes（`Keycode::Tab → Key::Named(Tab)`，`winit-android/src/keycodes.rs:312`） | UIKit | **无** | 有 |
 | IME | winit IME + `crates/platform/floom-platform-desktop/src/ime/` | 同左（Win32 组合桥未完成） | 锚点 `EditText.Editable` + `BaseInputConnection` 组合区 → `ImeCommit`/`ImePreedit` | 隐藏 `UITextField` → `floom_ios_push_ime_input`（拉丁 pass，CJK 提交成功） | **无** | 部分 |
 | 剪贴板 | `floom-platform-desktop/src/clipboard.rs`：macOS `NSPasteboard`、Windows `CF_UNICODETEXT`（两者都有往返测试，Windows 在 CI runner 上真跑过含 CJK）、Linux 走 `wl-copy`/`xclip`/`xsel`（只有解析逻辑有测试，赛道里没有可用的会话） | JNI ClipboardService（双向 pass，需先获得焦点） | objc2 `UIPasteboard`（双向 pass，含系统粘贴同意） | **无** | 无 |
-| 无障碍 | 语义树在进程内，**无 NSAccessibility 桥** | 无 AT-SPI / 无 UIA | `CapabilityLimitedAccessibilityAdapter`，`NATIVE_BRIDGE` 故意不置位 | 无原生适配器（frame 仍为 0） | 无 | 无 |
+| 无障碍 | 语义树在进程内，**无 NSAccessibility 桥** | 无 AT-SPI / 无 UIA | 适配器已真（阅读顺序 + frame + 下标→节点激活，`accessibility.rs`，4 个单测），**JVM 的 `AccessibilityNodeProvider` 未接**，所以 `NATIVE_BRIDGE` 仍不置位 | 适配器已接（`A11yNode` 30 字节 ABI + `FloomA11yElement`，`idb` 实测 frame 非零；VoiceOver 双击未机验） | 无 | 无 |
 | 文件选择 | **无 trait**（平台层还没这个抽象） | 同左 | SAF 代码完整，结果回传需要 `FloomNativeActivity` 子类 | `ios_file.rs`/`ios_receive.rs` 有，example 未接 | 无 | — |
 | 安全区 | n/a | n/a | 无公开 `WindowHandle::safe_area()` | **已接**（2026-11-22）：UIKit 的 `safeAreaInsets` 经 `floom_ios_set_safe_area_insets` 进 Rust，宿主每帧 `WidgetHost::set_content_insets` 作为根内边距；模拟器实测内容从 y=0 移到 y=62 | 无 | — |
 | 声明能力位 | WINDOWING/TOUCH/IME/CLIPBOARD/A11Y 视 feature | 同左 | `android_default()` = WINDOWING\|TOUCH\|IME\|SOFTWARE_RENDER\|**WEBGPU** | `ios_default()` = WINDOWING\|TOUCH\|NATIVE_VIEW\|SOFTWARE_RENDER | `harmony_default()` = WINDOWING\|TOUCH\|NATIVE_VIEW\|SOFTWARE_RENDER | 各自 |

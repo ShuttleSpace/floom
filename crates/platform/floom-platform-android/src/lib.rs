@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 //! Android platform adapter (independent crate; not an alias of Harmony).
 //!
-//! Accessibility is capability-limited: the adapter retains the semantics tree
-//! but no native bridge is wired, so actions cannot reach the OS.
+//! Accessibility has its adapter (`accessibility`): the tree arrives, in reading
+//! order and with frames, and an activation index can be routed back. What is
+//! still missing is the JVM half — an `AccessibilityNodeProvider` to publish to
+//! — so the capability bits stay the stub until that exists.
 
 pub mod accessibility;
 // The JNI bridge is Android-only: the `jni` crate is a target-gated dependency.
