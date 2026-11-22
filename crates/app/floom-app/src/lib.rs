@@ -466,6 +466,9 @@ impl WidgetAny for Retired {
     }
 }
 
+/// A frame hook: runs with the host in hand, once per frame.
+type FrameCallback = Box<dyn FnMut(&mut WidgetHost)>;
+
 /// Owns and drives a widget tree.
 pub struct WidgetHost {
     nodes: Vec<Node>,
@@ -510,7 +513,7 @@ pub struct WidgetHost {
     /// and whose semantics entry therefore needs an incremental refresh.
     semantics_stale: Vec<usize>,
     /// Per-frame reconciliation hooks; see [`WidgetHost::on_frame`].
-    frame_callbacks: Vec<Box<dyn FnMut(&mut WidgetHost)>>,
+    frame_callbacks: Vec<FrameCallback>,
     /// Scratch buffers reused across `run_layout` passes: taffy reports
     /// parent-relative rects, and accumulating them into absolute ones needs
     /// one slot per node. Resized (not reallocated) per pass.
