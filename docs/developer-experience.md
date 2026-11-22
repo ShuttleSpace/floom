@@ -43,6 +43,22 @@
 - golden examples 见 [examples.md](examples.md)（8 个，其清单被 `docs_parity.rs` 与 `scripts/run-golden-examples.sh` 双向校验）。
 - `floom-showcase` 是 `/components` 页挂载全部 Tier-0 组件的**唯一**"设计回归"入口。
 
+## 日志（Rust → logcat / os_log）
+
+Android 上 `log` 门面的记录默认**一条都不出现**：`android_logger` 的级别跟着 `log::max_level()`，而它初始是 `Off`。开关是系统属性，不需要重新编译：
+
+```sh
+adb shell setprop debug.floom.log debug     # off | 1(debug 档以上见下) | info | debug | trace | warn | error
+adb shell am force-stop <pkg> && adb shell am start -n <pkg>/.<Class>Activity
+adb logcat -s floom
+```
+
+值为空、`0`、`off` 时什么都不装（每条记录要一次 JNI 调用，没人要就不付这个成本）；无法识别的值也当关闭——拼错不会猜档位。开关必须在进程启动时读：属性是启动时快照，改完要重启 app。
+
+证据（模拟器 API 34）：`debug.floom.log debug` → logcat 出现 `I floom : floom_platform_android::logging: logging to logcat at DEBUG; debug.floom.log set the level` 与 `I floom : ...: android backend starting`（还有 `android_activity` 自己的 `D floom :` 行——`set_max_level` 是全局的）；设回 `0` 重启 → `adb logcat -s floom` 零行。
+
+平台另一半：**iOS 上 `log` 门面没有后端**，`os_log`/`NSLog` 只吃 Swift 侧的输出；Rust 的 `println!`/`eprintln!` 在两端都不进系统日志（Android 的 stdout 会以 `RustStdoutStderr` 标签出现，但不保证被 flush）。桌面走 `RUST_LOG`，那是 `tracing` 生态的约定，与这里无关。
+
 ## 错误信息
 
 要求（当前部分满足）：

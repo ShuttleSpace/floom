@@ -567,10 +567,10 @@ impl Ime for AndroidPlatform {
         if !self.windows.contains_key(&window.index()) {
             return;
         }
-        // stderr rather than the logger: `android_logger`'s default level
-        // follows the compile-time `log::max_level`, so a `log::warn!` here
-        // routinely never reaches logcat. stderr always does, tagged
-        // `RustStdoutStderr`.
+        // stderr rather than the logger: the logger only reaches logcat when
+        // the `debug.floom.log` switch is on, and a keyboard that will not open
+        // is worth a line even on a device nobody is debugging. stderr always
+        // shows, tagged `RustStdoutStderr`.
         if let Err(err) = crate::packages::keyboard::soft_input::set_soft_keyboard_visible(enabled)
         {
             let what = if enabled { "show" } else { "hide" };
@@ -698,7 +698,8 @@ impl<A: AndroidRunner> ApplicationHandler for AndroidDriver<A> {
 /// to us. `windows` are queued before the loop starts and realised as soon as
 /// the OS allows window creation (after `resumed`).
 pub fn run<A: AndroidRunner + 'static>(app: A, windows: Vec<WindowConfig>) -> Result<(), String> {
-    android_logger::init_once(android_logger::Config::default());
+    crate::logging::install();
+    log::info!("android backend starting");
     let android_app = get_android_app();
     // Hand the JVM + activity to the capability bridge before anything can use
     // it. Both setters are first-write-wins and ignore null, so a second `run`

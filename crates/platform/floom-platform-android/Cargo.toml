@@ -11,6 +11,9 @@ rust-version.workspace = true
 floom-accessibility = { workspace = true }
 floom-platform = { workspace = true }
 floom-types = { workspace = true }
+# The `logging` switch maps a property to a level on every target; only the
+# logcat backend is Android-only.
+log = "0.4"
 
 # --- Android real backend (Phase 17 / 19.4) ---------------------------------
 # These mirror the dependency blueprint already declared for the workspace root
@@ -28,3 +31,4 @@ winit = { workspace = true, features = ["android-native-activity"] }
 ndk = "0.9"
 android_logger = "0.14"
 jni = "0.22"
+
