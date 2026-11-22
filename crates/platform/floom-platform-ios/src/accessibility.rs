@@ -48,10 +48,13 @@ static ORDER: Mutex<Vec<ElementId>> = Mutex::new(Vec::new());
 
 /// What runs when UIKit activates an element. Registered by the host owner
 /// (`floom::platform::ios_host`), because only it can reach the widget tree.
-static ACTIVATE: Mutex<Option<Box<dyn Fn(ElementId) -> bool + Send>>> = Mutex::new(None);
+/// What UIKit's activation runs. Named, so the static's type stays readable.
+type Activate = Box<dyn Fn(ElementId) -> bool + Send>;
+
+static ACTIVATE: Mutex<Option<Activate>> = Mutex::new(None);
 
 /// Installs the handler behind [`floom_ios_a11y_activate`].
-pub fn set_activate_sink(handler: Box<dyn Fn(ElementId) -> bool + Send>) {
+pub fn set_activate_sink(handler: Activate) {
     *ACTIVATE.lock().unwrap_or_else(|e| e.into_inner()) = Some(handler);
 }
 
