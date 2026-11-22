@@ -442,6 +442,7 @@ impl AndroidPlatform {
             WindowEvent::KeyboardInput { event, .. } => {
                 let code = map_key(&event.logical_key, event.physical_key);
                 if code != KeyCode::NONE {
+                    log::debug!("key {:?} pressed={}", code, is_pressed(event.state));
                     self.events.push(PlatformEvent::Key {
                         window,
                         code,

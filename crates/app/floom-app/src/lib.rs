@@ -70,6 +70,30 @@ use smallvec::SmallVec;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeId(usize);
 
+/// How the host marks the element that holds keyboard focus.
+///
+/// The host paints it rather than each widget, because focus is the host's
+/// state: a widget would have to ask which of the several focus sources
+/// (keyboard, D-pad, focus traversal) is currently driving it, and the answer
+/// would differ per design system.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FocusRing {
+    pub color: floom_types::Color,
+    /// Thickness in logical px. Painted as four edges, so a backend without
+    /// stroke support still draws it.
+    pub width: f64,
+}
+
+impl FocusRing {
+    /// Visible on light and dark surfaces, and not any design system's accent:
+    /// a themed ring is the theme's job, and this one is the fallback that
+    /// makes focus visible when nothing else does.
+    pub const DEFAULT: Self = Self {
+        color: floom_types::Color::rgba(26, 115, 232, 235),
+        width: 2.0,
+    };
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct FrameStats {
     pub updated: usize,
@@ -472,6 +496,11 @@ type FrameCallback = Box<dyn FnMut(&mut WidgetHost)>;
 /// Owns and drives a widget tree.
 pub struct WidgetHost {
     nodes: Vec<Node>,
+    /// How the focused element is marked; `None` paints nothing.
+    focus_ring: Option<FocusRing>,
+    /// The ring's four edges, minted once and reused, so an unchanged ring
+    /// damages nothing and a settled frame allocates nothing.
+    ring_edges: [Option<SceneNodeId>; 4],
     root: Option<usize>,
     ids: IdAllocator,
     router: EventRouter,
@@ -897,6 +926,8 @@ impl WidgetHost {
         let scope = focus.create_scope(None);
         Self {
             nodes: Vec::new(),
+            focus_ring: Some(FocusRing::DEFAULT),
+            ring_edges: [None; 4],
             root: None,
             ids: IdAllocator::new(),
             router: EventRouter::new(),
@@ -2490,6 +2521,17 @@ impl WidgetHost {
     /// than written into the root's stored style, so the app's own backgrounds
     /// still paint edge to edge while its content stays clear of the system
     /// chrome.
+    /// Replaces the focus ring, or turns it off with `None`.
+    ///
+    /// Design systems that draw their own focus decoration pass `None` here;
+    /// leaving it on paints two rings on the same element.
+    pub fn set_focus_ring(&mut self, ring: Option<FocusRing>) {
+        self.focus_ring = ring;
+        // The ring is painted, not part of any widget, so nothing else would
+        // mark the frame: a ring that appears or disappears is a frame.
+        self.content_dirty = true;
+    }
+
     pub fn set_content_insets(&mut self, insets: floom_types::Insets) {
         if self.content_insets != insets {
             self.content_insets = insets;
@@ -3028,6 +3070,8 @@ impl WidgetHost {
         for (node, composite) in overlay_nodes {
             self.paint_overlay_subtree(node, composite, stats);
         }
+        // Last, so focus is never hidden by the tree it marks.
+        self.paint_focus_ring(stats);
         self.scene.finish_update();
     }
 
@@ -3121,6 +3165,77 @@ impl WidgetHost {
     /// wraps. A node's own motion beats an inherited one, so a descendant that
     /// animates its own opacity is dimmed by its own animation, not the
     /// ancestor's; one with no animation of its own inherits the ancestor's.
+    /// Paints the focus ring around the focused element, or retires it.
+    ///
+    /// Four rects rather than one stroked path: every backend draws a filled
+    /// rect, and only some have stroke support, so a ring built from edges is
+    /// the version that looks the same on all of them.
+    fn paint_focus_ring(&mut self, stats: &mut FrameStats) {
+        // Keyboard users get a visible ring; the mouse does not, matching the
+        // platform convention `keyboard_navigation` already records.
+        let ring = self.focus_ring.filter(|_| self.keyboard_navigation);
+        let bounds = match (ring, self.focus.focused()) {
+            (Some(_), Some(focused)) => self
+                .node_at(focused.index() as usize)
+                .map(|node| self.bounds(node)),
+            _ => None,
+        };
+        let Some(bounds) = bounds.filter(|box_| box_.width() > 0.0 && box_.height() > 0.0) else {
+            for slot in &mut self.ring_edges {
+                if let Some(id) = slot.take() {
+                    self.scene.remove(id);
+                }
+            }
+            return;
+        };
+        let ring = ring.unwrap_or(FocusRing::DEFAULT);
+        // Clamped so a ring on a 3 px chip stays inside the element instead of
+        // growing past it.
+        let w = ring
+            .width
+            .min(bounds.width() / 2.0)
+            .min(bounds.height() / 2.0);
+        let edges = [
+            floom_types::Rect {
+                x0: bounds.x0,
+                y0: bounds.y0,
+                x1: bounds.x1,
+                y1: bounds.y0 + w,
+            },
+            floom_types::Rect {
+                x0: bounds.x0,
+                y0: bounds.y1 - w,
+                x1: bounds.x1,
+                y1: bounds.y1,
+            },
+            floom_types::Rect {
+                x0: bounds.x0,
+                y0: bounds.y0,
+                x1: bounds.x0 + w,
+                y1: bounds.y1,
+            },
+            floom_types::Rect {
+                x0: bounds.x1 - w,
+                y0: bounds.y0,
+                x1: bounds.x1,
+                y1: bounds.y1,
+            },
+        ];
+        for (slot, edge) in self.ring_edges.iter_mut().zip(edges) {
+            let node = SceneNode::Rect {
+                bounds: edge,
+                fill: floom_types::Brush::Solid(ring.color),
+                radius: 0.0,
+                shadow: None,
+            };
+            match slot {
+                Some(id) => self.scene.upsert(*id, node),
+                None => *slot = Some(self.scene.insert(node)),
+            }
+            stats.painted += 1;
+        }
+    }
+
     fn paint_subtree(
         &mut self,
         index: usize,
@@ -4483,9 +4598,10 @@ impl WidgetHost {
 
     /// Whether focus was last moved by keyboard navigation (Tab / Shift+Tab).
     ///
-    /// Widgets read this through their own interaction state to decide whether
-    /// to paint a focus ring: keyboard users get a visible ring, mouse users do
-    /// not, which matches platform convention.
+    /// The host paints [`FocusRing`] for the focused element only while this
+    /// is true: keyboard users get a visible ring, mouse users do not, which
+    /// matches platform convention. A design system that draws its own ring
+    /// turns the host's off with [`WidgetHost::set_focus_ring`].
     pub fn keyboard_navigation(&self) -> bool {
         self.keyboard_navigation
     }
@@ -4514,6 +4630,8 @@ impl WidgetHost {
         self.focus.focus(id);
         self.set_focus_flag(id, true);
         self.yield_native_focus(id);
+        // A ring that appears or disappears is a frame.
+        self.content_dirty = true;
     }
 
     pub fn focus_next(&mut self) {
@@ -4530,6 +4648,9 @@ impl WidgetHost {
         let previous = self.focus.focused();
         let next = self.focus.traverse(direction);
         if previous != next {
+            // The ring is painted by the host, so a focus move the widgets did
+            // not otherwise react to still needs a frame or nothing shows.
+            self.content_dirty = true;
             if let Some(previous) = previous {
                 self.set_focus_flag(previous, false);
             }

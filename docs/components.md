@@ -37,7 +37,7 @@
 1. **颜色只来自 token**：组件源码里不允许出现颜色字面量（`tokens.rs` 白名单外）。
 2. **状态全覆盖**：`default / hover / pressed / focused / disabled / loading / error / selected`，缺哪个要在文档里写明"不适用"。
 3. **键盘可达**：Tab 到达、Enter/Space 激活、Esc 关闭、方向键在组内移动。
-4. **焦点环**：可见、不靠颜色单独表达（对比度）。
+4. **焦点环**：由宿主绘制（`FocusRing::DEFAULT` = 2 px、`rgba(26,115,232,235)`、四条填充矩形），只在键盘导航后出现——键盘用户看得见，鼠标用户看不见。设计系统要自绘就 `set_focus_ring(None)`；无论谁画，环必须可见且不靠颜色单独表达（对比度）。
 5. **语义**：`role` + `label`（或 `labelled_by`），状态映射到 `SemanticsState`（checked/expanded/disabled/busy）。
 6. **尺寸与密度**：只用 token 的 spacing/size 档，不写字面 px。
 7. **动效走 motion token**：时长/曲线来自 token，尊重"减少动态效果"。
