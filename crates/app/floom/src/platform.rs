@@ -501,6 +501,23 @@ mod ios {
     }
 }
 
+/// The `android_main` body: hand the `AndroidApp` to the platform, then run.
+///
+/// Split out of the [`android_app!`](crate::android_app) macro so the hand-over
+/// happens in one auditable place. winit refuses to build the event loop without
+/// the handle, and `android_main` is the only frame that ever sees it.
+#[cfg(all(feature = "mobile", target_os = "android"))]
+pub fn start_android(
+    android_app: floom_platform_android::AndroidApp,
+    size: floom_types::Size,
+    build: BuildFn,
+) {
+    floom_platform_android::set_android_app(android_app);
+    if let Err(err) = crate::run(env!("CARGO_PKG_NAME"), size, build) {
+        eprintln!("floom: {err}");
+    }
+}
+
 /// The iOS host-driven path: UIKit owns the run loop and asks for each frame,
 /// the way the ArkTS shell does on HarmonyOS. The blocking [`crate::run`] is
 /// the wrong door here — a `UIApplicationMain` that never returns cannot be

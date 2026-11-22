@@ -398,6 +398,7 @@ fn create_rust_app(opts: &CreateOpts, root: &Path, name: &str) -> Result<(), Str
         .iter()
         .any(|p| matches!(p.as_str(), "android" | "ios" | "ohos"));
     let ios = opts.platforms.iter().any(|p| p == "ios");
+    let android = opts.platforms.iter().any(|p| p == "android");
     write(
         &root.join("Cargo.toml"),
         &templates::cargo_toml(
@@ -406,6 +407,7 @@ fn create_rust_app(opts: &CreateOpts, root: &Path, name: &str) -> Result<(), Str
             opts.floom_path.as_deref(),
             mobile,
             ios,
+            android,
         ),
     )?;
     write(
@@ -420,13 +422,33 @@ fn create_rust_app(opts: &CreateOpts, root: &Path, name: &str) -> Result<(), Str
             .replace("{{TITLE}}", name)
             .replace("{{FLOOM}}", &opts.floom_crate),
     )?;
-    if ios {
-        write(
-            &root.join("src/lib.rs"),
-            &templates::IOS_LIB_RS.replace("{{FLOOM}}", &opts.floom_crate),
-        )?;
-    } else if mobile {
-        write(&root.join("src/lib.rs"), templates::MOBILE_LIB_RS)?;
+    if mobile {
+        // One `src/lib.rs` per crate, so the entry blocks are appended to a
+        // shared head rather than each claiming the file. `--platforms
+        // android,ios` is a normal request and must not produce two `mod app;`.
+        let mut lib = templates::LIB_HEAD.to_string();
+        if ios {
+            lib.push_str(&templates::IOS_ENTRY.replace("{{FLOOM}}", &opts.floom_crate));
+        }
+        if android {
+            lib.push_str(&templates::ANDROID_ENTRY.replace("{{FLOOM}}", &opts.floom_crate));
+        }
+        if !ios && !android {
+            lib.push_str(templates::MOBILE_ENTRY);
+        }
+        // Desktops build this crate too (the `[lib]` target is the same file),
+        // where there is no mobile host to call in. Keep the tree referenced so
+        // `cargo check` on the host does not warn about an empty crate.
+        let guard = match (ios, android) {
+            (true, true) => "#[cfg(not(any(target_os = \"ios\", target_os = \"android\")))]",
+            (true, false) => "#[cfg(not(target_os = \"ios\"))]",
+            (false, true) => "#[cfg(not(target_os = \"android\"))]",
+            (false, false) => "",
+        };
+        lib.push_str(&format!(
+            "\n{guard}\n#[allow(dead_code)]\nfn unused_tree() {{\n    let _ = app::build;\n}}\n"
+        ));
+        write(&root.join("src/lib.rs"), &lib)?;
     }
     write(
         &root.join("tests/smoke.rs"),
@@ -1561,13 +1583,13 @@ mod tests {
 
     #[test]
     fn mobile_scaffold_emits_a_cdylib_lib_target() {
-        let mobile = templates::cargo_toml("my_app", "floom", None, true, false);
+        let mobile = templates::cargo_toml("my_app", "floom", None, true, false, false);
         assert!(mobile.contains("[lib]"), "{mobile}");
         assert!(mobile.contains("crate-type = [\"cdylib\"]"), "{mobile}");
         assert!(mobile.contains("name = \"my_app\""), "{mobile}");
         assert!(mobile.contains("path = \"src/lib.rs\""), "{mobile}");
 
-        let desktop = templates::cargo_toml("my_app", "floom", None, false, false);
+        let desktop = templates::cargo_toml("my_app", "floom", None, false, false, false);
         assert!(!desktop.contains("[lib]"), "{desktop}");
         assert!(!desktop.contains("cdylib"), "{desktop}");
     }
@@ -1576,7 +1598,7 @@ mod tests {
     fn an_ios_scaffold_is_a_static_library_with_the_ios_bundle() {
         // iOS has no dynamic loader for Rust: the host links a static library,
         // and the feature bundle has to be on or the crate has no platform.
-        let ios = templates::cargo_toml("my_app", "floom", None, true, true);
+        let ios = templates::cargo_toml("my_app", "floom", None, true, true, false);
         assert!(ios.contains("crate-type = [\"staticlib\"]"), "{ios}");
         assert!(ios.contains("\"ios\""), "{ios}");
         assert!(!ios.contains("cdylib"), "{ios}");

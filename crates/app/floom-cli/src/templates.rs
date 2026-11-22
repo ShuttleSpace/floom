@@ -37,7 +37,7 @@ pub const PLATFORM_NOTES: &[(&str, &str, &str)] = &[
 /// Without both, `floom::run_desktop` does not exist.
 pub const DEFAULT_FEATURES: &[&str] = &["desktop", "renderer-gpu"];
 
-fn features_literal(ios: bool) -> String {
+fn features_literal(ios: bool, android: bool) -> String {
     let mut features: Vec<String> = DEFAULT_FEATURES
         .iter()
         .map(|f| format!("\"{f}\""))
@@ -46,6 +46,11 @@ fn features_literal(ios: bool) -> String {
         // The iOS backend is its own feature bundle; without it the static
         // library has no platform and `run` reports "no backend".
         features.push("\"ios\"".to_string());
+    }
+    if android {
+        // `mobile` is what pulls in `floom-platform-android`; `renderer-gpu`
+        // (already a default) is the Vello presenter the phone surface needs.
+        features.push("\"mobile\"".to_string());
     }
     features.join(", ")
 }
@@ -56,6 +61,7 @@ pub fn cargo_toml(
     floom_path: Option<&str>,
     mobile: bool,
     ios: bool,
+    android: bool,
 ) -> String {
     let dep = match floom_path {
         Some(p) => format!(
@@ -64,12 +70,12 @@ pub fn cargo_toml(
              # {f} = {{ version = \"0.2\", features = [{features}] }}",
             f = floom_crate,
             p = p,
-            features = features_literal(ios)
+            features = features_literal(ios, android)
         ),
         None => format!(
             "{f} = {{ version = \"0.2\", features = [{features}] }}",
             f = floom_crate,
-            features = features_literal(ios)
+            features = features_literal(ios, android)
         ),
     };
     // Mobile hosts load a shared library, not an executable: `cargo ndk`
@@ -86,7 +92,9 @@ pub fn cargo_toml(
              name = \"{lib_name}\"\n\
              path = \"src/lib.rs\"\n\
              crate-type = [\"{kind}\"]\n",
-            lib_name = name.replace('-', "_")
+            // Must equal the manifest's `android.app.lib_name` and the `.so`
+            // name `cargo ndk` copies: all three are the same library.
+            lib_name = crate::native_project::lib_name(name)
         )
     } else {
         String::new()
@@ -200,24 +208,39 @@ fn main() {
 "#;
 
 /// `src/lib.rs` for an iOS app: the entry symbols the Swift host calls.
-pub const IOS_LIB_RS: &str = r#"// SPDX-License-Identifier: MIT
-// iOS entry point. The Swift host in `ios/src/` binds the drawable, drives a
-// display link and forwards touches; this expands to the three symbols it
-// calls: `floom_ios_app_start`, `floom_ios_app_pump`, `floom_ios_app_touch`.
+/// Shared head of a mobile crate's `src/lib.rs`: the widget tree, and nothing
+/// platform-specific — each target's entry block is appended after it.
+pub const LIB_HEAD: &str = r#"// SPDX-License-Identifier: MIT
+// Mobile library target: `floom package` builds this into the platform's
+// library (cdylib for Android/OpenHarmony, staticlib for iOS). Everything
+// platform-specific is in the entry block below; the tree is shared.
 
 mod app;
+"#;
 
+/// The iOS entry block: the Swift host in `ios/src/` binds the drawable, drives
+/// a display link and forwards touches into the three symbols this expands to.
+pub const IOS_ENTRY: &str = r#"
+// iOS: the Swift host binds the drawable, drives a display link, forwards
+// touches. Expands to `floom_ios_app_{start,pump,touch}`.
 #[cfg(target_os = "ios")]
 {{FLOOM}}::ios_app!(app::build);
+"#;
 
-// Desktops build this crate too (the `[lib]` target is the same file), where
-// there is no host to call in. Keeping the module referenced stops `cargo
-// check` on the host from warning about an empty crate.
-#[cfg(not(target_os = "ios"))]
-#[allow(dead_code)]
-fn unused_tree() {
-    let _ = app::build;
-}
+/// The Android entry block: `native-activity` loads the cdylib and calls
+/// `android_main`, which this expands to.
+pub const ANDROID_ENTRY: &str = r#"
+// Android: `native-activity` loads this library and calls `android_main`.
+#[cfg(target_os = "android")]
+{{FLOOM}}::android_app!(app::build);
+"#;
+
+/// A mobile crate with no host wired yet (a bare `--platforms ohos`): the tree
+/// stays reachable so the library is not an empty crate.
+pub const MOBILE_ENTRY: &str = r#"
+// No host is wired for this target yet. OpenHarmony's exists — see
+// `docs/platforms.md` — and is opt-in with `floom::ohos_app!(app::build)` once
+// the ArkTS bridge is in place.
 "#;
 
 pub const INDEX_HTML: &str = r#"<!DOCTYPE html>

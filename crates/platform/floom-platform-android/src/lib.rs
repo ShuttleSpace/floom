@@ -30,6 +30,11 @@ pub fn android_platform() -> HostPlatform {
         .with_capabilities(PlatformCapabilities::unsupported_a11y_stub())
 }
 
+/// The `AndroidApp` handle `android_main` receives, re-exported so an app does
+/// not have to pin the winit fork's revision just to name the parameter type.
+#[cfg(target_os = "android")]
+pub use winit::platform::android::activity::AndroidApp;
+
 /// Real winit-backed Android backend (Phase 17 / 19.4). Only compiled for the
 /// `android` target; on other targets [`android_platform`] provides a headless
 /// stand-in. See the module for the `android_main` entry-point seam.

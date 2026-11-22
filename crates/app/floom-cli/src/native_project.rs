@@ -220,6 +220,12 @@ android.nonTransitiveRClass=true
 # its own built-in rules.
 android.builtInKotlin=false
 kotlin.code.style=official
+
+# AGP 9 turns on its new DSL by default, and the Kotlin Android plugin refuses
+# to apply under it ("not compatible with AGP's 9.0 new DSL"). The new DSL is
+# the future, but a scaffold whose first build fails is worse than one that opts
+# out; drop this line once KGP ships new-DSL support.
+android.newDsl=false
 "#
     .to_string()
 }
@@ -306,6 +312,9 @@ pub fn android_app_manifest(org: &str, name: &str) -> String {
     // — AAPT2 rejects it at resource-processing time with "must be a valid Java
     // class name", and the Kotlin sources are never even reached.
     let pkg = app_id.replace('-', "_");
+    // Must equal the Cargo `[lib] name`; `kotlin`/cargo disagree silently at
+    // runtime otherwise.
+    let lib = lib_name(name);
     format!(
         r#"<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -329,16 +338,18 @@ pub fn android_app_manifest(org: &str, name: &str) -> String {
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
 
-        <!--
-          The Rust half is packaged here rather than extracted from an APK entry
-          at runtime. These four are the ABIs `build.rs` cross-compiles for;
-          listing only what the device can run is what keeps the APK small.
-        -->
-        <meta-data
-            android:name="floom.nativeLibraryDir"
-            android:value="libfloom_{name}" />
+            <!--
+              Inside `<activity>`, not `<application>`: `NativeActivity` reads
+              `getActivityInfo(...).metaData`, so an application-level copy is
+              invisible and the launch fails with "Unable to find native library
+              main". The value is the Cargo `[lib] name` (`floom create` writes
+              both), and a mismatch fails the same way with the wrong name.
+            -->
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="{lib}" />
+        </activity>
 
     </application>
 
@@ -694,177 +705,50 @@ pub const ANDROID_PROGUARD_RULES: &str = "\
 
 // --- Android: Kotlin sources ---------------------------------------------
 
-/// The app's `MainActivity.kt`.
+/// The app's `MainActivity.kt` — a `NativeActivity` subclass.
 ///
-/// Three jobs: load the Rust cdylib, create a `SurfaceView` for Rust to paint
-/// into, and forward input. It deliberately does no layout — the Rust half owns
-/// the widget tree and the frame, so anything drawn here would be drawn over or
-/// under it unpredictably.
-pub fn android_main_activity(org: &str, name: &str, lib: &str) -> String {
-    let app_id = android_app_id(org, name);
-    // The dotted package for the `package` statement. `kotlin_package_path` is
-    // for the *directory* under `src/main/kotlin/`, and using it here produces
-    // `package com/example/demo`, which the Kotlin parser rejects with four
-    // "Expecting a top level declaration" errors on line 1 — one per slash.
+/// The Rust half owns the loop: the framework loads `lib{lib}.so` (named by the
+/// manifest's `android.app.lib_name` meta-data) and calls `android_main`, which
+/// builds the winit event loop, the surface, input and the soft keyboard.
+///
+/// Nothing here forwards input. A Java `onTouchEvent` would be a second source
+/// of truth for events winit already receives from the same window, and the two
+/// would disagree about coordinates and timing.
+///
+/// The class exists for what Rust cannot reach on its own: platform callbacks
+/// that only a Java/Kotlin `Activity` can override (`onNewIntent`, file-picker
+/// results) and JVM objects — accessibility first among them, since an
+/// `AccessibilityNodeProvider` cannot be constructed from native code.
+pub fn android_main_activity(_org: &str, name: &str, lib: &str) -> String {
+    let app_id = android_app_id(_org, name);
     let pkg = app_id.replace('-', "_");
     let class = kotlin_class_name(name);
     format!(
         r#"package {pkg}
 
+import android.app.NativeActivity
 import android.os.Bundle
-import android.view.Choreographer
-import android.view.SurfaceHolder
-import android.view.SurfaceView
-import android.app.Activity
 
 /**
  * The Android host for `{name}`.
  *
- * This class is a shell. It loads the Rust library, gives Rust a surface to
- * paint into, and forwards input. It does not decide what the app looks like —
- * that is the widget tree in `src/`, and a decision made here would be a
- * decision the host had to be rewritten to change.
+ * A [NativeActivity], so the loop belongs to Rust: the framework loads
+ * `lib{lib}.so` and calls `android_main`, which sets up the surface, the input
+ * and the soft keyboard through winit.
  *
- * ## The native boundary
+ * Input is deliberately not forwarded here — winit already receives the same
+ * window's events, and a second path in Kotlin would be a second source of
+ * truth for coordinates and timing.
  *
- * [FloomNative] declares `external fun`s. Their symbols are exported by the
- * Rust cdylib and resolved by the JVM on first call — a direct call into the
- * other side's memory, with no serialization and no runtime lookup by name.
- * That is why Kotlin here can pass a [Surface] straight through instead of
- * encoding it into a string, which is what a method channel would require.
+ * What this class is for is the part Rust cannot do by itself: overriding
+ * [Activity] callbacks the OS only delivers to a Java/Kotlin subclass, and
+ * owning JVM objects (an `AccessibilityNodeProvider` cannot be built natively).
  */
-class {class}Activity : Activity() {{
-
-    private lateinit var surface: SurfaceView
-    private var frameCallbackPosted = false
-
+class {class}Activity : NativeActivity() {{
     override fun onCreate(savedInstanceState: Bundle?) {{
         super.onCreate(savedInstanceState)
-
-        // `System.loadLibrary` finds `lib{lib}.so` in the APK's jniLibs. It must
-        // happen before any `external fun` is touched, and the `UnsatisfiedLinkError`
-        // it throws on a missing ABI names the ABI, so the message is left intact.
-        System.loadLibrary("{lib}")
-
-        surface = SurfaceView(this)
-        surface.holder.addCallback(object : SurfaceHolder.Callback {{
-            override fun surfaceCreated(holder: SurfaceHolder) {{
-                FloomNative.surfaceCreated(holder.surface, surface.width, surface.height)
-                requestFrame()
-            }}
-
-            override fun surfaceChanged(
-                holder: SurfaceHolder,
-                format: Int,
-                width: Int,
-                height: Int,
-            ) {{
-                FloomNative.surfaceResized(width, height)
-                requestFrame()
-            }}
-
-            override fun surfaceDestroyed(holder: SurfaceHolder) {{
-                FloomNative.surfaceDestroyed()
-            }}
-        }})
-
-        // A hardware layer is not requested: Rust paints through a native
-        // surface, and letting the compositor also cache the view would show the
-        // previous frame while the new one is being drawn.
-        surface.holder.setFormat(android.graphics.PixelFormat.RGBA_8888)
-        surface.setOnTouchListener {{ view, event ->
-            FloomNative.touch(
-                event.action,
-                event.x,
-                event.y,
-                event.pointerCount.coerceAtLeast(1),
-            )
-            view.performClick()
-            true
-        }}
-        setContentView(surface)
-
-        FloomNative.start()
-    }}
-
-    /**
-     * Asks Rust for one frame and schedules the next.
-     *
-     * Rust decides whether to actually redraw, so this can run every vsync
-     * without costing a frame: the cost of a no-op frame is the `requestFrame`
-     * call and nothing else.
-     */
-    private fun requestFrame() {{
-        if (frameCallbackPosted) return
-        frameCallbackPosted = true
-        Choreographer.getInstance().postFrameCallback {{
-            frameCallbackPosted = false
-            if (surface.isAttachedToWindow) {{
-                FloomNative.frame()
-                requestFrame()
-            }}
-        }}
-    }}
-
-    override fun onResume() {{
-        super.onResume()
-        FloomNative.lifecycleResumed()
-    }}
-
-    override fun onPause() {{
-        FloomNative.lifecyclePaused()
-        super.onPause()
-    }}
-
-    override fun onDestroy() {{
-        FloomNative.shutdown()
-        super.onDestroy()
     }}
 }}
-
-/**
- * The JNI surface Rust calls into.
- *
- * Every `external fun` here has a matching `#[no_mangle] pub extern "C"` in the
- * Rust half, and the JVM derives the symbol name from the class and method. The
- * naming convention is the contract: renaming a method here without renaming it
- * there is an `UnsatisfiedLinkError` at first call, not a compile error.
- *
- * The parameters are the FFI types the Rust side declares — ints, floats and
- * handles — which is the whole reason no serialization appears anywhere in this
- * path.
- */
-object FloomNative {{
-    external fun start()
-    external fun shutdown()
-
-    external fun surfaceCreated(surface: android.view.Surface, width: Int, height: Int)
-    external fun surfaceResized(width: Int, height: Int)
-    external fun surfaceDestroyed()
-
-    /** Requests one frame; returns whether anything was painted. */
-    external fun frame(): Boolean
-
-    /**
-     * Lifecycle transitions.
-     *
-     * Rust has to know when to stop scheduling frames and when to drop GPU
-     * resources, and the only source of that truth is the platform. These are
-     * notifications, not queries: nothing comes back.
-     */
-    external fun lifecycleResumed()
-    external fun lifecyclePaused()
-
-    /**
-     * Forwards a pointer event.
-     *
-     * [action] is one of the `MotionEvent` action constants, passed as-is
-     * because both sides agree on the numbering and copying it into an enum
-     * would only add a conversion that can go wrong.
-     */
-    external fun touch(action: Int, x: Float, y: Float, pointerCount: Int)
-}}
-
 "#
     )
 }
@@ -1429,7 +1313,7 @@ mod tests {
         // And the manifest's `android:name` must name the same class the source
         // declares, because it is resolved with Class.forName.
         let class = format!("{}Activity", kotlin_class_name("my_app"));
-        let declared = format!("class {class} : Activity()");
+        let declared = format!("class {class} : NativeActivity()");
         assert!(activity.contains(&declared), "{activity}");
         assert!(
             manifest.contains(&format!(
@@ -1442,16 +1326,25 @@ mod tests {
     }
 
     #[test]
-    fn external_functions_declare_native_calls_only() {
+    fn the_activity_is_a_native_activity_and_the_manifest_names_the_library() {
         let activity = android_main_activity("com.example", "my_app", "floom_my_app");
-        for call in [
-            "external fun start()",
-            "external fun frame()",
-            "external fun touch(",
-            "external fun surfaceCreated(",
-        ] {
-            assert!(activity.contains(call), "`{call}` missing");
-        }
+        let manifest = android_app_manifest("com.example", "my_app");
+
+        // `native-activity` loads the library named in the manifest and calls
+        // `android_main`. A Java Activity here would never receive the Rust
+        // event loop, and a Kotlin `external fun` with no Rust symbol is an
+        // `UnsatisfiedLinkError` at first call — so the host declares none.
+        assert!(!activity.contains("external fun"), "{activity}");
+        assert!(
+            // Inside the activity element: `NativeActivity` reads the
+            // activity's meta-data, not the application's.
+            manifest.find("android.app.lib_name").unwrap() < manifest.find("</activity>").unwrap(),
+            "{manifest}"
+        );
+        assert!(
+            manifest.contains("android:value=\"floom_my_app\""),
+            "the meta-data must name the Cargo [lib] name:\n{manifest}"
+        );
     }
 
     #[test]

@@ -96,8 +96,10 @@ pub fn pack_android(project: &Project, opts: &PackOpts) -> Result<PackResult, St
         ));
     }
 
-    let (gradle, gargs) = gradle_argv(project, opts);
     let android_dir = project.root.join("android");
+    ensure_wrapper(&android_dir)?;
+
+    let (gradle, gargs) = gradle_argv(project, opts);
     let gradle_ref = gradle.as_str();
     let gargs_ref: Vec<&str> = gargs.iter().map(String::as_str).collect();
     shared::run(gradle_ref, &gargs_ref, &android_dir)?;
@@ -118,6 +120,51 @@ pub fn pack_android(project: &Project, opts: &PackOpts) -> Result<PackResult, St
         artifact: Some(apk),
         note: None,
     })
+}
+
+/// The Gradle version a scaffold asked for, e.g. `9.1.0`.
+///
+/// The wrapper properties are the only place the version is written down, and
+/// the scaffold ships no `gradlew` (a binary jar in every generated project).
+/// So packaging reads the wanted version here and bootstraps the wrapper.
+fn wrapper_version(properties: &str) -> Option<String> {
+    let line = properties
+        .lines()
+        .find(|l| l.starts_with("distributionUrl="))?;
+    let file = line.rsplit('/').next()?;
+    let rest = file.strip_prefix("gradle-")?;
+    let version = rest
+        .strip_suffix("-all.zip")
+        .or_else(|| rest.strip_suffix("-bin.zip"))?;
+    (!version.is_empty()).then(|| version.to_string())
+}
+
+/// Make sure `android/gradlew` exists before Gradle runs.
+///
+/// AGP pins a minimum Gradle version, and a system `gradle` older than it fails
+/// with "Minimum supported Gradle version is …" *after* the `.so` was already
+/// built. Bootstrapping the wrapper once makes the build use the version the
+/// scaffold asked for. Silent when there is already a `gradlew` or no
+/// properties to read.
+fn ensure_wrapper(android_dir: &Path) -> Result<(), String> {
+    if android_dir.join("gradlew").exists() {
+        return Ok(());
+    }
+    let properties = android_dir.join("gradle/wrapper/gradle-wrapper.properties");
+    let Ok(text) = std::fs::read_to_string(&properties) else {
+        return Ok(());
+    };
+    let Some(version) = wrapper_version(&text) else {
+        return Ok(());
+    };
+    println!(
+        "bootstrapping the Gradle wrapper ({version}) — the scaffold pins a version newer than a system gradle"
+    );
+    shared::run(
+        "gradle",
+        &["wrapper", "--gradle-version", &version],
+        android_dir,
+    )
 }
 
 #[cfg(test)]
@@ -189,5 +236,17 @@ mod tests {
             adb_install_argv(apk),
             vec!["install", "-r", "/p/android/app-release.apk"]
         );
+    }
+
+    #[test]
+    fn the_wrapper_version_is_read_from_the_distribution_url() {
+        let properties = "distributionBase=GRADLE_USER_HOME\n\
+             distributionUrl=https\\://services.gradle.org/distributions/gradle-9.1.0-all.zip\n";
+        assert_eq!(wrapper_version(properties).as_deref(), Some("9.1.0"));
+        assert_eq!(
+            wrapper_version("distributionUrl=x/gradle-8.14-bin.zip"),
+            Some("8.14".to_string())
+        );
+        assert_eq!(wrapper_version("nothing here"), None);
     }
 }

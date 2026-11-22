@@ -226,6 +226,36 @@ macro_rules! ios_app {
     };
 }
 
+/// The Android entry point, in one line.
+///
+/// An app crate's `src/lib.rs` (the cdylib `floom package` builds into an APK)
+/// writes:
+///
+/// ```ignore
+/// #[cfg(target_os = "android")]
+/// floom::android_app!(build);
+/// ```
+///
+/// which expands to the `android_main` symbol `native-activity` looks up in the
+/// loaded library. The one thing it hides is the hand-over `android_main` owes
+/// the platform: winit will not build the event loop without the `AndroidApp`
+/// the OS passed in, and only this entry point ever sees it.
+#[cfg(all(feature = "mobile", target_os = "android"))]
+#[macro_export]
+macro_rules! android_app {
+    ($build:expr) => {
+        /// Entry point `native-activity` calls after loading the library.
+        #[unsafe(no_mangle)]
+        pub fn android_main(android_app: $crate::AndroidApp) {
+            $crate::platform::start_android(
+                android_app,
+                $crate::types::Size::new(360.0, 640.0),
+                Box::new($build),
+            );
+        }
+    };
+}
+
 /// The OpenHarmony entry point, in one line.
 ///
 /// An app crate's `src/lib.rs` (the cdylib `floom package` builds into a HAP)
@@ -298,6 +328,11 @@ macro_rules! ohos_app {
 /// # Ok(())
 /// # }
 /// ```
+/// The handle `android_main` receives. Re-exported so an app can write the
+/// entry point without depending on the winit fork Floom pins.
+#[cfg(all(feature = "mobile", target_os = "android"))]
+pub use floom_platform_android::AndroidApp;
+
 pub fn run<F>(title: &str, size: floom_types::Size, build: F) -> Result<(), String>
 where
     F: FnOnce(&mut floom_app::WidgetHost) + 'static,
