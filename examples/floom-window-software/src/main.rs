@@ -75,6 +75,19 @@ impl WinitApp for SoftwareApp {
         // published by the frame that lays the tree out, so an agent that asked
         // first would be told the window is empty.
         if self.selftest && self.frames >= 2 {
+            // A frame publishes semantics, and how many frames a runner needs
+            // before the tree is laid out is not something to guess at: paint
+            // until the window has something to describe.
+            let mut tries = 0;
+            while self.runner.host().semantics().iter().count() == 0 && tries < 5 {
+                self.runner.host_mut().frame();
+                tries += 1;
+            }
+            eprintln!(
+                "agent: {} semantic nodes after {} extra frames",
+                self.runner.host().semantics().iter().count(),
+                tries
+            );
             let answered = agent_selftest(self.runner.host_mut());
             eprintln!(
                 "floom-software: agent self-test {}",
