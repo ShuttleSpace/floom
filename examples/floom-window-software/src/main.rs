@@ -9,7 +9,7 @@
 //! xvfb-run -a cargo run -p floom-window-software
 //! ```
 //!
-//! `FLOOM_SOFTWARE_EXIT_FRAMES` (default 3) bounds the run: the app closes the
+//! `FLOOM_SOFTWARE_EXIT_FRAMES` (default 8) bounds the run: the app closes the
 //! loop itself, so the script never has to kill a window that is waiting for a
 //! human.
 
@@ -46,7 +46,7 @@ impl WinitApp for SoftwareApp {
     }
 
     fn events(&mut self, platform: &mut WinitPlatform) {
-        self.runner.pump(platform);
+        let stats = self.runner.pump(platform);
         let _ = platform;
         // The presenter's own pixels are the only proof that a frame was drawn
         // rather than a window opened over an empty buffer.
@@ -60,11 +60,18 @@ impl WinitApp for SoftwareApp {
             .filter(|p| p[3] > 0)
             .count();
         self.frames += 1;
+        // The extra numbers separate "no events reached the tree" from "the tree
+        // painted nothing" from "the presenter cleared the buffer" — a frame that
+        // arrives empty has to say which.
         eprintln!(
-            "floom-software: frame {} drew {}x{} with {inked} inked pixels",
+            "floom-software: frame {} drew {}x{} with {inked} inked pixels \
+             (events={} scene_ops={} host={:?})",
             self.frames,
             presenter.width(),
-            presenter.height()
+            presenter.height(),
+            stats.events,
+            self.runner.host().scene().len(),
+            self.runner.host().size(),
         );
         if self.frames >= self.exit_after {
             // `run` has no "close the loop" hook for the app, and this binary is
@@ -83,7 +90,7 @@ fn main() {
     let exit_after = env::var("FLOOM_SOFTWARE_EXIT_FRAMES")
         .ok()
         .and_then(|v| v.parse().ok())
-        .unwrap_or(3u32);
+        .unwrap_or(8u32);
 
     let mut host = floom_app::WidgetHost::new();
     host.mount_root(

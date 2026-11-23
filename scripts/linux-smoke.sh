@@ -9,7 +9,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LOG="${LOG:-$(mktemp)}"
-FRAMES="${FRAMES:-3}"
+FRAMES="${FRAMES:-8}"
 
 cd "$ROOT"
 cargo build --package=floom-window-software --locked
@@ -40,8 +40,10 @@ want() {
 want "floom-software: window surface " "a window opened and reported its surface"
 want "inked pixels" "a frame reached the window"
 
-# A frame with no ink means the surface was presented empty — a white window with
-# nothing in it passes "a frame arrived" but fails the only thing that matters.
+# The first frame arrives before the tree has painted anything (on a runner the
+# window appears, then the tree paints), so the assertion is over all frames: "no
+# frame ever carried ink" is the failure. A window presented empty passes "a frame
+# arrived" and fails the only thing that matters.
 if grep -E "floom-software: frame .* with [1-9][0-9]* inked pixels" "$LOG" > /dev/null; then
     echo "ok: a frame carried ink"
 else
