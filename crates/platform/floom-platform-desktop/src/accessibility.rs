@@ -14,6 +14,9 @@
 
 use std::collections::HashMap;
 
+#[cfg(target_os = "macos")]
+pub mod macos;
+
 use accesskit::{Action, Node, NodeId, Role, Tree, TreeId, TreeUpdate};
 use floom_accessibility::{
     AccessibilityAdapter, AccessibilityCapabilities, AccessibilityFrame, SemanticsAction,
@@ -26,6 +29,9 @@ pub struct DesktopAccessibilityAdapter {
     caps: AccessibilityCapabilities,
     frame: AccessibilityFrame,
     handlers: HashMap<ElementId, Box<dyn Fn(SemanticsAction) -> bool>>,
+    /// Bumped whenever [`DesktopAccessibilityAdapter::tree_update`] would
+    /// return something different, so a bridge can push only on change.
+    version: u64,
 }
 
 impl Default for DesktopAccessibilityAdapter {
@@ -38,6 +44,7 @@ impl Default for DesktopAccessibilityAdapter {
                 | AccessibilityCapabilities::LIVE_REGION,
             frame: AccessibilityFrame::default(),
             handlers: HashMap::new(),
+            version: 0,
         }
     }
 }
@@ -55,8 +62,16 @@ impl DesktopAccessibilityAdapter {
     /// two cannot drift: the default adapter has no bridge and does not claim
     /// one.
     pub fn with_native_bridge(mut self) -> Self {
-        self.caps |= AccessibilityCapabilities::NATIVE_BRIDGE;
+        self.claim_native_bridge();
         self
+    }
+
+    /// Record that an OS bridge is installed.
+    ///
+    /// The platform calls this when it attaches one, so the flag follows the
+    /// bridge instead of being set from a configuration knob.
+    pub fn claim_native_bridge(&mut self) {
+        self.caps |= AccessibilityCapabilities::NATIVE_BRIDGE;
     }
 
     pub fn frame(&self) -> &AccessibilityFrame {
@@ -65,6 +80,11 @@ impl DesktopAccessibilityAdapter {
 
     pub fn node_count(&self) -> usize {
         self.frame.node_count()
+    }
+
+    /// Changes whenever the tree an OS adapter would see changes.
+    pub fn version(&self) -> u64 {
+        self.version
     }
 
     /// Register the handler that receives accessibility actions for `node`.
@@ -225,8 +245,20 @@ pub fn accesskit_node_id(element: ElementId) -> NodeId {
     node_id(element)
 }
 
+/// The element an `accesskit` node id came from.
+///
+/// The other direction of [`accesskit_node_id`], for forwarding an OS action
+/// back to the widget that published the node.
+pub fn element_id(node: NodeId) -> ElementId {
+    let raw = node.0;
+    ElementId::new(raw as u32, (raw >> 32) as u32)
+}
+
 impl AccessibilityAdapter for DesktopAccessibilityAdapter {
     fn update(&mut self, diff: &SemanticsDiff) {
+        if !diff.is_empty() {
+            self.version += 1;
+        }
         for (id, node) in &diff.added {
             self.frame.nodes.insert(*id, node.clone());
         }
@@ -253,5 +285,6 @@ impl AccessibilityAdapter for DesktopAccessibilityAdapter {
     fn reset(&mut self) {
         self.frame = AccessibilityFrame::default();
         self.handlers.clear();
+        self.version += 1;
     }
 }

@@ -44,6 +44,10 @@ cursor-icon = { version = "1.2.0", optional = true }
 # `NSWindow` for `makeFirstResponder:` and the backing scale factor, so both are
 # load-bearing rather than transitive.
 [target.'cfg(target_os = "macos")'.dependencies]
+# The accessibility bridge (S1.6): the thinnest thing that puts the tree in front
+# of `NSAccessibility`. The tree itself is built in `accessibility.rs`, so this
+# crate stays a data model.
+accesskit_macos = "0.26"
 objc2 = { version = "0.6", default-features = false, features = ["std"] }
 objc2-app-kit = { version = "0.3", default-features = false, features = [
     "std",
@@ -87,5 +91,7 @@ windows-sys = { version = "0.61", features = [
     # `CF_UNICODETEXT` is filed under Ole, not DataExchange.
     "Win32_System_Ole",
 ] }
+
+
 
 [dev-dependencies]

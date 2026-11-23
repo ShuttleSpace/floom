@@ -46,6 +46,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::time::Instant;
 
+use floom_accessibility::SemanticsAction;
 use floom_platform::{
     Clipboard, Ime, KeyCode, Modifiers, Platform, PlatformCapabilities, PlatformEvent,
     SurfaceConfig, SurfaceTarget, Window, WindowCommand, WindowConfig, WindowState,
@@ -289,6 +290,17 @@ pub struct WinitPlatform {
     /// every `NativeSurface` mount try to composite, so a session that never
     /// built a bridge must not advertise it.
     native_caps: Option<PlatformCapabilities>,
+    /// The retained semantics frame. Kept here rather than only in the app
+    /// layer, because the platform is what an OS bridge attaches to.
+    accessibility: crate::accessibility::DesktopAccessibilityAdapter,
+    /// The frame version last handed to a bridge.
+    a11y_version: u64,
+    /// One `NSAccessibility` adapter per window, keyed like `windows`.
+    #[cfg(target_os = "macos")]
+    macos_a11y: std::collections::HashMap<u32, crate::accessibility::macos::MacBridge>,
+    /// Actions AppKit asked for, drained on the next poll.
+    #[cfg(target_os = "macos")]
+    a11y_actions: crate::accessibility::macos::ActionQueue,
 }
 
 impl std::fmt::Debug for WinitPlatform {
@@ -320,6 +332,12 @@ impl WinitPlatform {
             started: Instant::now(),
             ime_enabled: HashMap::new(),
             native_caps: None,
+            accessibility: crate::accessibility::DesktopAccessibilityAdapter::new(),
+            a11y_version: 0,
+            #[cfg(target_os = "macos")]
+            macos_a11y: HashMap::new(),
+            #[cfg(target_os = "macos")]
+            a11y_actions: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
         }
     }
 
@@ -465,6 +483,15 @@ impl WinitPlatform {
             transparent: false,
         });
 
+        #[cfg(target_os = "macos")]
+        if let Some(view) = crate::accessibility::macos::ns_view(&*native) {
+            let bridge = crate::accessibility::macos::MacBridge::attach(
+                view,
+                std::sync::Arc::clone(&self.a11y_actions),
+            );
+            self.macos_a11y.insert(id.index(), bridge);
+            self.accessibility.claim_native_bridge();
+        }
         self.native_ids.insert(native.id(), id);
         self.windows.insert(id.index(), window);
         self.events.push(PlatformEvent::WindowCreated {
@@ -488,6 +515,40 @@ impl WinitPlatform {
             }
         }
         created
+    }
+
+    /// Hand the frame to the OS bridge, and the OS's actions back to the tree.
+    ///
+    /// Both directions are drained here rather than at each call site: an
+    /// adapter that only ever writes is a tree nobody can act through.
+    fn flush_accessibility(&mut self) {
+        #[cfg(target_os = "macos")]
+        {
+            let requests: Vec<_> = match self.a11y_actions.lock() {
+                Ok(mut queue) => queue.drain(..).collect(),
+                Err(_) => Vec::new(),
+            };
+            for request in requests {
+                let element = crate::accessibility::element_id(request.target_node);
+                let action = match request.action {
+                    accesskit::Action::Click => SemanticsAction::Activate,
+                    _ => continue,
+                };
+                floom_accessibility::AccessibilityAdapter::perform_action(
+                    &mut self.accessibility,
+                    element,
+                    action,
+                );
+            }
+            if self.a11y_version != self.accessibility.version() {
+                self.a11y_version = self.accessibility.version();
+                if let Some(update) = self.accessibility.tree_update() {
+                    for bridge in self.macos_a11y.values_mut() {
+                        bridge.push(update.clone());
+                    }
+                }
+            }
+        }
     }
 
     fn window_index(&self, native: WinitWindowId) -> Option<WindowId> {
@@ -744,8 +805,20 @@ impl Platform for WinitPlatform {
         // no-bridge answer until then. Both come from `desktop_capabilities`, so
         // the flag is derived in exactly one place — this is the call site that
         // can know whether a bridge was built.
-        self.native_caps
-            .unwrap_or_else(|| crate::native::desktop_capabilities(false))
+        let mut caps = self
+            .native_caps
+            .unwrap_or_else(|| crate::native::desktop_capabilities(false));
+        // Follows the bridge, like every other claim here: until a window has an
+        // `NSAccessibility` adapter, a screen reader cannot read this tree.
+        #[cfg(target_os = "macos")]
+        if !self.macos_a11y.is_empty() {
+            caps.caps |= floom_platform::Capability::ACCESSIBILITY;
+        }
+        caps
+    }
+
+    fn accessibility(&mut self) -> Option<&mut dyn floom_accessibility::AccessibilityAdapter> {
+        Some(&mut self.accessibility)
     }
 
     fn ime(&mut self, _window: WindowId) -> Option<&mut dyn Ime> {
@@ -784,6 +857,7 @@ impl Platform for WinitPlatform {
     }
 
     fn poll_events(&mut self, out: &mut Vec<PlatformEvent>) {
+        self.flush_accessibility();
         out.append(&mut self.events);
     }
 
