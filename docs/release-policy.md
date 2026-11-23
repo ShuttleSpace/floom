@@ -48,7 +48,7 @@ nothing more.
 
 | target | backend | status |
 | --- | --- | --- |
-| `aarch64-apple-darwin` | `floom-platform-desktop` (winit) + `floom-renderer-vello` (Metal) | **tested**: macOS 26.6.2, Apple M4 Pro, rustc 1.98.0 |
+| `aarch64-apple-darwin` | `floom-platform-desktop` (winit) + `floom-renderer-vello` (Metal) | **tested (CI)**: `macos-window-smoke` opens a real window with the gate probe, asserts a surface and an `NSPasteboard` round trip (`scripts/macos-smoke.sh`); `gpu-pixels` runs the 11 pixel tests on real Metal. Hand-measured on macOS 26.6.2 / M4 Pro / rustc 1.98.0. |
 | `x86_64-apple-darwin` | same | **untested** — no Intel Mac on this machine. The window lifecycle is winit's (portable), but nothing here has been measured. |
 | `x86_64-pc-windows-msvc` | `floom-platform-desktop` | **device-gated (Phase 16.2)**: windowing via winit; native-view composition on Win32 incomplete; `cargo build` verified on `windows-latest` CI runner; `cargo test` pending native-view completion |
 | `x86_64-unknown-linux-gnu` | `floom-platform-desktop` | **device-gated (Phase 16.2)**: windowing via winit/X11; same bridge gap; `ubuntu-latest` build runner covers `cargo build`; `cargo test` pending native-view completion |

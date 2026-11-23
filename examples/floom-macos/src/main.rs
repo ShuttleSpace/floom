@@ -41,7 +41,7 @@ use std::time::Duration;
 use floom_app::{AppRunner, NodeId, WidgetHost};
 use floom_core::{Axis, Color, LayoutRequest};
 use floom_layout::LayoutStyle;
-use floom_platform::{Clipboard, Ime, WindowConfig};
+use floom_platform::{Clipboard, Ime, Platform, WindowConfig};
 use floom_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
 use floom_renderer_vello::VelloGpuPresenter;
 use floom_types::{ElementId, Size, WindowId};
@@ -80,8 +80,19 @@ struct MacWindowApp {
 }
 
 impl WinitApp for MacWindowApp {
-    fn window_created(&mut self, _platform: &mut WinitPlatform, window: WindowId) {
+    fn window_created(&mut self, platform: &mut WinitPlatform, window: WindowId) {
         self.window = Some(window);
+        // The one line that says a window exists and has a drawable surface: it
+        // is what `scripts/macos-smoke.sh` waits for, and it costs nothing on a
+        // human's run.
+        if let Some(created) = platform.window(window) {
+            let size = created.size();
+            let scale = created.display_info().scale_factor.get();
+            eprintln!(
+                "floom-macos: window surface {}x{} at scale {scale}",
+                size.width, size.height
+            );
+        }
     }
 
     fn events(&mut self, platform: &mut WinitPlatform) {

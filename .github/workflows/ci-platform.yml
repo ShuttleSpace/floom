@@ -325,3 +325,20 @@ jobs:
         run: cargo build --package=floom-cli --locked
       - name: Scaffold, package, install, launch, screenshot
         run: WORK="$RUNNER_TEMP/ios-smoke" bash scripts/ios-smoke.sh
+
+  # The desktop counterpart of the simulator smoke above: the gate probe opens a
+  # real window on the runner, gets a surface, and reaches `NSPasteboard`. The
+  # assertion is on the probe's own report lines, so nothing here depends on the
+  # runner's display size or on a screenshot.
+  macos-window-smoke:
+    name: macOS app in a window
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: macos-window-smoke
+      - name: Open a window and ask it what it sees
+        run: SECS=20 LOG="$RUNNER_TEMP/macos-smoke.log" bash scripts/macos-smoke.sh
