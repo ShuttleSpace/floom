@@ -14,7 +14,9 @@
 
 use std::collections::HashMap;
 
-#[cfg(target_os = "macos")]
+// `winit`-gated as well as platform-gated: the module turns a window handle into
+// an `NSView`, and without the `winit` feature this crate has no window.
+#[cfg(all(target_os = "macos", feature = "winit"))]
 pub mod macos;
 
 use accesskit::{Action, Node, NodeId, Role, Tree, TreeId, TreeUpdate};
