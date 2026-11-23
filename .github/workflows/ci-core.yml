@@ -437,3 +437,27 @@ jobs:
         # `--all-features` because feature-gated code is where MSRV breakage
         # hides.
         run: rustup run "$MSRV_TOOLCHAIN" cargo check --workspace --all-features
+
+  # G11 with teeth: the size budgets were a local check because the numbers are
+  # host-specific. This runner has its own baseline, so the comparison is
+  # Linux-against-Linux and the gate can fail a build that grows a tier.
+  size-budgets:
+    name: Size budgets on ubuntu-24.04
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: size-budgets
+      - name: Install what the release builds link
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pkg-config libfontconfig1-dev libgtk-3-dev libwayland-dev \
+            libxkbcommon-x11-dev libxcb-shape0-dev libxcb-xfixes0-dev libvulkan-dev
+      - name: Measure each tier (baseline harvest — temporary)
+        run: |
+          FLOOM_SIZE_BASELINE="$RUNNER_TEMP/size.json" bash scripts/check-size-budgets.sh --update
+          cat "$RUNNER_TEMP/size.json"

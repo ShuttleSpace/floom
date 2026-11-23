@@ -26,7 +26,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-BASELINE="docs/superpowers/benchmarks/floom-2-size-baseline.json"
+# Sizes are host-specific, so the baselines are too: CI keeps its own file per
+# runner platform (`floom-2-size-baseline-linux-x86_64.json`) instead of comparing
+# a Linux binary against a macOS number. `FLOOM_SIZE_BASELINE` picks the file.
+BASELINE="${FLOOM_SIZE_BASELINE:-docs/superpowers/benchmarks/floom-2-size-baseline.json}"
 UPDATE=0
 for arg in "$@"; do
   case "$arg" in
