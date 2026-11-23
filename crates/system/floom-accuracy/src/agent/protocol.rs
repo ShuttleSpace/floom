@@ -86,6 +86,11 @@ pub enum Selector {
     Label(String),
     /// The first node whose role has this name (`"checkbox"`, `"button"`, …).
     Role(String),
+    /// A node by the id `Tree` gave it. The id is the node's position in mount
+    /// order, so it holds for as long as the node is on screen -- what it does
+    /// *not* do is survive a sibling mounting before it, which is why `Label`
+    /// and `Role` remain the portable handles.
+    Id(u64),
 }
 
 impl std::fmt::Display for Selector {
@@ -93,6 +98,7 @@ impl std::fmt::Display for Selector {
         match self {
             Selector::Label(label) => write!(f, "label {label:?}"),
             Selector::Role(role) => write!(f, "role {role:?}"),
+            Selector::Id(id) => write!(f, "id {id}"),
         }
     }
 }

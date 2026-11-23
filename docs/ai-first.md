@@ -24,12 +24,18 @@
 | --- | --- | --- | --- |
 | A1 | ~~跑起来的 app 没有 agent 口~~ **已闭（2026-11-23）**：`AgentApp` 抽成 trait，`WindowApp` 让协议直接驱动真实 `WidgetHost`，`spawn_bridge` 把 loopback 请求交给持有窗口的线程；`floom-window-software --agent <port>` 在 CI 里被脚本问出树、点中按钮 | — | 见下节「已闭的缺口」 |
 | A2 | **无 `floom mcp`**：没有任何 MCP server 把上面 6 个只读命令 + 3 个动作暴露出去 | 每个 harness 都要自己写胶水 | 全仓无 `mcp` |
-| A3 | **语义动作 ID 不稳定**：`Tap{Label}` 在文案变更即失效，没有"稳定 id + label 兜底" | 一次 i18n 改动就让 agent 的全部脚本报废 | `Selector` 只有两种 |
+| A3 | **语义动作 ID 不稳定**：`Tap{Label}` 在文案变更即失效，没有"稳定 id + label 兜底" | 一次 i18n 改动就让 agent 的全部脚本报废 | `Selector` 只有两种（**2026-11-23 起有 `Selector::Id`，但 id 是挂载次序，sibling 挂载会让它移位**） |
 | A4 | **失败工件不成套**：`assert` 失败只报哈希不符，没有"期望/实际 PNG + 场景 diff + 那一刻的树"三件套 | agent 拿到哈希没法自己修 | `floom-snapshot/src/lib.rs:72-88` |
 | A5 | **token 分层文档**：schema 有 token 关系表，但没有"这个组件允许改哪些 token、改了会不会破一致性"的成文约束 | agent 会随手硬编码颜色（组件里已有 26/29/27 处先例） | [components.md](components.md) |
 | A6 | **CLI 没有 agent 子命令**：`floom verify` / `floom snapshot` 未暴露 | agent 只能写 Rust 测试来验 | `floom-cli/src/main.rs:103-109` 无 |
 
 ## 已闭的缺口
+
+**A2 的一半：`Tree` 给的 id 现在能用了。** 协议里 `Selector` 原有 `Label`/`Role` 两种，而 `Tree` 每条节点都带 `id` —— 读得到、点不到，等于给 agent 一个假手柄。现在 `Selector::Id(u64)` 会解析成本次的节点并走同一条点击路径（`AgentApp::element_of_id` + `tap_element`，默认实现基于 `host.node_at` / `host.node_id` / `host.activate`），越界或已离屏的 id 报 `SelectorNotFound` 并附上"现在屏幕上有什么"。
+
+id 是什么、不是什么，写进了 `protocol.rs`：它是**挂载次序**，节点在屏期间稳定，sibling 在它前面挂载会让它移位；跨 i18n 文案变更仍要靠 `Label`。要真正稳定的身份，得给节点一个作者声明的 key —— 那是 A3 的后半，没做。
+
+证据（`crates/system/floom-accuracy/tests/agent_ids.rs`，3 passed）：读树拿到 `Increment` 的 id 后 `Tap{Id}` 回 `Done{repainted:true}`；`Id(9999)` 被拒且回执里列出屏上的 label；同一个 app 建两次，`Tree` 与 `Semantics` 的 JSON 逐字节相同（这台机器上 id、次序、几何都是确定的）。
 
 **A1：跑起来的 app 有了 agent 口。** 三块拼起来，都在 `floom-accuracy::agent`：
 

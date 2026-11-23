@@ -55,6 +55,9 @@ impl AgentApp for WindowApp<'_> {
     fn host(&self) -> &WidgetHost {
         self.host
     }
+    fn host_mut(&mut self) -> &mut WidgetHost {
+        self.host
+    }
 
     fn size(&self) -> Size {
         self.size

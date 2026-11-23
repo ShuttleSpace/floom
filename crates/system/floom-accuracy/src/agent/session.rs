@@ -32,6 +32,7 @@ use crate::agent::schema::component_schema;
 /// agent's commands reach the same event path a human's do.
 pub trait AgentApp {
     fn host(&self) -> &WidgetHost;
+    fn host_mut(&mut self) -> &mut WidgetHost;
     fn size(&self) -> Size;
     fn scene_nodes(&self) -> Vec<SceneNode>;
     fn labels(&self) -> Vec<String>;
@@ -40,11 +41,35 @@ pub trait AgentApp {
     fn tap(&mut self, selector: Selector) -> bool;
     fn type_text(&mut self, selector: Selector, text: &str) -> bool;
     fn drag(&mut self, from: Point, to: Point) -> bool;
+
+    /// The node a protocol id names, when there is one on screen with it.
+    fn element_of_id(&self, id: u64) -> Option<floom_types::ElementId> {
+        let index = usize::try_from(id).ok()?;
+        let host = self.host();
+        let node = host.node_at(index)?;
+        host.live_semantics_hint(node)?;
+        Some(host.node_id(node))
+    }
+
+    /// Click a node the protocol already resolved to an element.
+    fn tap_element(&mut self, element: floom_types::ElementId) -> bool {
+        self.host_mut().activate(element)
+    }
+}
+
+/// What a wire selector turned into: either something the testkit can find, or
+/// an element the protocol already resolved by id.
+enum Target {
+    Selector(floom_testkit::Selector),
+    Element(floom_types::ElementId),
 }
 
 impl AgentApp for TestApp {
     fn host(&self) -> &WidgetHost {
         TestApp::host(self)
+    }
+    fn host_mut(&mut self) -> &mut WidgetHost {
+        TestApp::host_mut(self)
     }
     fn size(&self) -> Size {
         TestApp::size(self)
@@ -116,8 +141,10 @@ impl<'a, A: AgentApp> AgentSession<'a, A> {
             Command::Performance => Ok(Payload::Performance(self.stats)),
             Command::Schema => Ok(Payload::Schema(component_schema())),
             Command::Tap { selector } => {
-                let selector = self.resolve(selector)?;
-                let repainted = self.app.tap(selector);
+                let repainted = match self.resolve(selector)? {
+                    Target::Selector(selector) => self.app.tap(selector),
+                    Target::Element(element) => self.app.tap_element(element),
+                };
                 self.stats.interactions += 1;
                 self.stats.taps += 1;
                 if repainted {
@@ -126,8 +153,12 @@ impl<'a, A: AgentApp> AgentSession<'a, A> {
                 Ok(Payload::Done { repainted })
             }
             Command::TypeText { selector, text } => {
-                let selector = self.resolve(selector)?;
-                let repainted = self.app.type_text(selector, text);
+                let repainted = match self.resolve(selector)? {
+                    Target::Selector(selector) => self.app.type_text(selector, text),
+                    // A node reached by id is still typed into by what it says:
+                    // text input needs a field, and text is what addresses one.
+                    Target::Element(_) => false,
+                };
                 self.stats.interactions += 1;
                 self.stats.text_commits += 1;
                 if repainted {
@@ -150,12 +181,18 @@ impl<'a, A: AgentApp> AgentSession<'a, A> {
     /// Resolve a wire selector against the live screen, refusing nothing
     /// quietly: a miss carries what *is* on screen so an agent can correct
     /// itself rather than re-guess blind.
-    fn resolve(
-        &self,
-        selector: &crate::agent::protocol::Selector,
-    ) -> Result<floom_testkit::Selector, AgentError> {
+    fn resolve(&self, selector: &crate::agent::protocol::Selector) -> Result<Target, AgentError> {
         let on_screen = || self.app.labels();
         let candidate = match selector {
+            crate::agent::protocol::Selector::Id(id) => {
+                return match self.app.element_of_id(*id) {
+                    Some(element) => Ok(Target::Element(element)),
+                    None => Err(AgentError::SelectorNotFound {
+                        selector: selector.to_string(),
+                        on_screen: on_screen(),
+                    }),
+                };
+            }
             crate::agent::protocol::Selector::Label(label) => {
                 floom_testkit::Selector::Label(label.clone())
             }
@@ -170,7 +207,7 @@ impl<'a, A: AgentApp> AgentSession<'a, A> {
             }
         };
         if self.app.has(candidate.clone()) {
-            Ok(candidate)
+            Ok(Target::Selector(candidate))
         } else {
             Err(AgentError::SelectorNotFound {
                 selector: selector.to_string(),
