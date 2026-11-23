@@ -201,15 +201,6 @@ pub struct LineMetrics {
     pub line_height: f32,
 }
 
-/// How far a line may overflow its box before it counts as needing a wrap.
-///
-/// Real fonts have fractional advances, and the box a label is laid out in has
-/// been through a layout engine that rounds. A line that misses by a third of a
-/// pixel is not a line the reader wants broken: it is the same line, one rounding
-/// step early. Without the slack the outcome depends on which font the host
-/// happens to resolve, so the same label wraps on Windows and stays put on macOS.
-const WRAP_SLACK: f64 = 0.5;
-
 /// Fully shaped + wrapped text ready for painting.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LaidOutText {
@@ -263,7 +254,7 @@ impl TextShaper {
         } else {
             None
         };
-        layout.break_all_lines(width.map(|w| w + WRAP_SLACK as f32));
+        layout.break_all_lines(width);
         layout.align(
             width,
             options.align.to_parley(),
