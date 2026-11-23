@@ -14,6 +14,7 @@
 //! human.
 
 use std::env;
+use std::time::{Duration, Instant};
 
 use floom_app::AppRunner;
 use floom_core::{Axis, LayoutRequest};
@@ -27,6 +28,9 @@ struct SoftwareApp {
     window: Option<WindowId>,
     frames: u32,
     exit_after: u32,
+    /// The loop only hands out frames while the tree is unsettled, so a frame
+    /// budget alone can wait forever on a still tree. This is the other half.
+    deadline: Instant,
 }
 
 impl WinitApp for SoftwareApp {
@@ -47,6 +51,7 @@ impl WinitApp for SoftwareApp {
 
     fn events(&mut self, platform: &mut WinitPlatform) {
         let stats = self.runner.pump(platform);
+        let _ = platform;
         let _ = platform;
         // The presenter's own pixels are the only proof that a frame was drawn
         // rather than a window opened over an empty buffer.
@@ -73,12 +78,29 @@ impl WinitApp for SoftwareApp {
             self.runner.host().scene().len(),
             self.runner.host().size(),
         );
-        if self.frames >= self.exit_after {
+        if inked > 0 && self.frames >= 2 {
             // `run` has no "close the loop" hook for the app, and this binary is
-            // driven by a script rather than a human: leaving after the frames
-            // it promised is the whole contract.
+            // driven by a script rather than a human: leaving once a frame has
+            // ink is the whole contract.
             eprintln!(
                 "floom-software: {} frames is the report; leaving",
+                self.frames
+            );
+            std::process::exit(0);
+        }
+        if self.frames >= self.exit_after {
+            eprintln!(
+                "floom-software: {} frames and no ink; leaving without a drawing",
+                self.frames
+            );
+            std::process::exit(0);
+        }
+    }
+
+    fn about_to_wait(&mut self, _platform: &mut WinitPlatform) {
+        if self.deadline.elapsed() > Duration::from_secs(10) {
+            eprintln!(
+                "floom-software: 10s and {} frames later, the loop is still waiting",
                 self.frames
             );
             std::process::exit(0);
@@ -107,6 +129,7 @@ fn main() {
         window: None,
         frames: 0,
         exit_after,
+        deadline: Instant::now(),
     };
 
     let windows = vec![WindowConfig {
