@@ -1,0 +1,10 @@
+{
+  "name": "@types/floom",
+  "version": "0.2.0",
+  "description": "Type declarations for the floom TSX frontend. Generated from `floom_tsx::generate_dts()`; do not edit by hand.",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "files": [
+    "index.d.ts"
+  ]
+}
