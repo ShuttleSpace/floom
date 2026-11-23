@@ -156,6 +156,27 @@ mod tests {
     }
 
     #[test]
+    fn a_box_that_misses_by_a_rounding_step_does_not_wrap() {
+        // The regression this guards: a label whose advance is a fraction wider
+        // than its box used to break into two lines, and which fraction depends
+        // on the host font — so the same label wrapped on Windows and not on
+        // macOS. Both cases below are measured against this shaper's own
+        // intrinsic width, so the numbers are font-independent.
+        let text = "a label that fits on one line";
+        let free = measure_text(text, 14.0, f64::INFINITY);
+        let just_over = measure_text(text, 14.0, free.width - 0.3);
+        assert_eq!(
+            just_over.height, free.height,
+            "0.3 px of overflow is rounding, not a wrap"
+        );
+        let clearly_over = measure_text(text, 14.0, free.width - 8.0);
+        assert!(
+            clearly_over.height > free.height,
+            "8 px of overflow is a wrap, and the slack must not hide it"
+        );
+    }
+
+    #[test]
     fn repeated_calls_reuse_the_thread_shaper() {
         // No observable state, but exercises the thread-local borrow twice and
         // guards against re-entrancy panics (RefCell double-borrow).

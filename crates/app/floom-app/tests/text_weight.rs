@@ -268,18 +268,9 @@ fn an_unchanged_weight_keeps_its_glyph_resource() {
 /// The first two strings are the ones that broke; `Toolbar title` is regular
 /// weight and does not, which is the control — it is in the list to show the test
 /// is about the boundary rather than about these particular words.
-// shortcut: the three sample strings below only land in the upper half-pixel of
-// their rounded box under Apple's system face; under Segoe UI the first one
-// measures wide enough to wrap for real (1.1499 lines on the Windows runner), so
-// the premise this test pins does not exist there. Ignored off Apple rather than
-// relaxed everywhere: the disagreement is real and is tracked as a Windows text
-// bug in docs/progress.md, and an unguarded assertion here would fail the whole
-// CI run for a font the test does not control. Upgrade when text measurement
-// takes a font from a fixture instead of the system.
-#[cfg_attr(
-    not(target_vendor = "apple"),
-    ignore = "the sample strings fall in the half-pixel band only under Apple's system font; see docs/progress.md"
-)]
+// The slack in `floom-text`'s wrap decision is what makes this hold for any face:
+// a line that misses its box by less than half a pixel is not broken. Before that,
+// the same three strings fitted on Apple's system face and wrapped under Segoe UI.
 #[test]
 fn a_label_that_fits_on_one_line_paints_on_one_line() {
     // Each measured at 14px regular, and each lands in the upper half-pixel of
