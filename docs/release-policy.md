@@ -53,7 +53,8 @@ nothing more.
 | `x86_64-pc-windows-msvc` | `floom-platform-desktop` | **device-gated (Phase 16.2)**: windowing via winit; native-view composition on Win32 incomplete; `cargo build` verified on `windows-latest` CI runner; `cargo test` pending native-view completion |
 | `x86_64-unknown-linux-gnu` | `floom-platform-desktop` | **device-gated (Phase 16.2)**: windowing via winit/X11; same bridge gap; `ubuntu-latest` build runner covers `cargo build`; `cargo test` pending native-view completion |
 | `aarch64-linux-android` | `floom-platform-android` | **device-gated (Phase 17)**: emulator-verified start+interaction+IME+CJK+clipboard; a11y/file picker/safe area pending emulator closure |
-| `aarch64-apple-ios` | `floom-platform-ios` (UIKit staticlib) | **device-gated (Phase 17)**: iOS simulator-verified start+interaction+IME+CJK+clipboard; a11y zero-frame/file picker/safe area pending |
+| `aarch64-apple-ios` | `floom-platform-ios` (UIKit staticlib) | **device-gated (Phase 17)**: device-only — needs a signing identity. The simulator slice below is what runs in CI. |
+| `aarch64-apple-ios-sim` | same | **tested (CI)**: `ios-simulator-smoke` scaffolds an app with `floom create`, links it with `swiftc`, installs it on whatever iPhone runtime the runner's Xcode ships, launches it and counts the pixels it drew (`scripts/ios-smoke.sh`). Device behaviour (a11y actions, IME composition, safe area on notched hardware) is still device-gated. |
 | OpenHarmony | `floom-platform-harmony` (N-API cdylib) | **device-gated (Phase 19)**: DevEco emulator Mate X7 verified start+interaction; IME/a11y/clipboard/file/safe area/focus pending |
 | `wasm32-unknown-unknown` | `floom-platform-web` | **target-gated** (Phase 19): headless WASM harness pending |
 | no-std / bare metal | `floom-platform-embedded` | **target-gated** (Phase 19): `aarch64-unknown-linux-ohos`/`x86_64-unknown-linux-ohos` ELF verified; bare-metal target pending |

@@ -148,7 +148,11 @@ pub fn pack_ios(project: &Project, opts: &PackOpts) -> Result<PackResult, String
         target,
         sources: swift_sources(project),
         library_dir: shared::arg(&library_dir),
-        crate_name: project.package_name.replace('-', "_"),
+        // The static library's name comes from `[lib] name`, which the scaffold
+        // sets to `floom_<package>` so Android's `android.app.lib_name` and this
+        // link agree. Using the package name here linked `-lsmoke` against
+        // `libfloom_smoke.a`.
+        crate_name: crate::native_project::lib_name(&project.package_name),
         out: shared::arg(app.join(&project.package_name)),
     };
     if link.sources.is_empty() {

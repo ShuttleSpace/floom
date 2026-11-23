@@ -297,3 +297,31 @@ jobs:
           # The same for the driver: the only thing that catches a broken
           # `#[link]` before the device does.
           cargo build --package=floom --features harmony,harmony-winit --target aarch64-unknown-linux-ohos
+
+  # The first target where the *app* runs in CI, not just the crate that could
+  # build it. `ios-check` above cross-compiles; this job scaffolds an app from
+  # `floom create`, links it with `swiftc`, installs it on a simulator, launches
+  # it, and counts pixels in a screenshot. A target is "tested" in
+  # `docs/release-policy.md`'s sense when something runs on it — this is what
+  # makes that word true for `aarch64-apple-ios-sim`.
+  #
+  # The assertion is a pixel count and not a screenshot comparison: a golden
+  # would tie the job to the runner's simulator runtime, while "the blue button
+  # is on screen" is the property that breaks when the host, the link or the
+  # present path breaks. `scripts/ios-smoke.sh` prints the count it saw.
+  ios-simulator-smoke:
+    name: iOS app on a simulator
+    if: github.event.pull_request.draft == false
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios-sim
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ios-simulator-smoke
+      - name: Build the CLI the script drives
+        run: cargo build --package=floom-cli --locked
+      - name: Scaffold, package, install, launch, screenshot
+        run: WORK="$RUNNER_TEMP/ios-smoke" bash scripts/ios-smoke.sh
