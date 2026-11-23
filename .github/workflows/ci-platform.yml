@@ -363,7 +363,25 @@ jobs:
             xvfb libxkbcommon-x11-0 libx11-xcb1 libxcb1 libxcb-shape0 libxcb-xfixes0 \
             libwayland-client0 libvulkan1 pkg-config libfontconfig1-dev libgtk-3-dev
       - name: Open a window and ask it what it drew
-        run: LOG="$RUNNER_TEMP/linux-smoke.log" bash scripts/linux-smoke.sh
+        run: LOG="$RUNNER_TEMP/desktop-smoke.log" bash scripts/desktop-smoke.sh
+
+  # Windows has a desktop session even though it has no GPU, so the same check
+  # runs there without Xvfb. If winit cannot create a window in that session, the
+  # job says so instead of leaving the target with no evidence either way.
+  windows-window-smoke:
+    name: Windows app in a window (software renderer)
+    if: github.event.pull_request.draft == false
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: windows-window-smoke
+      - name: Open a window and ask it what it drew
+        run: bash scripts/desktop-smoke.sh
+        env:
+          LOG: ${{ runner.temp }}\desktop-smoke.log
 
   # The GPU path on a machine without a GPU: Mesa's software Vulkan (lavapipe).
   # If this passes, the 11 pixel tests are not "macOS only" any more; if it fails,

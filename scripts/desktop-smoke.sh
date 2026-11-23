@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# The Linux window check: no GPU, no display, no human.
+# The window check for machines with no GPU: no display either, no human.
 #
-# `floom-window-software` opens a real X11 window through winit and draws with the
-# software renderer. Under `xvfb-run` that is a window server, so what this proves
-# is the window lifecycle and the present path — not the GPU path, which
-# `scripts/` can only cover where an adapter exists.
+# `floom-window-software` opens a real window through winit and draws with the
+# software renderer. On Linux the window server comes from `xvfb-run`; on Windows
+# the runner has a desktop session, so the binary runs directly. What this proves
+# is the window lifecycle and the present path — not the GPU path, which is
+# covered where an adapter exists (`gpu-pixels`, `gpu-pixels-lavapipe`).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,8 +15,15 @@ FRAMES="${FRAMES:-8}"
 cd "$ROOT"
 cargo build --package=floom-window-software --locked
 
+# `xvfb-run` when it exists (Linux CI), the runner's own desktop otherwise. The
+# two branches are spelled out because `"${arr[@]}"` on an empty array is an
+# error under `set -u` in the bash macOS ships.
 set +e
-FLOOM_SOFTWARE_EXIT_FRAMES="$FRAMES" xvfb-run -a ./target/debug/floom-window-software > "$LOG" 2>&1
+if command -v xvfb-run > /dev/null; then
+    FLOOM_SOFTWARE_EXIT_FRAMES="$FRAMES" xvfb-run -a ./target/debug/floom-window-software > "$LOG" 2>&1
+else
+    FLOOM_SOFTWARE_EXIT_FRAMES="$FRAMES" ./target/debug/floom-window-software > "$LOG" 2>&1
+fi
 status=$?
 set -e
 
