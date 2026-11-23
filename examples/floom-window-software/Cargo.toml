@@ -1,0 +1,19 @@
+[package]
+name = "floom-window-software"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "Floom 2.0 in a real window with the software renderer — no GPU needed"
+
+# The counterpart of `floom-window`: same window, no GPU. It is what lets a
+# machine without an adapter (a CI runner under Xvfb) prove that a window opens
+# and a frame reaches it. See `scripts/linux-smoke.sh`.
+[dependencies]
+floom-app = { workspace = true }
+floom-core = { workspace = true }
+floom-layout = { workspace = true }
+floom-platform = { workspace = true }
+floom-platform-desktop = { workspace = true, features = ["winit"] }
+floom-renderer-software = { workspace = true }
+floom-widgets = { workspace = true }

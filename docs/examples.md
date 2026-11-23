@@ -19,6 +19,7 @@ not have.
 | `floom-demo` | the component gallery: every `floom-ui` component in Material, Cupertino and Fluent side by side, each with live samples and its own API | desktop | **integration-tested** — `cargo test -p floom-demo` mounts every page, sample and interaction |
 | `floom-probe` | device probe: one window holding every control the on-screen cases need | desktop | **display-gated** — `--features real`, driven by hand |
 | `floom-window` | a real OS window: winit + vello GPU | desktop | **verified on macOS** |
+| `floom-window-software` | a real OS window with the software renderer: no GPU, no display server needed beyond X + Xvfb. It reports its surface and how many pixels each frame carried, then leaves | Linux / any X11 | **run in CI** — `scripts/linux-smoke.sh` under `xvfb-run` (`Linux app in a window`) |
 | `floom-macos` | the macOS gate probe: a clickable tree, a text field an input method can type into, and a clipboard whose far end is the system pasteboard | macOS | **display-gated** — `--features real`, driven by hand (see `docs/gates/macos.md`) |
 | `floom-android` | a real Android app: `native-activity` + vello GPU in one APK | Android | **device-gated** — `--features real`, packaged by `examples/floom-android/scripts/build-apk.sh` |
 

@@ -342,3 +342,53 @@ jobs:
           key: macos-window-smoke
       - name: Open a window and ask it what it sees
         run: SECS=20 LOG="$RUNNER_TEMP/macos-smoke.log" bash scripts/macos-smoke.sh
+
+  # The Linux half of "tested": a real X11 window on a runner with no GPU and no
+  # display. Xvfb supplies the window server, `floom-window-software` supplies the
+  # software renderer, and the script asserts on what the window reported.
+  linux-window-smoke:
+    name: Linux app in a window (software renderer)
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: linux-window-smoke
+      - name: Install a window server and the X11 libraries winit links
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb libxkbcommon-x11-0 libx11-xcb1 libxcb1 libxcb-shape0 libxcb-xfixes0 \
+            libwayland-client0 libvulkan1
+      - name: Open a window and ask it what it drew
+        run: LOG="$RUNNER_TEMP/linux-smoke.log" bash scripts/linux-smoke.sh
+
+  # The GPU path on a machine without a GPU: Mesa's software Vulkan (lavapipe).
+  # If this passes, the 11 pixel tests are not "macOS only" any more; if it fails,
+  # the failure is the finding — lavapipe not implementing what vello needs is a
+  # fact worth recording rather than a reason to keep the job out.
+  gpu-pixels-lavapipe:
+    name: GPU pixels on lavapipe
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: gpu-pixels-lavapipe
+      - name: Install a software Vulkan implementation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers libvulkan1 vulkan-tools
+      - name: Show which ICD is in play
+        run: |
+          ls /usr/share/vulkan/icd.d/ || true
+          vulkaninfo --summary | head -40 || true
+      - name: Run the pixel tests on lavapipe
+        env:
+          VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          WGPU_BACKEND: vulkan
+        run: cargo test -p floom-renderer-vello --features gpu -- --ignored --test-threads=1

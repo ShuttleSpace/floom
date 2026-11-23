@@ -1676,6 +1676,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-window-software"
+version = "0.2.0"
+dependencies = [
+ "floom-app",
+ "floom-core",
+ "floom-layout",
+ "floom-platform",
+ "floom-platform-desktop",
+ "floom-renderer-software",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-winit-ohos"
 version = "0.4.11"
 dependencies = [
