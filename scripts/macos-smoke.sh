@@ -32,8 +32,9 @@ want() {
     fi
 }
 
-# A window, a surface, and a frame: at scale 2 a 480×320 point window is 960×640
-# pixels, so this cannot pass by inventing numbers.
+# A window, a surface, and a frame. The line carries the size the window really
+# got, so this cannot pass by inventing numbers — the runner reports scale 1 and
+# a laptop with a retina display reports 2.
 want "floom-macos: window surface " "a window opened and reported its surface"
 want "matched=true" "the system clipboard round-tripped through NSPasteboard"
 want "floom-macos: focus None -> TextInput@" "focus moved into the text field"
