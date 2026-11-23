@@ -59,16 +59,16 @@ else
     fail=1
 fi
 
-# The agent protocol, against that same window: a client on loopback asks for
-# the tree, taps a label, and both answers have to come back. The binary runs
-# the probe itself, so this is one process and no clock to race.
+# The agent protocol, against that same window: the binary asks itself the two
+# questions an agent would (read the tree, tap a label) once it has painted.
+# Same-thread, port-free: the TCP half has its own test in floom-accuracy, and a
+# probe thread racing a frame loop is how this failed on a runner once.
 AGENT_LOG="${AGENT_LOG:-$(mktemp)}"
-AGENT_PORT="${AGENT_PORT:-4877}"
 set +e
 if command -v xvfb-run > /dev/null; then
-    xvfb-run -a ./target/debug/floom-window-software --agent "$AGENT_PORT" > "$AGENT_LOG" 2>&1
+    xvfb-run -a ./target/debug/floom-window-software --agent-selftest > "$AGENT_LOG" 2>&1
 else
-    ./target/debug/floom-window-software --agent "$AGENT_PORT" > "$AGENT_LOG" 2>&1
+    ./target/debug/floom-window-software --agent-selftest > "$AGENT_LOG" 2>&1
 fi
 agent_status=$?
 set -e
@@ -79,9 +79,9 @@ if [ "$agent_status" -ne 0 ]; then
     exit 1
 fi
 LOG="$AGENT_LOG"
-want "floom-software: agent listening on 127.0.0.1:" "the agent transport bound to loopback"
 want "agent: tree has button Increment" "an agent read the live widget tree"
 want "agent: tap Increment repainted=true" "an agent's tap reached the app and moved it"
+want "floom-software: agent self-test passed" "the agent self-test left satisfied"
 exit "$fail"
 
 if [ "$fail" -ne 0 ]; then

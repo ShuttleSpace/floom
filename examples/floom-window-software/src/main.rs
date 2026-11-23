@@ -13,19 +13,23 @@
 //! loop itself, so the script never has to kill a window that is waiting for a
 //! human.
 //!
-//! `--agent <port>` starts the agent protocol on loopback, and then the binary
-//! proves it: a probe thread asks for the tree, taps a label, and the app exits
-//! once both answers are in. That is the whole "an agent can read and drive a
-//! real window" claim, checked rather than asserted.
+//! `--agent-selftest` asks this window the two questions an agent would -- read
+//! the tree, tap a label -- over the in-memory transport, then leaves. It is in
+//! the binary rather than in a test because what is being checked is a *window
+//! that exists*: the same session code, the same `WidgetHost`, a real surface.
+//! Same-thread and port-free on purpose: a probe thread racing a frame loop was
+//! the first shape of this, and it failed on a runner for reasons that had
+//! nothing to do with the protocol.
+//!
+//! `--agent <port>` starts the loopback TCP transport for a human or a tool;
+//! nothing in CI asserts on it, because the transport has its own test.
 
 use std::env;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Receiver;
 use std::time::{Duration, Instant};
 
 use floom_accuracy::agent::{
-    AgentClient, AgentSession, Command, Payload, Pending, Selector, WindowApp, bind, spawn_bridge,
+    AgentSession, Command, Payload, Pending, Selector, WindowApp, bind, local_channel, spawn_bridge,
 };
 use floom_app::AppRunner;
 use floom_core::{Axis, LayoutRequest};
@@ -44,8 +48,8 @@ struct SoftwareApp {
     deadline: Instant,
     /// Requests waiting for this thread, when `--agent` was given.
     agent: Option<Receiver<Pending>>,
-    /// Set by the probe once it has its answers.
-    probed: Arc<AtomicBool>,
+    /// Ask this window an agent's two questions once it has painted, then leave.
+    selftest: bool,
 }
 
 impl WinitApp for SoftwareApp {
@@ -67,9 +71,16 @@ impl WinitApp for SoftwareApp {
     fn events(&mut self, platform: &mut WinitPlatform) {
         let stats = self.runner.pump(platform);
         self.serve_agent();
-        if self.probed.load(Ordering::SeqCst) {
-            eprintln!("floom-software: the agent finished its probe; leaving");
-            std::process::exit(0);
+        // The questions are asked after a frame, not before: semantics are
+        // published by the frame that lays the tree out, so an agent that asked
+        // first would be told the window is empty.
+        if self.selftest && self.frames >= 2 {
+            let answered = agent_selftest(self.runner.host_mut());
+            eprintln!(
+                "floom-software: agent self-test {}",
+                if answered { "passed" } else { "failed" }
+            );
+            std::process::exit(if answered { 0 } else { 1 });
         }
         let _ = platform;
         let _ = platform;
@@ -98,7 +109,7 @@ impl WinitApp for SoftwareApp {
             self.runner.host().scene().len(),
             self.runner.host().size(),
         );
-        if inked > 0 && self.frames >= 2 && self.agent.is_none() {
+        if inked > 0 && self.frames >= 2 && self.agent.is_none() && !self.selftest {
             // `run` has no "close the loop" hook for the app, and this binary is
             // driven by a script rather than a human: leaving once a frame has
             // ink is the whole contract.
@@ -108,7 +119,7 @@ impl WinitApp for SoftwareApp {
             );
             std::process::exit(0);
         }
-        if self.frames >= self.exit_after && self.agent.is_none() {
+        if self.frames >= self.exit_after && self.agent.is_none() && !self.selftest {
             eprintln!(
                 "floom-software: {} frames and no ink; leaving without a drawing",
                 self.frames
@@ -122,10 +133,6 @@ impl WinitApp for SoftwareApp {
         // stops handing out frames, and an agent asking a question must not
         // have to make the UI move first.
         self.serve_agent();
-        if self.probed.load(Ordering::SeqCst) {
-            eprintln!("floom-software: the agent finished its probe; leaving");
-            std::process::exit(0);
-        }
         if self.deadline.elapsed() > Duration::from_secs(10) {
             eprintln!(
                 "floom-software: 10s and {} frames later, the loop is still waiting",
@@ -156,15 +163,24 @@ impl SoftwareApp {
     }
 }
 
-/// Ask the app, from a thread of its own, the two questions an agent would.
-///
-/// A thread because the answer needs this thread's frame loop: calling the
-/// client inline would block the only thing that can answer it.
-fn spawn_probe(addr: std::net::SocketAddr, token: Option<String>, done: Arc<AtomicBool>) {
-    std::thread::spawn(move || {
-        std::thread::sleep(Duration::from_millis(1500));
-        let client = AgentClient::connect(addr, token);
-        match client.call(Command::Tree) {
+/// Ask this window the two questions an agent would, over the in-memory
+/// transport, and report what came back.
+fn agent_selftest(host: &mut floom_app::WidgetHost) -> bool {
+    let (client, server) = local_channel();
+    let ask = |host: &mut floom_app::WidgetHost, command: Command| {
+        client.send(command);
+        while let Some(request) = server.next_request() {
+            let size = host.size();
+            let mut app = WindowApp::new(host, size);
+            let response = AgentSession::new(&mut app).handle(request);
+            server.respond(response);
+        }
+        client.receive()
+    };
+
+    let mut ok = true;
+    match ask(host, Command::Tree) {
+        Some(response) => match response.result {
             Ok(Payload::Tree(tree)) => {
                 let node = tree
                     .nodes
@@ -180,23 +196,51 @@ fn spawn_probe(addr: std::net::SocketAddr, token: Option<String>, done: Arc<Atom
                         node.width,
                         node.height
                     ),
-                    None => eprintln!("agent: the tree has no Increment"),
+                    None => {
+                        eprintln!("agent: the tree has no Increment");
+                        ok = false;
+                    }
                 }
             }
-            Ok(other) => eprintln!("agent: Tree answered with {other:?}"),
-            Err(e) => eprintln!("agent: Tree failed: {e:?}"),
-        }
-        match client.call(Command::Tap {
-            selector: Selector::Label("Increment".to_string()),
-        }) {
-            Ok(Payload::Done { repainted }) => {
-                eprintln!("agent: tap Increment repainted={repainted}")
+            Ok(other) => {
+                eprintln!("agent: Tree answered with {other:?}");
+                ok = false;
             }
-            Ok(other) => eprintln!("agent: Tap answered with {other:?}"),
-            Err(e) => eprintln!("agent: Tap failed: {e:?}"),
+            Err(e) => {
+                eprintln!("agent: Tree failed: {e:?}");
+                ok = false;
+            }
+        },
+        None => {
+            eprintln!("agent: Tree got no answer");
+            ok = false;
         }
-        done.store(true, Ordering::SeqCst);
-    });
+    }
+
+    let tap = Command::Tap {
+        selector: Selector::Label("Increment".to_string()),
+    };
+    match ask(host, tap) {
+        Some(response) => match response.result {
+            Ok(Payload::Done { repainted }) => {
+                eprintln!("agent: tap Increment repainted={repainted}");
+                ok &= repainted;
+            }
+            Ok(other) => {
+                eprintln!("agent: Tap answered with {other:?}");
+                ok = false;
+            }
+            Err(e) => {
+                eprintln!("agent: Tap failed: {e:?}");
+                ok = false;
+            }
+        },
+        None => {
+            eprintln!("agent: Tap got no answer");
+            ok = false;
+        }
+    }
+    ok
 }
 
 fn main() {
@@ -216,10 +260,12 @@ fn main() {
     );
 
     let mut agent = None;
-    let probed = Arc::new(AtomicBool::new(false));
+    let mut selftest = false;
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
-        if arg == "--agent" {
+        if arg == "--agent-selftest" {
+            selftest = true;
+        } else if arg == "--agent" {
             let port: u16 = args.next().and_then(|p| p.parse().ok()).unwrap_or_else(|| {
                 eprintln!("--agent needs a port");
                 std::process::exit(2);
@@ -233,8 +279,6 @@ fn main() {
                 .expect("a bound listener has an address");
             agent = Some(spawn_bridge(listener).expect("the bridge thread starts"));
             eprintln!("floom-software: agent listening on {addr}");
-            let done = probed.clone();
-            spawn_probe(addr, None, done);
         }
     }
 
@@ -245,7 +289,7 @@ fn main() {
         exit_after,
         deadline: Instant::now(),
         agent,
-        probed,
+        selftest,
     };
 
     let windows = vec![WindowConfig {
