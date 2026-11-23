@@ -11,7 +11,7 @@
 | --- | --- | --- | --- |
 | `aarch64-apple-darwin` | `floom-platform-desktop`（winit）+ `floom-renderer-vello`（Metal） | **tested**（macOS 26.6.2 / M4 Pro / rustc 1.98.0） | [gates/macos.md](gates/macos.md) 8/8 pass |
 | `x86_64-apple-darwin` | 同上 | **untested**（无 Intel 机器） | — |
-| `x86_64-pc-windows-msvc` | `floom-platform-desktop` | device-gated（Phase 16.2），只到 `cargo build` | [gates/windows.md](gates/windows.md) 8 项全 gated |
+| `x86_64-pc-windows-msvc` | `floom-platform-desktop` | **窗口 + 软件渲染已在 CI 真跑**（`Windows app in a window`）；GPU presenter 在窗口里未验；native-view 合成仍是 Phase 16.2 | [gates/windows.md](gates/windows.md) 8 项全 gated |
 | `x86_64-unknown-linux-gnu` | `floom-platform-desktop` | **窗口 + 软件渲染已在 CI 真跑**（`Linux app in a window`，`xvfb-run` 下的 X11 窗口）；GPU presenter 在窗口里未验（runner 无适配器）；native-view 合成仍是 Phase 16.2 | [gates/linux.md](gates/linux.md) 8 项全 gated |
 | `aarch64-linux-android` | `floom-platform-android`（JNI + winit-android） | 模板已能跑：`floom create`/`package` 出的 app 在模拟器上渲染 + 触摸 + 避开状态栏 + a11y（`AccessibilityNodeProvider`，TalkBack 可点）；Rust 日志经 `debug.floom.log` 进 logcat（2026-11-22，见 S1.12/S1.5） | [gates/android.md](gates/android.md) 4 pass / 1 partial |
 | `aarch64-apple-ios` | `floom-platform-ios`（UIKit staticlib） | 模拟器实测（2026-11-21）：宿主从占位工程换成真 Swift 宿主 + `swiftc` 链接，`floom package --platform ios` 产出可安装的 `.app`，floom 像素上屏；a11y 元素带非零 frame（`idb ui describe-all` 实测）；CJK 未过 | [gates/ios.md](gates/ios.md) 3 pass / 1 partial / 1 fail |
