@@ -10,9 +10,11 @@
 //!   `floom_dsl::ui_ir` tables the validator enforces, so an agent that reads it
 //!   authors documents that validate.
 //! * [`session`] + [`transport`] — the running-app loop (Task 25.3): a
-//!   session drives a headless app through the testkit's own actors, and two
-//!   transports carry the protocol to it — an in-memory channel for tests and
-//!   a localhost-only TCP server with a dev token for tools.
+//!   session drives an app through [`AgentApp`], the trait a headless test
+//!   (`TestApp`) and a live window ([`WindowApp`]) both implement, and three
+//!   transports carry the protocol to it — an in-memory channel for tests, a
+//!   localhost-only TCP server with a dev token for tools, and a bridge that
+//!   hands requests to whichever thread owns the window.
 //!
 //! # Why the selectors are semantic
 //!
@@ -36,6 +38,7 @@ mod protocol;
 mod schema;
 mod session;
 mod transport;
+mod window;
 
 pub use protocol::{
     AgentError, AgentRequest, AgentResponse, Command, PROTOCOL_VERSION, Payload,
@@ -43,7 +46,9 @@ pub use protocol::{
     check_version,
 };
 pub use schema::{ComponentSchema, PropertyInfo, TokenRel, WidgetInfo, component_schema};
-pub use session::AgentSession;
+pub use session::{AgentApp, AgentSession};
 pub use transport::{
-    AgentClient, LocalClient, LocalServer, bind, is_loopback_peer, local_channel, spawn_loopback,
+    AgentClient, LocalClient, LocalServer, Pending, bind, is_loopback_peer, local_channel,
+    spawn_bridge, spawn_loopback,
 };
+pub use window::WindowApp;

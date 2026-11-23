@@ -59,6 +59,31 @@ else
     fail=1
 fi
 
+# The agent protocol, against that same window: a client on loopback asks for
+# the tree, taps a label, and both answers have to come back. The binary runs
+# the probe itself, so this is one process and no clock to race.
+AGENT_LOG="${AGENT_LOG:-$(mktemp)}"
+AGENT_PORT="${AGENT_PORT:-4877}"
+set +e
+if command -v xvfb-run > /dev/null; then
+    xvfb-run -a ./target/debug/floom-window-software --agent "$AGENT_PORT" > "$AGENT_LOG" 2>&1
+else
+    ./target/debug/floom-window-software --agent "$AGENT_PORT" > "$AGENT_LOG" 2>&1
+fi
+agent_status=$?
+set -e
+echo "--- $AGENT_LOG"
+cat "$AGENT_LOG"
+if [ "$agent_status" -ne 0 ]; then
+    echo "the agent probe left with status $agent_status" >&2
+    exit 1
+fi
+LOG="$AGENT_LOG"
+want "floom-software: agent listening on 127.0.0.1:" "the agent transport bound to loopback"
+want "agent: tree has button Increment" "an agent read the live widget tree"
+want "agent: tap Increment repainted=true" "an agent's tap reached the app and moved it"
+exit "$fail"
+
 if [ "$fail" -ne 0 ]; then
     echo "the software window ran but did not report everything it must" >&2
     exit 1

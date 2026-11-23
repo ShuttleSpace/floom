@@ -11,6 +11,9 @@ description = "Floom 2.0 in a real window with the software renderer — no GPU 
 # and a frame reaches it. See `scripts/linux-smoke.sh`.
 [dependencies]
 floom-app = { workspace = true }
+# The agent protocol is the reason this example can be driven from a script as
+# well as looked at.
+floom-accuracy = { workspace = true }
 floom-core = { workspace = true }
 floom-layout = { workspace = true }
 floom-platform = { workspace = true }

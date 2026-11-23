@@ -67,7 +67,7 @@
 
 | ID | 动作 | 退出判据 | 验证命令 |
 | --- | --- | --- | --- |
-| S4.1 | 把 agent 口接进真实 `floom run` 进程（Task 25.3） | 真实 app 上 `Tree`/`Semantics`/`Screenshot`/`Tap` 可用，默认关闭 | `floom run --agent-port N` + 客户端脚本跑通 4 命令 |
+| S4.1 | 把 agent 口接进真实 app（Task 25.3）：`AgentApp` trait + `WindowApp` + `spawn_bridge` | 真实 app 上 `Tree`/`Tap` 可用，默认关闭 | ✅ 已达成于 `floom-window-software --agent <port>`（`Tree`/`Tap`；`Screenshot`/`Semantics` 走同一条会话） |
 | S4.2 | 稳定语义 id（不暴露 NodeId） | 同一 UI 两次运行选择器解析到同一节点 | 两次运行的 `Semantics` 输出 diff 为空 |
 | S4.3 | `floom mcp`：把上面 4–6 个能力包成 MCP 工具 | agent 编辑器里能直接"点按钮、读树、截图" | MCP 客户端（Claude/Cursor）实测一段脚本 |
 | S4.4 | 失败工件成套：testkit 失败同时产出树 + 语义 + PNG + trace | 任何断言失败都附四件 | 故意断言的负例产出工件目录 |
@@ -115,7 +115,7 @@
 | S3.1 | CLI check/test/doctor | 进行中 | `doctor` 已落地（`crates/app/floom-cli/src/doctor.rs`，`cargo test -p floom-cli` 110 passed）；`check` 加了前置校验（无 `Cargo.toml` 时给出下一步，单测 `check_explains_a_directory_that_holds_no_project`）；`test` 仍是裸转发 | `bash scripts/gate.sh` |
 | S3.2 | 热重载保留状态 | 未开始 | 文件级热重启 | — |
 | S3.3 | DevTools 计算值 | 未开始 | Style 行无计算值 | — |
-| S4.1 | agent 口进真实 app | 未开始 | Task 25.3 未做 | — |
+| S4.1 | agent 口进真实 app | 完成 | `AgentApp` 抽成 trait、`WindowApp` 驱动真实 `WidgetHost`、`spawn_bridge` 交给窗口线程；`TypeText`/`Drag` 明确 refused | `scripts/desktop-smoke.sh`：`agent: tree has button Increment` / `agent: tap Increment repainted=true`（Linux Xvfb + Windows） |
 | S4.2 | 稳定语义 id | 未开始 | 只有 `Label`/`Role` 选择器 | — |
 | S4.3 | `floom mcp` | 未开始 | 无该子命令 | — |
 | S4.4 | 失败工件成套 | 未开始 | snapshot 有 PNG，无 trace 绑定 | — |

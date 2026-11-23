@@ -159,7 +159,98 @@ where
     Ok(addr)
 }
 
-fn serve_connection(stream: &mut TcpStream, session: &mut AgentSession<'_>) -> std::io::Result<()> {
+/// One request waiting for the thread that owns the window to answer it.
+///
+/// The app answers between frames, so a request is a value passed *to* that
+/// thread rather than a call made from this one: the window's `WidgetHost` is
+/// `&mut` inside the event loop, and a second owner would be a data race.
+pub struct Pending {
+    request: AgentRequest,
+    reply: Sender<AgentResponse>,
+}
+
+impl Pending {
+    pub fn request(&self) -> &AgentRequest {
+        &self.request
+    }
+
+    /// Answer the waiting connection. Dropping it instead leaves the client to
+    /// time out, which is the honest answer to "the app never looked".
+    pub fn answer(self, response: AgentResponse) {
+        let _ = self.reply.send(response);
+    }
+}
+
+/// Accept connections and forward each request to the app thread.
+///
+/// The app drains the receiver once per frame and answers through
+/// [`Pending::answer`]. The dev token is enforced by the session, not here, so
+/// one place decides what an unauthenticated request is told.
+pub fn spawn_bridge(listener: TcpListener) -> std::io::Result<Receiver<Pending>> {
+    let (requests_tx, requests_rx) = mpsc::channel::<Pending>();
+    std::thread::Builder::new()
+        .name("floom-agent-bridge".to_string())
+        .spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { continue };
+                let admitted = stream.peer_addr().map(is_loopback_peer).unwrap_or(false);
+                if !admitted {
+                    continue;
+                }
+                let requests = requests_tx.clone();
+                std::thread::spawn(move || forward(&mut stream, requests));
+            }
+        })?;
+    Ok(requests_rx)
+}
+
+/// Read one connection's requests until it closes, blocking on each answer.
+fn forward(stream: &mut TcpStream, requests: Sender<Pending>) {
+    while let Ok(Some(bytes)) = read_message(stream) {
+        let request = match serde_json::from_slice::<AgentRequest>(&bytes) {
+            Ok(request) => request,
+            Err(e) => {
+                let response = AgentResponse {
+                    id: 0,
+                    result: Err(AgentError::Unsupported(format!("unparsable request: {e}"))),
+                };
+                let Ok(bytes) = serde_json::to_vec(&response) else {
+                    return;
+                };
+                if write_message(stream, &bytes).is_err() {
+                    return;
+                }
+                continue;
+            }
+        };
+        let (reply_tx, reply_rx) = mpsc::channel::<AgentResponse>();
+        if requests
+            .send(Pending {
+                request,
+                reply: reply_tx,
+            })
+            .is_err()
+        {
+            return;
+        }
+        match reply_rx.recv() {
+            Ok(response) => {
+                let Ok(bytes) = serde_json::to_vec(&response) else {
+                    return;
+                };
+                if write_message(stream, &bytes).is_err() {
+                    return;
+                }
+            }
+            Err(_) => return,
+        }
+    }
+}
+
+fn serve_connection<A: crate::agent::session::AgentApp>(
+    stream: &mut TcpStream,
+    session: &mut AgentSession<'_, A>,
+) -> std::io::Result<()> {
     while let Some(bytes) = read_message(stream)? {
         let response = match serde_json::from_slice::<AgentRequest>(&bytes) {
             Ok(request) => session.handle(request),

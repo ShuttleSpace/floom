@@ -11,6 +11,7 @@ description = "AI/design accuracy loop: a reference screen gallery, a render-and
 # The gallery screens are real widget trees, not mock-ups: the loop is only
 # worth automating if what it measures is what a user would see.
 floom-widgets = { workspace = true }
+floom-app = { workspace = true }
 floom-testkit = { workspace = true }
 # Pixels, scenes and semantics come from the snapshot engine, so an evaluation
 # fingerprint is the same one `assert_snapshot` would pin.

@@ -13,11 +13,13 @@
 //! share a wire vocabulary through `floom-inspector` — versions, the scene
 //! line format — and nothing else.
 
+use floom_app::WidgetHost;
 use floom_core::{SemanticsHint, SemanticsState};
 use floom_inspector::SceneLines;
+use floom_scene::SceneNode;
 use floom_snapshot::{PixelSnapshot, ReferencePixels};
-use floom_testkit::TestApp;
-use floom_types::Point;
+use floom_testkit::{Selector, TestApp};
+use floom_types::{Point, Size};
 
 use crate::agent::protocol::{
     AgentError, AgentRequest, AgentResponse, Command, PROTOCOL_VERSION, Payload,
@@ -25,15 +27,57 @@ use crate::agent::protocol::{
 };
 use crate::agent::schema::component_schema;
 
-/// The server half of the agent protocol over one headless app.
-pub struct AgentSession<'a> {
-    app: &'a mut TestApp,
+/// What a session can drive. [`TestApp`] is the headless half; a running
+/// window implements it over its own `WidgetHost`, which is what makes an
+/// agent's commands reach the same event path a human's do.
+pub trait AgentApp {
+    fn host(&self) -> &WidgetHost;
+    fn size(&self) -> Size;
+    fn scene_nodes(&self) -> Vec<SceneNode>;
+    fn labels(&self) -> Vec<String>;
+    /// Whether `selector` names something on screen right now.
+    fn has(&self, selector: Selector) -> bool;
+    fn tap(&mut self, selector: Selector) -> bool;
+    fn type_text(&mut self, selector: Selector, text: &str) -> bool;
+    fn drag(&mut self, from: Point, to: Point) -> bool;
+}
+
+impl AgentApp for TestApp {
+    fn host(&self) -> &WidgetHost {
+        TestApp::host(self)
+    }
+    fn size(&self) -> Size {
+        TestApp::size(self)
+    }
+    fn scene_nodes(&self) -> Vec<SceneNode> {
+        TestApp::scene_nodes(self)
+    }
+    fn labels(&self) -> Vec<String> {
+        TestApp::labels(self)
+    }
+    fn has(&self, selector: Selector) -> bool {
+        TestApp::find(self, selector).is_some()
+    }
+    fn tap(&mut self, selector: Selector) -> bool {
+        TestApp::tap(self, selector)
+    }
+    fn type_text(&mut self, selector: Selector, text: &str) -> bool {
+        TestApp::type_text(self, selector, text)
+    }
+    fn drag(&mut self, from: Point, to: Point) -> bool {
+        TestApp::drag(self, from, to)
+    }
+}
+
+/// The server half of the agent protocol over one app.
+pub struct AgentSession<'a, A: AgentApp = TestApp> {
+    app: &'a mut A,
     token: Option<String>,
     stats: PerformanceSummary,
 }
 
-impl<'a> AgentSession<'a> {
-    pub fn new(app: &'a mut TestApp) -> Self {
+impl<'a, A: AgentApp> AgentSession<'a, A> {
+    pub fn new(app: &'a mut A) -> Self {
         Self {
             app,
             token: None,
@@ -125,7 +169,7 @@ impl<'a> AgentSession<'a> {
                 floom_testkit::Selector::Role(role)
             }
         };
-        if self.app.find(candidate.clone()).is_some() {
+        if self.app.has(candidate.clone()) {
             Ok(candidate)
         } else {
             Err(AgentError::SelectorNotFound {

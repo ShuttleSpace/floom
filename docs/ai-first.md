@@ -22,12 +22,30 @@
 
 | # | 缺口 | 为什么是硬缺口 | 证据 |
 | --- | --- | --- | --- |
-| A1 | **跑起来的 app 没有 agent 口**：协议只在 `TestApp` 里，真实 `floom run` 的进程没有监听/没有握手指令 | agent 只能验"我构造的树"，验不了"用户跑的 app" | `session.rs` 只接 `&mut TestApp`；plan Task 25.3「Running-app agent loop」未完成 |
+| A1 | ~~跑起来的 app 没有 agent 口~~ **已闭（2026-11-23）**：`AgentApp` 抽成 trait，`WindowApp` 让协议直接驱动真实 `WidgetHost`，`spawn_bridge` 把 loopback 请求交给持有窗口的线程；`floom-window-software --agent <port>` 在 CI 里被脚本问出树、点中按钮 | — | 见下节「已闭的缺口」 |
 | A2 | **无 `floom mcp`**：没有任何 MCP server 把上面 6 个只读命令 + 3 个动作暴露出去 | 每个 harness 都要自己写胶水 | 全仓无 `mcp` |
 | A3 | **语义动作 ID 不稳定**：`Tap{Label}` 在文案变更即失效，没有"稳定 id + label 兜底" | 一次 i18n 改动就让 agent 的全部脚本报废 | `Selector` 只有两种 |
 | A4 | **失败工件不成套**：`assert` 失败只报哈希不符，没有"期望/实际 PNG + 场景 diff + 那一刻的树"三件套 | agent 拿到哈希没法自己修 | `floom-snapshot/src/lib.rs:72-88` |
 | A5 | **token 分层文档**：schema 有 token 关系表，但没有"这个组件允许改哪些 token、改了会不会破一致性"的成文约束 | agent 会随手硬编码颜色（组件里已有 26/29/27 处先例） | [components.md](components.md) |
 | A6 | **CLI 没有 agent 子命令**：`floom verify` / `floom snapshot` 未暴露 | agent 只能写 Rust 测试来验 | `floom-cli/src/main.rs:103-109` 无 |
+
+## 已闭的缺口
+
+**A1：跑起来的 app 有了 agent 口。** 三块拼起来，都在 `floom-accuracy::agent`：
+
+- `AgentApp` trait（`session.rs`）：`host` / `size` / `scene_nodes` / `labels` / `has` / `tap` / `type_text` / `drag`。`TestApp` 与 `WindowApp` 各实现一次，会话代码只有一份 —— 所以 agent 的点击与测试的点击走同一条事件路径，不是两条。
+- `WindowApp`（`window.rs`）：对真实 `WidgetHost` 实现它；`tap` 落成 `host.activate(element)`（元素中心按下+抬起），`has` 按 label/role 在语义树里找。`TypeText` 与 `Drag` **明确返回 false 而不是假装成功**：前者要输入法会话、后者要带时间的手势路径，凭空造一个只会教 agent 一个 app 收不到的手势。
+- `spawn_bridge`（`transport.rs`）：TCP 连接线程把请求塞进 channel，窗口线程每帧（以及 `about_to_wait`，因为静止的树不再给帧）取出并回答。请求是"交给窗口线程的值"，不是跨线程调用 —— `WidgetHost` 是 `&mut` 且只属于事件循环。
+
+证据（`scripts/desktop-smoke.sh`，Linux Xvfb 与 Windows 各一次）：
+
+```
+floom-software: agent listening on 127.0.0.1:4877
+agent: tree has button Increment at 0,0 160x40
+agent: tap Increment repainted=true
+```
+
+仍是 loopback-only（`bind` 拒绝非回环地址、`is_loopback_peer` 丢非回环对端）；示例不设 token 是因为它只在 CI 的本地回环上活两秒，`AgentSession::with_token` 给真实开发服务器留着。
 
 ## 判据（写进 1.0 门槛的东西）
 
