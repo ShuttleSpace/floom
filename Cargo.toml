@@ -122,6 +122,7 @@ repository = "https://gitee.com/floem/floem"
 #   one shared version; `crates/vendor` forks are patched in as workspace
 #   members, not pulled from the registry.
 [workspace.dependencies]
+accesskit = "0.24"
 floom = { path = "crates/app/floom", version = "0.2.0" }
 floom-accessibility = { path = "crates/core/floom-accessibility", version = "0.2.0" }
 floom-accuracy = { path = "crates/system/floom-accuracy", version = "0.2.0" }

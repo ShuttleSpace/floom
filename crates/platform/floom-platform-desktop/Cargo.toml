@@ -16,6 +16,10 @@ default = []
 winit = ["dep:winit", "dep:cursor-icon"]
 
 [dependencies]
+# The semantics tree is published to screen readers through this crate; the
+# OS-specific adapters (accesskit_macos/_windows/_unix) are installed by
+# whoever owns the window, so only the data model lives here.
+accesskit.workspace = true
 floom-accessibility = { workspace = true }
 # Same layer (L4), so the architecture gate permits this edge: the desktop
 # backend implements the native-view provider ABI, and `floom-native` stays a
