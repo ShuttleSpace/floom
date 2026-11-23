@@ -109,7 +109,7 @@
 | S1.8 | Windows 文本半像素换行（新发现） | 未开始 | `crates/app/floom-app/tests/text_weight.rs` 的 `cfg_attr(ignore)` 与理由 | 2026-11-20 |
 | S1.9 | Windows/Linux 组件 golden | 完成 | `crates/devtools/floom-snapshot/tests/widgets.rs`（Ahem 注册 + 重生成 golden）；证据 = 三系统 CI 无 `ignored` | 2026-11-21 |
 | S2.1 | 插件 `abi_version` | 完成（核验） | `crates/native/floom-native-ffi/src/abi.rs:46` ABI_VERSION=1、`provider.rs:196` 注册校验、`tests/c_vtable.rs:317` 旧版本被拒 | 2026-11-21 核实，原台账是 grep 误报 |
-| S2.2 | 资源门禁（G12） | 进行中 | P6 峰值 RSS、P8 逐帧分配、P10 首帧、P11 输入延迟均已有门禁（`tests/memory.rs`、`tests/allocation.rs`、`tests/latency.rs`）；只剩 GPU/VRAM 无 | 顺带修掉 S1.3 引入的 236 MiB 字体拷贝 |
+| S2.2 | 资源门禁（G12） | 进行中 | P6 峰值 RSS、P8 逐帧分配、P10 首帧、P11 输入延迟均已有门禁（`tests/memory.rs`、`tests/allocation.rs`、`tests/latency.rs`）；**体积（G11）2026-11-23 起在 CI 里跑**（`Size budgets on ubuntu-24.04`，Linux 自己的基线）；只剩 GPU/VRAM 与 Criterion 耗时无 CI 门禁 | 顺带修掉 S1.3 引入的 236 MiB 字体拷贝；Linux 的 `floom-window --features real` 比 macOS 大 73%，记为待解释问题 |
 | S2.3 | 组件 token 清零 + 门禁 | 完成 | 82 处清零（36 透明 / 22 黑 / 14 状态色进 tokens.rs）；`scripts/check-design-tokens.sh` + `gate.sh style`；fluent banner Warning 与 alert 统一为 `#FFB900` | 2026-11-21 |
 | S2.4 | 组件契约门禁 | 未开始 | `component_schema()` 无消费者 | — |
 | S3.1 | CLI check/test/doctor | 进行中 | `doctor` 已落地（`crates/app/floom-cli/src/doctor.rs`，`cargo test -p floom-cli` 110 passed）；`check` 加了前置校验（无 `Cargo.toml` 时给出下一步，单测 `check_explains_a_directory_that_holds_no_project`）；`test` 仍是裸转发 | `bash scripts/gate.sh` |

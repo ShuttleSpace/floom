@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "threshold_pct": 10.0,
+  "generated": "2026-11-23",
+  "host": "Linux x86_64 (ubuntu-24.04 CI runner), rustc 1.99.1",
+  "source": "Measured by `scripts/check-size-budgets.sh --update` on the `Size budgets on ubuntu-24.04` job, which is where these numbers are re-checked.",
+  "note": "The Linux counterpart of `floom-2-size-baseline.json`. Sizes are host-specific (a Linux release binary links Vulkan and both windowing stacks; the macOS one links Metal), so each CI platform that gates size keeps its own file rather than comparing across platforms. `desktop-gpu` is 20,115,008 B here against 11,626,912 B on the reference macOS host — that gap is recorded in `docs/release-policy.md` as an open question, not a budget change.",
+  "tiers": [
+    {
+      "id": "headless-floor",
+      "package": "floom-native-plugin",
+      "bin": "floom-native-plugin",
+      "features": [],
+      "baseline_bytes": 532072
+    },
+    {
+      "id": "desktop-gpu",
+      "package": "floom-window",
+      "bin": "floom-window",
+      "features": ["real"],
+      "baseline_bytes": 20115008
+    },
+    {
+      "id": "full-app",
+      "package": "floom-showcase",
+      "bin": "floom-showcase",
+      "features": [],
+      "baseline_bytes": 21654232
+    }
+  ]
+}

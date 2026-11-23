@@ -457,7 +457,5 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             pkg-config libfontconfig1-dev libgtk-3-dev libwayland-dev \
             libxkbcommon-x11-dev libxcb-shape0-dev libxcb-xfixes0-dev libvulkan-dev
-      - name: Measure each tier (baseline harvest — temporary)
-        run: |
-          FLOOM_SIZE_BASELINE="$RUNNER_TEMP/size.json" bash scripts/check-size-budgets.sh --update
-          cat "$RUNNER_TEMP/size.json"
+      - name: Compare each tier against this host's baseline
+        run: FLOOM_SIZE_BASELINE=docs/superpowers/benchmarks/floom-2-size-baseline-linux-x86_64.json bash scripts/check-size-budgets.sh

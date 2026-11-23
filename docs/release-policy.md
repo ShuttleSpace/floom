@@ -106,8 +106,26 @@ one budget per feature bundle). A regression >10 % exits 1; a missing baseline
 or a failed build exits 2 (a gate that could not run, never a pass). The baseline
 takes its three numbers from the table above — keep the two in sync. Refresh
 both after a toolchain change with
-`bash scripts/check-size-budgets.sh --update`. Like the Criterion budgets these
-are single-host numbers, so this is a local check rather than a PR merge gate.
+`bash scripts/check-size-budgets.sh --update`.
+
+**The same gate runs in CI, on its own baseline.** Sizes are host-specific, so
+`Size budgets on ubuntu-24.04` compares against
+`docs/superpowers/benchmarks/floom-2-size-baseline-linux-x86_64.json` instead of a
+macOS number (`FLOOM_SIZE_BASELINE` picks the file). Those numbers are bigger, and
+the gap is the interesting part:
+
+| example | macOS (reference host) | Linux (ubuntu-24.04) |
+| --- | --- | --- |
+| `floom-native-plugin` | 485,904 | 532,072 (+9.5 %) |
+| `floom-window --features real` | 11,626,912 | 20,115,008 (**+73 %**) |
+| `floom-showcase` | 12,488,476 | 21,654,232 (**+73 %**) |
+
+An unstripped Linux binary carrying both Vulkan and GLES paths, both windowing
+stacks and its own libc/libstd copy is plausibly the cause, but nobody has
+confirmed it — it is an open question for G11, not a budget change. Both figures
+are unstripped; a released binary is stripped, which is where the difference
+would shrink. Until that is measured, treat the Linux number as a guard against
+regressions, not as the size a user downloads.
 
 **Benchmarks.** `cargo bench`, run on the reference machine (macOS 26.6.2,
 Apple M4 Pro). There is no workspace-root bench crate: each suite lives with the

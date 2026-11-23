@@ -79,3 +79,14 @@ FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8 \
 4. `floom-devtools` 的 `budget_exceeded` / 分配计数从 headless 协议接到真实 window loop（当前 app wiring pending）。
 5. 体积第 4 档（desktop + software 组合）。
 6. 发布记录表：每次发布写六类数字（体积 / 空闲 CPU / 内存 / GPU / 帧时间 / 分配）。
+
+## 体积门禁现在两套宿主各一份（2026-11-23）
+
+`Size budgets on ubuntu-24.04` 让 G11 在 CI 里也有牙：Linux 的数字与 macOS 差很多
+（`floom-window --features real`：11,626,912 B → 20,115,008 B），所以基线与宿主绑定，
+脚本用 `FLOOM_SIZE_BASELINE` 选文件。差距本身记在
+`docs/release-policy.md` 的「大小」一节，是待解释的问题而不是放宽预算的理由。
+
+**仍未进 CI**：Criterion 的耗时基线（`check-perf-budgets.sh`）。它比体积更容易受
+宿主影响，单机上"同机不同次"的抖动就能吃掉 10% 预算；要么先在 runner 上测出抖动
+范围，要么换成"相对某次基线提交"的形式。在那之前它是本地门禁，文档里按本地门禁写。
