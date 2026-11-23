@@ -15,7 +15,7 @@
 | P4 | 空闲帧数 | 无输入 8 s 内的重绘次数 | **2** | 冒烟测试，人工比对 | `FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8 cargo run -p floom-window --features real` |
 | P5 | 空闲 CPU | 同上区间的 CPU 时间 | **0.15 s（≈0.5% 核）** | 同上 | 同上 |
 | P6 | RSS / 峰值内存 | 常驻与峰值 | **峰值 14.8 MiB**（1,000 行树 + 300 帧后 15.0）；`WidgetHost` 基线 9 MiB（字体上下文） | 有（300 帧峰值增长 < 8 MiB） | `crates/app/floom-app/tests/memory.rs` |
-| P7 | GPU 时间 / 显存 | 每帧 submit→present | **未测** | **无** | — |
+| P7 | GPU 时间 / 显存 | 每帧 submit→present | **未测**（像素正确性已在 Metal 与 lavapipe 两套后端上跑） | **无** | — |
 | P8 | 逐帧分配 | 稳定态每帧 heap 分配次数 | 稳定态帧 **≤8 次分配**，到 100k 节点不随节点增长（10/100/1k/10k 组 × 10 叶） | 有（单测断言） | `crates/app/floom-app/tests/allocation.rs` |
 | P9 | 帧时间 | 热基准 median，10% 阈值 | 9 条预算 best-of-N 全绿，能绿能红 | `scripts/check-perf-budgets.sh` | `floom-2-budget-baseline.json` |
 | P10 | 首帧 | 启动→首次绘制 | 2,000 节点树首帧 **≤1 帧**内全部绘制，之后无欠账（本机 6.4 ms，无头） | 有（帧数） | `crates/app/floom-app/tests/latency.rs` |
@@ -74,7 +74,7 @@ FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8 \
 ## 待办（对应 G11–G13）
 
 1. `just gate resources`：RSS / 峰值 / 逐帧分配三类基线与阈值（P6、P8）。
-2. GPU 时间与显存采集（P7）——先做能出数字的探针，再谈门禁。
+2. GPU 时间与显存采集（P7）——先做能出数字的探针，再谈门禁。像素**正确性**已不再只靠 Metal：`GPU pixels on lavapipe` 在 Mesa 的软件 Vulkan 上跑同一批 11 个测试，所以"vello 的画法在第二个后端上也对"是机器证据。
 3. ~~首帧与输入延迟基线（P10、P11）~~ → 已用**帧数**而非毫秒落地（`tests/latency.rs`）：毫秒数在无头 runner 上不可持守，帧数跨机器成立；真机毫秒仍待设备。
 4. `floom-devtools` 的 `budget_exceeded` / 分配计数从 headless 协议接到真实 window loop（当前 app wiring pending）。
 5. 体积第 4 档（desktop + software 组合）。
