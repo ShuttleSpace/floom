@@ -25,9 +25,20 @@
 | A1 | ~~跑起来的 app 没有 agent 口~~ **已闭（2026-11-23）**：`AgentApp` 抽成 trait，`WindowApp` 让协议直接驱动真实 `WidgetHost`，`spawn_bridge` 把 loopback 请求交给持有窗口的线程；`floom-window-software --agent <port>` 在 CI 里被脚本问出树、点中按钮 | — | 见下节「已闭的缺口」 |
 | A2 | **无 `floom mcp`**：没有任何 MCP server 把上面 6 个只读命令 + 3 个动作暴露出去 | 每个 harness 都要自己写胶水 | 全仓无 `mcp` |
 | A3 | ~~**语义动作 ID 不稳定**~~ **已闭（2026-11-24）**：`Selector::Key("increment")` 按作者声明的名字定位，跨位置、跨文案、跨列表重排都不变；`Selector::Id` 仍可用但不持久 | 一次 i18n 改动不会再让脚本报废 | `Child::named` / `WidgetHost::set_agent_key` + `tests/agent_keys.rs` 4 passed |
-| A4 | **失败工件不成套**：`assert` 失败只报哈希不符，没有"期望/实际 PNG + 场景 diff + 那一刻的树"三件套 | agent 拿到哈希没法自己修 | `floom-snapshot/src/lib.rs:72-88` |
+| A4 | ~~失败工件不成套~~ **已闭（2026-11-24）**：拒绝的命令现在落一目录证据；像素 golden 失败会写出 `-actual.png` | 见「已闭的缺口」 | `floom-accuracy/src/agent/session.rs`、`floom-snapshot/src/lib.rs` |
 | A5 | **token 分层文档**：schema 有 token 关系表，但没有"这个组件允许改哪些 token、改了会不会破一致性"的成文约束 | agent 会随手硬编码颜色（组件里已有 26/29/27 处先例） | [components.md](components.md) |
 | A6 | **CLI 没有 agent 子命令**：`floom verify` / `floom snapshot` 未暴露 | agent 只能写 Rust 测试来验 | `floom-cli/src/main.rs:103-109` 无 |
+
+### A4 失败工件成套（2026-11-24）
+
+两条路各补一半，都不改变失败本身：
+
+- **命令被拒**（agent 侧）：`AgentSession::with_artifact_dir(dir)` 后，每条失败的请求写 `dir/failure-NN/`，内含 `command.json`（请求 + 拒绝原因）、`tree.json`、`semantics.json`、`screenshot.png`（真实像素，`PixelSnapshot` → PNG）、`README.md`（说明每个文件是什么）。编号取自目录（不是计数器），因为桥每条连接一个 session，两个不能互相覆盖。写失败只在 stderr 说一句，原错误原样返回——工件不能掩盖失败。
+- **像素 golden 变了**（测试侧）：`floom_snapshot::assert_pixels(&snapshot, manifest_dir, name)` 把 golden 存成同名 `.png`，不符时把失败的那张写成 `<name>-actual.png`，panic 消息直接说"golden 在 X，失败的那张在 Y"。文本 golden 本来就有行 diff，像素没有，所以证据就是两张图。
+
+证据：`crates/system/floom-accuracy/tests/agent_artifacts.rs`（3 个测试：拒绝留下五件、成功什么都不写、两次失败各有编号）、`crates/devtools/floom-snapshot/tests/pixel_golden.rs`（2 个：bless 后同图通过且不留文件；变了的图 panic 消息点名 `-actual.png` 且文件是 PNG）。
+
+未做：把 agent 工件接进 `floom test`/`floom run` 的默认行为（要定"默认目录"与清理策略），以及 trace（现在只有树/语义/像素，没有请求时间线）。
 
 ## 已闭的缺口
 

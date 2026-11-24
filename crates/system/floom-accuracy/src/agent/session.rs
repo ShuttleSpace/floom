@@ -106,6 +106,10 @@ pub struct AgentSession<'a, A: AgentApp = TestApp> {
     app: &'a mut A,
     token: Option<String>,
     stats: PerformanceSummary,
+    /// Where a failed command leaves what it saw. `None` means "answer only",
+    /// which is what a test wants: nothing writes to disk behind its back.
+    artifacts: Option<std::path::PathBuf>,
+    failures: u32,
 }
 
 impl<'a, A: AgentApp> AgentSession<'a, A> {
@@ -114,6 +118,8 @@ impl<'a, A: AgentApp> AgentSession<'a, A> {
             app,
             token: None,
             stats: PerformanceSummary::default(),
+            artifacts: None,
+            failures: 0,
         }
     }
 
@@ -124,12 +130,89 @@ impl<'a, A: AgentApp> AgentSession<'a, A> {
         self
     }
 
+    /// Write a directory of evidence under `dir` for every command that fails.
+    ///
+    /// A refusal that says "no node with that label" is a sentence; what an agent
+    /// or a person needs is what the window looked like when it said so. The
+    /// write never changes the answer: a failure to record is reported on stderr
+    /// and the original error goes back untouched.
+    pub fn with_artifact_dir(mut self, dir: impl Into<std::path::PathBuf>) -> Self {
+        self.artifacts = Some(dir.into());
+        self
+    }
+
     /// Handle one request, answering `id` with either a payload or the reason.
     pub fn handle(&mut self, request: AgentRequest) -> AgentResponse {
         let result = self.dispatch(&request);
+        if let Err(error) = &result
+            && let Some(dir) = self.artifacts.clone()
+        {
+            self.record_failure(&dir, &request, error);
+        }
         AgentResponse {
             id: request.id,
             result,
+        }
+    }
+
+    /// One directory per failure: the command, what was on screen, and the pixels.
+    fn record_failure(
+        &mut self,
+        root: &std::path::Path,
+        request: &AgentRequest,
+        error: &AgentError,
+    ) {
+        // The number comes from the directory, not from a counter: a bridge makes
+        // one session per connection, and two of them must not write over each
+        // other's evidence.
+        self.failures += 1;
+        let mut index = self.failures;
+        while root.join(format!("failure-{index:02}")).exists() {
+            index += 1;
+        }
+        let dir = root.join(format!("failure-{index:02}"));
+        let write = |name: &str, contents: &[u8]| -> std::io::Result<()> {
+            std::fs::create_dir_all(&dir)?;
+            std::fs::write(dir.join(name), contents)
+        };
+        // The order matters only for the report below: the first failure to be
+        // written is the one a reader opens first.
+        let steps: [(&str, Vec<u8>); 4] = [
+            (
+                "command.json",
+                serde_json::to_vec_pretty(&(request.command.clone(), error.clone()))
+                    .unwrap_or_default(),
+            ),
+            (
+                "tree.json",
+                serde_json::to_vec_pretty(&self.tree()).unwrap_or_default(),
+            ),
+            (
+                "semantics.json",
+                serde_json::to_vec_pretty(&self.semantics()).unwrap_or_default(),
+            ),
+            ("screenshot.png", self.screenshot_png()),
+        ];
+        for (name, contents) in steps {
+            if let Err(write_error) = write(name, &contents) {
+                eprintln!(
+                    "floom-accuracy: the failure artefact {name} could not be written: {write_error}"
+                );
+            }
+        }
+        let readme = format!(
+            "# A command the window refused\n\n\
+             `{:?}` was asked for and the window said: {:?}\n\n\
+             - `command.json` — the request and the refusal\n\
+             - `tree.json` — every node that was on screen\n\
+             - `semantics.json` — what a screen reader was told\n\
+             - `screenshot.png` — the pixels at the moment of the refusal\n",
+            request.command, error
+        );
+        if let Err(write_error) = write("README.md", readme.as_bytes()) {
+            eprintln!(
+                "floom-accuracy: the failure artefact README.md could not be written: {write_error}"
+            );
         }
     }
 
@@ -308,6 +391,19 @@ impl<'a, A: AgentApp> AgentSession<'a, A> {
                 .iter()
                 .map(|node| format!("{node:?}"))
                 .collect(),
+        }
+    }
+
+    /// The pixels at this moment, as a PNG file. A refusal that cannot be looked
+    /// at is a refusal someone has to reproduce to believe.
+    fn screenshot_png(&self) -> Vec<u8> {
+        let shot = PixelSnapshot::of(self.app.host().scene(), None, self.app.size(), 1.0);
+        match floom_snapshot::encode_png(&shot.rgba, shot.width, shot.height) {
+            Ok(png) => png,
+            Err(error) => {
+                eprintln!("floom-accuracy: the failure screenshot could not be encoded: {error}");
+                Vec::new()
+            }
         }
     }
 

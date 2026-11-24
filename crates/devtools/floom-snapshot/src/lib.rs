@@ -111,6 +111,55 @@ impl SemanticsSnapshot {
     }
 }
 
+/// Compare a picture against a PNG golden, and leave the picture behind when it
+/// differs.
+///
+/// Text goldens get a line diff from [`assert_snapshot`]; pixels cannot, so the
+/// evidence is the two pictures: the golden stays where it was, and the picture
+/// that failed is written beside it as `<name>-actual.png`. A person holds them
+/// side by side; nothing has to be reproduced to see what moved.
+///
+/// With `UPDATE_SNAPSHOTS=1` the golden is written and the test passes.
+pub fn assert_pixels(snapshot: &PixelSnapshot, manifest_dir: &str, name: &str) {
+    let golden = std::path::Path::new(manifest_dir)
+        .join("snapshots")
+        .join(format!("{name}.png"));
+    let png = encode_png(&snapshot.rgba, snapshot.width, snapshot.height)
+        .expect("a rendered picture encodes as PNG");
+    if std::env::var("UPDATE_SNAPSHOTS")
+        .map(|value| value == "1")
+        .unwrap_or(false)
+    {
+        if let Some(parent) = golden.parent() {
+            std::fs::create_dir_all(parent).expect("create snapshots dir");
+        }
+        std::fs::write(&golden, &png).expect("write pixel golden");
+        return;
+    }
+    let Ok(expected) = std::fs::read(&golden) else {
+        panic!(
+            "pixel golden `{name}` missing at {}; run with UPDATE_SNAPSHOTS=1 to create it",
+            golden.display()
+        );
+    };
+    if expected == png {
+        return;
+    }
+    let actual = golden.with_file_name(format!("{name}-actual.png"));
+    let written = std::fs::write(&actual, &png);
+    let where_it_is = match written {
+        Ok(()) => format!("the picture that failed is at {}", actual.display()),
+        Err(error) => format!("the picture that failed could not be written: {error}"),
+    };
+    panic!(
+        "pixel golden `{name}` changed ({}x{}, hash {}): the golden is at {}, {where_it_is}",
+        snapshot.width,
+        snapshot.height,
+        snapshot.hash,
+        golden.display()
+    );
+}
+
 /// The **reference** pixel snapshot: `scene` rendered through the software
 /// presenter, which is the picture every other backend is measured against.
 ///
