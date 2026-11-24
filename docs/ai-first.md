@@ -26,8 +26,14 @@
 | A2 | **无 `floom mcp`**：没有任何 MCP server 把上面 6 个只读命令 + 3 个动作暴露出去 | 每个 harness 都要自己写胶水 | 全仓无 `mcp` |
 | A3 | ~~**语义动作 ID 不稳定**~~ **已闭（2026-11-24）**：`Selector::Key("increment")` 按作者声明的名字定位，跨位置、跨文案、跨列表重排都不变；`Selector::Id` 仍可用但不持久 | 一次 i18n 改动不会再让脚本报废 | `Child::named` / `WidgetHost::set_agent_key` + `tests/agent_keys.rs` 4 passed |
 | A4 | ~~失败工件不成套~~ **已闭（2026-11-24）**：拒绝的命令现在落一目录证据；像素 golden 失败会写出 `-actual.png` | 见「已闭的缺口」 | `floom-accuracy/src/agent/session.rs`、`floom-snapshot/src/lib.rs` |
-| A5 | **token 分层文档**：schema 有 token 关系表，但没有"这个组件允许改哪些 token、改了会不会破一致性"的成文约束 | agent 会随手硬编码颜色（组件里已有 26/29/27 处先例） | [components.md](components.md) |
+| A5 | ~~**token 分层文档**~~ **已闭（2026-11-24）**：四层（全局主题 → 设计系统 → 组件表 → 实例 prop）、各层谁能写、改一层会动什么，以及门禁**不**检查什么 | agent 不必再猜"能不能直接写颜色" | [tokens.md](tokens.md)、`gate style` |
 | A6 | **CLI 没有 agent 子命令**：`floom verify` / `floom snapshot` 未暴露 | agent 只能写 Rust 测试来验 | `floom-cli/src/main.rs:103-109` 无 |
+
+### A5 token 分层（2026-11-24）
+
+[`docs/tokens.md`](tokens.md) 把"值可以从哪来"写成四层：`floom-theme` 的七个颜色角色 → 各设计系统 `tokens.rs` 的额外角色（Material 十九个、`INFO`/`SUCCESS`/`WARNING`）→ `component_tokens/<widget>.rs` 的每组件度量 → 实例 prop。规则一句话：**组件可读任一层，不得自己发明值；单点改动是 prop，不是 token。**
+
+同一节里写了改哪一层会动什么（全局 → 三个系统都跟；设计系统 → 只有它自己变，于是差异在 diff 里看得见；组件表 → 该组件的全部实例；widget 里的字面量 → 什么都不跟，下一次换主题就漏掉），以及门禁的边界：`gate style` 只拦三个系统的 `src/widgets/**` 里的颜色字面量（注入验证过），**不**检查组件是否绕过组件表直接读设计系统层，也**不**检查 `tokens.rs` 里有没有没人用的常量——两者都需要真正的 token 图。
 
 ### A4 失败工件成套（2026-11-24）
 
