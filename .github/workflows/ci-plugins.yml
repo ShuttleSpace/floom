@@ -107,8 +107,13 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          # Space-separated workspace roots, relative to the repo root.
-          workspaces: crates/ecosystem/floom-ui crates/ecosystem/floom-editor
+          # Workspace roots, relative to the repo root, one per line: the action
+          # splits on newlines, so two paths on one line are read as a single
+          # path that does not exist. That read only happens on a cache miss, so
+          # it failed the first time the key moved, not the day it was written.
+          workspaces: |
+            crates/ecosystem/floom-ui
+            crates/ecosystem/floom-editor
           key: ecosystem-check
           save-if: ${{ github.event_name != 'merge_group' }}
 
