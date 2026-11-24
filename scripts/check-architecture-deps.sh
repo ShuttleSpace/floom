@@ -372,7 +372,7 @@ for _names, _level in [
     # `floom-cli` scaffolds projects against the facade and links none of the
     # stack; it has to sit above the layer it names, or a scaffolded project
     # could point at a crate the CLI itself does not.
-    (["floom-cli"], 9),
+    (["floom-cli", "floom-mcp"], 9),
 ]:
     for _n in _names:
         LAYERS[_n] = _level

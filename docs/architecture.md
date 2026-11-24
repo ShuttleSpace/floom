@@ -34,7 +34,7 @@ Companion pages: [`EXAMPLES.md`](EXAMPLES.md) (the golden examples) and
 | `floom-widgets`, `floom-widgets-data` | L6 | widgets: Tier-0 primitives, controls, composites, data widgets |
 | `floom-app` | L7 | the headless app shell: `WidgetHost`, `AppRunner`, input routing, semantics publication |
 | `floom-testkit`, `floom-snapshot`, `floom-dsl`, `floom-hot-reload`, `floom-inspector`, `floom-devtools`, `floom-accuracy`, `floom-tsx` | L8 | tooling and compilers — **not** shipped in an application binary. (`floom-codegen`, the native-glue compiler, and `floom-ui-ir`, the versioned UI IR, are folded into `floom-dsl` as its `codegen` and `ui_ir` modules; the Phase-25 agent protocol is folded into `floom-accuracy` as its `agent` module) |
-| `floom`, `floom-cli` | L9 | the public facade and the scaffolder that targets it: `floom::prelude`, feature bundles. It aggregates the tooling tier too, which is why it sits above L8 even though it *is* shipped. |
+| `floom`, `floom-cli`, `floom-mcp` | L9 | the public facade, the scaffolder that targets it, and the MCP adapter that drives a running app: `floom::prelude`, feature bundles. It aggregates the tooling tier too, which is why it sits above L8 even though it *is* shipped. |
 
 Two crates sit outside the ladder on purpose:
 
