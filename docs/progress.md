@@ -117,7 +117,7 @@
 | S3.3 | DevTools 计算值 | 未开始 | Style 行无计算值 | — |
 | S4.1 | agent 口进真实 app | 完成 | `AgentApp` 抽成 trait、`WindowApp` 驱动真实 `WidgetHost`、`spawn_bridge` 交给窗口线程；`TypeText`/`Drag` 明确 refused | `scripts/desktop-smoke.sh`：`agent: tree has button Increment` / `agent: tap Increment repainted=true`（Linux Xvfb + Windows） |
 | S4.2 | 稳定语义 id | 完成 | ① `Selector::Id(u64)` 解析到 `Tree` 的 id 并走点击路径（`tests/agent_ids.rs` 3 passed，含两次运行 `Tree`/`Semantics` JSON 逐字节相同）；② `Selector::Key(str)` 按作者声明名定位：`Child::named` / `WidgetHost::set_agent_key`，`Tree` 每节点带 `key`（`tests/agent_keys.rs` 4 passed，含"同一 key 在第一个/第二个位置都解析成功"）。限界：id 是挂载次序，跨挂载次序请用 key；`Key` 只有作者命名过的节点才有 | — |
-| S4.3 | `floom mcp` | 未开始 | 无该子命令 | — |
+| S4.3 | `floom mcp` | 完成（独立 crate `floom-mcp`，五个工具；未验：真实 MCP 客户端 Claude/Cursor 里跑一段脚本） | `tests/protocol.rs` 8 passed + 本机端到端 | A2 |
 | S4.4 | 失败工件成套 | 完成（trace 未做） | `agent_artifacts.rs` 3 passed、`pixel_golden.rs` 2 passed | A4 |
 | S4.6 | CLI agent 子命令（`floom verify` / `floom snapshot`） | 完成（2026-11-24） | `VERIFY_STEPS` 顺序测试、`SNAPSHOT_STEPS` 过滤测试、无工程目录的拒绝测试，`cargo test -p floom-cli` 116 passed | A6 |
 | S4.5 | token 分层文档 | 未开始（`llms.txt` 是 15 分钟档、`docs/README.md` 是索引、`docs/*` 是全量，但没有人证明过"只读 15 分钟档就能写出一个窗口"；token 契约那一半已在 A5 关闭） | `llms.txt` 单档 | A5 |

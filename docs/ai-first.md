@@ -23,7 +23,7 @@
 | # | 缺口 | 为什么是硬缺口 | 证据 |
 | --- | --- | --- | --- |
 | A1 | ~~跑起来的 app 没有 agent 口~~ **已闭（2026-11-23）**：`AgentApp` 抽成 trait，`WindowApp` 让协议直接驱动真实 `WidgetHost`，`spawn_bridge` 把 loopback 请求交给持有窗口的线程；`floom-window-software --agent <port>` 在 CI 里被脚本问出树、点中按钮 | — | 见下节「已闭的缺口」 |
-| A2 | **无 `floom mcp`**：没有任何 MCP server 把上面 6 个只读命令 + 3 个动作暴露出去 | 每个 harness 都要自己写胶水 | 全仓无 `mcp` |
+| A2 | ~~**无 `floom mcp`**~~ **已闭（2026-11-24）**：`floom-mcp` 把五个工具（树/语义/点/输入/截图）包成 MCP，stdio + JSON-RPC；它只附到已在跑的 app，不启动进程 | harness 里不用再写胶水 | `crates/app/floom-mcp`、`tests/protocol.rs` 8 passed |
 | A3 | ~~**语义动作 ID 不稳定**~~ **已闭（2026-11-24）**：`Selector::Key("increment")` 按作者声明的名字定位，跨位置、跨文案、跨列表重排都不变；`Selector::Id` 仍可用但不持久 | 一次 i18n 改动不会再让脚本报废 | `Child::named` / `WidgetHost::set_agent_key` + `tests/agent_keys.rs` 4 passed |
 | A4 | ~~失败工件不成套~~ **已闭（2026-11-24）**：拒绝的命令现在落一目录证据；像素 golden 失败会写出 `-actual.png` | 见「已闭的缺口」 | `floom-accuracy/src/agent/session.rs`、`floom-snapshot/src/lib.rs` |
 | A5 | ~~**token 分层文档**~~ **已闭（2026-11-24）**：四层（全局主题 → 设计系统 → 组件表 → 实例 prop）、各层谁能写、改一层会动什么，以及门禁**不**检查什么 | agent 不必再猜"能不能直接写颜色" | [tokens.md](tokens.md)、`gate style` |
@@ -49,6 +49,14 @@
 ## 已闭的缺口
 
 **A3：作者声明的 key。** `ChildKey` 是有哈希的、读不回来，所以名字按原样存在节点上（`Child::named("increment")` 或 `WidgetHost::set_agent_key`），`Tree` 每条节点带 `key`，`Selector::Key("increment")` 就能点到它。`tests/agent_keys.rs` 证明四件事：命名的子节点在树里报出自己的 key、按 key 能点中、**同一个 key 在"第一个"与"第二个"位置都解析成功**（位置无关）、未知 key 被拒并列出屏上 label。位置型 `Selector::Id` 保留但不再被文档推荐为持久句柄。
+
+### A2 MCP server（2026-11-24）
+
+`crates/app/floom-mcp` 是**适配器**，不是启动器：它接一个已经在跑 agent 协议的 app（`floom-window-software --agent 4877`），把 `Tree`/`Semantics`/`Tap`/`TypeText`/`Screenshot` 包成五个 MCP 工具（`floom_tree`、`floom_semantics`、`floom_tap`、`floom_type`、`floom_screenshot`），传输是 stdio + 换行分隔的 JSON-RPC 2.0。
+
+三条边界写进了代码与文档：① 它不启动 app（否则要回答"谁持有窗口、进程退出怎么办、stderr 去哪"）；② 工具调用失败是 `isError: true` 的**结果**而不是 JSON-RPC error（模型看得见、能改）；③ `floom_screenshot` 只报尺寸与哈希——协议报的是"这一帧变了"，不是"长什么样"，把它说成截图会是假的。
+
+`crates/app/floom-cli` 刻意保持零依赖（只为 `floom create` 能在裸机器上跑起来），所以 MCP 是独立 crate。实测：启动示例 app → `floom-mcp` 收 `initialize` 与两次 `tools/call` → 读回 `button "Increment" 160x40`、点它得 `Done{repainted:true}`。
 
 **A2 的一半：`Tree` 给的 id 现在能用了。** 协议里 `Selector` 原有 `Label`/`Role` 两种，而 `Tree` 每条节点都带 `id` —— 读得到、点不到，等于给 agent 一个假手柄。现在 `Selector::Id(u64)` 会解析成本次的节点并走同一条点击路径（`AgentApp::element_of_id` + `tap_element`，默认实现基于 `host.node_at` / `host.node_id` / `host.activate`），越界或已离屏的 id 报 `SelectorNotFound` 并附上"现在屏幕上有什么"。
 

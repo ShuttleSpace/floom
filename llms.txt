@@ -9,7 +9,8 @@
 - [Architecture](docs/architecture.md) — layers, three ABIs, contributor guide
 - [Performance](docs/performance.md) — metric ledger (size, CPU, memory, GPU, frame time), current numbers, gates
 - [Developer experience](docs/developer-experience.md) — `floom` CLI lifecycle, `run --watch`, devtools
-- [AI first](docs/ai-first.md) — the agent protocol that already exists, and what is missing
+- [AI first](docs/ai-first.md)
+- [MCP server](crates/app/floom-mcp/README.md) — five tools in front of a running app; it attaches, it does not launch — the agent protocol that already exists, and what is missing
 - [Platforms](docs/platforms.md) — 9 targets and per-platform capability bindings in one table
 - [Tokens](docs/tokens.md) — the four layers a colour or a size may come from, and which changes are safe
 - [Components](docs/components.md) — widget inventory, design-system conformance, component contract

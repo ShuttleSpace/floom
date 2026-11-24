@@ -1276,6 +1276,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-mcp"
+version = "0.2.0"
+dependencies = [
+ "floom-accuracy",
+ "serde_json",
+]
+
+[[package]]
 name = "floom-native"
 version = "0.2.0"
 dependencies = [

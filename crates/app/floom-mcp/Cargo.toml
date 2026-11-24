@@ -1,0 +1,17 @@
+[package]
+name = "floom-mcp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Model Context Protocol server for Floom: the agent protocol, in the shape a harness expects"
+readme = "README.md"
+
+[dependencies]
+floom-accuracy = { workspace = true }
+serde_json.workspace = true
+
+[[bin]]
+name = "floom-mcp"
+path = "src/main.rs"

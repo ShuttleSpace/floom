@@ -22,6 +22,7 @@ members = [
   "crates/system/floom-animation",
   "crates/app/floom-app",
   "crates/app/floom-cli",
+  "crates/app/floom-mcp",
   "crates/core/floom-core",
   "crates/devtools/floom-devtools",
   "crates/frontend/floom-dsl",
@@ -126,6 +127,7 @@ accesskit = "0.24"
 floom = { path = "crates/app/floom", version = "0.2.0" }
 floom-accessibility = { path = "crates/core/floom-accessibility", version = "0.2.0" }
 floom-accuracy = { path = "crates/system/floom-accuracy", version = "0.2.0" }
+floom-mcp = { path = "crates/app/floom-mcp", version = "0.2.0" }
 floom-animation = { path = "crates/system/floom-animation", version = "0.2.0" }
 floom-app = { path = "crates/app/floom-app", version = "0.2.0" }
 floom-core = { path = "crates/core/floom-core", version = "0.2.0" }

@@ -55,7 +55,7 @@ jobs:
         --package=floom-platform-harmony --package=floom-platform-ios --package=floom-platform-embedded
         --package=floom-renderer --package=floom-renderer-software --package=floom-renderer-vello --package=floom-renderer-tui --package=floom-renderer-web
         --package=floom-devtools --package=floom-hot-reload --package=floom-inspector --package=floom-snapshot --package=floom-testkit
-        --package=floom-app --package=floom-cli --package=floom
+        --package=floom-app --package=floom-cli --package=floom-mcp --package=floom
     steps:
       - name: Install dependencies on Ubuntu
         if: startsWith(matrix.os, 'ubuntu')
