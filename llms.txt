@@ -1,34 +1,106 @@
 # Floom
 
-> Floom is a native Rust GUI library: self-drawn, retained-mode, GPU-accelerated, no browser dependency, with fine-grained reactivity. "Floom 2.0" workspace: edition 2024, MSRV 1.91, workspace version 0.2.0 (pre-1.0), MIT. The 1.0 bar is budgets + conformance suites, not competitor feature counts.
+> A native Rust GUI library: self-drawn, retained-mode, GPU-accelerated, no browser
+> dependency, fine-grained reactivity. Workspace "Floom 2.0": edition 2024, MSRV 1.91,
+> version 0.2.0 (pre-1.0), MIT. The 1.0 bar is budgets and conformance suites, not a
+> competitor feature count.
 
-## Read in this order
+This file is the **fifteen-minute tier**: enough to open a window and change it.
+The map is [docs/README.md](docs/README.md); the full tier is `docs/`.
+
+## Fifteen minutes: a window that runs
+
+```toml
+# Cargo.toml
+[package]
+name = "hello"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+floom = { path = "path/to/floom/crates/app/floom", features = ["desktop", "renderer-gpu"] }
+```
+
+```rust
+// src/main.rs
+use floom::prelude::*;
+
+fn main() {
+    floom::run_desktop("Hello", Size::new(360.0, 240.0), |host| {
+        let root = Stack::new(Axis::Vertical).gap(8.0).child(Child::new(
+            ChildKey::index(0),
+            LayoutRequest::new(),
+            || Box::new(Button::new("Save")),
+        ));
+        host.mount_root(LayoutStyle::default(), root);
+        host.frame();
+    })
+    .expect("a window");
+}
+```
+
+`cargo run` opens a window with one button. Two facts about the manifest are the ones
+people lose time to: `floom`'s `default` is `[]` (nothing is compiled in until asked),
+and `run_desktop` needs **both** `desktop` and `renderer-gpu` — it drives the GPU
+presenter. Three facts about the tree are worth knowing before you fight them:
+
+- `build` runs **once**. Widgets are retained; you change them through
+  `host.widget_mut::<T>(node)` from a callback, never by rebuilding the tree.
+- `on_click(|| …)` handlers must be `'static`, so they cannot capture `host`. The
+  bridge is `host.on_frame(|host| …)`: state changes in the handler, the tree is
+  reconciled on the next frame.
+- `host.frame()` paints the first frame; the platform drives the rest.
+
+`floom create myapp --platforms ios` scaffolds the same tree with the
+native hosts already wired (`floom package --platform ios|android` builds them).
+
+## Read next (the map, ~1 hour)
 
 - [Docs index](docs/README.md) — the map, the status dashboard, the doc rules
 - [Vision](docs/vision.md) — goal, what we borrow from which competitor, moat, non-goals
 - [Architecture](docs/architecture.md) — layers, three ABIs, contributor guide
-- [Performance](docs/performance.md) — metric ledger (size, CPU, memory, GPU, frame time), current numbers, gates
+- [Components](docs/components.md) — widget inventory and the ten contract rules
+- [Tokens](docs/tokens.md) — the four layers a colour or a size may come from
 - [Developer experience](docs/developer-experience.md) — `floom` CLI lifecycle, `run --watch`, devtools
-- [AI first](docs/ai-first.md)
-- [MCP server](crates/app/floom-mcp/README.md) — five tools in front of a running app; it attaches, it does not launch — the agent protocol that already exists, and what is missing
+- [AI first](docs/ai-first.md) — the agent protocol and its MCP server
 - [Platforms](docs/platforms.md) — 9 targets and per-platform capability bindings in one table
-- [Tokens](docs/tokens.md) — the four layers a colour or a size may come from, and which changes are safe
-- [Components](docs/components.md) — widget inventory, design-system conformance, component contract
+- [Performance](docs/performance.md) — metric ledger, current numbers, gates
 - [Plugins](docs/plugins.md) — provider vtable contract, 22-plugin matrix
 - [Roadmap](docs/roadmap.md) — the 13 gates to 1.0, current gaps, ordering, risks
 - [Release policy](docs/release-policy.md) — versioning, supported-target authority, release steps
-- [Renderers](docs/renderer-backend-support.md) — per-backend coverage, including what is deliberately counted-not-drawn
-- [Examples](docs/examples.md) — golden examples (read by `docs_parity.rs` and `scripts/run-golden-examples.sh`)
-- [Per-target gates](docs/gates/) — 8 items per platform, `pass`/`fail`/`n/a` with line-level evidence
+- [Renderers](docs/renderer-backend-support.md) — per-backend coverage
+- [Examples](docs/examples.md) — golden examples (checked by `docs_parity.rs`)
+- [Per-target gates](docs/gates/) — 8 items per platform with line-level evidence
 - [Workspace conventions](docs/workspace-conventions.md)
 
 ## Quick facts for an agent
 
-- Layout: `crates/{core,system,widgets,platform,render,native,devtools,frontend,app}`; the public facade is `crates/app/floom`. Design systems and the editor are separate workspaces under `crates/ecosystem/` and are **not** in the 1.0 surface.
-- Tests that must keep compiling: `crates/app/floom/tests/{prelude_surface,feature_graph,docs_parity}.rs`. `docs_parity.rs` cross-checks `docs/examples.md` ↔ `examples/`, `docs/architecture.md` ↔ `scripts/check-architecture-deps.sh`, and every path named in `docs/release-policy.md`.
-- Gates: run `just gate` (local). The `justfile` recipes are the real gate; `.github/workflows/` cannot run from this origin, so no CI badge means anything yet.
-- Platform reality: only `aarch64-apple-darwin` is "tested". The other 8 targets are device- or target-gated — see the targets table in `docs/release-policy.md`.
-- Agent protocol (already implemented, `crates/system/floom-accuracy/src/agent/`): commands `Tree`, `Semantics`, `Scene`, `Screenshot`, `Performance`, `Schema`, actions `Tap`, `TypeText`, `Drag`; selectors are `Label`/`Role` only (never a `NodeId`); transports are in-process and `127.0.0.1`-only with a dev token.
-- Component schema: `component_schema()` yields slots, properties (`style`/`layout`/`widget` + closed domains), events, tokens, and a runnable example per widget kind.
-- Benchmarks: `scripts/check-perf-budgets.sh` (10% budgets, single-machine baseline — deliberately not a CI gate) and `just gate size` (3 tiers).
-- TypeScript: there is **no** published `npm/@types/floom`; `floom-tsx` generates Rust from TSX in-tree.
+- Layout: `crates/{core,system,widgets,platform,render,native,devtools,frontend,app}`; the
+  public facade is `crates/app/floom`. Design systems and the editor live under
+  `crates/ecosystem/` in their own workspaces and are **not** part of the 1.0 surface.
+- Tests that must keep compiling: `crates/app/floom/tests/{prelude_surface,feature_graph,docs_parity}.rs`.
+  `docs_parity.rs` cross-checks `docs/examples.md` ↔ `examples/`,
+  `docs/architecture.md` ↔ `scripts/check-architecture-deps.sh`, and every path named in
+  `docs/release-policy.md` — moving a doc without updating its readers fails the build.
+- Gates: `bash scripts/gate.sh` (or `just gate`). CI runs on GitHub
+  (`github.com/ShuttleSpace/floom`, four workflows); the gate is still the authority for
+  size, perf and the cross-target checks CI cannot reach.
+- Tested targets (2026-11-24): `aarch64-apple-darwin`, `aarch64-apple-ios-sim`,
+  `x86_64-unknown-linux-gnu` and `x86_64-pc-windows-msvc` open a real window in CI — the
+  desktop two with the software renderer. Everything else is device- or target-gated;
+  `docs/release-policy.md` is the authority.
+- There is no crates.io release yet, and `floom` **on crates.io is an unrelated project**.
+  Depend on the path until the rename is decided.
+- Agent protocol (`crates/system/floom-accuracy/src/agent/`): commands `Tree`, `Semantics`,
+  `Scene`, `Screenshot`, `Performance`, `Schema`; actions `Tap`, `TypeText`, `Drag`.
+  Selectors: `Key` (the author's `Child::named`), `Label`, `Role`, and `Id` (mount order —
+  stable only while nothing mounts before it). Transports: in-process, and `127.0.0.1`
+  only with a dev token. `crates/app/floom-mcp` exposes the same five tools over MCP; it
+  attaches to a running app, it does not launch one.
+- Component schema: `component_schema()` yields slots, properties (`style`/`layout`/`widget`
+  with closed domains), events, tokens, and a runnable example per widget kind.
+- Benchmarks: `scripts/check-perf-budgets.sh` (10% budgets against a single-machine
+  baseline), `just gate size` (3 tiers), `scripts/gate.sh resources` (idle CPU, peak RSS,
+  allocation counts, frame counts).
+- TypeScript: `floom-tsx` generates Rust from TSX in-tree; there is **no** published npm
+  package (`npm/@types-floom` is the in-repo type surface the generator is checked against).

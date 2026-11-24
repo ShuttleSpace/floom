@@ -120,7 +120,7 @@
 | S4.3 | `floom mcp` | 完成（独立 crate `floom-mcp`，五个工具；未验：真实 MCP 客户端 Claude/Cursor 里跑一段脚本） | `tests/protocol.rs` 8 passed + 本机端到端 | A2 |
 | S4.4 | 失败工件成套 | 完成（trace 未做） | `agent_artifacts.rs` 3 passed、`pixel_golden.rs` 2 passed | A4 |
 | S4.6 | CLI agent 子命令（`floom verify` / `floom snapshot`） | 完成（2026-11-24） | `VERIFY_STEPS` 顺序测试、`SNAPSHOT_STEPS` 过滤测试、无工程目录的拒绝测试，`cargo test -p floom-cli` 116 passed | A6 |
-| S4.5 | token 分层文档 | 未开始（`llms.txt` 是 15 分钟档、`docs/README.md` 是索引、`docs/*` 是全量，但没有人证明过"只读 15 分钟档就能写出一个窗口"；token 契约那一半已在 A5 关闭） | `llms.txt` 单档 | A5 |
+| S4.5 | 三档文档 + 15 分钟档实测 | **完成（2026-11-24）**：`llms.txt` 重写为自含的 15 分钟档（可复制的 `Cargo.toml` + `main.rs`、三个"别踩"事实），实测方式＝照抄该档原文在 `/tmp/llms15` 建工程 → `cargo build` → 运行 6 s 开窗退出；过程中抓出两处该档没写、但一写就卡住的事实（`default = []`；`run_desktop` 需要 `desktop` **和** `renderer-gpu`），已补进档内 | 照抄即可编译运行 | — |
 | S5.1 | 兼容矩阵 / `flameo` / 命名 | 未开始 | `docs/roadmap.md` G10 | — |
 | S5.2 | G2 版本承诺 | 未开始 | 0.2.0 | — |
 | S5.3 | G9 像素测试进 CI | 未开始 | `#[ignore]` | — |
