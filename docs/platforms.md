@@ -102,7 +102,7 @@
 ## 7. 桌面（mac, Windows, Linux）
 
 - 剪贴板只有 macOS 真实现；Linux/Windows 是**进程内占位**——复制粘贴出不了应用。这是三个桌面 target 里最容易踩的"看起来能用"。
-- 无障碍：语义树保留、无 OS 桥（mac 无 NSAccessibility、Linux 无 AT-SPI、Windows 无 UIA）。
+- 无障碍：语义树保留；macOS（NSAccessibility）与 Windows（UIA）桥已装，Linux 无 AT-SPI 桥；三者都没有"读屏软件实际读到什么"的机验。
 - 文件选择：**平台层根本没有 file-picker trait**，所以"每个桌面 target 都缺"不是 Linux/Windows 的特别问题。
 - Windows/Linux 的 native-view 合成（Phase 16.2）未完成，`cargo test` 在 CI 上只跑到 build。
 

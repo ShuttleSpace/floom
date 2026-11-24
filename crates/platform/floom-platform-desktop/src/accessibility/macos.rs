@@ -7,12 +7,9 @@
 //! and drained on the next poll — the same shape the Android side uses for its
 //! `AccessibilityNodeProvider`.
 
-use std::sync::{Arc, Mutex};
-
 use accesskit::{ActionHandler, ActionRequest};
 
-/// Actions AppKit asked for, waiting for the next poll to dispatch them.
-pub type ActionQueue = Arc<Mutex<Vec<ActionRequest>>>;
+use super::ActionQueue;
 
 /// Queues AppKit's actions for the next poll.
 struct Queue(ActionQueue);

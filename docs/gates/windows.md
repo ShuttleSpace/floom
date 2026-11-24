@@ -6,7 +6,7 @@
 |---|------|--------|----------|
 | 1 | Official example starts + basic interaction | device-gated: desktop native-view bridge Phase 16.2 incomplete; no Windows machine in CI; verified headless on Linux+macOS deputy | CI has no Windows runner for the full test suite (`build` job covers `cargo build` on `windows-latest`) |
 | 2 | IME Latin + one CJK | device-gated: winit IME layer + composition bridge incomplete on Win32; verified headlessly on Linux/macOS deputy | `crates/floom-platform-desktop/src/ime/` |
-| 3 | a11y label + Default action | device-gated: no `NSAccessibility`/`UIA` bridge on Windows yet; semantics tree retained in-process | `crates/floom-accessibility/` |
+| 3 | a11y label + Default action | **partial**: `accesskit_windows` adapter attached to the `HWND` on window creation (2026-11-24, `crates/platform/floom-platform-desktop/src/accessibility/windows.rs`), tree pushed on change, UIA `Click` queued and dispatched as `SemanticsAction::Activate`; **no Narrator/UIA-client verification** — the claim is "attached", not "read back" | `winit_backend.rs` `create_window_now`; `accessibility/windows.rs` |
 | 4 | Clipboard read/write | device-gated: cross-platform clipboard trait stubbed; Windows `OpenClipboard`/`GetClipboardData` adapter not yet wired | `crates/floom-platform-desktop/src/clipboard.rs` |
 | 5 | File pick / share-open as applicable | device-gated: no dialog/file-picker trait exists yet — true on every desktop target, not just Windows | v1 `crates/floom/src/platform/*` bridges not carried over |
 | 6 | Safe area insets | n/a | desktop |

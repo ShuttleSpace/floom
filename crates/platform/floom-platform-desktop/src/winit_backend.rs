@@ -296,11 +296,11 @@ pub struct WinitPlatform {
     /// The frame version last handed to a bridge.
     a11y_version: u64,
     /// One `NSAccessibility` adapter per window, keyed like `windows`.
-    #[cfg(target_os = "macos")]
-    macos_a11y: std::collections::HashMap<u32, crate::accessibility::macos::MacBridge>,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    a11y_bridges: std::collections::HashMap<u32, crate::accessibility::Bridge>,
     /// Actions AppKit asked for, drained on the next poll.
-    #[cfg(target_os = "macos")]
-    a11y_actions: crate::accessibility::macos::ActionQueue,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    a11y_actions: crate::accessibility::ActionQueue,
 }
 
 impl std::fmt::Debug for WinitPlatform {
@@ -334,9 +334,9 @@ impl WinitPlatform {
             native_caps: None,
             accessibility: crate::accessibility::DesktopAccessibilityAdapter::new(),
             a11y_version: 0,
-            #[cfg(target_os = "macos")]
-            macos_a11y: HashMap::new(),
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
+            a11y_bridges: HashMap::new(),
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
             a11y_actions: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
         }
     }
@@ -483,13 +483,11 @@ impl WinitPlatform {
             transparent: false,
         });
 
-        #[cfg(target_os = "macos")]
-        if let Some(view) = crate::accessibility::macos::ns_view(&*native) {
-            let bridge = crate::accessibility::macos::MacBridge::attach(
-                view,
-                std::sync::Arc::clone(&self.a11y_actions),
-            );
-            self.macos_a11y.insert(id.index(), bridge);
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        if let Some(bridge) =
+            crate::accessibility::attach(&*native, std::sync::Arc::clone(&self.a11y_actions))
+        {
+            self.a11y_bridges.insert(id.index(), bridge);
             self.accessibility.claim_native_bridge();
         }
         self.native_ids.insert(native.id(), id);
@@ -522,7 +520,7 @@ impl WinitPlatform {
     /// Both directions are drained here rather than at each call site: an
     /// adapter that only ever writes is a tree nobody can act through.
     fn flush_accessibility(&mut self) {
-        #[cfg(target_os = "macos")]
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
         {
             let requests: Vec<_> = match self.a11y_actions.lock() {
                 Ok(mut queue) => queue.drain(..).collect(),
@@ -543,7 +541,7 @@ impl WinitPlatform {
             if self.a11y_version != self.accessibility.version() {
                 self.a11y_version = self.accessibility.version();
                 if let Some(update) = self.accessibility.tree_update() {
-                    for bridge in self.macos_a11y.values_mut() {
+                    for bridge in self.a11y_bridges.values_mut() {
                         bridge.push(update.clone());
                     }
                 }
@@ -808,10 +806,10 @@ impl Platform for WinitPlatform {
         let mut caps = self
             .native_caps
             .unwrap_or_else(|| crate::native::desktop_capabilities(false));
-        // Follows the bridge, like every other claim here: until a window has an
-        // `NSAccessibility` adapter, a screen reader cannot read this tree.
-        #[cfg(target_os = "macos")]
-        if !self.macos_a11y.is_empty() {
+        // Follows the bridge, like every other claim here: until a window has a
+        // `UIA`/`NSAccessibility` adapter, a screen reader cannot read this tree.
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        if !self.a11y_bridges.is_empty() {
             caps.caps |= floom_platform::Capability::ACCESSIBILITY;
         }
         caps

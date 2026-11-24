@@ -91,6 +91,7 @@ windows-sys = { version = "0.61", features = [
     # `CF_UNICODETEXT` is filed under Ole, not DataExchange.
     "Win32_System_Ole",
 ] }
+accesskit_windows = "0.34"
 
 
 

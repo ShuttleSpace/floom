@@ -18,6 +18,53 @@ use std::collections::HashMap;
 // an `NSView`, and without the `winit` feature this crate has no window.
 #[cfg(all(target_os = "macos", feature = "winit"))]
 pub mod macos;
+#[cfg(all(target_os = "windows", feature = "winit"))]
+pub mod windows;
+
+/// Actions the OS asked for, waiting for the next poll to dispatch them.
+///
+/// Both bridges queue rather than run: the macOS handler runs inside AppKit's
+/// call and UI Automation calls arrive on whichever thread it likes, while the
+/// widget tree lives one layer up. Queuing is what keeps the tree single
+/// threaded.
+pub type ActionQueue = std::sync::Arc<std::sync::Mutex<Vec<accesskit::ActionRequest>>>;
+
+/// One window's accessibility bridge, whichever one this build has.
+#[cfg(all(feature = "winit", any(target_os = "macos", target_os = "windows")))]
+pub enum Bridge {
+    #[cfg(target_os = "macos")]
+    Mac(macos::MacBridge),
+    #[cfg(target_os = "windows")]
+    Windows(windows::WindowsBridge),
+}
+
+#[cfg(all(feature = "winit", any(target_os = "macos", target_os = "windows")))]
+impl Bridge {
+    /// Hand the tree to the OS, which only forwards it once a client is reading.
+    pub fn push(&mut self, update: accesskit::TreeUpdate) {
+        match self {
+            #[cfg(target_os = "macos")]
+            Bridge::Mac(bridge) => bridge.push(update),
+            #[cfg(target_os = "windows")]
+            Bridge::Windows(bridge) => bridge.push(update),
+        }
+    }
+}
+
+/// Attach whatever bridge this OS has to a window, or `None` when it has none
+/// (or the window handle is not the kind the bridge needs).
+#[cfg(all(feature = "winit", any(target_os = "macos", target_os = "windows")))]
+pub fn attach(window: &dyn winit::window::Window, actions: ActionQueue) -> Option<Bridge> {
+    #[cfg(target_os = "macos")]
+    {
+        let view = macos::ns_view(window)?;
+        Some(Bridge::Mac(macos::MacBridge::attach(view, actions)))
+    }
+    #[cfg(target_os = "windows")]
+    {
+        windows::attach(window, actions).map(Bridge::Windows)
+    }
+}
 
 use accesskit::{Action, Node, NodeId, Role, Tree, TreeId, TreeUpdate};
 use floom_accessibility::{
