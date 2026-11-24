@@ -11,6 +11,7 @@
 - [Developer experience](docs/developer-experience.md) — `floom` CLI lifecycle, `run --watch`, devtools
 - [AI first](docs/ai-first.md) — the agent protocol that already exists, and what is missing
 - [Platforms](docs/platforms.md) — 9 targets and per-platform capability bindings in one table
+- [Tokens](docs/tokens.md) — the four layers a colour or a size may come from, and which changes are safe
 - [Components](docs/components.md) — widget inventory, design-system conformance, component contract
 - [Plugins](docs/plugins.md) — provider vtable contract, 22-plugin matrix
 - [Roadmap](docs/roadmap.md) — the 13 gates to 1.0, current gaps, ordering, risks

@@ -49,6 +49,7 @@
 
 ```sh
 bash scripts/gate.sh style   # 三个 DS 的 src/widgets/** 出现颜色字面量即失败（2026-11-21 起在 CI 与本地门禁里）
+# 四层 token 的读写规则见 tokens.md：组件可读任一层，不得自己发明值
 bash scripts/gate.sh a11y    # 尚未存在：每个公开组件至少一条 semantics 断言
 ```
 

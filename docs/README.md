@@ -23,6 +23,7 @@
 | --- | --- |
 | [progress.md](progress.md) | **执行台账**：6 阶段 18 步的退出判据 + 验证命令 + 当前状态表。改代码前先看这里 |
 | [platforms.md](platforms.md) | 9 个 target 矩阵 + **每平台能力 binding 真相**（输入、IME、剪贴板、a11y、文件、安全区怎么过桥）+ 已定位缺陷 |
+| [tokens.md](tokens.md) | where colours, sizes and curves may come from; the four layers and what changing each one moves |
 | [components.md](components.md) | 组件分层清单 + 设计系统一致性（token 违规是量化的）+ 组件契约 checklist |
 | [plugins.md](plugins.md) | provider vtable 契约 + 22 个能力插件矩阵 + 缺口 |
 | [renderer-backend-support.md](renderer-backend-support.md) | 每个渲染后端的能力矩阵（哪些画、哪些只计数）+ 已知不可实现项 |
