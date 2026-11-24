@@ -27,7 +27,7 @@
 | A3 | ~~**语义动作 ID 不稳定**~~ **已闭（2026-11-24）**：`Selector::Key("increment")` 按作者声明的名字定位，跨位置、跨文案、跨列表重排都不变；`Selector::Id` 仍可用但不持久 | 一次 i18n 改动不会再让脚本报废 | `Child::named` / `WidgetHost::set_agent_key` + `tests/agent_keys.rs` 4 passed |
 | A4 | ~~失败工件不成套~~ **已闭（2026-11-24）**：拒绝的命令现在落一目录证据；像素 golden 失败会写出 `-actual.png` | 见「已闭的缺口」 | `floom-accuracy/src/agent/session.rs`、`floom-snapshot/src/lib.rs` |
 | A5 | ~~**token 分层文档**~~ **已闭（2026-11-24）**：四层（全局主题 → 设计系统 → 组件表 → 实例 prop）、各层谁能写、改一层会动什么，以及门禁**不**检查什么 | agent 不必再猜"能不能直接写颜色" | [tokens.md](tokens.md)、`gate style` |
-| A6 | **CLI 没有 agent 子命令**：`floom verify` / `floom snapshot` 未暴露 | agent 只能写 Rust 测试来验 | `floom-cli/src/main.rs:103-109` 无 |
+| A6 | ~~**CLI 没有 agent 子命令**~~ **已闭（2026-11-24）**：`floom verify`（fmt → check → test 一条命令一个退出码）与 `floom snapshot [--update]`（只跑快照测试） | agent 不必再手敲三条 cargo 命令 | `floom-cli/src/main.rs` 的 `VERIFY_STEPS`/`SNAPSHOT_STEPS` |
 
 ### A5 token 分层（2026-11-24）
 

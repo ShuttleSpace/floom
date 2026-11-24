@@ -32,6 +32,8 @@ COMMANDS:
     init <NAME>      Scaffold a new Floom app in the current directory
     check <DIR>      Type-check the project in <DIR> (default: .)
     test <DIR>       Run the project's tests in <DIR> (default: .)
+    verify <DIR>     Format check, type check and tests in one command
+    snapshot <DIR>   Run the snapshot tests; --update rewrites the goldens
     doctor <DIR>     Report which platforms this machine can build, and why not
     package <DIR>    Build a release binary (add --platform <P> for a platform artifact)
 OPTIONS (run):
@@ -107,6 +109,8 @@ fn run(args: &[String]) -> Result<(), String> {
         "init" => init(&args[1..]),
         "check" => check(&args[1..]),
         "test" => test(&args[1..]),
+        "verify" => verify(&args[1..]),
+        "snapshot" => snapshot(&args[1..]),
         "doctor" => doctor::run(&args[1..]),
         "package" => package::run(&args[1..]),
         "help" | "-h" | "--help" => {
@@ -706,6 +710,74 @@ fn test(args: &[String]) -> Result<(), String> {
     cargo_in(&opts.dir, "test", &opts.features, false)
 }
 
+/// The steps `floom verify` runs, in order.
+///
+/// Separated from the run so the order is testable: a verification that checks
+/// formatting *after* a ten-minute test run is one people stop using.
+const VERIFY_STEPS: [&[&str]; 3] = [
+    &["fmt", "--all", "--check"],
+    &["check", "--all-targets"],
+    &["test", "--no-fail-fast"],
+];
+
+/// `floom verify <DIR>` — what a reviewer runs, in one command and one exit code.
+fn verify(args: &[String]) -> Result<(), String> {
+    let opts = parse_lifecycle(args)?;
+    require_manifest(&opts.dir)?;
+    for step in VERIFY_STEPS {
+        cargo_run(&opts.dir, step)
+            .map_err(|error| format!("{error} — `floom verify` stopped here"))?;
+    }
+    Ok(())
+}
+
+/// `floom snapshot <DIR> [--update]` — the goldens, and only the goldens.
+fn snapshot(args: &[String]) -> Result<(), String> {
+    let mut rest = Vec::new();
+    let mut update = false;
+    for arg in args {
+        if arg == "--update" {
+            update = true;
+        } else {
+            rest.push(arg.clone());
+        }
+    }
+    let opts = parse_lifecycle(&rest)?;
+    require_manifest(&opts.dir)?;
+    let mut cmd = Command::new("cargo");
+    cmd.args(SNAPSHOT_STEPS[0]).current_dir(&opts.dir);
+    if update {
+        cmd.env("UPDATE_SNAPSHOTS", "1");
+    }
+    let status = cmd
+        .status()
+        .map_err(|e| format!("cannot run `cargo test`: {e}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "snapshot tests failed ({status}) — the failing picture is next to its golden as `-actual.png`"
+        ))
+    }
+}
+
+/// The one cargo invocation `floom snapshot` makes, kept separate for the test.
+const SNAPSHOT_STEPS: [&[&str]; 1] = [&["test", "--no-fail-fast", "--", "snapshot"]];
+
+/// Run one cargo invocation in `dir` and report which one failed.
+fn cargo_run(dir: &Path, argv: &[&str]) -> Result<(), String> {
+    let status = Command::new("cargo")
+        .args(argv)
+        .current_dir(dir)
+        .status()
+        .map_err(|e| format!("cannot run `cargo {}`: {e}", argv.join(" ")))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("`cargo {}` failed ({status})", argv.join(" ")))
+    }
+}
+
 /// Writes the native host project for one platform of an **app**.
 ///
 /// Each platform gets a directory the platform's own toolchain recognises, so
@@ -1050,6 +1122,34 @@ fn emit_plugin_platform(opts: &CreateOpts, root: &Path, platform: &str) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn verify_checks_formatting_before_it_runs_the_tests() {
+        // Cheap checks first: a verify that formats after a long test run is one
+        // people stop using.
+        assert_eq!(VERIFY_STEPS[0], ["fmt", "--all", "--check"]);
+        assert_eq!(VERIFY_STEPS[1], ["check", "--all-targets"]);
+        assert_eq!(VERIFY_STEPS[2], ["test", "--no-fail-fast"]);
+    }
+
+    #[test]
+    fn verify_and_snapshot_refuse_a_directory_without_a_project() {
+        let dir = std::env::temp_dir().join(format!("floom-cli-verify-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let error = verify(&[dir.to_string_lossy().to_string()]).unwrap_err();
+        assert!(error.contains("has no Cargo.toml"), "got: {error}");
+        let error = snapshot(&[dir.to_string_lossy().to_string()]).unwrap_err();
+        assert!(error.contains("has no Cargo.toml"), "got: {error}");
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn snapshot_runs_only_the_snapshot_tests() {
+        assert_eq!(
+            SNAPSHOT_STEPS[0],
+            ["test", "--no-fail-fast", "--", "snapshot"]
+        );
+    }
     use std::path::PathBuf;
 
     #[test]
