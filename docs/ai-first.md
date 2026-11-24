@@ -24,12 +24,14 @@
 | --- | --- | --- | --- |
 | A1 | ~~跑起来的 app 没有 agent 口~~ **已闭（2026-11-23）**：`AgentApp` 抽成 trait，`WindowApp` 让协议直接驱动真实 `WidgetHost`，`spawn_bridge` 把 loopback 请求交给持有窗口的线程；`floom-window-software --agent <port>` 在 CI 里被脚本问出树、点中按钮 | — | 见下节「已闭的缺口」 |
 | A2 | **无 `floom mcp`**：没有任何 MCP server 把上面 6 个只读命令 + 3 个动作暴露出去 | 每个 harness 都要自己写胶水 | 全仓无 `mcp` |
-| A3 | **语义动作 ID 不稳定**：`Tap{Label}` 在文案变更即失效，没有"稳定 id + label 兜底" | 一次 i18n 改动就让 agent 的全部脚本报废 | `Selector` 只有两种（**2026-11-23 起有 `Selector::Id`，但 id 是挂载次序，sibling 挂载会让它移位**） |
+| A3 | ~~**语义动作 ID 不稳定**~~ **已闭（2026-11-24）**：`Selector::Key("increment")` 按作者声明的名字定位，跨位置、跨文案、跨列表重排都不变；`Selector::Id` 仍可用但不持久 | 一次 i18n 改动不会再让脚本报废 | `Child::named` / `WidgetHost::set_agent_key` + `tests/agent_keys.rs` 4 passed |
 | A4 | **失败工件不成套**：`assert` 失败只报哈希不符，没有"期望/实际 PNG + 场景 diff + 那一刻的树"三件套 | agent 拿到哈希没法自己修 | `floom-snapshot/src/lib.rs:72-88` |
 | A5 | **token 分层文档**：schema 有 token 关系表，但没有"这个组件允许改哪些 token、改了会不会破一致性"的成文约束 | agent 会随手硬编码颜色（组件里已有 26/29/27 处先例） | [components.md](components.md) |
 | A6 | **CLI 没有 agent 子命令**：`floom verify` / `floom snapshot` 未暴露 | agent 只能写 Rust 测试来验 | `floom-cli/src/main.rs:103-109` 无 |
 
 ## 已闭的缺口
+
+**A3：作者声明的 key。** `ChildKey` 是有哈希的、读不回来，所以名字按原样存在节点上（`Child::named("increment")` 或 `WidgetHost::set_agent_key`），`Tree` 每条节点带 `key`，`Selector::Key("increment")` 就能点到它。`tests/agent_keys.rs` 证明四件事：命名的子节点在树里报出自己的 key、按 key 能点中、**同一个 key 在"第一个"与"第二个"位置都解析成功**（位置无关）、未知 key 被拒并列出屏上 label。位置型 `Selector::Id` 保留但不再被文档推荐为持久句柄。
 
 **A2 的一半：`Tree` 给的 id 现在能用了。** 协议里 `Selector` 原有 `Label`/`Role` 两种，而 `Tree` 每条节点都带 `id` —— 读得到、点不到，等于给 agent 一个假手柄。现在 `Selector::Id(u64)` 会解析成本次的节点并走同一条点击路径（`AgentApp::element_of_id` + `tap_element`，默认实现基于 `host.node_at` / `host.node_id` / `host.activate`），越界或已离屏的 id 报 `SelectorNotFound` 并附上"现在屏幕上有什么"。
 

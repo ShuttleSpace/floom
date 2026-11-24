@@ -398,6 +398,10 @@ pub struct Child {
     /// transition, so a host that lower these children can pair them up and
     /// fly the source into the destination's box.
     pub shared_key: Option<u64>,
+    /// A name an agent can address this child by, unchanged by mount order,
+    /// labels or language. [`ChildKey`] is hashed and cannot be read back, so
+    /// the name is kept as written.
+    pub name: Option<&'static str>,
 }
 
 impl Child {
@@ -411,7 +415,15 @@ impl Child {
             layout,
             build: Arc::new(build),
             shared_key: None,
+            name: None,
         }
+    }
+
+    /// Names this child for agents: `Selector::Key(name)` reaches it wherever
+    /// it sits, and the name survives list reordering and translated labels.
+    pub fn named(mut self, name: &'static str) -> Self {
+        self.name = Some(name);
+        self
     }
 
     /// Marks this child as participating in a shared-element transition under

@@ -68,7 +68,7 @@
 | ID | 动作 | 退出判据 | 验证命令 |
 | --- | --- | --- | --- |
 | S4.1 | 把 agent 口接进真实 app（Task 25.3）：`AgentApp` trait + `WindowApp` + `spawn_bridge` | 真实 app 上 `Tree`/`Tap` 可用，默认关闭 | ✅ 已达成于 `floom-window-software --agent <port>`（`Tree`/`Tap`；`Screenshot`/`Semantics` 走同一条会话） |
-| S4.2 | 稳定语义 id（不暴露 NodeId） | 同一 UI 两次运行选择器解析到同一节点 | 两次运行的 `Semantics` 输出 diff 为空（**2026-11-23 达成一半**：`Selector::Id` 可用且两次运行逐字节相同；跨挂载次序的稳定身份需作者声明 key，未做） |
+| S4.2 | 稳定语义 id（不暴露 NodeId） | 同一 UI 两次运行选择器解析到同一节点 | 两次运行的 `Semantics` 输出 diff 为空；`Selector::Key` 按作者声明的名字跨位置解析（2026-11-23/24 达成） |
 | S4.3 | `floom mcp`：把上面 4–6 个能力包成 MCP 工具 | agent 编辑器里能直接"点按钮、读树、截图" | MCP 客户端（Claude/Cursor）实测一段脚本 |
 | S4.4 | 失败工件成套：testkit 失败同时产出树 + 语义 + PNG + trace | 任何断言失败都附四件 | 故意断言的负例产出工件目录 |
 | S4.5 | token 分层文档（`llms.txt` 15 分钟版 / 1 小时版 / 全量） | 三档各自可独立读通 | 让 agent 只读 15 分钟版写出一个能跑的窗口 |
@@ -116,7 +116,7 @@
 | S3.2 | 热重载保留状态 | 未开始 | 文件级热重启 | — |
 | S3.3 | DevTools 计算值 | 未开始 | Style 行无计算值 | — |
 | S4.1 | agent 口进真实 app | 完成 | `AgentApp` 抽成 trait、`WindowApp` 驱动真实 `WidgetHost`、`spawn_bridge` 交给窗口线程；`TypeText`/`Drag` 明确 refused | `scripts/desktop-smoke.sh`：`agent: tree has button Increment` / `agent: tap Increment repainted=true`（Linux Xvfb + Windows） |
-| S4.2 | 稳定语义 id | 进行中（id 可用，key 未做） | `Selector::Id(u64)` 解析到 `Tree` 给的那条 id 并走点击路径；`tests/agent_ids.rs` 3 passed（读树→按 id 点→回 `Done{repainted:true}`；`Id(9999)` 被拒并列出屏上 label；同 app 两次运行 `Tree`/`Semantics` JSON 逐字节相同）。限界写进 `protocol.rs`：id 是挂载次序，sibling 前插会移位 | 跨挂载次序仍需作者声明 key（A3 后半） |
+| S4.2 | 稳定语义 id | 完成 | ① `Selector::Id(u64)` 解析到 `Tree` 的 id 并走点击路径（`tests/agent_ids.rs` 3 passed，含两次运行 `Tree`/`Semantics` JSON 逐字节相同）；② `Selector::Key(str)` 按作者声明名定位：`Child::named` / `WidgetHost::set_agent_key`，`Tree` 每节点带 `key`（`tests/agent_keys.rs` 4 passed，含"同一 key 在第一个/第二个位置都解析成功"）。限界：id 是挂载次序，跨挂载次序请用 key；`Key` 只有作者命名过的节点才有 | — |
 | S4.3 | `floom mcp` | 未开始 | 无该子命令 | — |
 | S4.4 | 失败工件成套 | 未开始 | snapshot 有 PNG，无 trace 绑定 | — |
 | S4.5 | token 分层文档 | 未开始 | `llms.txt` 单档 | — |

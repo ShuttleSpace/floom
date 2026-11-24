@@ -86,6 +86,9 @@ pub enum Selector {
     Label(String),
     /// The first node whose role has this name (`"checkbox"`, `"button"`, …).
     Role(String),
+    /// The node its author mounted under this name. Unlike `Id` this survives
+    /// reordering, list insertion and translated labels.
+    Key(String),
     /// A node by the id `Tree` gave it. The id is the node's position in mount
     /// order, so it holds for as long as the node is on screen -- what it does
     /// *not* do is survive a sibling mounting before it, which is why `Label`
@@ -98,6 +101,7 @@ impl std::fmt::Display for Selector {
         match self {
             Selector::Label(label) => write!(f, "label {label:?}"),
             Selector::Role(role) => write!(f, "role {role:?}"),
+            Selector::Key(key) => write!(f, "key {key:?}"),
             Selector::Id(id) => write!(f, "id {id}"),
         }
     }
@@ -153,6 +157,10 @@ pub struct UiNodeInfo {
     /// The node's position in mount order — the identity this protocol offers,
     /// stable within a session.
     pub id: u64,
+    /// The name the author mounted this node under, if any. Unlike `id` it
+    /// survives reordering and translated labels, which is what makes it the
+    /// thing to remember between runs.
+    pub key: Option<String>,
     pub role: String,
     pub label: Option<String>,
     pub checked: bool,

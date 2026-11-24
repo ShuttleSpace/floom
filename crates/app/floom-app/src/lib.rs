@@ -148,6 +148,10 @@ struct Node {
     /// reconciler keep a widget mounted across `children()` re-calls by key
     /// instead of by position.
     child_keys: Vec<ChildKey>,
+    /// The name this node was mounted under, if its parent gave one. Read back
+    /// by the agent protocol so a tool can address a widget by a name the
+    /// author chose instead of by where it happens to sit.
+    agent_key: Option<&'static str>,
     style: LayoutStyle,
     /// The parent-declared layout intent for this node, if it was mounted as a
     /// composite child. `None` for the root and imperatively-mounted nodes,
@@ -1517,11 +1521,12 @@ impl WidgetHost {
     /// intent from [`Widget::layout_request`].
     fn mount_child(&mut self, parent_index: usize, child: &Child) -> usize {
         let widget = child.build();
-        self.push(
+        self.push_named(
             Some(parent_index),
             LayoutStyle::default(),
             Some(child.layout),
             widget,
+            child.name,
         )
     }
 
@@ -1531,6 +1536,17 @@ impl WidgetHost {
         style: LayoutStyle,
         parent_request: Option<LayoutRequest>,
         widget: Box<dyn WidgetAny>,
+    ) -> usize {
+        self.push_named(parent, style, parent_request, widget, None)
+    }
+
+    fn push_named(
+        &mut self,
+        parent: Option<usize>,
+        style: LayoutStyle,
+        parent_request: Option<LayoutRequest>,
+        widget: Box<dyn WidgetAny>,
+        agent_key: Option<&'static str>,
     ) -> usize {
         // Apply the widget's own container intent (flex axis, gap, absolute
         // position) on top of the supplied sizing. Composite children carry a
@@ -1609,6 +1625,7 @@ impl WidgetHost {
             parent,
             children: Vec::new(),
             child_keys: Vec::new(),
+            agent_key,
             style,
             parent_request,
             depth,
@@ -1739,6 +1756,7 @@ impl WidgetHost {
                 // its `pressed` state, or the drag stops after the first step.
                 if rebuild && self.pointer_capture != Some(self.nodes[idx].id) {
                     self.nodes[idx].widget = child.build();
+                    self.nodes[idx].agent_key = child.name;
                 }
                 idx
             } else {
@@ -4733,6 +4751,30 @@ impl WidgetHost {
     /// door it cannot open.
     pub fn semantics_updates(&mut self) -> floom_accessibility::SemanticsDiff {
         self.semantics.collect_updates()
+    }
+
+    /// The name this node was mounted under, if its parent gave one.
+    ///
+    /// Keys are declared (`Child::named`, [`Self::set_agent_key`]) rather than
+    /// derived: the agent protocol needs an address that survives reordering
+    /// and translated labels, and a position cannot do that.
+    pub fn agent_key(&self, node: NodeId) -> Option<&'static str> {
+        self.nodes.get(node.0).and_then(|entry| entry.agent_key)
+    }
+
+    /// Names an already-mounted node for agents.
+    pub fn set_agent_key(&mut self, node: NodeId, key: &'static str) {
+        if let Some(entry) = self.nodes.get_mut(node.0) {
+            entry.agent_key = Some(key);
+        }
+    }
+
+    /// The node mounted under `key`, at any depth.
+    pub fn node_by_agent_key(&self, key: &str) -> Option<NodeId> {
+        self.nodes
+            .iter()
+            .position(|entry| entry.agent_key == Some(key))
+            .map(NodeId)
     }
 
     pub fn semantics(&self) -> &SemanticsTree {

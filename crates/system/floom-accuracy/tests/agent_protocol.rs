@@ -54,6 +54,7 @@ fn payloads_round_trip_over_json() {
         Payload::Tree(UiTree {
             nodes: vec![UiNodeInfo {
                 id: 3,
+                key: Some("agree".into()),
                 role: "checkbox".into(),
                 label: Some("Agree".into()),
                 checked: true,

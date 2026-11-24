@@ -55,6 +55,13 @@ pub trait AgentApp {
     fn tap_element(&mut self, element: floom_types::ElementId) -> bool {
         self.host_mut().activate(element)
     }
+
+    /// The node mounted under `key`, looked up by the name the author gave it.
+    fn element_of_key(&self, key: &str) -> Option<floom_types::ElementId> {
+        let node = self.host().node_by_agent_key(key)?;
+        self.host().live_semantics_hint(node)?;
+        Some(self.host().node_id(node))
+    }
 }
 
 /// What a wire selector turned into: either something the testkit can find, or
@@ -193,6 +200,15 @@ impl<'a, A: AgentApp> AgentSession<'a, A> {
                     }),
                 };
             }
+            crate::agent::protocol::Selector::Key(key) => {
+                return match self.app.element_of_key(key) {
+                    Some(element) => Ok(Target::Element(element)),
+                    None => Err(AgentError::SelectorNotFound {
+                        selector: selector.to_string(),
+                        on_screen: on_screen(),
+                    }),
+                };
+            }
             crate::agent::protocol::Selector::Label(label) => {
                 floom_testkit::Selector::Label(label.clone())
             }
@@ -228,6 +244,15 @@ impl<'a, A: AgentApp> AgentSession<'a, A> {
     }
 
     fn live_nodes(&self) -> Vec<(u64, SemanticsHint, floom_types::Rect)> {
+        self.live_keyed_nodes()
+            .into_iter()
+            .map(|(id, _, hint, bounds)| (id, hint, bounds))
+            .collect()
+    }
+
+    fn live_keyed_nodes(
+        &self,
+    ) -> Vec<(u64, Option<&'static str>, SemanticsHint, floom_types::Rect)> {
         let host = self.app.host();
         (0..host.node_count())
             .filter_map(|index| host.node_at(index))
@@ -235,17 +260,18 @@ impl<'a, A: AgentApp> AgentSession<'a, A> {
             .filter_map(|(order, node)| {
                 let hint = host.live_semantics_hint(node)?;
                 let bounds = host.bounds(node);
-                Some((order as u64, hint, bounds))
+                Some((order as u64, host.agent_key(node), hint, bounds))
             })
             .collect()
     }
 
     fn tree(&self) -> UiTree {
         let nodes = self
-            .live_nodes()
+            .live_keyed_nodes()
             .into_iter()
-            .map(|(order, hint, bounds)| UiNodeInfo {
+            .map(|(order, key, hint, bounds)| UiNodeInfo {
                 id: order,
+                key: key.map(str::to_string),
                 role: role_name(hint.role),
                 label: hint.label,
                 checked: hint.state.contains(SemanticsState::CHECKED),
