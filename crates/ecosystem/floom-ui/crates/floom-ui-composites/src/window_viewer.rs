@@ -364,6 +364,7 @@ impl Widget for WindowViewer {
                 layout: LayoutRequest::new().absolute_fill(),
                 build: page.build.clone(),
                 shared_key: page.shared_key,
+                name: page.name,
             });
         }
 
