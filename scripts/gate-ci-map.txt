@@ -1,0 +1,34 @@
+# Which gate runs where.
+#
+# `scripts/check-gate-parity.sh` fails when this file and `scripts/gate.sh`
+# disagree in either direction: a gate nobody mapped, or a mapping for a gate
+# that no longer exists. A gate that only ever runs on someone's laptop is a
+# gate that rots, so "local" needs a reason on the same line.
+#
+# Format: <gate>  <where>  <reason>
+#   where = a CI job name from .github/workflows/*.yml, or "local" with a reason.
+
+fmt                 CI core (Rustfmt)                        every workspace, in CI
+clippy              CI core (Clippy on ubuntu/macos/windows)  warnings are denied, so a lint is a failure
+test                CI core (Rust on ubuntu/macos/windows)    the hosted matrix
+ecosystem           CI plugins (satellite tests)              separate workspaces need their own run
+doc                 CI core (Documentation)                   doctests are documentation that has to compile
+arch                CI core (Architecture boundaries)         layering is a test, not a review comment
+probe               CI platform (device probe)                a probe that stopped compiling is not evidence
+plugins             CI plugins (satellite tests)              capability plugins on the host
+plugin-template     CI plugins (satellite tests)              the template is the contract new plugins copy
+plugin-facades      CI plugins (satellite tests)              the TypeScript facade has to match the Rust API
+android             CI platform (android-check)               cross-compiling catches cfg arms nobody compiles
+ios                 CI platform (ios-check)                   cross-compiling catches cfg arms nobody compiles
+windows             CI platform (windows-check)               cross-compiling catches cfg arms nobody compiles
+ohos                CI platform (ohos-check)                  SDK from setup-ohos-sdk, links native_window
+golden              CI platform (golden examples)             pixels are the product
+size                CI core (Size budgets on ubuntu-24.04)    a 10% regression is invisible until it is not
+gpu                 local  needs an adapter; the pixel tests run in CI instead (gpu-pixels, lavapipe)
+style               CI plugins (Check design tokens)          colour literals bypass the theme
+module-paths        CI core (Check module paths)              src/name.rs, never src/name/mod.rs
+parity              CI core (Check gate parity)                this map and gate.sh cannot drift apart
+
+# Not gates in gate.sh, but gates in CI -- listed so nobody looks for them above.
+# resources, perf: local only (a real GPU adapter; Criterion numbers are not
+# comparable across runner hardware). deny: two Cargo deny jobs in CI core.

@@ -340,6 +340,7 @@ clippy     cargo clippy on the 2.0 track, warnings denied
 test       cargo test --workspace
 ecosystem  cargo test --workspace in every crates/ecosystem satellite
 doc        cargo test --doc
+gpu        the device probe's GPU readback, on a host with an adapter
 arch       scripts/check-architecture-deps.sh
 probe      the device probe compiles with `--features real`
 plugins    the capability plugins compile on the host
@@ -353,6 +354,7 @@ golden     the pixel-golden examples
 size       release binary sizes within 10% of the checked-in baseline
 style      no colour literals in the design-system widget trees
 module-paths  every module is a src/name.rs, never a src/name/mod.rs
+parity     every gate above says where it runs (scripts/gate-ci-map.txt)
 EOF
   exit 0
 fi
@@ -649,6 +651,7 @@ has_check size && run_check size "" ./scripts/check-size-budgets.sh
 # palette lives in each crate's tokens.rs; this keeps it there.
 has_check style && run_check style "" ./scripts/check-design-tokens.sh
 has_check module-paths && run_check module-paths "" ./scripts/check-module-paths.sh
+has_check parity && run_check parity "" ./scripts/check-gate-parity.sh
 
 echo
 if [ "$FAIL" -eq 0 ]; then

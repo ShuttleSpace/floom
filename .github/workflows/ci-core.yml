@@ -120,6 +120,9 @@ jobs:
       - name: Check module paths
         run: ./scripts/check-module-paths.sh
 
+      - name: Check gate parity
+        run: ./scripts/check-gate-parity.sh
+
       # The native-view plugin's native half is Objective-C and reaches AppKit,
       # so the window half of its verification only runs on macOS. The
       # framework-side half -- the C ABI, the provider, the lifecycle -- is
