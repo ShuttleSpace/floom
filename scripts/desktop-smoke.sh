@@ -85,7 +85,8 @@ want "floom-software: agent self-test passed" "the agent self-test left satisfie
 # --- a rebuild, in the loop that is already open -----------------------------
 # The unit tests cover carry_state and remount; this is the only place the whole
 # path runs in a real window: watcher -> rebuild -> remount -> new pixels.
-WATCH_LOG="$WORK/watch.log"
+# `WORK` is only set by callers that keep a scratch dir; CI does not pass one.
+WATCH_LOG="${WORK:-${TMPDIR:-/tmp}}/floom-watch.log"
 SRC="$ROOT/examples/floom-window-software/src/main.rs"
 if command -v xvfb-run > /dev/null; then
     ( xvfb-run -a env FLOOM_WATCH_ROOT="$(dirname "$SRC")" \
