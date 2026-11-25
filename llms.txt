@@ -40,9 +40,9 @@ fn main() {
 ```
 
 `cargo run` opens a window with one button. It needs a GPU: `run_desktop` is the
-vello presenter. On a machine without one, start from
-[`examples/floom-window-software`](examples/floom-window-software) — the same loop
-with the software presenter, and the one the Linux/Windows CI jobs run. Two facts about the manifest are the ones
+vello presenter. On a machine without one, switch the feature to
+`renderer-software` and call `floom::run_desktop_software` — same window, same
+loop, same widgets, the software rasteriser instead. Two facts about the manifest are the ones
 people lose time to: `floom`'s `default` is `[]` (nothing is compiled in until asked),
 and `run_desktop` needs **both** `desktop` and `renderer-gpu` — it drives the GPU
 presenter. Three facts about the tree are worth knowing before you fight them:

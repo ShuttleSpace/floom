@@ -119,7 +119,7 @@
 | S4.2 | 稳定语义 id | 完成 | ① `Selector::Id(u64)` 解析到 `Tree` 的 id 并走点击路径（`tests/agent_ids.rs` 3 passed，含两次运行 `Tree`/`Semantics` JSON 逐字节相同）；② `Selector::Key(str)` 按作者声明名定位：`Child::named` / `WidgetHost::set_agent_key`，`Tree` 每节点带 `key`（`tests/agent_keys.rs` 4 passed，含"同一 key 在第一个/第二个位置都解析成功"）。限界：id 是挂载次序，跨挂载次序请用 key；`Key` 只有作者命名过的节点才有 | — |
 | S4.3 | `floom mcp` | 完成（独立 crate `floom-mcp`，五个工具；未验：真实 MCP 客户端 Claude/Cursor 里跑一段脚本） | `tests/protocol.rs` 8 passed + 本机端到端 | A2 |
 | S4.4 | 失败工件成套 | 完成（trace 未做） | `agent_artifacts.rs` 3 passed、`pixel_golden.rs` 2 passed | A4 |
-| S3.5 | 桌面软件渲染入口：`floom::run_desktop_software`（现在只有 `examples/floom-window-software` 那份约 80 行的手写循环） | 无 GPU 的机器一行起窗；同时让 Linux/Windows 的窗口 job 可以用公开 API 而不是示例 | 未开始 | `docs/developer-experience.md` |
+| S3.5 | 桌面软件渲染入口：`floom::run_desktop_software` + 只开 `renderer-software` 时 `run` 自动落到软件后端 | 无 GPU 的机器一行起窗 | 完成（2026-11-24） | `tests/desktop_software.rs` 1 passed；`/tmp/swapp` 首帧画出 |
 | S4.6 | CLI agent 子命令（`floom verify` / `floom snapshot`） | 完成（2026-11-24） | `VERIFY_STEPS` 顺序测试、`SNAPSHOT_STEPS` 过滤测试、无工程目录的拒绝测试，`cargo test -p floom-cli` 116 passed | A6 |
 | S4.5 | 三档文档 + 15 分钟档实测 | **完成（2026-11-24）**：`llms.txt` 重写为自含的 15 分钟档（可复制的 `Cargo.toml` + `main.rs`、三个"别踩"事实），实测方式＝照抄该档原文在 `/tmp/llms15` 建工程 → `cargo build` → 运行 6 s 开窗退出；过程中抓出两处该档没写、但一写就卡住的事实（`default = []`；`run_desktop` 需要 `desktop` **和** `renderer-gpu`），已补进档内 | 照抄即可编译运行 | — |
 | S5.1 | 兼容矩阵 / `flameo` / 命名 | 未开始 | `docs/roadmap.md` G10 | — |

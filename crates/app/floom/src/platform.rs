@@ -166,6 +166,19 @@ pub fn current() -> &'static dyn PlatformBackend {
     {
         return &desktop::DesktopBackend;
     }
+    // The desktop this build has when it has no GPU bundle: same window, same
+    // loop, the software rasteriser instead.
+    #[cfg(all(
+        feature = "desktop",
+        feature = "renderer-software",
+        not(feature = "renderer-gpu"),
+        not(target_arch = "wasm32"),
+        not(target_os = "android")
+    ))]
+    #[allow(unreachable_code)]
+    {
+        return &desktop_software::DesktopSoftwareBackend;
+    }
     #[cfg(all(
         feature = "tui",
         not(target_arch = "wasm32"),
@@ -246,11 +259,76 @@ impl PlatformBackend for NoBackend {
 #[cfg_attr(all(feature = "desktop", feature = "renderer-gpu"), allow(dead_code))]
 static NO_BACKEND: NoBackend = NoBackend;
 
+/// One winit window driven by an `AppRunner`, with the presenter chosen by
+/// `make`.
+///
+/// The GPU and software desktop backends share this: the loop, the redraw
+/// draining and the "no presenter" report are the same code, and only the
+/// presenter differs. `missing` is that report, worded for whichever entry the
+/// caller came through.
+#[cfg(all(
+    feature = "desktop",
+    any(feature = "renderer-gpu", feature = "renderer-software"),
+    not(target_arch = "wasm32"),
+    not(target_os = "android")
+))]
+struct WinitClosureApp<P: floom_renderer::Presenter + 'static> {
+    build: Option<BuildFn>,
+    runner: Option<floom_app::AppRunner<P>>,
+    make: fn() -> Option<P>,
+    missing: &'static str,
+}
+
+#[cfg(all(
+    feature = "desktop",
+    any(feature = "renderer-gpu", feature = "renderer-software"),
+    not(target_arch = "wasm32"),
+    not(target_os = "android")
+))]
+impl<P: floom_renderer::Presenter + 'static> floom_platform_desktop::winit_backend::WinitApp
+    for WinitClosureApp<P>
+{
+    fn window_created(
+        &mut self,
+        _platform: &mut floom_platform_desktop::winit_backend::WinitPlatform,
+        _window: floom_types::WindowId,
+    ) {
+        let Some(build) = self.build.take() else {
+            return;
+        };
+        let mut host = floom_app::WidgetHost::new();
+        build(&mut host);
+        // `WinitApp` has no error channel, so a machine that cannot make a
+        // presenter is reported on stderr rather than panicking in the loop.
+        let Some(presenter) = (self.make)() else {
+            eprintln!("{}", self.missing);
+            return;
+        };
+        self.runner = Some(floom_app::AppRunner::new(host, presenter));
+    }
+
+    fn events(&mut self, platform: &mut floom_platform_desktop::winit_backend::WinitPlatform) {
+        if let Some(runner) = self.runner.as_mut() {
+            runner.pump(platform);
+        }
+    }
+
+    fn about_to_wait(
+        &mut self,
+        platform: &mut floom_platform_desktop::winit_backend::WinitPlatform,
+    ) {
+        // Drain once more so redraws requested during `events` are picked up
+        // before the loop blocks.
+        if let Some(runner) = self.runner.as_mut() {
+            runner.pump(platform);
+        }
+    }
+}
+
 #[cfg(all(feature = "desktop", feature = "renderer-gpu"))]
 mod desktop {
-    use floom_app::{AppRunner, WidgetHost};
     use floom_platform::WindowConfig;
-    use floom_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run as winit_run};
+    use floom_platform_desktop::winit_backend::run as winit_run;
     use floom_renderer_vello::VelloGpuPresenter;
 
     use super::{AppRequest, BuildFn, PlatformBackend, PlatformCapabilities};
@@ -267,53 +345,14 @@ mod desktop {
         }
 
         fn run(&self, request: AppRequest, build: BuildFn) -> Result<(), String> {
-            struct ClosureApp {
-                build: Option<BuildFn>,
-                runner: Option<AppRunner<VelloGpuPresenter>>,
-            }
-
-            impl WinitApp for ClosureApp {
-                fn window_created(
-                    &mut self,
-                    _platform: &mut WinitPlatform,
-                    _window: floom_types::WindowId,
-                ) {
-                    let Some(build) = self.build.take() else {
-                        return;
-                    };
-                    let mut host = WidgetHost::new();
-                    build(&mut host);
-                    // `WinitApp` has no error channel, so a machine with no
-                    // usable adapter is reported on stderr rather than
-                    // panicking inside the event loop.
-                    let Some(presenter) = VelloGpuPresenter::new() else {
-                        eprintln!(
-                            "floom::run: no usable GPU adapter; a desktop window needs one to paint"
-                        );
-                        return;
-                    };
-                    self.runner = Some(AppRunner::new(host, presenter));
-                }
-
-                fn events(&mut self, platform: &mut WinitPlatform) {
-                    if let Some(runner) = self.runner.as_mut() {
-                        runner.pump(platform);
-                    }
-                }
-
-                fn about_to_wait(&mut self, platform: &mut WinitPlatform) {
-                    // Drain once more so redraws the runner requested during the
-                    // last `events` call are picked up before the loop blocks.
-                    if let Some(runner) = self.runner.as_mut() {
-                        runner.pump(platform);
-                    }
-                }
-            }
-
             winit_run(
-                ClosureApp {
+                super::WinitClosureApp {
                     build: Some(build),
                     runner: None,
+                    make: VelloGpuPresenter::new,
+                    missing: "floom::run: no usable GPU adapter; a desktop window \
+                              needs one to paint. `floom::run_desktop_software` \
+                              paints without one.",
                 },
                 vec![WindowConfig {
                     title: request.title,
@@ -322,6 +361,62 @@ mod desktop {
                 }],
             )
         }
+    }
+}
+
+/// Desktop backend for machines without a GPU: the same winit window driven by
+/// the software rasteriser.
+///
+/// A separate module rather than a branch inside `desktop`, because the two
+/// bundles are separate features: a build with only `renderer-software` must not
+/// mention vello at all, and a build with both picks vello for `floom::run` while
+/// keeping this reachable through `floom::run_desktop_software`.
+#[cfg(all(
+    feature = "desktop",
+    feature = "renderer-software",
+    not(target_arch = "wasm32"),
+    not(target_os = "android")
+))]
+pub mod desktop_software {
+    use floom_platform::WindowConfig;
+    use floom_platform_desktop::winit_backend::run as winit_run;
+    use floom_renderer_software::SoftwarePresenter;
+
+    use super::{AppRequest, BuildFn, PlatformBackend, PlatformCapabilities, WinitClosureApp};
+
+    pub struct DesktopSoftwareBackend;
+
+    impl PlatformBackend for DesktopSoftwareBackend {
+        fn name(&self) -> &'static str {
+            "desktop (winit + software)"
+        }
+
+        fn capabilities(&self) -> PlatformCapabilities {
+            PlatformCapabilities::desktop_default()
+        }
+
+        fn run(&self, request: AppRequest, build: BuildFn) -> Result<(), String> {
+            winit_run(
+                WinitClosureApp {
+                    build: Some(build),
+                    runner: None,
+                    make: || Some(SoftwarePresenter::new()),
+                    missing: "floom::run_desktop_software: the software presenter \
+                              did not start, which it always does -- this is a bug, \
+                              not a missing driver",
+                },
+                vec![WindowConfig {
+                    title: request.title,
+                    size: request.size,
+                    resizable: request.resizable,
+                }],
+            )
+        }
+    }
+
+    /// Run a window with the software rasteriser, on any machine.
+    pub fn run(request: AppRequest, build: BuildFn) -> Result<(), String> {
+        DesktopSoftwareBackend.run(request, build)
     }
 }
 

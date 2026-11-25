@@ -360,6 +360,36 @@ where
     run(title, size, build)
 }
 
+/// Run a Floom app in a window painted by the software rasteriser.
+///
+/// For machines without a usable GPU adapter, and for CI: same window, same
+/// event loop, same widgets as [`run_desktop`], only the presenter differs.
+/// [`run_desktop`] is still what a build with `renderer-gpu` should call when
+/// there is a card to use -- it is faster and the difference is visible.
+///
+/// ```no_run
+/// # fn main() -> Result<(), String> {
+/// floom::run_desktop_software("Hello", floom::types::Size::new(360.0, 240.0), |host| {
+///     let _ = host;
+/// })?;
+/// # Ok(())
+/// # }
+/// ```
+#[cfg(all(feature = "desktop", feature = "renderer-software"))]
+pub fn run_desktop_software<F>(title: &str, size: floom_types::Size, build: F) -> Result<(), String>
+where
+    F: FnOnce(&mut floom_app::WidgetHost) + 'static,
+{
+    platform::desktop_software::run(
+        platform::AppRequest {
+            title: title.to_string(),
+            size,
+            resizable: true,
+        },
+        Box::new(build),
+    )
+}
+
 /// Run a Floom app in a window with the devtools panel already wired — the
 /// one-call entry for the desktop backend *plus* the devtools door.
 ///
