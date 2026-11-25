@@ -81,6 +81,16 @@ impl Default for Tabs {
 }
 
 impl Widget for Tabs {
+    /// Which tab is showing is state. Handing over the shared selection rather
+    /// than its value keeps whoever else holds the handle — an app that drives
+    /// the tabs from a button, a saved preference — pointing at the same number.
+    fn carry_state(&mut self, previous: &dyn floom_core::WidgetAny) {
+        if let Some(previous) = previous.as_any().downcast_ref::<Tabs>() {
+            self.selection = previous.selection.clone();
+            self.last_selected = previous.last_selected;
+        }
+    }
+
     fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
         cx.alloc_child()
     }
