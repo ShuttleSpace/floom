@@ -25,8 +25,10 @@
 
 ## 热重载
 
-- 现状：`floom run --watch` 是**文件级热重启**——进程重启、状态丢失（`crates/devtools/floom-hot-reload`）。
-- 明确不做：进程内保留状态的热补丁（等于重做 `dioxus-hotpatch` 那一层，1.0.x 之后再谈）。
+- 现状：`floom run --watch` 是**文件级热重启**——进程重启、状态丢失。
+- 机制那一半是**做完了的**：`crates/devtools/floom-hot-reload/src/patch.rs:88` 的 `LiveTree::apply(&UiPatch, &mut DirtySet)` 事务式应用补丁（任一 op 失败则 `restore(checkpoint)` 并返回 `RolledBack { failed_at, reason }`），keys 与 `stash` 跨补丁保留，`tests/hot_reload.rs::ids_and_stashed_state_survive_a_compatible_patch` 证明。
+- 卡住的不是补丁，是**两棵树**：`LiveTree` 是 `WidgetHost` 的只读镜像（`describe(&[HostedNode]) -> LiveTree`），补丁改的是镜像，像素由 `WidgetHost` 决定；把镜像的改动送回去，要么让 host 由文档构建（`floom-dsl` 的 `UiDocument` 直接驱动挂载），要么给 host 加一条按 key 重挂的入口。这是设计决策，不是接线——所以它停在未开始，而不是差一个 watcher。
+- 明确不做（1.0.x 之前）：进程内保留状态的热补丁。
 - 延迟纪律：改一次文件到窗口重绘的时间必须**记录下来**，进 release notes；不测就不许说"快"。
 - 已知限制：重启期间窗口会闪一下；watch 只覆盖 `src/`。
 
