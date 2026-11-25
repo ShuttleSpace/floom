@@ -1894,6 +1894,78 @@ impl WidgetHost {
         self.frame_callbacks.push(Box::new(callback));
     }
 
+    /// Rebuild `self` from `build`, carrying widget state across by position in
+    /// the tree.
+    ///
+    /// The parent's source is what changed; the widget is what remembers. Each
+    /// node is identified by the path of authored keys from the root (an
+    /// `agent_key` when the parent named the slot, the parent's `ChildKey`
+    /// otherwise), so a node keeps its state as long as the same slot exists in
+    /// the new tree — moving a widget to a different parent resets it, which is
+    /// what a reader expects from "this is a different place in the UI".
+    ///
+    /// Focus, hover and scroll offsets held by the *host* are not carried: a
+    /// rebuild is a fresh tree, and a keyboard focus pointing at a node that no
+    /// longer exists is worse than no focus.
+    pub fn remount(&mut self, build: impl FnOnce(&mut WidgetHost)) {
+        let mut fresh = WidgetHost::new();
+        fresh.set_size(self.size);
+        fresh.set_scale(self.scale());
+        fresh.set_content_insets(self.content_insets);
+        fresh.focus_ring = self.focus_ring;
+        build(&mut fresh);
+        fresh.carry_state_from(self);
+        *self = fresh;
+    }
+
+    /// Give each widget whatever state the widget at the same position held.
+    ///
+    /// Public because it is the half of a rebuild that has no dependency on how
+    /// the new tree was built; `remount` is the convenience wrapper.
+    pub fn carry_state_from(&mut self, previous: &WidgetHost) {
+        if previous.nodes.is_empty() {
+            return;
+        }
+        let old = previous.identities();
+        for (path, index) in self.identities() {
+            let Some(source) = old.iter().find(|(p, _)| *p == path).map(|(_, i)| *i) else {
+                continue;
+            };
+            if source >= previous.nodes.len() {
+                continue;
+            }
+            self.nodes[index]
+                .widget
+                .carry_state(previous.nodes[source].widget.as_ref());
+        }
+    }
+
+    /// The identity path of every node, root first.
+    fn identities(&self) -> Vec<(String, usize)> {
+        let mut out = Vec::with_capacity(self.nodes.len());
+        if self.nodes.is_empty() {
+            return out;
+        }
+        let mut stack = vec![(0usize, String::from("/"))];
+        while let Some((index, path)) = stack.pop() {
+            out.push((path.clone(), index));
+            let Some(node) = self.nodes.get(index) else {
+                continue;
+            };
+            for (slot, &child) in node.children.iter().enumerate() {
+                let step = match self.nodes.get(child).and_then(|c| c.agent_key) {
+                    Some(name) => format!("@{name}"),
+                    None => match node.child_keys.get(slot) {
+                        Some(key) => format!("{key:?}"),
+                        None => format!("#{slot}"),
+                    },
+                };
+                stack.push((child, format!("{path}{step}/")));
+            }
+        }
+        out
+    }
+
     pub fn widget_mut<T: WidgetAny + 'static>(&mut self, node: NodeId) -> Option<&mut T> {
         let widget = self
             .nodes
