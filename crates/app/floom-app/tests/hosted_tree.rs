@@ -115,6 +115,7 @@ fn a_node_whose_parent_was_not_described_is_dropped() {
             // "no claim" the field documents.
             style: None,
             layout: None,
+            bounds: None,
         },
         HostedNode {
             key: "root".into(),
@@ -126,6 +127,7 @@ fn a_node_whose_parent_was_not_described_is_dropped() {
             // "no claim" the field documents.
             style: None,
             layout: None,
+            bounds: None,
         },
     ];
     let live = describe(&nodes);
@@ -159,6 +161,7 @@ fn the_kinds_map_onto_the_inspectors_three_tiers() {
             // "no claim" the field documents.
             style: None,
             layout: None,
+            bounds: None,
         },
         HostedNode {
             key: "leaf".into(),
@@ -170,6 +173,7 @@ fn the_kinds_map_onto_the_inspectors_three_tiers() {
             // "no claim" the field documents.
             style: None,
             layout: None,
+            bounds: None,
         },
     ];
     let live = describe(&nodes);

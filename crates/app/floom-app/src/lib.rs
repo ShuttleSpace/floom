@@ -2611,6 +2611,7 @@ impl WidgetHost {
                 // Only when there is no slot — the root, an imperatively
                 // mounted node — does the widget's own request describe it.
                 layout: node.parent_request.or_else(|| node.widget.layout_request()),
+                bounds: Some(self.bounds(NodeId(index))),
             });
             // Reverse, so the first child is described first.
             for child in node.children.iter().rev() {

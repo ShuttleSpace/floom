@@ -52,6 +52,12 @@ pub struct HostedNode {
     pub parent: Option<ElementId>,
     /// What the node's widget says it paints, when it says anything.
     pub style: Option<PaintStyle>,
+    /// Where the node was actually laid out, once a frame has run.
+    ///
+    /// `None` before the first layout: the box a widget *asks* for and the box
+    /// it got are different questions, and a readout that mixed them would be
+    /// wrong in the one case a readout exists for.
+    pub bounds: Option<Rect>,
     /// How the node's box wants to be laid out, when it declares anything.
     ///
     /// The parent's request wins where there is one: a child's slot is sized by
