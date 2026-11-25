@@ -1320,6 +1320,13 @@ impl std::fmt::Debug for Switch {
 }
 
 impl Widget for Switch {
+    /// The knob is state; the label is what the parent asked for.
+    fn carry_state(&mut self, previous: &dyn crate::WidgetAny) {
+        if let Some(previous) = previous.as_any().downcast_ref::<Switch>() {
+            self.on = previous.on;
+        }
+    }
+
     fn set_focused(&mut self, focused: bool) {
         // Forward to the inherent builder, which bumps the revision.
         Switch::set_focused(self, focused);

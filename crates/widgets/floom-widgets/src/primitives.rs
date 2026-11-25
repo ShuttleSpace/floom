@@ -340,6 +340,14 @@ impl Text {
 }
 
 impl Widget for Text {
+    /// Content is state: a rebuild that reset it would silently discard what the
+    /// app put there, and the app cannot tell that from its own bug.
+    fn carry_state(&mut self, previous: &dyn crate::WidgetAny) {
+        if let Some(previous) = previous.as_any().downcast_ref::<Text>() {
+            self.content.clone_from(&previous.content);
+        }
+    }
+
     fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
         cx.alloc_child()
     }

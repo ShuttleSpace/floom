@@ -39,6 +39,20 @@ pub trait Widget {
     fn layout_request(&self) -> Option<LayoutRequest> {
         None
     }
+
+    /// Take over the part of `previous`'s state that outlives a rebuild.
+    ///
+    /// A hot reload rebuilds the tree from source, so every widget is new; the
+    /// things a user would notice resetting — the text in a field, the knob on a
+    /// switch, where a list is scrolled — live in the widget, and the widget is
+    /// the only one that knows which of its fields are state rather than
+    /// configuration. The default carries nothing, which is the honest answer
+    /// for a widget whose fields are all derived from what its parent passed in.
+    ///
+    /// `previous` is the widget that occupied the same position (same authoured
+    /// key) before the rebuild; it may be a different type, in which case the
+    /// implementation must ignore it.
+    fn carry_state(&mut self, _previous: &dyn crate::WidgetAny) {}
     /// What this widget declares it paints, for an inspector's Style readout.
     ///
     /// Defaults to `None`, which means "this widget does not describe its own
