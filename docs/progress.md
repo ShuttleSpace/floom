@@ -61,7 +61,7 @@
 | --- | --- | --- | --- |
 | S3.1 | CLI `check`/`test` 从 cargo 转发变成真门禁子集 + `doctor` | `floom check` 在坏项目上报出具体问题；`floom doctor` 报环境矩阵 | `cargo test -p floom-cli`，含坏项目 fixture |
 | S3.2 | 热重载保留状态 + 记录延迟 | 改一个颜色 ≤2 s 见到；组件状态不丢 | 手工 + 延迟数字写进 release notes |
-| S3.3 | DevTools：Layout 页显示计算出的盒子（`HostedNode.bounds` → `LiveTree` → `Inspector::bounds_of` → `bounds WxH at (x, y)`）+ 悬停 Elements 行即高亮应用里那个节点（`DevtoolsState::set_hovered`，优先于选中） | G7 | 完成（2026-11-25）：`devtools_integration` 22 passed（含新 `hovering_a_row_outlines_its_element_without_changing_the_selection`） | 未验：`PointerPhase::Move` 是否真的送到 overlay 里的树行（无头 host 没有 `EventContext` 替身，`TreeRow::event` 的 Move 分支只被编译过） | `docs/developer-experience.md` |
+| S3.3 | DevTools：Layout 页显示计算出的盒子（`HostedNode.bounds` → `LiveTree` → `Inspector::bounds_of` → `bounds WxH at (x, y)`）+ 悬停 Elements 行即高亮应用里那个节点（`DevtoolsState::set_hovered`，优先于选中） | G7 | 完成（2026-11-25）：`devtools_integration` **23 passed** —— `hovering_a_row_outlines_its_element_without_changing_the_selection` 验状态链路，`a_pointer_move_reaches_a_row_inside_the_panel` 验路由（向面板纵向逐点 `PointerEvent::hover`，直到某行应答，并断言应答的 key 属于 live tree） | `Leave` 分支（指针离开面板时清掉悬停）未单独验 | `docs/developer-experience.md` |
 
 ### S4 AI-first（护城河，不许拖到最后）
 
@@ -114,7 +114,7 @@
 | S2.4 | 组件契约门禁 | 未开始 | `component_schema()` 无消费者 | — |
 | S3.1 | CLI check/test/doctor | 进行中 | `doctor` 已落地（`crates/app/floom-cli/src/doctor.rs`，`cargo test -p floom-cli` 110 passed）；`check` 加了前置校验（无 `Cargo.toml` 时给出下一步，单测 `check_explains_a_directory_that_holds_no_project`）；`test` 仍是裸转发 | `bash scripts/gate.sh` |
 | S3.2 | 热重载保留状态 | 未开始 | 文件级热重启 | — |
-| S3.3 | DevTools 计算值 + 行悬停高亮 | 完成（2026-11-25） | Layout 页 `bounds 160 x 40 at (0, 0)`；悬停优先于选中；`TreeRow::event` 新增 `Move`/`Leave` 分支 | `devtools_integration` 22 passed；Move 到达 overlay 一事未验 |
+| S3.3 | DevTools 计算值 + 行悬停高亮 | 完成（2026-11-25） | Layout 页 `bounds 160 x 40 at (0, 0)`；悬停优先于选中；`TreeRow::event` 新增 `Move`/`Leave` 分支 | `devtools_integration` 23 passed（含 Move 真实路由的端到端测试） |
 | S4.1 | agent 口进真实 app | 完成 | `AgentApp` 抽成 trait、`WindowApp` 驱动真实 `WidgetHost`、`spawn_bridge` 交给窗口线程；`TypeText`/`Drag` 明确 refused | `scripts/desktop-smoke.sh`：`agent: tree has button Increment` / `agent: tap Increment repainted=true`（Linux Xvfb + Windows） |
 | S4.2 | 稳定语义 id | 完成 | ① `Selector::Id(u64)` 解析到 `Tree` 的 id 并走点击路径（`tests/agent_ids.rs` 3 passed，含两次运行 `Tree`/`Semantics` JSON 逐字节相同）；② `Selector::Key(str)` 按作者声明名定位：`Child::named` / `WidgetHost::set_agent_key`，`Tree` 每节点带 `key`（`tests/agent_keys.rs` 4 passed，含"同一 key 在第一个/第二个位置都解析成功"）。限界：id 是挂载次序，跨挂载次序请用 key；`Key` 只有作者命名过的节点才有 | — |
 | S4.3 | `floom mcp` | 完成（独立 crate `floom-mcp`，五个工具；未验：真实 MCP 客户端 Claude/Cursor 里跑一段脚本） | `tests/protocol.rs` 8 passed + 本机端到端 | A2 |

@@ -666,6 +666,52 @@ fn the_highlight_follows_the_panel_selection_and_goes_away_with_the_panel() {
     assert_eq!(drawn, None, "a hidden panel highlights nothing");
 }
 
+/// A pointer that moves over the panel reaches a tree row.
+///
+/// The hover link had two halves and only one was exercised: writing the key and
+/// reading it back. Whether the router delivers a move to a row *inside an
+/// overlay* was an assumption, and an assumption is what makes the other half
+/// look finished while the box stays dark. This drives the host the way a frame
+/// loop does — a `hover` at a sequence of points down the panel — and stops at
+/// the first row that answers.
+#[test]
+fn a_pointer_move_reaches_a_row_inside_the_panel() {
+    let mut host = host_with_app(Arc::new(AtomicUsize::new(0)));
+    let devtools = floom::devtools::attach_elements(&mut host);
+    devtools.show();
+    host.frame();
+
+    let panel = floom::devtools::panel::panel_bounds(floom_types::Rect::from_origin_size(
+        Point::new(0.0, 0.0),
+        host.size(),
+    ));
+    let x = panel.x0 + 30.0;
+    let keys: Vec<String> = host
+        .tree_nodes()
+        .into_iter()
+        .map(|node| node.key)
+        .collect();
+
+    let mut found = None;
+    let mut y = panel.y0 + 4.0;
+    while y < panel.y1 - 4.0 {
+        host.dispatch(floom_types::Event::Pointer(floom_types::PointerEvent::hover(Point::new(x, y))));
+        if let Some(key) = devtools.state().lock().unwrap().hovered().map(String::from) {
+            found = Some((key, y));
+            break;
+        }
+        y += 6.0;
+    }
+
+    let (key, _) = found.unwrap_or_else(|| {
+        panic!("no row answered a hover anywhere down the panel ({panel:?})")
+    });
+    assert!(
+        keys.contains(&key),
+        "the hovered key {key} should be one of the tree's keys"
+    );
+}
+
 /// A hover outlines its row's element without selecting it.
 ///
 /// The two are different questions. Selecting re-targets the Style and Layout
