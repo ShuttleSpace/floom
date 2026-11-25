@@ -546,7 +546,13 @@ impl PickHandle {
         if !state.visible() {
             return None;
         }
-        state.selected().map(String::from)
+        // The row under the pointer first: it is the most recent answer to
+        // "which box on screen is this name", and it leaves as soon as the
+        // pointer does.
+        state
+            .hovered()
+            .map(String::from)
+            .or_else(|| state.selected().map(String::from))
     }
 
     /// Whether the highlight is following a hover rather than sitting on a pick.

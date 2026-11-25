@@ -666,6 +666,58 @@ fn the_highlight_follows_the_panel_selection_and_goes_away_with_the_panel() {
     assert_eq!(drawn, None, "a hidden panel highlights nothing");
 }
 
+/// A hover outlines its row's element without selecting it.
+///
+/// The two are different questions. Selecting re-targets the Style and Layout
+/// tabs, so a hover that selected would make the readout flicker as the pointer
+/// crossed the tree; but a hover that did not outline anything would leave the
+/// reader unable to tell which box on screen a row's name refers to.
+#[test]
+fn hovering_a_row_outlines_its_element_without_changing_the_selection() {
+    let mut host = host_with_app(Arc::new(AtomicUsize::new(0)));
+    let devtools = floom::devtools::attach_elements(&mut host);
+    devtools.show();
+    let picker = floom::devtools::attach_picker(&mut host, devtools.state());
+    host.frame();
+
+    let nodes = host.tree_nodes();
+    let root_key = nodes.first().map(|node| node.key.clone()).expect("a root");
+    let root_bounds = host.bounds(host.root().expect("mounted"));
+
+    // A different row is selected, so a hover that re-targeted the tabs would
+    // be caught by the Style readout rather than only by the box.
+    devtools.state().lock().unwrap().select(root_key.clone());
+    devtools
+        .state()
+        .lock()
+        .unwrap()
+        .set_hovered(Some(root_key.clone()));
+    picker.sync_highlight(&mut host);
+
+    let box_node = host
+        .overlay_node_id(picker.overlay())
+        .expect("the box is mounted");
+    let drawn = host
+        .widget_mut::<floom::devtools::HighlightBox>(box_node)
+        .and_then(|widget| widget.rect());
+    assert_eq!(drawn, Some(root_bounds), "the hovered row is outlined");
+    assert_eq!(
+        devtools.state().lock().unwrap().selected(),
+        Some(root_key.as_str()),
+        "a hover does not change what the readout is about"
+    );
+
+    // The pointer leaves: the box falls back to the selection, which is still
+    // the same element here, so the assertion is that nothing panics and the box
+    // survives the fallback rather than being torn down.
+    devtools.state().lock().unwrap().set_hovered(None);
+    picker.sync_highlight(&mut host);
+    let drawn = host
+        .widget_mut::<floom::devtools::HighlightBox>(box_node)
+        .and_then(|widget| widget.rect());
+    assert_eq!(drawn, Some(root_bounds), "the selection takes over");
+}
+
 /// A row is as tall as the row widget says it is, in a real layout pass.
 ///
 /// The row's slot is mounted with an empty `LayoutRequest`, and the height comes

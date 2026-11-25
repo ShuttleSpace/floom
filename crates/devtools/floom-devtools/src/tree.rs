@@ -239,6 +239,22 @@ impl Widget for TreeRow {
                 }
                 true
             }
+            // Moving over a row outlines its element on the app. It does not
+            // select: a hover is a question ("which box is this?"), and
+            // answering it by re-targeting the Style tab would make the readout
+            // flicker as the pointer crossed the tree.
+            PointerPhase::Move => {
+                if let Ok(mut state) = self.state.lock() {
+                    state.set_hovered(Some(self.node.key.clone()));
+                }
+                true
+            }
+            PointerPhase::Leave => {
+                if let Ok(mut state) = self.state.lock() {
+                    state.set_hovered(None);
+                }
+                false
+            }
             // A press that started on a row is not a press on whatever is behind
             // the panel: consuming the release keeps the app from seeing a click
             // it never got the press for.

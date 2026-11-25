@@ -90,6 +90,13 @@ pub struct DevtoolsState {
     tab: DevtoolsTab,
     /// The element the readout is about, as a live-tree key.
     selected: Option<String>,
+    /// The row the pointer is over, as a live-tree key.
+    ///
+    /// Separate from `selected` because a hover is not a choice: moving the
+    /// pointer across the tree must not re-target the Style and Layout tabs, and
+    /// it must still be able to outline a box on the app — which is how a reader
+    /// finds out what a row's name refers to without committing to it.
+    hovered: Option<String>,
     /// The keys of the nodes whose children the reader has collapsed.
     ///
     /// Empty means everything is open, which is the right default for a tree
@@ -160,6 +167,7 @@ impl DevtoolsState {
             visible: false,
             tab: DevtoolsTab::default(),
             selected: None,
+            hovered: None,
             collapsed: BTreeSet::new(),
         }
     }
@@ -206,6 +214,16 @@ impl DevtoolsState {
     /// Picks the element the readout is about.
     pub fn select(&mut self, key: impl Into<String>) {
         self.selected = Some(key.into());
+    }
+
+    /// Records the row under the pointer, or clears it when the pointer leaves.
+    pub fn set_hovered(&mut self, key: Option<String>) {
+        self.hovered = key;
+    }
+
+    /// The row under the pointer, when there is one.
+    pub fn hovered(&self) -> Option<&str> {
+        self.hovered.as_deref()
     }
 
     /// Forgets the selection, so Style and Layout have nothing to be about.
