@@ -1707,6 +1707,7 @@ dependencies = [
  "floom-accuracy",
  "floom-app",
  "floom-core",
+ "floom-hot-reload",
  "floom-layout",
  "floom-renderer-software",
  "floom-types",

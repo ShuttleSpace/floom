@@ -221,10 +221,16 @@ fn main() {
 
     let mut agent = None;
     let mut selftest = false;
+    let mut reloading = false;
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
         if arg == "--agent-selftest" {
             selftest = true;
+        } else if arg == "--watch" {
+            // The in-place path: rebuild and remount instead of restarting the
+            // process. `FLOOM_WATCH_ROOT` exists because a binary's cwd is not
+            // always its crate root.
+            reloading = true;
         } else if arg == "--agent" {
             let port: u16 = args
                 .next()
@@ -252,6 +258,33 @@ fn main() {
         agent,
         selftest,
     };
+
+    if reloading {
+        let root = env::var("FLOOM_WATCH_ROOT").unwrap_or_else(|_| "src".to_string());
+        let mut watch = floom_hot_reload::watch::Watch::new(&root);
+        eprintln!("floom-software: watching {root} for in-place reload");
+        let result = floom::run_desktop_software_watched(
+            "floom — software window (reloading)",
+            Size::new(320.0, 240.0),
+            move |host| {
+                eprintln!("floom-software: rebuilding the tree");
+                host.mount_root(
+                    floom_layout::LayoutStyle::default(),
+                    Stack::new(Axis::Vertical)
+                        .gap(8.0)
+                        .push_layout(LayoutRequest::new().width(160.0).height(40.0), || {
+                            Box::new(Button::new("Increment"))
+                        }),
+                );
+            },
+            move || !watch.poll().is_empty(),
+        );
+        if let Err(error) = result {
+            eprintln!("window loop failed: {error}");
+            std::process::exit(1);
+        }
+        return;
+    }
 
     let result = floom::run_desktop_software_observed(
         "floom — software window",
