@@ -54,3 +54,51 @@ fn a_rebuild_that_mounts_nothing_carries_nothing() {
     host.remount(|_| {});
     assert_eq!(host.node_at(0).map(|_| ()), None);
 }
+
+/// The other half of a rebuild: the tree is not just re-bound, it is laid out
+/// and published again at whatever the new source says. Without this, "hot
+/// reload" would mean "state survives, layout does not".
+#[test]
+fn a_rebuild_that_changes_a_size_lays_out_at_the_new_size() {
+    use floom_accessibility::SemanticsRole;
+    use floom_core::{Axis, Child, ChildKey, LayoutRequest};
+    use floom_widgets::{Button, Stack};
+
+    fn button_width(host: &WidgetHost) -> f64 {
+        let (id, _) = host
+            .semantics()
+            .iter()
+            .find(|(_, node)| node.role == SemanticsRole::Button)
+            .expect("the button publishes a node");
+        let node = host.node_at(id.index() as usize).expect("the node exists");
+        host.bounds(node).width()
+    }
+
+    let build = |width: f32| {
+        move |host: &mut WidgetHost| {
+            host.mount_root(
+                LayoutStyle::default(),
+                Stack::new(Axis::Vertical).child(Child::new(
+                    ChildKey::index(0),
+                    LayoutRequest::new().width(width).height(40.0),
+                    || Box::new(Button::new("Increment")),
+                )),
+            );
+        }
+    };
+
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(400.0, 200.0));
+    build(100.0)(&mut host);
+    host.frame();
+    let first = button_width(&host);
+
+    host.remount(build(220.0));
+    host.frame();
+    let second = button_width(&host);
+    assert!(first > 0.0, "first build: {first}");
+    assert!(
+        (second - first).abs() > 100.0,
+        "the rebuild has to change the laid-out box: {first} then {second}"
+    );
+}
