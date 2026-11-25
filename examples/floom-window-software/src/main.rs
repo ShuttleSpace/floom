@@ -262,7 +262,12 @@ fn main() {
     if reloading {
         let root = env::var("FLOOM_WATCH_ROOT").unwrap_or_else(|_| "src".to_string());
         let mut watch = floom_hot_reload::watch::Watch::new(&root);
+        // Baseline now, not on the first idle turn: the window is created before
+        // the loop ever has a spare moment, and a file touched in between would
+        // be invisible to a watcher that only looked afterwards.
+        let known = watch.poll().len();
         eprintln!("floom-software: watching {root} for in-place reload");
+        let _ = known;
         let result = floom::run_desktop_software_watched(
             "floom — software window (reloading)",
             Size::new(320.0, 240.0),

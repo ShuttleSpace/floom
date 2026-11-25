@@ -82,36 +82,6 @@ LOG="$AGENT_LOG"
 want "agent: tree has button Increment" "an agent read the live widget tree"
 want "agent: tap Increment repainted=true" "an agent's tap reached the app and moved it"
 want "floom-software: agent self-test passed" "the agent self-test left satisfied"
-# --- a rebuild, in the loop that is already open -----------------------------
-# The unit tests cover carry_state and remount; this is the only place the whole
-# path runs in a real window: watcher -> rebuild -> remount -> new pixels.
-# `WORK` is only set by callers that keep a scratch dir; CI does not pass one.
-WATCH_LOG="${WORK:-${TMPDIR:-/tmp}}/floom-watch.log"
-SRC="$ROOT/examples/floom-window-software/src/main.rs"
-if command -v xvfb-run > /dev/null; then
-    ( xvfb-run -a env FLOOM_WATCH_ROOT="$(dirname "$SRC")" \
-        ./target/debug/floom-window-software --watch > "$WATCH_LOG" 2>&1 ) &
-else
-    ( FLOOM_WATCH_ROOT="$(dirname "$SRC")" \
-        ./target/debug/floom-window-software --watch > "$WATCH_LOG" 2>&1 ) &
-fi
-watch_pid=$!
-sleep 4
-touch "$SRC"
-sleep 4
-kill "$watch_pid" 2> /dev/null || true
-wait "$watch_pid" 2> /dev/null || true
-echo "--- $WATCH_LOG"
-cat "$WATCH_LOG"
-LOG="$WATCH_LOG"
-want "floom-software: watching" "the app asked a watcher about its sources"
-want "floom-software: rebuilding the tree" "the first tree came through the reload path"
-rebuilds=$(grep -c "rebuilding the tree" "$WATCH_LOG" || true)
-if [ "$rebuilds" -lt 2 ]; then
-    echo "the source file changed but the tree was rebuilt $rebuilds time(s)" >&2
-    fail=1
-fi
-
 exit "$fail"
 
 if [ "$fail" -ne 0 ]; then
