@@ -523,6 +523,17 @@ impl WidgetAny for Scroll {
 }
 
 impl Widget for Scroll {
+    /// Where a list is scrolled is state: a rebuild that jumped back to the top
+    /// of a two-thousand-row list is the difference between a hot reload people
+    /// use and one they stop running. Untested on purpose — the offset is shared
+    /// through an `Arc` and there is no public setter to observe it through, so a
+    /// test would need API added for the test's sake.
+    fn carry_state(&mut self, previous: &dyn crate::WidgetAny) {
+        if let Some(previous) = previous.as_any().downcast_ref::<Scroll>() {
+            self.offset = previous.offset.clone();
+        }
+    }
+
     fn create(&self, cx: &mut dyn CreateContext) -> ElementId {
         cx.alloc_child()
     }

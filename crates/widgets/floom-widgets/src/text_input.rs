@@ -401,6 +401,19 @@ fn next_boundary(text: &str, offset: usize) -> usize {
 }
 
 impl Widget for TextInput {
+    /// The buffer is shared state, so the rebuild keeps the same allocation
+    /// rather than a copy: two fields over one buffer stay in sync, and a copy
+    /// would silently split them. The caret comes along because a rebuild is not
+    /// a reason to lose the caret position; the in-progress composition does
+    /// not, because the IME session belongs to the platform, not to the widget.
+    fn carry_state(&mut self, previous: &dyn crate::WidgetAny) {
+        if let Some(previous) = previous.as_any().downcast_ref::<TextInput>() {
+            self.buffer = previous.buffer.clone();
+            self.last_seen = previous.last_seen.clone();
+            self.caret = previous.caret;
+        }
+    }
+
     fn set_focused(&mut self, focused: bool) {
         // Forward to the inherent builder, which bumps the revision.
         TextInput::set_focused(self, focused);

@@ -2,7 +2,7 @@
 //! widget's.
 
 use floom_core::{Widget, WidgetAny};
-use floom_widgets::{Switch, Text};
+use floom_widgets::{Scroll, Switch, Text, TextInput};
 
 #[test]
 fn a_rebuilt_label_keeps_what_the_app_put_in_it() {
@@ -33,4 +33,21 @@ fn a_different_widget_at_the_same_position_carries_nothing() {
     let mut rebuilt = Text::new("Count: 0");
     rebuilt.carry_state(&previous as &dyn WidgetAny);
     assert_eq!(rebuilt.content(), "Count: 0");
+}
+
+#[test]
+fn a_rebuilt_field_keeps_its_buffer_and_caret_but_not_its_composition() {
+    // Two fields over one buffer would silently split if the rebuild copied the
+    // string instead of the shared allocation. Writing through the *old* handle
+    // and reading the new one is the proof.
+    let buffer: floom_widgets::SharedBuffer = Default::default();
+    *buffer.lock().unwrap() = "hello".to_string();
+    let previous = TextInput::new(buffer.clone());
+    let mut rebuilt = TextInput::new(Default::default());
+
+    rebuilt.carry_state(&previous as &dyn WidgetAny);
+    assert_eq!(rebuilt.text(), "hello");
+
+    *buffer.lock().unwrap() = "hello there".to_string();
+    assert_eq!(rebuilt.text(), "hello there", "one buffer, two fields");
 }
