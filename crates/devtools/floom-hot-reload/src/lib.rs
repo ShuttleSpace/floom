@@ -24,6 +24,7 @@ mod diff;
 pub mod hosted;
 mod live;
 mod patch;
+pub mod watch;
 
 pub use diff::diff;
 pub use hosted::{HostedTree, describe};
