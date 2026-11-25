@@ -84,6 +84,12 @@ impl HostedTree {
         self.live.set_layout(id, layout);
     }
 
+    /// The box the node was laid out in. Separate from `set_layout` because a
+    /// request and a result are different claims.
+    pub fn set_bounds(&mut self, id: ElementId, bounds: floom_types::Rect) {
+        self.live.set_bounds(id, bounds);
+    }
+
     /// The live tree, ready for an `Inspector`.
     pub fn finish(self) -> LiveTree {
         self.live
@@ -163,6 +169,9 @@ pub fn describe(nodes: &[HostedNode]) -> LiveTree {
         }
         if let Some(layout) = node.layout {
             builder.set_layout(id, layout);
+        }
+        if let Some(bounds) = node.bounds {
+            builder.set_bounds(id, bounds);
         }
     }
     builder.finish()

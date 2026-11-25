@@ -181,6 +181,11 @@ impl<'a> Inspector<'a> {
         self.live.layout_of(key)
     }
 
+    /// The box the key was actually laid out in, when the host reported one.
+    pub fn bounds_of(&self, key: &NodeKey) -> Option<floom_types::Rect> {
+        self.live.bounds_of(key)
+    }
+
     // --- source mapping -----------------------------------------------------
 
     /// The host records where a node was written (DSL span, proc macro, …).

@@ -8,7 +8,7 @@ use floom_core::{Align, Axis, Element, ElementKind, LayoutRequest, Length, Posit
 use floom_dsl::ui_ir::{EventBinding, NodeKey, NodeKind, Prop, UiDocument};
 use floom_runtime_core::{ElementArena, ElementTree};
 use floom_style::{StyleMap, StyleProps, StyleSet, StyleState};
-use floom_types::ElementId;
+use floom_types::{ElementId, Rect};
 
 /// A mounted document: the element tree it produced and the tables keyed by
 /// the stable [`NodeKey`](floom_dsl::ui_ir::NodeKey)s that produced it.
@@ -28,6 +28,9 @@ pub struct LiveTree {
     styles: StyleMap,
     /// Layout requests keyed by raw id.
     layouts: HashMap<u64, LayoutRequest>,
+    /// Laid-out boxes keyed by raw id. The counterpart of `layouts`: what a node
+    /// asked for, and what it got.
+    bounds: HashMap<u64, Rect>,
     /// Event wiring keyed by raw id.
     events: HashMap<u64, Vec<EventBinding>>,
     /// State a layer stashed on an element, keyed by raw id. Reloads must
@@ -142,6 +145,10 @@ impl LiveTree {
         self.layouts.insert(id.raw(), layout);
     }
 
+    pub(crate) fn set_bounds(&mut self, id: ElementId, bounds: Rect) {
+        self.bounds.insert(id.raw(), bounds);
+    }
+
     /// The live id a stable key currently owns.
     pub fn id_of(&self, key: &NodeKey) -> Option<ElementId> {
         self.keys.get(key).copied()
@@ -162,6 +169,12 @@ impl LiveTree {
     pub fn layout_of(&self, key: &NodeKey) -> Option<&LayoutRequest> {
         let id = self.id_of(key)?;
         self.layouts.get(&id.raw())
+    }
+
+    /// Where the node was laid out, when the caller reported it.
+    pub fn bounds_of(&self, key: &NodeKey) -> Option<Rect> {
+        let id = self.id_of(key)?;
+        self.bounds.get(&id.raw()).copied()
     }
 
     /// The event wiring recorded for a key.

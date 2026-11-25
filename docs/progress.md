@@ -61,7 +61,7 @@
 | --- | --- | --- | --- |
 | S3.1 | CLI `check`/`test` 从 cargo 转发变成真门禁子集 + `doctor` | `floom check` 在坏项目上报出具体问题；`floom doctor` 报环境矩阵 | `cargo test -p floom-cli`，含坏项目 fixture |
 | S3.2 | 热重载保留状态 + 记录延迟 | 改一个颜色 ≤2 s 见到；组件状态不丢 | 手工 + 延迟数字写进 release notes |
-| S3.3 | DevTools 计算值 + hover 高亮接真实 window loop | Style 行显示计算值；hover 高亮在真窗口可用 | `cargo run -p floom-showcase`，F12 逐项点 |
+| S3.3 | DevTools 计算值：`HostedNode.bounds` → `LiveTree` → Inspector → Layout 页 `bounds WxH at (x, y)`（hover 高亮仍缺） | G7 | 完成（2026-11-25）：`devtools_integration` 21 passed，新测试断言 Layout 页出现 `bounds 160 x 40 at (0, 0)` | `docs/developer-experience.md` |
 
 ### S4 AI-first（护城河，不许拖到最后）
 
@@ -114,7 +114,7 @@
 | S2.4 | 组件契约门禁 | 未开始 | `component_schema()` 无消费者 | — |
 | S3.1 | CLI check/test/doctor | 进行中 | `doctor` 已落地（`crates/app/floom-cli/src/doctor.rs`，`cargo test -p floom-cli` 110 passed）；`check` 加了前置校验（无 `Cargo.toml` 时给出下一步，单测 `check_explains_a_directory_that_holds_no_project`）；`test` 仍是裸转发 | `bash scripts/gate.sh` |
 | S3.2 | 热重载保留状态 | 未开始 | 文件级热重启 | — |
-| S3.3 | DevTools 计算值 | 未开始 | Style 行无计算值 | — |
+| S3.3 | DevTools 计算值 | 完成（2026-11-25，hover 高亮仍缺） | Layout 页多一行 `bounds 160 x 40 at (0, 0)`；`HostedNode.bounds` → `LiveTree::set_bounds` → `Inspector::bounds_of` → `layout_rows` | `devtools_integration` 21 passed |
 | S4.1 | agent 口进真实 app | 完成 | `AgentApp` 抽成 trait、`WindowApp` 驱动真实 `WidgetHost`、`spawn_bridge` 交给窗口线程；`TypeText`/`Drag` 明确 refused | `scripts/desktop-smoke.sh`：`agent: tree has button Increment` / `agent: tap Increment repainted=true`（Linux Xvfb + Windows） |
 | S4.2 | 稳定语义 id | 完成 | ① `Selector::Id(u64)` 解析到 `Tree` 的 id 并走点击路径（`tests/agent_ids.rs` 3 passed，含两次运行 `Tree`/`Semantics` JSON 逐字节相同）；② `Selector::Key(str)` 按作者声明名定位：`Child::named` / `WidgetHost::set_agent_key`，`Tree` 每节点带 `key`（`tests/agent_keys.rs` 4 passed，含"同一 key 在第一个/第二个位置都解析成功"）。限界：id 是挂载次序，跨挂载次序请用 key；`Key` 只有作者命名过的节点才有 | — |
 | S4.3 | `floom mcp` | 完成（独立 crate `floom-mcp`，五个工具；未验：真实 MCP 客户端 Claude/Cursor 里跑一段脚本） | `tests/protocol.rs` 8 passed + 本机端到端 | A2 |

@@ -710,3 +710,51 @@ fn a_tree_row_gets_its_height_from_the_row_widget_not_the_slot() {
         );
     }
 }
+
+/// The layout tab answers "where did this really go", not only "what did it ask
+/// for". Without the host's laid-out box the panel could describe a box that
+/// never existed — the request and the result are separate claims, and only the
+/// host knows the second one.
+#[test]
+fn the_layout_readout_reports_the_box_the_node_was_laid_out_in() {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(400.0, 200.0));
+    host.mount_root(
+        LayoutStyle::default(),
+        floom_widgets::Stack::new(floom_core::Axis::Vertical).child(floom_core::Child::new(
+            floom_core::ChildKey::index(0),
+            floom_core::LayoutRequest::new().width(160.0).height(40.0),
+            || Box::new(floom_widgets::Button::new("Save")),
+        )),
+    );
+    host.frame();
+
+    let nodes = host.tree_nodes();
+    let live = floom::devtools::describe(&nodes);
+    let inspector = floom::devtools::Inspector::new(&live);
+    // The Stack is the root; the button is the node the slot sized to 160x40.
+    let key = nodes
+        .iter()
+        .find(|node| node.bounds.is_some_and(|b| (b.width() - 160.0).abs() < 0.5))
+        .map(|node| node.key.clone())
+        .unwrap_or_else(|| {
+            panic!(
+                "no 160 wide node in {:?}",
+                nodes.iter().map(|n| (&n.key, n.bounds)).collect::<Vec<_>>()
+            )
+        });
+    let rows = floom::devtools::layout_rows(&inspector, &key);
+    let bounds = rows
+        .iter()
+        .find(|row| row.label.contains("bounds"))
+        .unwrap_or_else(|| {
+            panic!(
+                "no bounds row in {:?}",
+                rows.iter().map(|r| &r.label).collect::<Vec<_>>()
+            )
+        });
+    assert!(
+        bounds.value.contains("160") && bounds.value.contains("40"),
+        "the row should carry the laid-out size, got {bounds:?}"
+    );
+}

@@ -37,6 +37,7 @@ use floom_widgets::{Button, Scroll, Stack, Surface, Text};
 
 use crate::tree::row_child;
 use crate::{Inspector, SemanticsEntry, UpdatePath};
+use floom_hot_reload::NodeKey;
 use floom_inspector::TreeNodeInfo;
 
 pub use crate::tree::RowNode;
@@ -1068,6 +1069,21 @@ pub fn layout_rows(inspector: &Inspector<'_>, key: &str) -> Vec<ReadoutRow> {
                 layout.height.map(fmt_f32).unwrap_or_else(|| "auto".into()),
             ),
         ));
+        // Where the box actually ended up. The rows above are what the node
+        // asked for; this is what it got, which is the question a layout panel
+        // exists to answer.
+        if let Some(bounds) = inspector.bounds_of(&NodeKey::from(key)) {
+            rows.push(ReadoutRow::new(
+                "bounds",
+                format!(
+                    "{} x {} at ({}, {})",
+                    fmt_f32(bounds.width() as f32),
+                    fmt_f32(bounds.height() as f32),
+                    fmt_f32(bounds.x0 as f32),
+                    fmt_f32(bounds.y0 as f32),
+                ),
+            ));
+        }
         if let Some(v) = layout.flex_grow {
             rows.push(ReadoutRow::new("flex-grow", fmt_f32(v)));
         }
