@@ -122,10 +122,10 @@
 | S3.5 | 完成（2026-11-24） | 桌面软件渲染入口：`run_desktop_software` / `_observed`；只有 `renderer-software` 时 `run` 自动落到软件 | `tests/desktop_software.rs` 1 passed；`/tmp/swapp` 首帧画出 |
 | S4.6 | CLI agent 子命令（`floom verify` / `floom snapshot`） | 完成（2026-11-24） | `VERIFY_STEPS` 顺序测试、`SNAPSHOT_STEPS` 过滤测试、无工程目录的拒绝测试，`cargo test -p floom-cli` 116 passed | A6 |
 | S4.5 | 三档文档 + 15 分钟档实测 | **完成（2026-11-24）**：`llms.txt` 重写为自含的 15 分钟档（可复制的 `Cargo.toml` + `main.rs`、三个"别踩"事实），实测方式＝照抄该档原文在 `/tmp/llms15` 建工程 → `cargo build` → 运行 6 s 开窗退出；过程中抓出两处该档没写、但一写就卡住的事实（`default = []`；`run_desktop` 需要 `desktop` **和** `renderer-gpu`），已补进档内 | 照抄即可编译运行 | — |
-| S5.1 | 兼容矩阵 / `flameo` / 命名 | 未开始 | `docs/roadmap.md` G10 | — |
-| S5.2 | G2 版本承诺 | 未开始 | 0.2.0 | — |
+| S5.1 | 兼容矩阵 / `flameo` / 命名 | 完成（2026-11-25） | 矩阵 = `docs/release-policy.md` 的 targets 表（逐个标 tested / device-gated / target-gated，CI job 名写进证据列）；`flameo` 从未在本仓库存在，`workspace-conventions.md` 与 `roadmap.md` 里的声明已删；crate 命名的现实（`floom` 已被占用）写在 `docs/vision.md` | `cargo test -p floom --test docs_parity` |
+| S5.2 | G2 版本承诺 | 完成（2026-11-25） | `release-policy.md` 的 "What is semver-locked" 表逐面写死（prelude 46 个名字 / feature bundle / Widget / 渲染与平台 trait / WidgetHost / widgets API 锁定，advanced 与设计系统按 minor 变更，L8 工具无保证），每行注明由哪个测试守；breaking 流程落成 `.github/pull_request_template.md` 的勾选项 | 走一遍 PR 模板 |
 | S5.3 | 完成（2026-11-21） | `GPU pixels on macos-latest`（11 passed）+ `GPU pixels on lavapipe`（11 passed）；`#[ignore]` 仍在但 CI 用 `--ignored` 跑，缺失适配器时 job 红 |
-| S5.4 | 发布记录表 | 未开始 | 表空 | — |
+| S5.4 | 发布记录表 | 完成（2026-11-25） | `docs/performance.md` 的「版本记录」表有 0.2.0 行：体积 485,904 B / 11.9 MiB / 11,626,912 B / 20,115,008 B，空闲 8 s 2 帧，峰值 14.8 MiB，首帧 6.427 ms，tap→提交 308 µs，settled 帧 ≤8 次分配，GPU 未测 | 每个 tag 前加一行 |
 
 ## 5. 更新规则（这份文件怎么活）
 

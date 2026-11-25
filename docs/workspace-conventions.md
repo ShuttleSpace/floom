@@ -52,7 +52,7 @@ the layer table in `scripts/check-architecture-deps.sh`.
 
 ## 2b. Satellites → `crates/ecosystem/`
 
-The official satellites (`floom-ui`, `floom-editor`, `flameo`) live in this
+The official satellites (`floom-ui`, `floom-editor`) live in this
 repository under `crates/ecosystem/`, but each is its **own workspace** — the root
 `Cargo.toml` excludes the whole directory. Consequences worth knowing:
 

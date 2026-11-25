@@ -78,7 +78,16 @@ FLOOM2_WINDOW_IDLE=1 FLOOM2_WINDOW_IDLE_SECS=8 \
 3. ~~首帧与输入延迟基线（P10、P11）~~ → 已用**帧数**而非毫秒落地（`tests/latency.rs`）：毫秒数在无头 runner 上不可持守，帧数跨机器成立；真机毫秒仍待设备。
 4. `floom-devtools` 的 `budget_exceeded` / 分配计数从 headless 协议接到真实 window loop（当前 app wiring pending）。
 5. 体积第 4 档（desktop + software 组合）。
-6. 发布记录表：每次发布写六类数字（体积 / 空闲 CPU / 内存 / GPU / 帧时间 / 分配）。
+6. ~~发布记录表~~ → 已建（见下表），每次发布加一行。
+
+## 版本记录
+
+六类数字固定：体积 / 空闲 CPU / 内存 / 帧时间 / 分配 / GPU。空着的格子写"未测"，
+不写"很快"。
+
+| 版本 | 体积（headless 下限 / showcase / desktop-gpu macOS / Linux） | 空闲 | 内存（1000 行峰値） | 帧时间 | 分配（settled 帧） | GPU |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0.2.0（未发布，2026-11-25） | 485,904 B / 11.9 MiB / 11,626,912 B / 20,115,008 B | 8 s 内 2 帧，CPU 0.15 s | 14.8 MiB | 2000 行首帧 6.427 ms；tap→提交 308 µs | ≤8 次/帧 | 未测（P7 决定不做） |
 
 ## 体积门禁现在两套宿主各一份（2026-11-23）
 

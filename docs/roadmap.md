@@ -19,7 +19,7 @@
 | G7 | DevTools 全平台 | 1.0.x | △ Style 行无计算值、无 hover 高亮；性能画像停在 headless | 接真实 window loop |
 | G8 | 插件 + ABI 版本 | 必达 | ✓ 领先（22 插件 + vtable） | 加 `abi_version` 字段；webview JS→Rust |
 | G9 | 可视化回归进 CI | 必达 | △ GPU 像素测试仍 `#[ignore]` | 进 CI |
-| G10 | 生态钉版 | 必达 | ✗ 兼容矩阵空白、`flameo` 缺失、无 docs 索引（本文件即索引） | 三项都要 |
+| G10 | 生态钉版 | 必达 | △ 兼容矩阵在 `release-policy.md` 的 targets 表（逐个标 tested/device-gated）；docs 索引已有（`README.md`）；`flameo` 从未存在于本仓库，声明已删 | 剩：生态 crate 钉版本号 |
 | G11 | 体积 | 必达 | △ 3 档 10% 已落地 | 第 4 档（desktop+software）、发布记录表 |
 | G12 | 资源（CPU/内存/GPU/分配） | 必达 | △ 只有空闲 frames/CPU | RSS、GPU、逐帧分配预算 |
 | G13 | 渲染性能 | 必达 | △ 11 bench + 10% 脚本能绿能红 | 帧预算接真实 loop、数字进发布记录 |
