@@ -83,3 +83,30 @@ fn a_deleted_file_is_reported_and_build_output_is_ignored() {
     );
     std::fs::remove_dir_all(&dir).ok();
 }
+
+/// The case the window never reached: a real file, a real gap, a real touch.
+///
+/// Everything else in this file writes and reads within the same millisecond,
+/// which a coarse timestamp would hide. A debugger session showed the app polling
+/// a hundred times and seeing nothing, so the gap is reproduced here rather than
+/// argued about.
+#[test]
+fn a_touch_a_second_later_is_reported() {
+    let root = std::env::temp_dir().join(format!("floom-watch-gap-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).expect("a scratch directory");
+    let file = root.join("main.rs");
+    std::fs::write(&file, "fn main() {}\n").expect("the first write");
+
+    let mut watch = Watch::new(&root);
+    assert!(watch.poll().is_empty(), "the baseline is silent");
+
+    std::thread::sleep(std::time::Duration::from_millis(1100));
+    std::fs::write(&file, "fn main() { /* edited */ }\n").expect("the second write");
+
+    let changed = watch.poll();
+    assert!(
+        changed.contains(&file),
+        "a rewrite 1.1 s later has to be reported, got {changed:?}"
+    );
+}

@@ -260,7 +260,12 @@ fn main() {
     };
 
     if reloading {
-        let root = env::var("FLOOM_WATCH_ROOT").unwrap_or_else(|_| "src".to_string());
+        // Absolute on purpose: `Watch` sweeps on every poll, and a relative root
+        // would resolve against whatever cwd the window happened to start in.
+        let root = match env::var("FLOOM_WATCH_ROOT") {
+            Ok(path) => path,
+            Err(_) => format!("{}/src", env!("CARGO_MANIFEST_DIR")),
+        };
         let mut watch = floom_hot_reload::watch::Watch::new(&root);
         // Baseline now, not on the first idle turn: the window is created before
         // the loop ever has a spare moment, and a file touched in between would
