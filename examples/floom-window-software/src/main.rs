@@ -1,22 +1,27 @@
+// SPDX-License-Identifier: MIT
 //! One window, the software renderer, and a report of what it got.
 //!
 //! The other window examples need a GPU. This one needs only a window server,
 //! which is what makes it possible to run "the stack opens a window and draws"
 //! on a machine with no GPU — a CI runner under Xvfb, for instance. See
-//! `scripts/linux-smoke.sh`.
+//! `scripts/desktop-smoke.sh`.
 //!
 //! ```sh
 //! xvfb-run -a cargo run -p floom-window-software
 //! ```
 //!
-//! `FLOOM_SOFTWARE_EXIT_FRAMES` (default 8) bounds the run: the app closes the
-//! loop itself, so the script never has to kill a window that is waiting for a
-//! human.
+//! It goes through the same public door an app does —
+//! [`floom::run_desktop_software_observed`] — and only adds a watcher, so what
+//! CI exercises is the entry point users call, not a copy of it.
+//!
+//! `FLOOM_SOFTWARE_EXIT_FRAMES` (default 8) bounds the run: the watcher closes
+//! the process itself, so the script never has to kill a window that is waiting
+//! for a human.
 //!
 //! `--agent-selftest` asks this window the two questions an agent would -- read
-//! the tree, tap a label -- over the in-memory transport, then leaves. It is in
-//! the binary rather than in a test because what is being checked is a *window
-//! that exists*: the same session code, the same `WidgetHost`, a real surface.
+//! the tree, tap a label -- over the in-memory transport, then leaves. In the
+//! binary rather than in a test because what is being checked is a *window that
+//! exists*: the same session code, the same `WidgetHost`, a real surface.
 //! Same-thread and port-free on purpose: a probe thread racing a frame loop was
 //! the first shape of this, and it failed on a runner for reasons that had
 //! nothing to do with the protocol.
@@ -33,145 +38,97 @@ use floom_accuracy::agent::{
 };
 use floom_app::AppRunner;
 use floom_core::{Axis, LayoutRequest};
-use floom_platform::{Platform, Size, WindowConfig, WindowId};
-use floom_platform_desktop::winit_backend::{WinitApp, WinitPlatform, run};
 use floom_renderer_software::SoftwarePresenter;
+use floom_types::Size;
 use floom_widgets::{Button, Stack};
 
-struct SoftwareApp {
-    runner: AppRunner<SoftwarePresenter>,
-    window: Option<WindowId>,
+/// Everything the run reports and the two ways it ends.
+struct Watch {
     frames: u32,
     exit_after: u32,
-    /// The loop only hands out frames while the tree is unsettled, so a frame
-    /// budget alone can wait forever on a still tree. This is the other half.
+    #[allow(dead_code)]
     deadline: Instant,
-    /// Requests waiting for this thread, when `--agent` was given.
     agent: Option<Receiver<Pending>>,
-    /// Ask this window an agent's two questions once it has painted, then leave.
     selftest: bool,
 }
 
-impl WinitApp for SoftwareApp {
-    fn window_created(&mut self, platform: &mut WinitPlatform, window: WindowId) {
-        self.window = Some(window);
-        // The evidence line: a window exists and the OS gave it a surface of a
-        // real size. The script asserts on it, so it cannot pass silently.
-        if let Some(created) = platform.window(window) {
-            let size = created.size();
+impl Watch {
+    fn frame(&mut self, runner: &mut AppRunner<SoftwarePresenter>) {
+        self.frames += 1;
+        let presenter = runner.presenter();
+        let (width, height) = (presenter.width(), presenter.height());
+        if self.frames == 1 {
+            // The evidence line: a window exists and has a real size. The script
+            // asserts on it, so it cannot pass silently.
+            let host = runner.host().size();
             eprintln!(
                 "floom-software: window surface {}x{} at scale {}",
-                size.width,
-                size.height,
-                created.display_info().scale_factor.get()
+                host.width, host.height, 1.0
             );
         }
-    }
+        let inked = presenter
+            .pixels()
+            .chunks_exact(4)
+            .filter(|pixel| pixel[3] > 0)
+            .count();
+        eprintln!(
+            "floom-software: frame {} drew {width}x{height} with {inked} inked pixels",
+            self.frames
+        );
 
-    fn events(&mut self, platform: &mut WinitPlatform) {
-        let stats = self.runner.pump(platform);
-        self.serve_agent();
-        // The questions are asked after a frame, not before: semantics are
-        // published by the frame that lays the tree out, so an agent that asked
-        // first would be told the window is empty.
+        self.serve_agent(runner);
+
         if self.selftest && self.frames >= 2 {
-            // A frame publishes semantics, and how many frames a runner needs
-            // before the tree is laid out is not something to guess at: paint
-            // until the window has something to describe.
+            // A frame publishes semantics; how many a host needs before the tree
+            // is laid out is not something to guess at, so paint until it says
+            // something and report the count.
             let mut tries = 0;
-            while self.runner.host().semantics().iter().count() == 0 && tries < 5 {
-                self.runner.host_mut().frame();
+            while runner.host().semantics().iter().count() == 0 && tries < 5 {
+                runner.host_mut().frame();
                 tries += 1;
             }
             eprintln!(
                 "agent: {} semantic nodes after {} extra frames",
-                self.runner.host().semantics().iter().count(),
+                runner.host().semantics().iter().count(),
                 tries
             );
-            let answered = agent_selftest(self.runner.host_mut());
+            let answered = agent_selftest(runner.host_mut());
             eprintln!(
                 "floom-software: agent self-test {}",
                 if answered { "passed" } else { "failed" }
             );
             std::process::exit(if answered { 0 } else { 1 });
         }
-        let _ = platform;
-        let _ = platform;
-        // The presenter's own pixels are the only proof that a frame was drawn
-        // rather than a window opened over an empty buffer.
-        let presenter = self.runner.presenter();
-        if presenter.width() == 0 || presenter.height() == 0 {
-            return;
-        }
-        let inked = presenter
-            .pixels()
-            .chunks_exact(4)
-            .filter(|p| p[3] > 0)
-            .count();
-        self.frames += 1;
-        // The extra numbers separate "no events reached the tree" from "the tree
-        // painted nothing" from "the presenter cleared the buffer" — a frame that
-        // arrives empty has to say which.
-        eprintln!(
-            "floom-software: frame {} drew {}x{} with {inked} inked pixels \
-             (events={} scene_ops={} host={:?})",
-            self.frames,
-            presenter.width(),
-            presenter.height(),
-            stats.events,
-            self.runner.host().scene().len(),
-            self.runner.host().size(),
-        );
+
         if inked > 0 && self.frames >= 2 && self.agent.is_none() && !self.selftest {
-            // `run` has no "close the loop" hook for the app, and this binary is
-            // driven by a script rather than a human: leaving once a frame has
-            // ink is the whole contract.
+            eprintln!("floom-software: the window drew; leaving");
+            std::process::exit(0);
+        }
+        if self.frames >= self.exit_after && self.agent.is_none() && !self.selftest {
             eprintln!(
                 "floom-software: {} frames is the report; leaving",
                 self.frames
             );
             std::process::exit(0);
         }
-        if self.frames >= self.exit_after && self.agent.is_none() && !self.selftest {
+        if self.deadline.elapsed() > Duration::from_secs(10) && self.agent.is_none() {
             eprintln!(
-                "floom-software: {} frames and no ink; leaving without a drawing",
+                "floom-software: {} frames in 10s, the loop is still waiting",
                 self.frames
             );
-            std::process::exit(0);
+            std::process::exit(1);
         }
     }
 
-    fn about_to_wait(&mut self, _platform: &mut WinitPlatform) {
-        // Requests are answered here too, not only in `events`: an idle tree
-        // stops handing out frames, and an agent asking a question must not
-        // have to make the UI move first.
-        self.serve_agent();
-        if self.deadline.elapsed() > Duration::from_secs(10) {
-            eprintln!(
-                "floom-software: 10s and {} frames later, the loop is still waiting",
-                self.frames
-            );
-            std::process::exit(0);
-        }
-    }
-}
-
-impl SoftwareApp {
-    /// Answer every request that is waiting. Each one is handled against the
-    /// live host, then a frame runs so a tap's effect is in the next report.
-    fn serve_agent(&mut self) {
-        loop {
-            let Some(pending) = self.agent.as_ref().and_then(|rx| rx.try_recv().ok()) else {
-                return;
-            };
-            let request = pending.request().clone();
-            let size = self.runner.host().size();
-            let response = {
-                let mut app = WindowApp::new(self.runner.host_mut(), size);
-                AgentSession::new(&mut app).handle(request)
-            };
+    fn serve_agent(&mut self, runner: &mut AppRunner<SoftwarePresenter>) {
+        let Some(requests) = self.agent.as_ref() else {
+            return;
+        };
+        while let Ok(pending) = requests.try_recv() {
+            let size = runner.host().size();
+            let mut app = WindowApp::new(runner.host_mut(), size);
+            let response = AgentSession::new(&mut app).handle(pending.request().clone());
             pending.answer(response);
-            self.runner.host_mut().frame();
         }
     }
 }
@@ -259,18 +216,8 @@ fn agent_selftest(host: &mut floom_app::WidgetHost) -> bool {
 fn main() {
     let exit_after = env::var("FLOOM_SOFTWARE_EXIT_FRAMES")
         .ok()
-        .and_then(|v| v.parse().ok())
+        .and_then(|value| value.parse().ok())
         .unwrap_or(8u32);
-
-    let mut host = floom_app::WidgetHost::new();
-    host.mount_root(
-        floom_layout::LayoutStyle::default(),
-        Stack::new(Axis::Vertical)
-            .gap(8.0)
-            .push_layout(LayoutRequest::new().width(160.0).height(40.0), || {
-                Box::new(Button::new("Increment"))
-            }),
-    );
 
     let mut agent = None;
     let mut selftest = false;
@@ -279,12 +226,15 @@ fn main() {
         if arg == "--agent-selftest" {
             selftest = true;
         } else if arg == "--agent" {
-            let port: u16 = args.next().and_then(|p| p.parse().ok()).unwrap_or_else(|| {
-                eprintln!("--agent needs a port");
-                std::process::exit(2);
-            });
-            let listener = bind("127.0.0.1", port).unwrap_or_else(|e| {
-                eprintln!("agent listener refused: {e}");
+            let port: u16 = args
+                .next()
+                .and_then(|port| port.parse().ok())
+                .unwrap_or_else(|| {
+                    eprintln!("--agent needs a port");
+                    std::process::exit(2);
+                });
+            let listener = bind("127.0.0.1", port).unwrap_or_else(|error| {
+                eprintln!("agent listener refused: {error}");
                 std::process::exit(2);
             });
             let addr = listener
@@ -295,9 +245,7 @@ fn main() {
         }
     }
 
-    let app = SoftwareApp {
-        runner: AppRunner::new(host, SoftwarePresenter::new()),
-        window: None,
+    let mut watch = Watch {
         frames: 0,
         exit_after,
         deadline: Instant::now(),
@@ -305,15 +253,28 @@ fn main() {
         selftest,
     };
 
-    let windows = vec![WindowConfig {
-        title: "floom — software window".into(),
-        size: Size::new(320.0, 240.0),
-        resizable: true,
-    }];
+    let result = floom::run_desktop_software_observed(
+        "floom — software window",
+        Size::new(320.0, 240.0),
+        |host| {
+            host.mount_root(
+                floom_layout::LayoutStyle::default(),
+                Stack::new(Axis::Vertical)
+                    .gap(8.0)
+                    .push_layout(LayoutRequest::new().width(160.0).height(40.0), || {
+                        Box::new(Button::new("Increment"))
+                    }),
+            );
+        },
+        move |runner| watch.frame(runner),
+    );
 
-    if let Err(err) = run(app, windows) {
-        eprintln!("window loop failed: {err}");
+    if let Err(error) = result {
+        eprintln!("window loop failed: {error}");
         std::process::exit(1);
     }
-    eprintln!("floom-software: the loop returned after {exit_after} frames");
+    eprintln!(
+        "floom-software: the loop returned after {} frames",
+        exit_after
+    );
 }

@@ -1703,13 +1703,13 @@ dependencies = [
 name = "floom-window-software"
 version = "0.2.0"
 dependencies = [
+ "floom",
  "floom-accuracy",
  "floom-app",
  "floom-core",
  "floom-layout",
- "floom-platform",
- "floom-platform-desktop",
  "floom-renderer-software",
+ "floom-types",
  "floom-widgets",
 ]
 

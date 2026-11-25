@@ -6,9 +6,9 @@ license.workspace = true
 publish = false
 description = "Floom 2.0 in a real window with the software renderer — no GPU needed"
 
-# The counterpart of `floom-window`: same window, no GPU. It is what lets a
-# machine without an adapter (a CI runner under Xvfb) prove that a window opens
-# and a frame reaches it. See `scripts/linux-smoke.sh`.
+# The counterpart of `floom-window`: same window, no GPU. It goes through the
+# public entry (`floom::run_desktop_software_observed`) rather than a copy of the
+# loop, so what CI runs is what an app runs. See `scripts/desktop-smoke.sh`.
 [dependencies]
 floom-app = { workspace = true }
 # The agent protocol is the reason this example can be driven from a script as
@@ -16,7 +16,9 @@ floom-app = { workspace = true }
 floom-accuracy = { workspace = true }
 floom-core = { workspace = true }
 floom-layout = { workspace = true }
-floom-platform = { workspace = true }
-floom-platform-desktop = { workspace = true, features = ["winit"] }
+# The facade, with the two features that make a software window: what a user
+# would write in their own `Cargo.toml`.
+floom = { workspace = true, features = ["desktop", "renderer-software"] }
 floom-renderer-software = { workspace = true }
+floom-types = { workspace = true }
 floom-widgets = { workspace = true }

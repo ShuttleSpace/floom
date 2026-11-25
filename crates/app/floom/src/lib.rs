@@ -390,6 +390,33 @@ where
     )
 }
 
+/// [`run_desktop_software`], with a hook that sees every pump.
+///
+/// `observe` is called after each frame with the runner in hand, which is how a
+/// smoke script reads the frame count, the pixels and the first ink without
+/// giving up the public entry point. Nothing in an ordinary app needs it.
+#[cfg(all(feature = "desktop", feature = "renderer-software"))]
+pub fn run_desktop_software_observed<F, O>(
+    title: &str,
+    size: floom_types::Size,
+    build: F,
+    observe: O,
+) -> Result<(), String>
+where
+    F: FnOnce(&mut floom_app::WidgetHost) + 'static,
+    O: FnMut(&mut floom_app::AppRunner<floom_renderer_software::SoftwarePresenter>) + 'static,
+{
+    platform::desktop_software::run_observed(
+        platform::AppRequest {
+            title: title.to_string(),
+            size,
+            resizable: true,
+        },
+        Box::new(build),
+        Some(Box::new(observe)),
+    )
+}
+
 /// Run a Floom app in a window with the devtools panel already wired — the
 /// one-call entry for the desktop backend *plus* the devtools door.
 ///

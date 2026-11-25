@@ -277,6 +277,9 @@ struct WinitClosureApp<P: floom_renderer::Presenter + 'static> {
     runner: Option<floom_app::AppRunner<P>>,
     make: fn() -> Option<P>,
     missing: &'static str,
+    /// Called after every pump. The seam the smoke tests use to watch frames
+    /// from a public entry; `None` costs nothing.
+    observe: Option<Box<dyn FnMut(&mut floom_app::AppRunner<P>)>>,
 }
 
 #[cfg(all(
@@ -310,6 +313,9 @@ impl<P: floom_renderer::Presenter + 'static> floom_platform_desktop::winit_backe
     fn events(&mut self, platform: &mut floom_platform_desktop::winit_backend::WinitPlatform) {
         if let Some(runner) = self.runner.as_mut() {
             runner.pump(platform);
+            if let Some(observe) = self.observe.as_mut() {
+                observe(runner);
+            }
         }
     }
 
@@ -350,6 +356,7 @@ mod desktop {
                     build: Some(build),
                     runner: None,
                     make: VelloGpuPresenter::new,
+                    observe: None,
                     missing: "floom::run: no usable GPU adapter; a desktop window \
                               needs one to paint. `floom::run_desktop_software` \
                               paints without one.",
@@ -396,27 +403,39 @@ pub mod desktop_software {
         }
 
         fn run(&self, request: AppRequest, build: BuildFn) -> Result<(), String> {
-            winit_run(
-                WinitClosureApp {
-                    build: Some(build),
-                    runner: None,
-                    make: || Some(SoftwarePresenter::new()),
-                    missing: "floom::run_desktop_software: the software presenter \
-                              did not start, which it always does -- this is a bug, \
-                              not a missing driver",
-                },
-                vec![WindowConfig {
-                    title: request.title,
-                    size: request.size,
-                    resizable: request.resizable,
-                }],
-            )
+            run_observed(request, build, None)
         }
     }
 
     /// Run a window with the software rasteriser, on any machine.
     pub fn run(request: AppRequest, build: BuildFn) -> Result<(), String> {
-        DesktopSoftwareBackend.run(request, build)
+        run_observed(request, build, None)
+    }
+
+    /// The same window, with a hook that sees every pump.
+    ///
+    /// This is what the smoke scripts watch: the frame count, the pixels, and
+    /// the moment there is ink to look at. A public entry that CI never runs is
+    /// a public entry nobody knows works.
+    pub fn run_observed(
+        request: AppRequest,
+        build: BuildFn,
+        observe: Option<Box<dyn FnMut(&mut floom_app::AppRunner<SoftwarePresenter>)>>,
+    ) -> Result<(), String> {
+        winit_run(
+            WinitClosureApp {
+                build: Some(build),
+                runner: None,
+                make: || Some(SoftwarePresenter::new()),
+                missing: "floom::run_desktop_software: the software presenter did not start",
+                observe,
+            },
+            vec![WindowConfig {
+                title: request.title,
+                size: request.size,
+                resizable: request.resizable,
+            }],
+        )
     }
 }
 
