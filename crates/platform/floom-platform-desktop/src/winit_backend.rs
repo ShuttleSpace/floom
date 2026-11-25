@@ -980,6 +980,16 @@ pub trait WinitApp {
         let _ = platform;
     }
 
+    /// How long the loop may sleep before `about_to_wait` runs again.
+    ///
+    /// `None` means "until something happens", which is right for a tree that
+    /// only moves when it is poked: the loop blocks and costs nothing. An app
+    /// that has to *notice* something — a file changing, a socket filling — has
+    /// to ask for a wake-up, because nothing outside the loop can give it one.
+    fn poll_interval(&self) -> Option<std::time::Duration> {
+        None
+    }
+
     /// The loop has decided to exit, called exactly once while the platform is
     /// still alive — the place to drop GPU surfaces and other OS resources.
     /// winit has no dedicated callback for this in this version; the loop
@@ -1079,6 +1089,10 @@ impl<A: WinitApp> ApplicationHandler for WinitDriver<A> {
         }
         let Self { platform, app, .. } = self;
         app.about_to_wait(platform);
+        event_loop.set_control_flow(match app.poll_interval() {
+            Some(interval) => ControlFlow::WaitUntil(std::time::Instant::now() + interval),
+            None => ControlFlow::Wait,
+        });
     }
 
     fn suspended(&mut self, _event_loop: &dyn ActiveEventLoop) {

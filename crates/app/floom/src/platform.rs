@@ -329,6 +329,14 @@ impl<P: floom_renderer::Presenter + 'static> floom_platform_desktop::winit_backe
         }
     }
 
+    fn poll_interval(&self) -> Option<std::time::Duration> {
+        // 200 ms: fast enough that a reload feels immediate, slow enough that an
+        // idle reloading app still costs a quarter of nothing.
+        self.changed
+            .as_ref()
+            .map(|_| std::time::Duration::from_millis(200))
+    }
+
     fn about_to_wait(
         &mut self,
         platform: &mut floom_platform_desktop::winit_backend::WinitPlatform,
