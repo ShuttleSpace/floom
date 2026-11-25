@@ -101,8 +101,10 @@ while [ "$waited" -lt 30 ] && ! grep -q "rebuilding the tree" "$WATCH_LOG" 2> /d
     waited=$((waited + 1))
 done
 touch "$SRC"
+# Two seconds is the ledger's criterion ("change a colour and see it in two
+# seconds"). It excludes the compile, which is the app's build system, not this.
 waited=0
-while [ "$waited" -lt 30 ] && [ "$(grep -c "rebuilding the tree" "$WATCH_LOG" || true)" -lt 2 ]; do
+while [ "$waited" -lt 2 ] && [ "$(grep -c "rebuilding the tree" "$WATCH_LOG" || true)" -lt 2 ]; do
     sleep 1
     waited=$((waited + 1))
 done
@@ -115,7 +117,7 @@ want "floom-software: watching" "the app asked a watcher about its sources"
 want "floom-software: rebuilding the tree" "the first tree came through the reload path"
 rebuilds=$(grep -c "rebuilding the tree" "$WATCH_LOG" || true)
 if [ "$rebuilds" -lt 2 ]; then
-    echo "the source file changed but the tree was rebuilt $rebuilds time(s)" >&2
+    echo "the source file changed but the tree was rebuilt $rebuilds time(s) within 2 s" >&2
     fail=1
 fi
 
