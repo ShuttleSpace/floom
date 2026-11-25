@@ -28,6 +28,8 @@
 - 现状：`floom run --watch` 是**文件级热重启**——进程重启、状态丢失。
 - 机制那一半是**做完了的**：`crates/devtools/floom-hot-reload/src/patch.rs:88` 的 `LiveTree::apply(&UiPatch, &mut DirtySet)` 事务式应用补丁（任一 op 失败则 `restore(checkpoint)` 并返回 `RolledBack { failed_at, reason }`），keys 与 `stash` 跨补丁保留，`tests/hot_reload.rs::ids_and_stashed_state_survive_a_compatible_patch` 证明。
 - 卡住的不是补丁，是**两棵树**：`LiveTree` 是 `WidgetHost` 的只读镜像（`describe(&[HostedNode]) -> LiveTree`），补丁改的是镜像，像素由 `WidgetHost` 决定；把镜像的改动送回去，要么让 host 由文档构建（`floom-dsl` 的 `UiDocument` 直接驱动挂载），要么给 host 加一条按 key 重挂的入口。这是设计决策，不是接线——所以它停在未开始，而不是差一个 watcher。
+- **决定（2026-11-25）：host 仍是真相，补丁路径是"按 key 重挂"**，不是"文档驱动挂载"。理由三条：① 这个库的公开 API 是 Rust 值（`Button::new("Save")`、`mount_root(style, widget)`），用户写的是代码不是 IR；② `Selector::Key`（agent 侧）已经建立在 `Child::named` + host 的 `agent_key` 之上，改文档驱动要迁移 agent 与 devtools 两处 key 语义；③ 文档驱动需要 `UiDocument` 覆盖每个 widget 的每个 prop，那是把 Rust 的类型检查换成运行时校验，与"开发友好"相反。
+- 因此第一步是给 `WidgetHost` 一个按 key 重挂的入口（旧树按 `ChildKey`/`agent_key` 与新树对齐，能带的状态从旧 widget 搬到新 widget，带不了的如实丢弃），watcher 与补丁应用都排在它后面。
 - 明确不做（1.0.x 之前）：进程内保留状态的热补丁。
 - 延迟纪律：改一次文件到窗口重绘的时间必须**记录下来**，进 release notes；不测就不许说"快"。
 - 已知限制：重启期间窗口会闪一下；watch 只覆盖 `src/`。
