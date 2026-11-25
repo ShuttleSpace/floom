@@ -395,6 +395,43 @@ where
 /// `observe` is called after each frame with the runner in hand, which is how a
 /// smoke script reads the frame count, the pixels and the first ink without
 /// giving up the public entry point. Nothing in an ordinary app needs it.
+/// `run_desktop_software`, but the tree is rebuilt in place when `watch` says the
+/// sources moved.
+///
+/// The window, the presenter and everything each widget carried across stay; only
+/// what the rebuild closure produces is new. Pair it with
+/// `floom_hot_reload::watch::Watch`:
+///
+/// ```ignore
+/// let mut watch = floom_hot_reload::watch::Watch::new("src");
+/// floom::run_desktop_software_watched("Demo", floom::types::Size::new(640.0, 480.0),
+///     |host| { /* mount the tree */ }, move || !watch.poll().is_empty())?;
+/// ```
+///
+/// `ignore` rather than `no_run`: `floom-hot-reload` is behind the `devtools`
+/// feature, so the snippet cannot compile in every feature combination.
+#[cfg(all(feature = "desktop", feature = "renderer-software"))]
+pub fn run_desktop_software_watched<F, C>(
+    title: &str,
+    size: floom_types::Size,
+    build: F,
+    watch: C,
+) -> Result<(), String>
+where
+    F: Fn(&mut floom_app::WidgetHost) + 'static,
+    C: FnMut() -> bool + 'static,
+{
+    platform::desktop_software::run_watched(
+        platform::AppRequest {
+            title: title.to_string(),
+            size,
+            resizable: true,
+        },
+        build,
+        watch,
+    )
+}
+
 #[cfg(all(feature = "desktop", feature = "renderer-software"))]
 pub fn run_desktop_software_observed<F, O>(
     title: &str,

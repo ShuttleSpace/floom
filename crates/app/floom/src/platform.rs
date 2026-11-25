@@ -280,6 +280,11 @@ struct WinitClosureApp<P: floom_renderer::Presenter + 'static> {
     /// Called after every pump. The seam the smoke tests use to watch frames
     /// from a public entry; `None` costs nothing.
     observe: Option<Box<dyn FnMut(&mut floom_app::AppRunner<P>)>>,
+    /// How to rebuild the tree in place. Present only for callers that asked for
+    /// in-process reload; `floom::run` keeps its `FnOnce` build.
+    rebuild: Option<Box<dyn Fn(&mut floom_app::WidgetHost)>>,
+    /// Asked once per idle turn: "are the sources newer than the tree?"
+    changed: Option<Box<dyn FnMut() -> bool>>,
 }
 
 #[cfg(all(
@@ -296,11 +301,16 @@ impl<P: floom_renderer::Presenter + 'static> floom_platform_desktop::winit_backe
         _platform: &mut floom_platform_desktop::winit_backend::WinitPlatform,
         _window: floom_types::WindowId,
     ) {
-        let Some(build) = self.build.take() else {
-            return;
-        };
         let mut host = floom_app::WidgetHost::new();
-        build(&mut host);
+        match self.build.take() {
+            Some(build) => build(&mut host),
+            // A reloading app has no `FnOnce` to spend: the first tree is just
+            // the first rebuild.
+            None => match self.rebuild.as_ref() {
+                Some(rebuild) => rebuild(&mut host),
+                None => return,
+            },
+        }
         // `WinitApp` has no error channel, so a machine that cannot make a
         // presenter is reported on stderr rather than panicking in the loop.
         let Some(presenter) = (self.make)() else {
@@ -323,6 +333,14 @@ impl<P: floom_renderer::Presenter + 'static> floom_platform_desktop::winit_backe
         &mut self,
         platform: &mut floom_platform_desktop::winit_backend::WinitPlatform,
     ) {
+        // Sources are checked here rather than on a timer thread: the loop is
+        // already idle, and a rebuild has to happen on the thread that owns the
+        // tree.
+        if self.changed.as_mut().is_some_and(|changed| changed()) {
+            if let (Some(rebuild), Some(runner)) = (self.rebuild.as_ref(), self.runner.as_mut()) {
+                runner.host_mut().remount(|host| rebuild(host));
+            }
+        }
         // Drain once more so redraws requested during `events` are picked up
         // before the loop blocks.
         if let Some(runner) = self.runner.as_mut() {
@@ -357,6 +375,8 @@ mod desktop {
                     runner: None,
                     make: VelloGpuPresenter::new,
                     observe: None,
+                    rebuild: None,
+                    changed: None,
                     missing: "floom::run: no usable GPU adapter; a desktop window \
                               needs one to paint. `floom::run_desktop_software` \
                               paints without one.",
@@ -429,6 +449,39 @@ pub mod desktop_software {
                 make: || Some(SoftwarePresenter::new()),
                 missing: "floom::run_desktop_software: the software presenter did not start",
                 observe,
+                rebuild: None,
+                changed: None,
+            },
+            vec![WindowConfig {
+                title: request.title,
+                size: request.size,
+                resizable: request.resizable,
+            }],
+        )
+    }
+    /// A window that rebuilds its tree when `changed` says the sources moved.
+    ///
+    /// The tree is rebuilt in place: same window, same presenter, and whatever
+    /// each widget carried across (`Widget::carry_state`). `changed` is the
+    /// caller's watcher — this module does not know what a source file is, which
+    /// is what keeps `floom` free of a hot-reload dependency.
+    #[allow(clippy::too_many_arguments)]
+    pub fn run_watched<F, C>(request: AppRequest, build: F, mut changed: C) -> Result<(), String>
+    where
+        F: Fn(&mut floom_app::WidgetHost) + 'static,
+        C: FnMut() -> bool + 'static,
+    {
+        // Swap in an owned closure so the loop can call it more than once.
+        let build: Box<dyn Fn(&mut floom_app::WidgetHost)> = Box::new(build);
+        winit_run(
+            WinitClosureApp::<SoftwarePresenter> {
+                build: None,
+                runner: None,
+                make: || Some(SoftwarePresenter::new()),
+                missing: "floom::run_desktop_software: the software presenter did not start",
+                observe: None,
+                rebuild: Some(build),
+                changed: Some(Box::new(move || changed())),
             },
             vec![WindowConfig {
                 title: request.title,
