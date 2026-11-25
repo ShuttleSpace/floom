@@ -683,10 +683,40 @@ fn parse_lifecycle(args: &[String]) -> Result<LifecycleOpts, String> {
 }
 
 /// `floom check <DIR>` — type-check the project without producing a binary.
+/// The static gates `floom check` runs, in order: the cheap ones first, because
+/// a formatting complaint found after a full type-check costs a rebuild to fix.
+const CHECK_STEPS: [&[&str]; 2] = [&["fmt", "--all", "--check"], &["check", "--all-targets"]];
+
+/// `floom check <DIR>` — would a reviewer's static gates pass?
+///
+/// Not a rename of `cargo check`: the point is that a green `floom check` means
+/// the same two things CI's cheap jobs mean, so a formatting failure shows up
+/// locally instead of in a pull request.
 fn check(args: &[String]) -> Result<(), String> {
     let opts = parse_lifecycle(args)?;
     require_manifest(&opts.dir)?;
-    cargo_in(&opts.dir, "check", &opts.features, false)
+    for step in CHECK_STEPS {
+        let argv = check_argv(step, &opts.features);
+        let borrowed: Vec<&str> = argv.iter().map(String::as_str).collect();
+        cargo_run(&opts.dir, &borrowed)
+            .map_err(|error| format!("{error} — `floom check` stopped here"))?;
+    }
+    Ok(())
+}
+
+/// One step's argv, with `--features` attached to the step that understands it.
+///
+/// `cargo fmt` has no `--features`: appending the flag to every step would make
+/// `floom check --features desktop` fail on the first, cheap step.
+fn check_argv(step: &[&str], features: &[String]) -> Vec<String> {
+    let mut argv: Vec<String> = step.iter().map(|word| word.to_string()).collect();
+    if step.first() == Some(&"check") {
+        for feature in features {
+            argv.push("--features".to_string());
+            argv.push(feature.clone());
+        }
+    }
+    argv
 }
 
 /// Fail before cargo does when there is no project to check.
@@ -705,9 +735,30 @@ fn require_manifest(dir: &Path) -> Result<(), String> {
 }
 
 /// `floom test <DIR>` — run the project's test suite.
+/// `floom test <DIR>` — the suite, with snapshot blessing switched off.
+///
+/// The one thing this adds over `cargo test` is the guard: a test run that
+/// rewrites goldens is a test run that always passes, so a stray
+/// `UPDATE_SNAPSHOTS=1` in the shell must not reach the tests. Blessing is
+/// `floom snapshot --update`, and nothing else.
 fn test(args: &[String]) -> Result<(), String> {
     let opts = parse_lifecycle(args)?;
-    cargo_in(&opts.dir, "test", &opts.features, false)
+    require_manifest(&opts.dir)?;
+    let mut cmd = Command::new("cargo");
+    cmd.args(["test", "--no-fail-fast"])
+        .env_remove("UPDATE_SNAPSHOTS")
+        .current_dir(&opts.dir);
+    for feature in &opts.features {
+        cmd.arg("--features").arg(feature);
+    }
+    let status = cmd
+        .status()
+        .map_err(|e| format!("cannot run `cargo test`: {e}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("`cargo test` failed ({status})"))
+    }
 }
 
 /// The steps `floom verify` runs, in order.
@@ -1133,6 +1184,30 @@ mod tests {
     }
 
     #[test]
+    fn check_runs_formatting_before_the_type_check() {
+        // Same reason as verify's order: a formatting complaint is seconds to
+        // fix and a rebuild to reach if it is found last.
+        assert_eq!(CHECK_STEPS[0], ["fmt", "--all", "--check"]);
+        assert_eq!(CHECK_STEPS[1], ["check", "--all-targets"]);
+    }
+
+    #[test]
+    fn only_the_step_that_understands_features_gets_them() {
+        // `cargo fmt --features desktop` is not a command: putting the flag on
+        // every step would make `floom check --features desktop` fail on the
+        // cheap step first.
+        let features = vec!["desktop".to_string()];
+        assert_eq!(
+            check_argv(CHECK_STEPS[0], &features),
+            ["fmt", "--all", "--check"]
+        );
+        assert_eq!(
+            check_argv(CHECK_STEPS[1], &features),
+            ["check", "--all-targets", "--features", "desktop"]
+        );
+    }
+
+    #[test]
     fn verify_and_snapshot_refuse_a_directory_without_a_project() {
         let dir = std::env::temp_dir().join(format!("floom-cli-verify-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
@@ -1163,8 +1238,6 @@ mod tests {
         assert_eq!(require_manifest(&project), Ok(()));
         std::fs::remove_dir_all(&dir).ok();
     }
-
-    use super::*;
 
     /// The repository root, found from this crate's manifest directory.
     fn repo_root() -> PathBuf {

@@ -116,29 +116,6 @@ pub fn cargo_toml(
 /// app's business; this stub is what makes the crate produce a `.so` that
 /// `floom package` can bundle. It compiles for the host too, so `cargo test`
 /// of the scaffold is unaffected.
-pub const MOBILE_LIB_RS: &str = r#"// SPDX-License-Identifier: MIT
-// Mobile cdylib target. `floom package` builds this into a shared library
-// (`cargo ndk` -> jniLibs, `cargo-ios`/Xcode -> the app bundle).
-//
-// Wire the platform's entry point here (e.g. `#[no_mangle] pub extern "C"`
-// `android_main`), calling the same widget tree as `src/main.rs`.
-//
-// OpenHarmony is the one target with a ready-made entry: enable the `harmony`
-// and `harmony-winit` features and export the app core with
-//
-//     #[cfg(target_env = "ohos")]
-//     floom::ohos_app!(build);   // `build` moved into a shared `mod app`
-//
-// which generates the `ohos_winit_runtime_*` symbols the XComponent bridge in
-// `entry/src/main/cpp/` calls (surface, touch, vsync). iOS has the same shape:
-//
-//     #[cfg(target_os = "ios")]
-//     floom::ios_app!(build);    // generates floom_ios_app_{start,pump,touch}
-//
-// which the Swift host in `ios/src/` calls from a display link. Android still
-// goes through its own `android_main`.
-"#;
-
 /// The widget tree, shared by every target: the desktop entry and each mobile
 /// host build this one function.
 pub const APP_RS: &str = r#"// The widget tree. Every target mounts this: `src/main.rs` on desktop, and the

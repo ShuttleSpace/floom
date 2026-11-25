@@ -112,7 +112,7 @@
 | S2.2 | 资源门禁（G12） | 进行中 | P6 峰值 RSS、P8 逐帧分配、P10 首帧、P11 输入延迟均已有门禁（`tests/memory.rs`、`tests/allocation.rs`、`tests/latency.rs`）；**体积（G11）2026-11-23 起在 CI 里跑**（`Size budgets on ubuntu-24.04`，Linux 自己的基线）；只剩 GPU/VRAM 与 Criterion 耗时无 CI 门禁 | 顺带修掉 S1.3 引入的 236 MiB 字体拷贝；Linux 的 `floom-window --features real` 比 macOS 大 73%，记为待解释问题 |
 | S2.3 | 组件 token 清零 + 门禁 | 完成 | 82 处清零（36 透明 / 22 黑 / 14 状态色进 tokens.rs）；`scripts/check-design-tokens.sh` + `gate.sh style`；fluent banner Warning 与 alert 统一为 `#FFB900` | 2026-11-21 |
 | S2.4 | 组件契约门禁 | 未开始 | `component_schema()` 无消费者 | — |
-| S3.1 | CLI check/test/doctor | 进行中 | `doctor` 已落地（`crates/app/floom-cli/src/doctor.rs`，`cargo test -p floom-cli` 110 passed）；`check` 加了前置校验（无 `Cargo.toml` 时给出下一步，单测 `check_explains_a_directory_that_holds_no_project`）；`test` 仍是裸转发 | `bash scripts/gate.sh` |
+| S3.1 | CLI check/test/doctor | 完成（2026-11-25） | `doctor`（`doctor.rs`）；`check` = `fmt --all --check` → `check --all-targets`（`CHECK_STEPS`，`--features` 只加给后者）；`test` = `cargo test --no-fail-fast` + `env_remove("UPDATE_SNAPSHOTS")`；`cargo test -p floom-cli` **118 passed** | 仍缺：把 `docs_parity`/`gate` 其余子集串进来 | `bash scripts/gate.sh` |
 | S3.2 | 热重载保留状态 | 未开始 | 文件级热重启 | — |
 | S3.3 | DevTools 计算值 + 行悬停高亮 | 完成（2026-11-25） | Layout 页 `bounds 160 x 40 at (0, 0)`；悬停优先于选中；`TreeRow::event` 新增 `Move`/`Leave` 分支 | `devtools_integration` 23 passed（含 Move 真实路由的端到端测试） |
 | S4.1 | agent 口进真实 app | 完成 | `AgentApp` 抽成 trait、`WindowApp` 驱动真实 `WidgetHost`、`spawn_bridge` 交给窗口线程；`TypeText`/`Drag` 明确 refused | `scripts/desktop-smoke.sh`：`agent: tree has button Increment` / `agent: tap Increment repainted=true`（Linux Xvfb + Windows） |

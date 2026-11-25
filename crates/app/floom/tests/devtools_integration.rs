@@ -686,16 +686,14 @@ fn a_pointer_move_reaches_a_row_inside_the_panel() {
         host.size(),
     ));
     let x = panel.x0 + 30.0;
-    let keys: Vec<String> = host
-        .tree_nodes()
-        .into_iter()
-        .map(|node| node.key)
-        .collect();
+    let keys: Vec<String> = host.tree_nodes().into_iter().map(|node| node.key).collect();
 
     let mut found = None;
     let mut y = panel.y0 + 4.0;
     while y < panel.y1 - 4.0 {
-        host.dispatch(floom_types::Event::Pointer(floom_types::PointerEvent::hover(Point::new(x, y))));
+        host.dispatch(floom_types::Event::Pointer(
+            floom_types::PointerEvent::hover(Point::new(x, y)),
+        ));
         if let Some(key) = devtools.state().lock().unwrap().hovered().map(String::from) {
             found = Some((key, y));
             break;
@@ -703,9 +701,8 @@ fn a_pointer_move_reaches_a_row_inside_the_panel() {
         y += 6.0;
     }
 
-    let (key, _) = found.unwrap_or_else(|| {
-        panic!("no row answered a hover anywhere down the panel ({panel:?})")
-    });
+    let (key, _) = found
+        .unwrap_or_else(|| panic!("no row answered a hover anywhere down the panel ({panel:?})"));
     assert!(
         keys.contains(&key),
         "the hovered key {key} should be one of the tree's keys"
