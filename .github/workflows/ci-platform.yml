@@ -301,6 +301,11 @@ jobs:
       # target -- harmony + widgets + text + the native_window library -- which
       # is the difference between "the backend compiles" and "an app links".
       - name: Link the OpenHarmony example
+        env:
+          SDK: ${{ steps.ohos.outputs.ohos_sdk_native }}
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_OHOS_LINKER: ${{ steps.ohos.outputs.ohos_sdk_native }}/llvm/bin/clang
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_OHOS_RUSTFLAGS: -C link-arg=--target=aarch64-linux-ohos -C link-arg=--sysroot=${{ steps.ohos.outputs.ohos_sdk_native }}/sysroot
+          LIBRARY_PATH: ${{ steps.ohos.outputs.ohos_sdk_native }}/sysroot/usr/lib/aarch64-linux-ohos
         run: |
           cargo build --package=floom-ohos --target aarch64-unknown-linux-ohos
 
