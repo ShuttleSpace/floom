@@ -891,13 +891,37 @@ mod harmony {
         }
 
         fn run(&self, request: AppRequest, build: BuildFn) -> Result<(), String> {
-            super::run_os_frames(
+            // Not `run_os_frames`: the shell pushes touches into a queue and this
+            // loop is the only thing that can hand them to the platform, because
+            // it owns the `HostPlatform` the widgets are driven through.
+            super::run_os_frames_with_input(
                 request,
                 build,
                 floom_platform_harmony::HARMONY_PLATFORM_ID,
                 floom_platform_harmony::capabilities(),
                 floom_platform_harmony::display_scale(),
                 floom_platform_harmony::present,
+                |platform, window| {
+                    let scale = floom_platform_harmony::display_scale() as f64;
+                    for touch in floom_platform_harmony::take_touches() {
+                        // The shell reports device pixels; layout is in points.
+                        let position = floom_types::Point::new(touch.x / scale, touch.y / scale);
+                        platform.push_event(floom_platform::PlatformEvent::PointerMoved {
+                            window,
+                            position,
+                            modifiers: floom_platform::Modifiers::NONE,
+                        });
+                        if touch.phase == 0 || touch.phase == 2 {
+                            platform.push_event(floom_platform::PlatformEvent::PointerButton {
+                                window,
+                                position,
+                                button: floom_platform::PointerButton::Primary,
+                                pressed: touch.phase == 0,
+                                modifiers: floom_platform::Modifiers::NONE,
+                            });
+                        }
+                    }
+                },
             )
         }
     }
@@ -916,6 +940,51 @@ mod harmony {
     all(feature = "ios", target_os = "ios"),
     all(feature = "harmony", target_env = "ohos")
 ))]
+/// `run_os_frames` plus a hook that runs before every pump.
+///
+/// Kept separate rather than as a parameter on the common path: only a backend
+/// whose input arrives out of band needs it, and every other caller would pass a
+/// closure that does nothing.
+#[allow(clippy::too_many_arguments)]
+fn run_os_frames_with_input(
+    request: AppRequest,
+    build: BuildFn,
+    id: floom_types::PlatformId,
+    caps: PlatformCapabilities,
+    scale: f32,
+    present: fn(&[u8], u32, u32) -> bool,
+    mut before_pump: impl FnMut(&mut floom_platform::HostPlatform, floom_types::WindowId),
+) -> Result<(), String> {
+    use floom_app::{AppRunner, WidgetHost};
+    use floom_platform::{HostPlatform, Platform, WindowConfig};
+    use floom_renderer_software::SoftwarePresenter;
+
+    let mut platform = HostPlatform::new()
+        .with_id(id)
+        .with_capabilities(caps)
+        .with_scale_factor(scale as f64);
+    let window = platform.create_window(WindowConfig {
+        title: request.title,
+        size: request.size,
+        resizable: request.resizable,
+    });
+    let mut host = WidgetHost::new();
+    build(&mut host);
+    let mut runner = AppRunner::new(host, SoftwarePresenter::new());
+    platform.request_frame(window);
+    loop {
+        before_pump(&mut platform, window);
+        runner.pump(&mut platform);
+        let presenter = runner.presenter();
+        let (width, height) = (presenter.width(), presenter.height());
+        if !present(presenter.pixels(), width, height) {
+            break;
+        }
+        platform.request_frame(window);
+    }
+    Ok(())
+}
+
 fn run_os_frames(
     request: AppRequest,
     build: BuildFn,

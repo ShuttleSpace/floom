@@ -46,7 +46,11 @@ pub extern "C" fn floom_demo_start(width_px: i32, height_px: i32, density: f32) 
                     Stack::new(floom_core::Axis::Vertical).child(floom_core::Child::new(
                         floom_core::ChildKey::index(0),
                         floom_core::LayoutRequest::new(),
-                        || Box::new(Button::new("Floom on OpenHarmony")),
+                        || {
+                            Box::new(Button::new("Floom on OpenHarmony").on_click(|| {
+                                floom_platform_harmony::log("tapped");
+                            }))
+                        },
                     )),
                 );
                 // 量一次就够：布局尺寸、缩放、内容盒子，与 present 那行

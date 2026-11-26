@@ -29,6 +29,7 @@ extern "C" void floom_harmony_release_surface();
 // Runs the Floom widget tree on its own thread; it presents through
 // `floom_harmony_present_frame` and therefore needs a bound surface first.
 extern "C" void floom_demo_start(int32_t width, int32_t height, float density);
+extern "C" void floom_harmony_touch(double x, double y, uint8_t phase);
 
 namespace {
 
@@ -74,6 +75,38 @@ void on_vsync(long long /*timestamp*/, void* /*data*/) {
   }
   if (g_vsync != nullptr) {
     OH_NativeVSync_RequestFrame(g_vsync, on_vsync, nullptr);
+  }
+}
+
+// Touches arrive here, in the component's own pixel space: the Floom side divides
+// by the display scale because layout is in points.
+void on_touch(OH_NativeXComponent* component, void* window) {
+  OH_NativeXComponent_TouchEvent event;
+  if (OH_NativeXComponent_GetTouchEvent(component, window, &event) != 0) {
+    return;
+  }
+  // Only the down edge: a move stream would flood hilog.
+  if (event.type == OH_NATIVEXCOMPONENT_DOWN) {
+    LOGI("touch points=%{public}u x=%{public}f y=%{public}f", event.numPoints, event.x,
+         event.y);
+  }
+  for (uint32_t i = 0; i < event.numPoints; i++) {
+    const auto& point = event.touchPoints[i];
+    uint8_t phase = 1;  // move
+    switch (point.type) {
+      case OH_NATIVEXCOMPONENT_DOWN:
+        phase = 0;
+        break;
+      case OH_NATIVEXCOMPONENT_UP:
+        phase = 2;
+        break;
+      case OH_NATIVEXCOMPONENT_CANCEL:
+        phase = 3;
+        break;
+      default:
+        break;
+    }
+    floom_harmony_touch(point.x, point.y, phase);
   }
 }
 
@@ -124,6 +157,7 @@ napi_value Init(napi_env env, napi_value exports) {
     g_callback.OnSurfaceCreated = on_surface_created;
     g_callback.OnSurfaceChanged = on_surface_changed;
     g_callback.OnSurfaceDestroyed = on_surface_destroyed;
+    g_callback.DispatchTouchEvent = on_touch;
     reg = OH_NativeXComponent_RegisterCallback(g_component, &g_callback);
   }
   LOGI("Init component=%{public}p RegisterCallback=%{public}d", g_component, reg);

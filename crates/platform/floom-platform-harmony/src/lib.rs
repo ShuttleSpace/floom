@@ -176,6 +176,37 @@ pub extern "C" fn floom_harmony_set_display_scale(scale: f32) {
     }
 }
 
+/// One pointer sample from the ArkTS shell.
+#[derive(Debug, Clone, Copy)]
+pub struct Touch {
+    pub x: f64,
+    pub y: f64,
+    /// 0 down, 1 move, 2 up, 3 cancel -- the codes the XComponent callback uses.
+    pub phase: u8,
+}
+
+static INBOX: Mutex<Vec<Touch>> = Mutex::new(Vec::new());
+
+/// Queues a touch sample for the frame loop to drain.
+///
+/// The shell owns the XComponent and therefore the only source of input; the
+/// loop that owns the widget tree is on another thread, so the hand-off is a
+/// queue rather than a call.
+#[unsafe(no_mangle)]
+pub extern "C" fn floom_harmony_touch(x: f64, y: f64, phase: u8) {
+    if let Ok(mut inbox) = INBOX.lock() {
+        inbox.push(Touch { x, y, phase });
+    }
+}
+
+/// Takes everything queued since the last frame.
+pub fn take_touches() -> Vec<Touch> {
+    INBOX
+        .lock()
+        .map(|mut inbox| std::mem::take(&mut *inbox))
+        .unwrap_or_default()
+}
+
 static SURFACE: Mutex<Option<Bound>> = Mutex::new(None);
 
 // The fields are read only on the OHOS target (`present_frame`'s blit is
@@ -566,10 +597,16 @@ mod native {
         }
         let len = hnd.size as usize;
         let stride = stride_bytes(hnd.stride, w);
-        crate::log(&format!(
-            "buffer w={} h={} stride_raw={} size={} fd={} mapped={len} stride_used={stride}",
-            hnd.width, hnd.height, hnd.stride, hnd.size, hnd.fd
-        ));
+        {
+            use std::sync::atomic::{AtomicBool, Ordering};
+            static ANNOUNCED: AtomicBool = AtomicBool::new(false);
+            if !ANNOUNCED.swap(true, Ordering::Relaxed) {
+                crate::log(&format!(
+                    "buffer w={} h={} stride_raw={} size={} fd={} mapped={len} stride_used={stride}",
+                    hnd.width, hnd.height, hnd.stride, hnd.size, hnd.fd
+                ));
+            }
+        }
         // A buffer that cannot hold the frame would be a partial copy presented
         // as a whole frame.
         let needed = stride
