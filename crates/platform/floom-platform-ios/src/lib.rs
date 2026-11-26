@@ -52,7 +52,6 @@ pub extern "C" fn floom_ios_set_display_scale(scale: f32) {
     }
 }
 
-
 pub mod packages;
 
 /// Host entry point: publish safe-area insets (logical points) read from

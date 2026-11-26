@@ -162,11 +162,17 @@ pub fn log(message: &str) {
         };
         let text = CString::new(message.replace('\0', "")).unwrap_or_default();
         unsafe {
-            OH_LOG_Print(LOG_APP, LOG_INFO, DOMAIN, tag.as_ptr(), fmt.as_ptr(), text.as_ptr());
+            OH_LOG_Print(
+                LOG_APP,
+                LOG_INFO,
+                DOMAIN,
+                tag.as_ptr(),
+                fmt.as_ptr(),
+                text.as_ptr(),
+            );
         }
     }
 }
-
 
 /// Records the display scale. Called by the shell; a redraw picks it up.
 #[unsafe(no_mangle)]

@@ -20,6 +20,7 @@ not have.
 | `floom-probe` | device probe: one window holding every control the on-screen cases need | desktop | **display-gated** — `--features real`, driven by hand |
 | `floom-window` | a real OS window: winit + vello GPU | desktop | **verified on macOS** |
 | `floom-window-software` | a real OS window with the software renderer: no GPU, no display server needed beyond X + Xvfb. It reports its surface and how many pixels each frame carried, then leaves | Linux, Windows | **run in CI** — `scripts/desktop-smoke.sh` (`Linux app in a window` under `xvfb-run`, `Windows app in a window` directly) |
+| `floom-ohos` | renderer sanity check for OpenHarmony: the smallest tree that proves text measures, the scale is applied and a tap reaches a click handler | OpenHarmony (emulator, DevEco SDK) | **device-gated** — `cargo build --target aarch64-unknown-linux-ohos` then repackaged into `tests/floom-ohos-demo`; evidence in `docs/gates/ohos.md` |
 | `floom-macos` | the macOS gate probe: a clickable tree, a text field an input method can type into, and a clipboard whose far end is the system pasteboard | macOS | **display-gated** — `--features real`, driven by hand (see `docs/gates/macos.md`) |
 | `floom-android` | a real Android app: `native-activity` + vello GPU in one APK | Android | **device-gated** — `--features real`, packaged by `examples/floom-android/scripts/build-apk.sh` |
 
@@ -46,6 +47,21 @@ A platform whose backend cannot render, or whose toolchain is missing, is
 reported as `check-only`/`blocked`, never as `artifact`.
 
 ## Notes per example
+
+### `floom-ohos`
+
+Not a component gallery: it exists so that "the emulator shows something" has a
+minimal, readable tree behind it. A `Button` with a label is enough to catch the
+three failures that actually happened -- a zero-sized text measurement when no
+font family resolves, a frame drawn at logical size inside a pixel-sized buffer,
+and a tap that never arrives because nothing forwards it.
+
+```sh
+# cross-compile, then drop the .so where the HAP picks it up
+cargo build --release -p floom-ohos --target aarch64-unknown-linux-ohos
+cp target/aarch64-unknown-linux-ohos/release/libfloom_ohos.so \
+   tests/floom-ohos-demo/entry/src/main/cpp/libs/arm64-v8a/libfloom_platform_harmony.so
+```
 
 ### `floom-showcase`
 
