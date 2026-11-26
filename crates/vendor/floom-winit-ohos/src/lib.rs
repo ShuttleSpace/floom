@@ -1,3 +1,7 @@
+//! **FROZEN as of 2026-11-27.** Nothing in the workspace depends on this crate:
+//! the shipping OpenHarmony path is `floom-platform-harmony` (N-API + a touch queue),
+//! which is the one with device evidence. Keep this for the day someone bridges IME —
+//! it is the only layer in the tree that speaks keyboard/composition.
 //! OpenHarmony backend for the split Winit architecture.
 
 mod app;

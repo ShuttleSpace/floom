@@ -48,15 +48,19 @@
 
 ## 4. OHOS：已定位缺陷（按严重度）
 
-1. **没有输入入口**。`floom-platform-harmony` 只导出上屏三件套，没有 touch/key/IME/剪贴板/安全区导出；ArkTS 侧无处可送事件。而 `harmony_default()` 声明了 `TOUCH`。
-2. **有输入能力的那一层被弃用**：`crates/vendor/floom-winit-ohos/`（3,049 行，含 touch `.notify_touch`、mouse `.notify_mouse`、键盘、`request_ime_update`）**没有任何 crate 依赖它**，只有 workspace 声明（`Cargo.toml:184`）与一句注释。当前在用的是无输入的 N-API 上屏层。
+1. ~~没有输入入口~~（2026-11-27 部分解决：touch 有入口，键盘/IME 仍没有）。`floom-platform-harmony` 只导出上屏三件套，没有 touch/key/IME/剪贴板/安全区导出；ArkTS 侧无处可送事件。而 `harmony_default()` 声明了 `TOUCH`。
+2. **有输入能力的那一层被弃用（2026-11-27：标注 frozen，见下面的决定）**：`crates/vendor/floom-winit-ohos/`（3,049 行，含 touch `.notify_touch`、mouse `.notify_mouse`、键盘、`request_ime_update`）**没有任何 crate 依赖它**，只有 workspace 声明（`Cargo.toml:184`）与一句注释。当前在用的是无输入的 N-API 上屏层。
 3. ~~**缓冲队列泄漏**~~：`RequestBuffer` 之后的所有早退路径（handle 空 / `size<=0` / `fd<0` / `mmap` 失败 / 拷贝失败）现在都 `OH_NativeWindow_NativeWindowAbortBuffer` 归还缓冲；只有成功拷贝才 `Flush`。
 4. ~~**脏帧上屏**~~：拷贝失败改为 abort，不再先把半帧 `Flush` 给合成器。
 5. ~~**状态非成组**~~：三个 atomic 换成一个 `static Mutex<Option<Bound>>`（window 地址 + 宽高同一把锁），且锁**跨整个 blit 持有** —— `release_surface` 会等正在进行的帧画完，window 不可能在帧中途被释放。
 6. ~~**尺寸必须精确相等**~~：`present_frame` 改用**帧自己的**宽高（每次 present 都 `SET_BUFFER_GEOMETRY`），bind 只剩"有没有窗口"这一个作用。旋转/分屏竞态不再丢帧。
 7. ~~**`stride` 单位可疑**~~：`stride_bytes(reported, width)` 先按字节读；小于一行时按像素读（×4）；仍不够则退回行宽，不再把帧拒掉。语义有单元测试，**设备上仍是待验项**（真正读数只有真机才给）。
 
-**决定（2026-11-21）**：走 `floom-winit-ohos`（A 方案）。理由是"谁拥有事件循环"这个选择只能有一个答案——ArkTS 驱动 vsync 时输入要从 ArkUI 手工转进 Rust，每加一个事件类型就要在 C++ 与 Rust 两侧各写一遍；把循环交给 Rust 后，surface/触控/键盘都由 winit 抽象统一，并且 wgpu 能拿到 `native_window` 直接上屏（当前 CPU `mmap` blit 的替代路径）。代价是要写 ArkTS/C++ 胶水，这部分只在设备上验证。
+**决定（2026-11-27，覆盖下面 2026-11-21 的决定）**：2.x 继续用 `floom-platform-harmony` 的 N-API 路径，而不是 `floom-winit-ohos`。理由来自设备证据而不是偏好：这条路上树已经按 3.125 画对、点击已经进 `host.activate`（`docs/gates/ohos.md` item 1 的 2026-11-27 段），而 winit 路径一行设备证据都没有，切过去等于把已验的东西换成未验的。代价写在明处：键盘/IME 仍然没有入口，而 `floom-winit-ohos` 是仓库里唯一带 IME 的层 —— 所以它被**标注为 frozen**（不在任何默认构建里），将来做 IME 时要么复活它，要么沿 touch 已经跑通的模式加 `floom_harmony_ime_*` 桥。§4 第 1 条因此降级为"只有 touch 有入口"。
+
+落地形态（现状）：`examples/floom-ohos` → `floom_demo_start` → `run_os_frames_with_input`；输入走 `DispatchTouchEvent` → `floom_harmony_touch(x, y, phase)` →队列→ 每帧 drain。
+
+**决定（2026-11-21，已被上面的决定覆盖）**：走 `floom-winit-ohos`（A 方案）。理由是"谁拥有事件循环"这个选择只能有一个答案——ArkTS 驱动 vsync 时输入要从 ArkUI 手工转进 Rust，每加一个事件类型就要在 C++ 与 Rust 两侧各写一遍；把循环交给 Rust 后，surface/触控/键盘都由 winit 抽象统一，并且 wgpu 能拿到 `native_window` 直接上屏（当前 CPU `mmap` blit 的替代路径）。代价是要写 ArkTS/C++ 胶水，这部分只在设备上验证。
 
 落地形态（`crates/app/floom/src/platform/ohos_winit.rs`，feature `harmony,harmony-winit`）：
 
