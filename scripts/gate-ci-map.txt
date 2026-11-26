@@ -25,6 +25,7 @@ ohos                CI platform (ohos-check)                  SDK from setup-oho
 golden              CI platform (golden examples)             pixels are the product
 size                CI core (Size budgets on ubuntu-24.04)    a 10% regression is invisible until it is not
 gpu                 local  needs an adapter; the pixel tests run in CI instead (gpu-pixels, lavapipe)
+components          CI plugins (Check component contract)       every system reads the same token tables for a widget
 style               CI plugins (Check design tokens)          colour literals bypass the theme
 module-paths        CI core (Check module paths)              src/name.rs, never src/name/mod.rs
 parity              CI core (Check gate parity)                this map and gate.sh cannot drift apart

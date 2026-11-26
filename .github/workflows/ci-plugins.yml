@@ -117,6 +117,9 @@ jobs:
           key: ecosystem-check
           save-if: ${{ github.event_name != 'merge_group' }}
 
+      - name: Check component contract
+        run: ./scripts/check-component-contract.sh
+
       - name: Check design tokens
         run: ./scripts/check-design-tokens.sh
 

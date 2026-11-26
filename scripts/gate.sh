@@ -352,6 +352,7 @@ windows    the plugins with real Windows arms compile for x86_64-pc-windows-msvc
 ohos       the HarmonyOS backend + plugins compile for aarch64-unknown-linux-ohos
 golden     the pixel-golden examples
 size       release binary sizes within 10% of the checked-in baseline
+components the three design systems agree on each widget's token tables
 style      no colour literals in the design-system widget trees
 module-paths  every module is a src/name.rs, never a src/name/mod.rs
 parity     every gate above says where it runs (scripts/gate-ci-map.txt)
@@ -649,6 +650,7 @@ has_check size && run_check size "" ./scripts/check-size-budgets.sh
 # --- design tokens (S2.3) ----------------------------------------------------
 # A widget that paints `Color::rgb(...)` ignores the theme it was given. The
 # palette lives in each crate's tokens.rs; this keeps it there.
+has_check components && run_check components "" ./scripts/check-component-contract.sh
 has_check style && run_check style "" ./scripts/check-design-tokens.sh
 has_check module-paths && run_check module-paths "" ./scripts/check-module-paths.sh
 has_check parity && run_check parity "" ./scripts/check-gate-parity.sh

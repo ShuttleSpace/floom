@@ -53,7 +53,7 @@
 | S2.1 | 插件 `abi_version`（核实为**早已成立**，本步降级为核验台账） | 每条台账前提都被命令验证过；假缺口删除 | `crates/native/floom-native-ffi/tests/c_vtable.rs` 的旧 ABI 负例 |
 | S2.2 | 资源门禁（RSS / GPU 时间；逐帧分配、峰值内存、首帧、输入延迟已由测试落地） | `just gate resources` 能绿能红 | 故意把阈值调小 → 红；恢复 → 绿 |
 | S2.3 | **完成**：82 处字面量清零——36 处 `rgba(0,0,0,0)` → `Color::TRANSPARENT`（主题自己的 `Color` 类型补了该常量）、22 处 `rgba(0,0,0,255)` → `Color::BLACK`（scrim/shadow 的 alpha 本来就叠在它上面）、14 处状态色（info/success/warning、cupertino 的 rating 黄、三个 color-picker 默认色）移进各 crate 的 `src/tokens.rs`；顺带统一 fluent banner 的 Warning（原 `#F7CE00`，与 alert 的 `#FFB900` 不一致） | 三个 `*/src/widgets/` 0 处 `Color::rgb*`；`gate.sh style` 绿，注入一个字面量即红 | `bash scripts/gate.sh style`；变异验证：往 `floom-material/src/widgets/badge.rs` 加一行 `Color::rgb(1,2,3)` → 退出码 1 |
-| S2.4 | 组件契约门禁：`ComponentSchema` 校验 token/属性/事件齐全 | 门禁能对新增组件报错 | `just gate components` 对一个故意缺 token 的组件变红 |
+| S2.4 | 完成（2026-11-26，两半） | 门禁能对新增组件报错 **DSL 半边**：`component_schema()`（`crates/system/floom-accuracy/src/agent/schema.rs`，177 行）从 `floom_dsl::ui_ir` 的 `all_prop_names`/`prop_spec`/`events_for` 生成，emit 而非手写，契约与实现不可能分叉。 **Rust 半边**：`scripts/check-component-contract.sh`（`gate components`，进 CI plugins 的 `Check component contract`）——剥掉注释后按文件抽出所引用的 `*Tokens` 表与 `tokens::*` 组，要求 (a) 每个绘制型 widget 至少读一张共享表（不画的 provider/spacer/grid/icon_paths 在脚本里显式列白名单），(b) 三套系统对同名 widget 引用的表必须一致。当前 98 个三系统共有 widget 全一致、296 个 widget 文件读共享表；注入 `use crate::tokens::ComboboxTokens;` 到 cupertino 的 `autocomplete` 立刻报 `autocomplete needs different tables per system`，删掉即绿。 注：首版没剥注释，把 cupertino `autocomplete.rs:155` 的一句散文当成依赖，误报一条——现在注释不算依赖。 | `just gate components` 对一个故意缺 token 的组件变红 |
 
 ### S3 开发者表面
 
