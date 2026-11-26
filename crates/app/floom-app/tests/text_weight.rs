@@ -274,8 +274,11 @@ fn an_unchanged_weight_keeps_its_glyph_resource() {
 // the premise this test pins does not exist there. Ignored off Apple rather than
 // relaxed everywhere: the disagreement is real and is tracked as a Windows text
 // bug in docs/progress.md, and an unguarded assertion here would fail the whole
-// CI run for a font the test does not control. Upgrade when text measurement
-// takes a font from a fixture instead of the system.
+// CI run for a font the test does not control. The invariant this test was
+// reaching for is pinned cross-platform by
+// `the_painted_lines_agree_with_the_measured_lines` below, so what remains here
+// is the font-specific claim only. Upgrade when text measurement takes a font
+// from a fixture instead of the system.
 #[cfg_attr(
     not(target_vendor = "apple"),
     ignore = "the sample strings fall in the half-pixel band only under Apple's system font; see docs/progress.md"
@@ -331,4 +334,83 @@ fn a_label_that_needs_two_lines_still_wraps() {
         painted.width <= 120.5,
         "and stay inside the box it was given: {painted:?}"
     );
+}
+
+/// The width a label takes when nothing constrains it.
+fn natural_width(text: &str) -> f64 {
+    let mut host = WidgetHost::new();
+    host.set_size(Size::new(400.0, 200.0));
+    let root = host.mount_root(
+        LayoutStyle {
+            flex_direction: floom_layout::FlexDirection::Column,
+            ..LayoutStyle::default()
+        },
+        Container::new(),
+    );
+    host.mount(root, LayoutStyle::default(), Text::new(text));
+    host.frame();
+    text_extent(&host, 0).width
+}
+
+// --- the invariant the ignored test was reaching for ------------------------
+
+/// What the box decides and what the pixels do are the same answer.
+///
+/// The test above pinned *one line* for three strings, which is a fact about a
+/// font rather than about this crate: under Segoe UI the first string wraps for
+/// real. What has to hold on every font is agreement -- measure the string at a
+/// width, lay it out at that width, and the painted height must be the height the
+/// measure reported. The old bug was exactly a disagreement here (measured one
+/// line, painted two), so this catches it without naming a face.
+#[test]
+fn the_painted_lines_agree_with_the_measured_lines() {
+    for text in [
+        "kmgfbq nctio",
+        "s rmfleynnt",
+        "Toolbar title",
+        "Count: 0",
+        "a label far wider than the box it is given by the viewport",
+    ] {
+        let natural = natural_width(text) as f32;
+        for width in [natural.floor(), natural, natural * 0.6, natural + 1.0] {
+            if width < 1.0 {
+                continue;
+            }
+            let measured = floom_text::measure(
+                text,
+                &floom_text::TextLayoutOptions {
+                    max_width: width as f64,
+                    font_size: 14.0,
+                    ..Default::default()
+                },
+            );
+
+            let mut host = WidgetHost::new();
+            host.set_size(Size::new(400.0, 200.0));
+            let root = host.mount_root(
+                LayoutStyle {
+                    flex_direction: floom_layout::FlexDirection::Column,
+                    ..LayoutStyle::default()
+                },
+                Container::new(),
+            );
+            host.mount(
+                root,
+                LayoutStyle {
+                    width: Some(floom_types::Length::Px(width)),
+                    ..LayoutStyle::default()
+                },
+                Text::new(text),
+            );
+            host.frame();
+
+            let painted = text_extent(&host, 0);
+            assert!(
+                (painted.height - measured.height).abs() < 0.75,
+                "{text:?} at width {width}: measured {:.1} tall, painted {:.1}",
+                measured.height,
+                painted.height
+            );
+        }
+    }
 }
