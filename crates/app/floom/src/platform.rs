@@ -699,6 +699,31 @@ pub fn start_android(
 /// pumped from inside itself.
 #[cfg(all(feature = "ios", target_os = "ios"))]
 pub mod ios_host {
+/// Shape a Han line and leave the `.notdef` count where `simctl` can read it.
+///
+/// A screenshot cannot answer "did the face resolve": a tofu box and a stroke
+/// carry about the same ink at 14px. Glyph id 0 can. Opt-in through the
+/// environment because this is a diagnostic, not something a shipped app does --
+/// `simctl launch` forwards `SIMCTL_CHILD_FLOOM_GLYPH_REPORT` to the app.
+fn write_glyph_report() {
+    use floom_text::{TextLayoutOptions, TextShaper};
+
+    if std::env::var_os("FLOOM_GLYPH_REPORT").is_none() {
+        return;
+    }
+    let mut shaper = TextShaper::new();
+    let shaped = shaper.shape("\u{4f60}\u{597d}\u{4e16}\u{754c}", &TextLayoutOptions::default());
+    let notdef = shaped
+        .runs
+        .iter()
+        .flat_map(|run| run.glyphs.iter())
+        .filter(|glyph| glyph.id == 0)
+        .count();
+    let path = std::env::temp_dir().join("floom-glyphs.txt");
+    let _ = std::fs::write(&path, format!("notdef={notdef}\n"));
+    println!("floom: glyph report notdef={notdef} at {}", path.display());
+}
+
     use std::cell::RefCell;
 
     use floom_app::{AppRunner, WidgetHost};
@@ -729,6 +754,7 @@ pub mod ios_host {
     /// Build the tree and paint the first frame. `scale` is
     /// `UIScreen.main.scale`: UIKit hands out points, the host wants pixels.
     pub fn start(request: AppRequest, build: BuildFn, scale: f64) -> bool {
+        write_glyph_report();
         let built = build;
         let mut platform = HostPlatform::new()
             .with_id(floom_platform_ios::IOS_PLATFORM_ID)

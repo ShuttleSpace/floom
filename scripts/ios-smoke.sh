@@ -41,7 +41,7 @@ xcrun simctl bootstatus "$UDID" -b
 say "installing and launching"
 BUNDLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
 xcrun simctl install "$UDID" "$APP"
-xcrun simctl launch "$UDID" "$BUNDLE"
+SIMCTL_CHILD_FLOOM_GLYPH_REPORT=1 xcrun simctl launch "$UDID" "$BUNDLE"
 sleep 4
 
 say "screenshot"
@@ -80,5 +80,25 @@ print(f"screen {width}x{height}: {ink} inked pixels, {blue} blue")
 if blue < 500:
     sys.exit(f"the app drew no button: {blue} blue pixels, expected at least 500")
 PY
+
+# What a screenshot cannot answer: a tofu box and a stroke carry about the same
+# ink at 14px, so the app shapes a Han line itself and leaves the `.notdef` count
+# in its sandbox. Non-zero means the face never resolved.
+DATA=$(xcrun simctl get_app_container "$UDID" "$BUNDLE" data)
+REPORT="$DATA/tmp/floom-glyphs.txt"
+tries=0
+while [ ! -f "$REPORT" ] && [ "$tries" -lt 20 ]; do
+  sleep 1
+  tries=$((tries + 1))
+done
+if [ ! -f "$REPORT" ]; then
+  echo "the app left no glyph report at $REPORT" >&2
+  exit 1
+fi
+GLYPHS=$(cat "$REPORT")
+case "$GLYPHS" in
+  "notdef=0") say "ok: Han text shaped to real glyphs ($GLYPHS)" ;;
+  *) echo "CJK text shaped to .notdef boxes: $GLYPHS" >&2; exit 1 ;;
+esac
 
 say "ok: $NAME rendered on $UDID"
