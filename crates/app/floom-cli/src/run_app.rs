@@ -236,7 +236,6 @@ fn watch_run(
     }
 }
 
-
 /// `floom run <dir> --watch`: build a Rust app and hand the reload to it.
 ///
 /// Only the app knows what "a source file changed" means for its own tree, so the
