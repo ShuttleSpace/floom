@@ -121,7 +121,18 @@ pub(crate) fn register(cx: &mut FontContext) {
             .find_map(|path| std::fs::read(path).ok().map(|bytes| (*path, bytes)));
         match registered {
             Some((path, bytes)) => {
-                cx.collection.register_fonts(Blob::from(bytes), None);
+                let ids = cx.collection.register_fonts(Blob::from(bytes), None);
+                // Registering is not enough: the stacks in `layout` ask for the
+                // *generic* sans family first, and with no OpenHarmony backend
+                // there is nothing behind that name, so every run still measures
+                // zero. Point the generic at the face we just loaded.
+                let families: Vec<_> = ids.into_iter().map(|(id, _)| id).collect();
+                if !families.is_empty() {
+                    cx.collection.set_generic_families(
+                        parley::GenericFamily::SansSerif,
+                        families.into_iter(),
+                    );
+                }
                 crate::system_fonts::note_registered(path);
             }
             None => eprintln!(

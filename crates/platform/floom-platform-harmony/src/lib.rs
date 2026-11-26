@@ -480,7 +480,6 @@ mod native {
             return false;
         }
         // From here on the queue owns `buffer`: abort on every early return.
-        crate::log(&format!("frame {w}x{h}"));
         {
             // Where the ink actually is, once: a frame drawn at logical size
             // inside a pixel-sized buffer shows ink in one corner, and that is a
@@ -528,10 +527,18 @@ mod native {
             rect_number: 0,
         };
         let rc = unsafe { OH_NativeWindow_NativeWindowFlushBuffer(window, buffer, fence, region) };
-        crate::log(&format!(
-            "presented {w}x{h} stride={} flush_rc={rc}",
-            mapping.stride
-        ));
+        // One line per run on success, every line on failure: a phone frame loop
+        // that logs unconditionally costs more than the frame does.
+        {
+            use std::sync::atomic::{AtomicBool, Ordering};
+            static ANNOUNCED: AtomicBool = AtomicBool::new(false);
+            if rc != 0 || !ANNOUNCED.swap(true, Ordering::Relaxed) {
+                crate::log(&format!(
+                    "presented {w}x{h} stride={} flush_rc={rc}",
+                    mapping.stride
+                ));
+            }
+        }
         rc == 0
     }
 

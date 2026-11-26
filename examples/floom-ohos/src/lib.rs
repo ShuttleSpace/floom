@@ -52,9 +52,11 @@ pub extern "C" fn floom_demo_start(width_px: i32, height_px: i32, density: f32) 
                 // 量一次就够：布局尺寸、缩放、内容盒子，与 present 那行
                 // `frame WxH` 对起来，就能看出 scale 在哪一段被多用了一次。
                 host.on_frame(|host| {
-                    use std::sync::atomic::{AtomicBool, Ordering};
-                    static ONCE: AtomicBool = AtomicBool::new(false);
-                    if ONCE.swap(true, Ordering::Relaxed) {
+                    use std::sync::atomic::{AtomicU32, Ordering};
+                    static FRAMES: AtomicU32 = AtomicU32::new(0);
+                    // The first frame's callback runs before layout, so the
+                    // boxes are still zero there; the third is past it.
+                    if FRAMES.fetch_add(1, Ordering::Relaxed) != 2 {
                         return;
                     }
                     let ink =
@@ -67,11 +69,19 @@ pub extern "C" fn floom_demo_start(width_px: i32, height_px: i32, density: f32) 
                                 x1: a.x1.max(b.x1),
                                 y1: a.y1.max(b.y1),
                             });
+                    let nodes: Vec<String> = host
+                        .tree_nodes()
+                        .iter()
+                        .take(4)
+                        .map(|node| format!("{:?}@{:?}", node.kind, node.bounds))
+                        .collect();
                     floom_platform_harmony::log(&format!(
-                        "host size={:?} scale={} ink={:?}",
+                        "host size={:?} scale={} ink={:?} nodes={} {:?}",
                         host.size(),
                         host.scale(),
-                        ink
+                        ink,
+                        host.tree_nodes().len(),
+                        nodes
                     ));
                 });
             },
