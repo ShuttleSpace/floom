@@ -32,7 +32,7 @@ use parley::FontContext;
 #[cfg(target_vendor = "apple")]
 const NEEDS_SYSTEM_FONTS: bool = cfg!(not(target_os = "macos"));
 
-#[cfg(target_vendor = "apple")]
+#[cfg(any(target_vendor = "apple", target_env = "ohos"))]
 use parley::fontique::Blob;
 
 /// System font directories the backend skips, most specific first.
@@ -66,6 +66,25 @@ const CJK_STEMS: &[&str] = &[
     "Arial Unicode",
 ];
 
+/// Faces to try on OpenHarmony, most specific first.
+///
+/// `HarmonyOS_Sans_SC` carries Han coverage; the plain `HarmonyOS_Sans` is the
+/// Latin face every image ships.
+#[cfg(target_env = "ohos")]
+const OHOS_FACES: &[&str] = &[
+    "/system/fonts/HarmonyOS_Sans_SC_Regular.ttf",
+    "/system/fonts/HarmonyOS_Sans.ttf",
+];
+
+/// Records which face was registered, for the hilog line the demo prints.
+#[cfg(target_env = "ohos")]
+pub(crate) fn note_registered(path: &str) {
+    let _ = crate::system_fonts::LAST_FACE.set(Some(path.to_string()));
+}
+
+#[cfg(target_env = "ohos")]
+pub static LAST_FACE: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+
 /// Registers one CJK face into `cx`, where the platform needs it.
 ///
 /// The first family in [`CJK_STEMS`] order that is actually on disk wins: that
@@ -92,7 +111,25 @@ pub(crate) fn register(cx: &mut FontContext) {
             }
         }
     }
-    #[cfg(not(target_vendor = "apple"))]
+    #[cfg(target_env = "ohos")]
+    {
+        // fontique has no OpenHarmony backend, so the collection starts empty and
+        // every run measures zero wide: the tree collapses to its padding and the
+        // screen shows a dot. The system faces are in /system/fonts.
+        let registered = OHOS_FACES
+            .iter()
+            .find_map(|path| std::fs::read(path).ok().map(|bytes| (*path, bytes)));
+        match registered {
+            Some((path, bytes)) => {
+                cx.collection.register_fonts(Blob::from(bytes), None);
+                crate::system_fonts::note_registered(path);
+            }
+            None => eprintln!(
+                "floom-text: none of {OHOS_FACES:?} could be read; text will not shape here"
+            ),
+        }
+    }
+    #[cfg(all(not(target_vendor = "apple"), not(target_env = "ohos")))]
     {
         let _ = cx;
     }

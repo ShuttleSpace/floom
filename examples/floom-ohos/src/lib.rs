@@ -49,6 +49,31 @@ pub extern "C" fn floom_demo_start(width_px: i32, height_px: i32, density: f32) 
                         || Box::new(Button::new("Floom on OpenHarmony")),
                     )),
                 );
+                // 量一次就够：布局尺寸、缩放、内容盒子，与 present 那行
+                // `frame WxH` 对起来，就能看出 scale 在哪一段被多用了一次。
+                host.on_frame(|host| {
+                    use std::sync::atomic::{AtomicBool, Ordering};
+                    static ONCE: AtomicBool = AtomicBool::new(false);
+                    if ONCE.swap(true, Ordering::Relaxed) {
+                        return;
+                    }
+                    let ink =
+                        host.semantics()
+                            .iter()
+                            .map(|(_, node)| node.bounds)
+                            .reduce(|a, b| floom_types::Rect {
+                                x0: a.x0.min(b.x0),
+                                y0: a.y0.min(b.y0),
+                                x1: a.x1.max(b.x1),
+                                y1: a.y1.max(b.y1),
+                            });
+                    floom_platform_harmony::log(&format!(
+                        "host size={:?} scale={} ink={:?}",
+                        host.size(),
+                        host.scale(),
+                        ink
+                    ));
+                });
             },
         );
         if let Err(error) = outcome {
