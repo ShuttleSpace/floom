@@ -123,6 +123,47 @@ static DISPLAY_SCALE: std::sync::atomic::AtomicU32 =
     std::sync::atomic::AtomicU32::new(1.0f32.to_bits());
 
 /// The scale the shell reported, or 1.0 when it never did.
+/// Writes one line to hilog.
+///
+/// `println!` and `log::` both go nowhere on this platform -- stdout is not
+/// collected and the `log` facade has no backend here -- so the one place that
+/// knows why a frame was rejected has to speak the system's own protocol.
+#[cfg(target_env = "ohos")]
+pub fn log(message: &str) {
+    use std::ffi::{CString, c_char, c_int};
+    #[link(name = "hilog_ndk.z")]
+    unsafe extern "C" {
+        fn OH_LOG_Print(
+            type_: c_int,
+            level: c_int,
+            domain: u32,
+            tag: *const c_char,
+            fmt: *const c_char,
+            ...
+        ) -> c_int;
+    }
+    const LOG_APP: c_int = 0;
+    const LOG_INFO: c_int = 3;
+    const DOMAIN: u32 = 0x0F10;
+    let Ok(tag) = CString::new("FloomHarmony") else {
+        return;
+    };
+    let Ok(fmt) = CString::new("%{public}s") else {
+        return;
+    };
+    let message = CString::new(message.replace('\0', "")).unwrap_or_default();
+    unsafe {
+        OH_LOG_Print(
+            LOG_APP,
+            LOG_INFO,
+            DOMAIN,
+            tag.as_ptr(),
+            fmt.as_ptr(),
+            message.as_ptr(),
+        );
+    }
+}
+
 pub fn display_scale() -> f32 {
     f32::from_bits(DISPLAY_SCALE.load(std::sync::atomic::Ordering::Relaxed))
 }
@@ -422,6 +463,9 @@ mod native {
         let usage =
             unsafe { OH_NativeWindow_NativeWindowHandleOpt(window, SET_USAGE, USAGE_CPU_RW_DMA) };
         if geometry != 0 || format != 0 || usage != 0 {
+            crate::log(&format!(
+                "handleopt failed: geometry={geometry} format={format} usage={usage}"
+            ));
             return false;
         }
         let mut buffer: *mut c_void = std::ptr::null_mut();
@@ -429,9 +473,14 @@ mod native {
         let rc =
             unsafe { OH_NativeWindow_NativeWindowRequestBuffer(window, &mut buffer, &mut fence) };
         if rc != 0 || buffer.is_null() {
+            crate::log(&format!(
+                "RequestBuffer rc={rc} buffer_null={}",
+                buffer.is_null()
+            ));
             return false;
         }
         // From here on the queue owns `buffer`: abort on every early return.
+        crate::log(&format!("frame {w}x{h}"));
         let Some(mapping) = (unsafe { map_buffer(buffer, w, h) }) else {
             unsafe { OH_NativeWindow_NativeWindowAbortBuffer(window, buffer) };
             return false;
@@ -456,6 +505,10 @@ mod native {
             rect_number: 0,
         };
         let rc = unsafe { OH_NativeWindow_NativeWindowFlushBuffer(window, buffer, fence, region) };
+        crate::log(&format!(
+            "presented {w}x{h} stride={} flush_rc={rc}",
+            mapping.stride
+        ));
         rc == 0
     }
 
@@ -483,6 +536,10 @@ mod native {
         }
         let len = hnd.size as usize;
         let stride = stride_bytes(hnd.stride, w);
+        crate::log(&format!(
+            "buffer w={} h={} stride_raw={} size={} fd={} mapped={len} stride_used={stride}",
+            hnd.width, hnd.height, hnd.stride, hnd.size, hnd.fd
+        ));
         // A buffer that cannot hold the frame would be a partial copy presented
         // as a whole frame.
         let needed = stride
