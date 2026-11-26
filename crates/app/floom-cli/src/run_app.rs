@@ -70,6 +70,9 @@ pub fn run(args: &[String]) -> Result<(), String> {
         .app
         .canonicalize()
         .map_err(|e| format!("cannot open {}: {e}", opts.app.display()))?;
+    if app.is_dir() {
+        return run_rust_dir(&app, &opts);
+    }
     if !app.is_file() {
         return Err(format!("{} is not a file", app.display()));
     }
@@ -231,6 +234,60 @@ fn watch_run(
             change.detected_after, opts.debounce_ms, rebuild_ms, relaunch_ms, total, opts.poll_ms
         );
     }
+}
+
+
+/// `floom run <dir> --watch`: build a Rust app and hand the reload to it.
+///
+/// Only the app knows what "a source file changed" means for its own tree, so the
+/// CLI's whole job here is `cargo run` plus `--watch` on the far side of `--`. The
+/// apps that answer it are the ones built on `run_desktop_software_watched`, which
+/// rebuilds in place and keeps widget state; an app that ignores the flag simply
+/// runs, which is why this is a flag and not a contract.
+fn run_rust_dir(dir: &Path, opts: &RunOpts) -> Result<(), String> {
+    let manifest = dir.join("Cargo.toml");
+    if !manifest.is_file() {
+        return Err(format!(
+            "{} has no Cargo.toml; `floom run` takes a `.tsx` file or a Rust app directory",
+            dir.display()
+        ));
+    }
+    let argv = rust_run_argv(&manifest, opts.release, opts.watch);
+    if opts.watch {
+        println!(
+            "floom: running {} with --watch; the app owns the rebuild, so changes it \
+             watches are reloaded in place rather than by restarting it",
+            dir.display()
+        );
+    }
+    let status = Command::new(&argv[0])
+        .args(&argv[1..])
+        .status()
+        .map_err(|e| format!("cannot run {}: {e}", argv[0]))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("the app exited with {status}"))
+    }
+}
+
+/// The command that starts a Rust app, flag and all. Split out so the flag
+/// placement (after `--`, or it lands on cargo) can be tested without cargo.
+fn rust_run_argv(manifest: &Path, release: bool, watch: bool) -> Vec<String> {
+    let mut argv = vec![
+        "cargo".to_string(),
+        "run".to_string(),
+        "--manifest-path".to_string(),
+        manifest.display().to_string(),
+    ];
+    if release {
+        argv.push("--release".to_string());
+    }
+    if watch {
+        argv.push("--".to_string());
+        argv.push("--watch".to_string());
+    }
+    argv
 }
 
 /// Spawn the built binary directly (not `cargo run`) so it can be killed and
@@ -954,5 +1011,26 @@ mod tests {
             "{manifest}"
         );
         let _ = fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod run_rust_tests {
+    use super::*;
+
+    #[test]
+    fn the_watch_flag_goes_after_the_separator() {
+        let argv = rust_run_argv(Path::new("/tmp/app/Cargo.toml"), false, true);
+        assert_eq!(argv[0], "cargo");
+        assert_eq!(argv[1], "run");
+        let separator = argv.iter().position(|a| a == "--").expect("a `--`");
+        assert_eq!(&argv[separator + 1..], &["--watch".to_string()]);
+    }
+
+    #[test]
+    fn without_watch_the_app_is_started_plainly() {
+        let argv = rust_run_argv(Path::new("/tmp/app/Cargo.toml"), true, false);
+        assert!(!argv.iter().any(|a| a == "--watch"));
+        assert!(argv.contains(&"--release".to_string()));
     }
 }

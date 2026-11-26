@@ -27,6 +27,7 @@
 
 - 现状：`floom run --watch` 是**文件级热重启**——进程重启、状态丢失。
 - 为什么 TSX 路径上"原地重建"不值得做（2026-11-26 判定）：`floom run` 的 `.tsx` 路径会生成一个临时 crate 再编译，改一次源码本来就要重新编译；编译完再启动进程与"编译完在原进程里重建"耗时相同，而后者只能保住用户态的 widget 状态——一个刚被重新编译的二进制没有旧状态可保。真正需要原地重建的是**应用自己持有重建闭包**的场景（Rust 应用），所以入口做成 `floom::run_desktop_software_watched`，由应用决定"什么算源码变了"，CLI 不替它猜。
+- `floom run <dir> --watch`（2026-11-26）：目录里有 `Cargo.toml` 时，CLI 用 `cargo run … -- --watch` 启动并把 `--watch` 交给应用，**重建由应用自己做**（`floom::run_desktop_software_watched`），CLI 不杀进程。
 - 机制那一半是**做完了的**（2026-11-25）：`floom_hot_reload::watch::Watch` 轮询 mtime（忽略 `target/`、首次静默、删除也上报）、`WidgetHost::remount` 重建并按 authored key 路径搬状态、`Widget::carry_state` 由 `Text`/`Switch`/`TextInput`/`Scroll` 实现。接线也有了：`floom::run_desktop_software_watched(title, size, build, watch)`——`build` 是 `Fn`（不是 `FnOnce`），循环空闲时问一次 `watch()`，为真就 `remount`。`floom run --watch` 本身仍是进程重启（CLI 侧还没切）。
 - 更早的事实，留着免得有人重查：`crates/devtools/floom-hot-reload/src/patch.rs:88` 的 `LiveTree::apply(&UiPatch, &mut DirtySet)` 事务式应用补丁（任一 op 失败则 `restore(checkpoint)` 并返回 `RolledBack { failed_at, reason }`），keys 与 `stash` 跨补丁保留，`tests/hot_reload.rs::ids_and_stashed_state_survive_a_compatible_patch` 证明。
 - 卡住的不是补丁，是**两棵树**：`LiveTree` 是 `WidgetHost` 的只读镜像（`describe(&[HostedNode]) -> LiveTree`），补丁改的是镜像，像素由 `WidgetHost` 决定；把镜像的改动送回去，要么让 host 由文档构建（`floom-dsl` 的 `UiDocument` 直接驱动挂载），要么给 host 加一条按 key 重挂的入口。这是设计决策，不是接线——所以它停在未开始，而不是差一个 watcher。
