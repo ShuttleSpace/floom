@@ -1323,6 +1323,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "floom-ohos"
+version = "0.2.0"
+dependencies = [
+ "floom",
+ "floom-core",
+ "floom-layout",
+ "floom-platform-harmony",
+ "floom-types",
+ "floom-widgets",
+]
+
+[[package]]
 name = "floom-platform"
 version = "0.2.0"
 dependencies = [

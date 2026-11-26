@@ -1,0 +1,18 @@
+[package]
+name = "floom-ohos"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+floom = { workspace = true, features = ["harmony"] }
+floom-platform-harmony = { workspace = true }
+floom-core = { workspace = true }
+floom-layout = { workspace = true }
+floom-types = { workspace = true }
+floom-widgets = { workspace = true }
+
+[lib]
+crate-type = ["cdylib"]
