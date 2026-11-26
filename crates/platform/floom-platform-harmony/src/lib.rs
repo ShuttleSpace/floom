@@ -481,6 +481,29 @@ mod native {
         }
         // From here on the queue owns `buffer`: abort on every early return.
         crate::log(&format!("frame {w}x{h}"));
+        {
+            // Where the ink actually is, once: a frame drawn at logical size
+            // inside a pixel-sized buffer shows ink in one corner, and that is a
+            // different bug from a frame that never arrived.
+            use std::sync::atomic::{AtomicBool, Ordering};
+            static REPORTED: AtomicBool = AtomicBool::new(false);
+            if !REPORTED.swap(true, Ordering::Relaxed) {
+                let mut bbox = (usize::MAX, usize::MAX, 0usize, 0usize);
+                let mut inked = 0usize;
+                for y in 0..h {
+                    for x in 0..w {
+                        if frame[(y * w + x) * 4 + 3] > 0 {
+                            inked += 1;
+                            bbox = (bbox.0.min(x), bbox.1.min(y), bbox.2.max(x), bbox.3.max(y));
+                        }
+                    }
+                }
+                crate::log(&format!(
+                    "ink={inked} bbox={}x{}-{}x{}",
+                    bbox.0, bbox.1, bbox.2, bbox.3
+                ));
+            }
+        }
         let Some(mapping) = (unsafe { map_buffer(buffer, w, h) }) else {
             unsafe { OH_NativeWindow_NativeWindowAbortBuffer(window, buffer) };
             return false;
