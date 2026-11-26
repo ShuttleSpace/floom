@@ -123,50 +123,50 @@ static DISPLAY_SCALE: std::sync::atomic::AtomicU32 =
     std::sync::atomic::AtomicU32::new(1.0f32.to_bits());
 
 /// The scale the shell reported, or 1.0 when it never did.
-/// Writes one line to hilog.
-///
-/// `println!` and `log::` both go nowhere on this platform -- stdout is not
-/// collected and the `log` facade has no backend here -- so the one place that
-/// knows why a frame was rejected has to speak the system's own protocol.
-#[cfg(target_env = "ohos")]
-pub fn log(message: &str) {
-    use std::ffi::{CString, c_char, c_int};
-    #[link(name = "hilog_ndk.z")]
-    unsafe extern "C" {
-        fn OH_LOG_Print(
-            type_: c_int,
-            level: c_int,
-            domain: u32,
-            tag: *const c_char,
-            fmt: *const c_char,
-            ...
-        ) -> c_int;
-    }
-    const LOG_APP: c_int = 0;
-    const LOG_INFO: c_int = 3;
-    const DOMAIN: u32 = 0x0F10;
-    let Ok(tag) = CString::new("FloomHarmony") else {
-        return;
-    };
-    let Ok(fmt) = CString::new("%{public}s") else {
-        return;
-    };
-    let message = CString::new(message.replace('\0', "")).unwrap_or_default();
-    unsafe {
-        OH_LOG_Print(
-            LOG_APP,
-            LOG_INFO,
-            DOMAIN,
-            tag.as_ptr(),
-            fmt.as_ptr(),
-            message.as_ptr(),
-        );
-    }
-}
-
 pub fn display_scale() -> f32 {
     f32::from_bits(DISPLAY_SCALE.load(std::sync::atomic::Ordering::Relaxed))
 }
+
+/// Writes one line to hilog on the device, to stderr on a desk.
+///
+/// `println!` and `log::` both go nowhere on OpenHarmony -- stdout is not
+/// collected and the `log` facade has no backend here -- so the one place that
+/// knows why a frame was rejected has to speak the system's own protocol.
+pub fn log(message: &str) {
+    #[cfg(not(target_env = "ohos"))]
+    {
+        eprintln!("floom-harmony: {message}");
+    }
+    #[cfg(target_env = "ohos")]
+    {
+        use std::ffi::{CString, c_char, c_int};
+        #[link(name = "hilog_ndk.z")]
+        unsafe extern "C" {
+            fn OH_LOG_Print(
+                type_: c_int,
+                level: c_int,
+                domain: u32,
+                tag: *const c_char,
+                fmt: *const c_char,
+                ...
+            ) -> c_int;
+        }
+        const LOG_APP: c_int = 0;
+        const LOG_INFO: c_int = 3;
+        const DOMAIN: u32 = 0x0F10;
+        let Ok(tag) = CString::new("FloomHarmony") else {
+            return;
+        };
+        let Ok(fmt) = CString::new("%{public}s") else {
+            return;
+        };
+        let text = CString::new(message.replace('\0', "")).unwrap_or_default();
+        unsafe {
+            OH_LOG_Print(LOG_APP, LOG_INFO, DOMAIN, tag.as_ptr(), fmt.as_ptr(), text.as_ptr());
+        }
+    }
+}
+
 
 /// Records the display scale. Called by the shell; a redraw picks it up.
 #[unsafe(no_mangle)]

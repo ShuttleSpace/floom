@@ -2,22 +2,7 @@
 //! iOS platform backend — a UIKit app, not an embedded board.
 //!
 //! iOS is a full OS: UIKit owns the window, lifecycle, touch, IME and
-//! clipboard, and it links Rust as a **/// Pixels per logical point, reported by the UIKit host.
-static DISPLAY_SCALE: std::sync::atomic::AtomicU32 =
-    std::sync::atomic::AtomicU32::new(1.0f32.to_bits());
-
-pub fn display_scale() -> f32 {
-    f32::from_bits(DISPLAY_SCALE.load(std::sync::atomic::Ordering::Relaxed))
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn floom_ios_set_display_scale(scale: f32) {
-    if scale.is_finite() && scale > 0.0 {
-        DISPLAY_SCALE.store(scale.to_bits(), std::sync::atomic::Ordering::Relaxed);
-    }
-}
-
-static library** (there is no dynamic
+//! clipboard, and it links Rust as a **static library** (there is no dynamic
 //! N-API loader on iOS; this is the symmetric case to HarmonyOS's `ohos-rs`
 //! cdylib). A `UIView` backed by a `CGBitmapContext` or a `CAMetalLayer`
 //! hands Rust its drawable pixel buffer; the software renderer produces an
@@ -47,6 +32,26 @@ static library** (there is no dynamic
 //! keyboard) live in [`packages`]. They use objc2/UIKit for the reads Rust can
 //! do on its own, and a C ABI seam for facts UIKit only delivers to the host
 //! (keyboard notifications, IME text) — see `packages/keyboard/soft_input`.
+
+/// Pixels per logical point, reported by the UIKit host.
+///
+/// 1.0 until the host says otherwise, which is what a windowless test wants.
+static DISPLAY_SCALE: std::sync::atomic::AtomicU32 =
+    std::sync::atomic::AtomicU32::new(1.0f32.to_bits());
+
+/// The scale the host reported, or 1.0 when it never did.
+pub fn display_scale() -> f32 {
+    f32::from_bits(DISPLAY_SCALE.load(std::sync::atomic::Ordering::Relaxed))
+}
+
+/// Records the display scale; the frame loop picks it up on the next frame.
+#[unsafe(no_mangle)]
+pub extern "C" fn floom_ios_set_display_scale(scale: f32) {
+    if scale.is_finite() && scale > 0.0 {
+        DISPLAY_SCALE.store(scale.to_bits(), std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
 
 pub mod packages;
 

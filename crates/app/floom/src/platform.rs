@@ -894,6 +894,7 @@ mod harmony {
             // Not `run_os_frames`: the shell pushes touches into a queue and this
             // loop is the only thing that can hand them to the platform, because
             // it owns the `HostPlatform` the widgets are driven through.
+            #[cfg(target_env = "ohos")]
             super::run_os_frames_with_input(
                 request,
                 build,
@@ -945,6 +946,7 @@ mod harmony {
 /// Kept separate rather than as a parameter on the common path: only a backend
 /// whose input arrives out of band needs it, and every other caller would pass a
 /// closure that does nothing.
+#[cfg(any(feature = "harmony", feature = "ios"))]
 #[allow(clippy::too_many_arguments)]
 fn run_os_frames_with_input(
     request: AppRequest,
@@ -985,6 +987,7 @@ fn run_os_frames_with_input(
     Ok(())
 }
 
+#[cfg(any(feature = "harmony", feature = "ios"))]
 fn run_os_frames(
     request: AppRequest,
     build: BuildFn,
