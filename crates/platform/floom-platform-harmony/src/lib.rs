@@ -114,6 +114,27 @@ pub fn stride_bytes(reported: i32, width: usize) -> usize {
 ///
 /// The window is stored as an address because a raw pointer is not `Send`, and
 /// a `static Mutex` needs `Sync`.
+/// Pixels per logical point of the display, set by the ArkTS shell.
+///
+/// 1.0 means "logical points are pixels", which is what a desktop means and
+/// wrong on every phone: presenting a logical-sized frame into a 3x surface
+/// shows one corner.
+static DISPLAY_SCALE: std::sync::atomic::AtomicU32 =
+    std::sync::atomic::AtomicU32::new(1.0f32.to_bits());
+
+/// The scale the shell reported, or 1.0 when it never did.
+pub fn display_scale() -> f32 {
+    f32::from_bits(DISPLAY_SCALE.load(std::sync::atomic::Ordering::Relaxed))
+}
+
+/// Records the display scale. Called by the shell; a redraw picks it up.
+#[unsafe(no_mangle)]
+pub extern "C" fn floom_harmony_set_display_scale(scale: f32) {
+    if scale.is_finite() && scale > 0.0 {
+        DISPLAY_SCALE.store(scale.to_bits(), std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
 static SURFACE: Mutex<Option<Bound>> = Mutex::new(None);
 
 // The fields are read only on the OHOS target (`present_frame`'s blit is

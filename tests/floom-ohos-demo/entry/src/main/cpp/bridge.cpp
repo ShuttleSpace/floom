@@ -28,7 +28,7 @@ extern "C" bool floom_harmony_present_frame(const uint8_t* rgba, size_t len, int
 extern "C" void floom_harmony_release_surface();
 // Runs the Floom widget tree on its own thread; it presents through
 // `floom_harmony_present_frame` and therefore needs a bound surface first.
-extern "C" void floom_demo_start();
+extern "C" void floom_demo_start(int32_t width, int32_t height, float density);
 
 namespace {
 
@@ -88,7 +88,7 @@ void on_surface_created(OH_NativeXComponent* component, void* window) {
        sz, (unsigned long long)w, (unsigned long long)h, window, bound ? 1 : 0);
   // The tree owns the pixels from here on: no gradient, no vsync loop of our own.
   if (bound) {
-    floom_demo_start();
+    floom_demo_start(g_width, g_height, 3.125f);
     LOGI("floom_demo_start returned");
   }
 }

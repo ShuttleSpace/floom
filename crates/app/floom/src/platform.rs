@@ -670,6 +670,7 @@ mod ios {
                 build,
                 floom_platform_ios::IOS_PLATFORM_ID,
                 floom_platform_ios::capabilities(),
+                floom_platform_ios::display_scale(),
                 floom_platform_ios::present,
             )
         }
@@ -895,6 +896,7 @@ mod harmony {
                 build,
                 floom_platform_harmony::HARMONY_PLATFORM_ID,
                 floom_platform_harmony::capabilities(),
+                floom_platform_harmony::display_scale(),
                 floom_platform_harmony::present,
             )
         }
@@ -919,13 +921,20 @@ fn run_os_frames(
     build: BuildFn,
     id: floom_types::PlatformId,
     caps: PlatformCapabilities,
+    scale: f32,
     present: fn(&[u8], u32, u32) -> bool,
 ) -> Result<(), String> {
     use floom_app::{AppRunner, WidgetHost};
     use floom_platform::{HostPlatform, Platform, WindowConfig};
     use floom_renderer_software::SoftwarePresenter;
 
-    let mut platform = HostPlatform::new().with_id(id).with_capabilities(caps);
+    // The presenter allocates `size * scale` pixels, so this has to be the
+    // surface's scale: presenting a logical-sized frame into a surface-sized
+    // buffer paints one corner and leaves the rest black.
+    let mut platform = HostPlatform::new()
+        .with_id(id)
+        .with_capabilities(caps)
+        .with_scale_factor(scale as f64);
     let window = platform.create_window(WindowConfig {
         title: request.title,
         size: request.size,
