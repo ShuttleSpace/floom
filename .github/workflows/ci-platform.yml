@@ -297,6 +297,12 @@ jobs:
           # The same for the driver: the only thing that catches a broken
           # `#[link]` before the device does.
           cargo build --package=floom --features harmony,harmony-winit --target aarch64-unknown-linux-ohos
+      # The example is the only thing that links the whole stack for this
+      # target -- harmony + widgets + text + the native_window library -- which
+      # is the difference between "the backend compiles" and "an app links".
+      - name: Link the OpenHarmony example
+        run: |
+          cargo build --package=floom-ohos --target aarch64-unknown-linux-ohos
 
   # The first target where the *app* runs in CI, not just the crate that could
   # build it. `ios-check` above cross-compiles; this job scaffolds an app from
