@@ -610,11 +610,13 @@ impl Widget for TextInput {
         }
 
         let (shown, color) = self.shown();
-        let baseline = bounds.y0
-            + style.padding_vert
-            + f64::from(crate::controls::text_ascent_at(self.style.font_size));
+        // `fill_text`'s origin is the top of the line box, not the baseline --
+        // adding the ascent here put the text one ascent lower than its caret.
+        // Vertically centred in the box, like `floom-ui`'s text field: padding
+        // alone leaves the text hanging at the top of a tall field.
+        let top = bounds.y0 + (bounds.height() - f64::from(style.font_size)) / 2.0;
         cx.fill_text(
-            floom_types::Point::new(bounds.x0 + style.padding_horiz, baseline),
+            floom_types::Point::new(bounds.x0 + style.padding_horiz, top),
             &shown,
             style.font_size,
             style.font_weight,
@@ -629,9 +631,8 @@ impl Widget for TextInput {
             // cannot yet do.
             let width = crate::controls::text_width_at(&shown, style.font_size);
             let x = (bounds.x0 + style.padding_horiz) as f32 + width;
-            // The caret spans the glyphs, not the line box: `text_line_height_at`
-            // includes the line gap, which made it visibly taller than the text.
-            let top = baseline - f64::from(crate::controls::text_ascent_at(style.font_size));
+            // Same origin as the text, one font size tall: the caret now covers
+            // exactly the glyph box that was just drawn.
             let bottom = top + f64::from(style.font_size);
             cx.fill_rect(
                 Rect {
