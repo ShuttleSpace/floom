@@ -213,6 +213,41 @@ pub fn take_touches() -> Vec<Touch> {
         .unwrap_or_default()
 }
 
+static IME_COMMITS: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+/// Queues text the ArkTS shell committed on behalf of a focused field.
+///
+/// The shell owns the keyboard, so composition arrives out of band exactly like
+/// touches do. `ptr`/`len` are a UTF-8 buffer the caller keeps until this returns.
+///
+/// # Safety
+///
+/// `ptr` must point at `len` readable bytes, or be null with `len == 0`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn floom_harmony_text_input(ptr: *const u8, len: usize) {
+    // A composition longer than this is not a composition; refuse rather than
+    // allocate whatever a broken caller sends.
+    const MAX: usize = 64 * 1024;
+    if ptr.is_null() || len == 0 || len > MAX {
+        return;
+    }
+    let bytes = unsafe { std::slice::from_raw_parts(ptr, len) };
+    let Ok(text) = std::str::from_utf8(bytes) else {
+        return;
+    };
+    if let Ok(mut commits) = IME_COMMITS.lock() {
+        commits.push(text.to_string());
+    }
+}
+
+/// Takes every committed string since the last frame.
+pub fn take_ime_commits() -> Vec<String> {
+    IME_COMMITS
+        .lock()
+        .map(|mut commits| std::mem::take(&mut *commits))
+        .unwrap_or_default()
+}
+
 static SURFACE: Mutex<Option<Bound>> = Mutex::new(None);
 
 // The fields are read only on the OHOS target (`present_frame`'s blit is
@@ -729,5 +764,26 @@ mod tests {
             let _ = floom_harmony_present_frame(frame.as_ptr(), frame.len(), 2, 2);
         }
         floom_harmony_release_surface();
+    }
+}
+
+#[cfg(test)]
+mod input_tests {
+    use super::*;
+
+    #[test]
+    fn a_commit_reaches_the_queue_and_is_taken_once() {
+        let text = "汉字 and ascii";
+        unsafe { floom_harmony_text_input(text.as_ptr(), text.len()) };
+        assert_eq!(take_ime_commits(), vec![text.to_string()]);
+        assert!(take_ime_commits().is_empty(), "take means take");
+    }
+
+    #[test]
+    fn junk_is_refused_rather_than_queued() {
+        unsafe { floom_harmony_text_input(std::ptr::null(), 4) };
+        unsafe { floom_harmony_text_input(b"x".as_ptr(), 0) };
+        unsafe { floom_harmony_text_input([0xFFu8, 0xFE].as_ptr(), 2) };
+        assert!(take_ime_commits().is_empty());
     }
 }

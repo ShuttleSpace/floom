@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <string>
 #include <vector>
 
 #include <napi/native_api.h>
@@ -30,6 +31,7 @@ extern "C" void floom_harmony_release_surface();
 // `floom_harmony_present_frame` and therefore needs a bound surface first.
 extern "C" void floom_demo_start(int32_t width, int32_t height, float density);
 extern "C" void floom_harmony_touch(double x, double y, uint8_t phase);
+extern "C" void floom_harmony_text_input(const uint8_t* bytes, size_t len);
 
 namespace {
 
@@ -146,6 +148,24 @@ void on_surface_destroyed(OH_NativeXComponent* /*component*/, void* /*window*/) 
 // OH_NATIVE_XCOMPONENT_OBJ into this module's `exports` before calling Init.
 // This is the Flutter `library_loader.cpp` / `XComponentAdapter::Export` seam:
 // the handle comes from `exports`, NOT from an onLoad callback argument.
+// The ArkTS side owns the keyboard, so committed text arrives here as a string.
+napi_value TextInput(napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value argv[1];
+  napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
+  size_t len = 0;
+  if (argc < 1 || napi_get_value_string_utf8(env, argv[0], nullptr, 0, &len) != napi_ok ||
+      len == 0) {
+    return nullptr;
+  }
+  std::string text(len, '\0');
+  if (napi_get_value_string_utf8(env, argv[0], text.data(), len + 1, &len) != napi_ok) {
+    return nullptr;
+  }
+  floom_harmony_text_input(reinterpret_cast<const uint8_t*>(text.data()), len);
+  return nullptr;
+}
+
 napi_value Init(napi_env env, napi_value exports) {
   napi_value xcObj = nullptr;
   napi_get_named_property(env, exports, OH_NATIVE_XCOMPONENT_OBJ, &xcObj);
@@ -160,6 +180,10 @@ napi_value Init(napi_env env, napi_value exports) {
     g_callback.DispatchTouchEvent = on_touch;
     reg = OH_NativeXComponent_RegisterCallback(g_component, &g_callback);
   }
+  napi_property_descriptor exported[] = {
+      {"textInput", nullptr, TextInput, nullptr, nullptr, nullptr, napi_default, nullptr},
+  };
+  napi_define_properties(env, exports, sizeof(exported) / sizeof(exported[0]), exported);
   LOGI("Init component=%{public}p RegisterCallback=%{public}d", g_component, reg);
   return exports;
 }
