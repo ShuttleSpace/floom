@@ -57,11 +57,14 @@ pub extern "C" fn floom_demo_start(width_px: i32, height_px: i32, density: f32) 
                         // type on the soft keyboard, and the text has to arrive.
                         .child(floom_core::Child::new(
                             floom_core::ChildKey::index(1),
-                            floom_core::LayoutRequest::new(),
+                            floom_core::LayoutRequest::new().width(320.0).height(44.0),
                             || {
-                                Box::new(floom_widgets::TextInput::new(std::sync::Arc::new(
-                                    std::sync::Mutex::new(String::new()),
-                                )))
+                                Box::new(
+                                    floom_widgets::TextInput::new(std::sync::Arc::new(
+                                        std::sync::Mutex::new(String::new()),
+                                    ))
+                                    .placeholder("输入 CJK…"),
+                                )
                             },
                         )),
                 );
