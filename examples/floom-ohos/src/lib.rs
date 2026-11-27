@@ -63,7 +63,17 @@ pub extern "C" fn floom_demo_start(width_px: i32, height_px: i32, density: f32) 
                                     floom_widgets::TextInput::new(std::sync::Arc::new(
                                         std::sync::Mutex::new(String::new()),
                                     ))
-                                    .placeholder("输入 CJK…"),
+                                    .placeholder("输入 CJK…")
+                                    // The window has no light surface of its own, so
+                                    // the defaults (near-black text, 1 px hairline)
+                                    // are invisible on it. Give the field its own.
+                                    .style(
+                                        floom_widgets::TextInputStyle {
+                                            background: Some(floom_types::Color::WHITE),
+                                            border_color: floom_types::Color::rgb(0x1D, 0x1B, 0x20),
+                                            ..Default::default()
+                                        },
+                                    ),
                                 )
                             },
                         )),
