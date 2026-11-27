@@ -96,7 +96,12 @@ pub(crate) fn text_height_at(size: f32) -> f32 {
 /// and a first line agree at every size — and `text_ascent_at` exists rather than a
 /// formula so that a future real measurement replaces one place.
 pub(crate) fn text_ascent_at(size: f32) -> f32 {
-    floom_text::measure_text("Hg", size, f64::INFINITY).height as f32 * 0.8
+    text_line_height_at(size) * 0.8
+}
+
+/// Height of one line of text at `size` — the box a caret has to fill.
+pub(crate) fn text_line_height_at(size: f32) -> f32 {
+    floom_text::measure_text("Hg", size, f64::INFINITY).height as f32
 }
 
 /// Shared hover/press/focus/disable state for interactive controls.

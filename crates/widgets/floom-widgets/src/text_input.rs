@@ -629,8 +629,10 @@ impl Widget for TextInput {
             // cannot yet do.
             let width = crate::controls::text_width_at(&shown, style.font_size);
             let x = (bounds.x0 + style.padding_horiz) as f32 + width;
+            // The caret is as tall as the text it sits next to, not as the box:
+            // a box-minus-padding caret grows with padding and reads as a bar.
             let top = bounds.y0 + style.padding_vert;
-            let bottom = bounds.y1 - style.padding_vert;
+            let bottom = top + f64::from(crate::controls::text_line_height_at(style.font_size));
             cx.fill_rect(
                 Rect {
                     x0: x as f64,
