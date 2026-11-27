@@ -68,3 +68,9 @@
   silent timeout — is the ArkTS-side log emitted on the JS thread:
   `A03D00/JSAPP: [floom] a11y tree updated: {"root":…,"nodes":[{"id":…,"role":"button","label":"+"…}]}`
   (3×, tid 29653 = pid).
+
+### 2026-11-27 收工时的三个未决（按决定记录）
+
+1. **返回键：选 B（语义正确的那条）**。`EntryAbility.onBackPressed` → napi → 新 `PlatformEvent::Back { window }`；host 默认"有可返回栈就 pop，没有就退出应用"。不做 A（映射成 `KeyCode::Escape`）——那会把"返回"这件事伪装成按键，等真做导航时两套语义会打架。改动跨 `floom-platform`（新变体）、`floom-app`（处理）、`tests/floom-ohos-demo`（`onBackPressed` + cpp 导出）三处，各配一个测试。
+2. **英文文本与光标高度/居中不一致**：光标现在用 `text_line_height_at(font_size)`（`measure_text("Hg")`），而文字基线是 `padding_vert + ascent(=line*0.8)`。两者对 Latin 应该一致；设备上看到"光标比字高且不居中"，说明还有一处用的是**框高**（可能是 `TextInputStyle` 之外的默认值，或 host 侧的 focus ring/caret 绘制路径）。下一步：在设备上把 `line`, `ascent`, `bounds` 三个数一起打出来（`text_input.rs` 的 paint 里已有全部输入），看是画错还是量错。
+3. **CJK 打不进 TextInput（显示不出来）**：`examples/floom-ohos` 的 shaper 已注册 HarmonyOS Sans 且 `set_generic_families` 过，按钮文字因此能画；但 `fill_text` 走的是渲染器自己的字体上下文 —— 需要确认它与 `floom_text` 的注册是同一份。查法：在 `floom-renderer-*` 的 `fill_text` 里打印解析到的 face id，若与 shaper 注册的不一致，就是第二处字体上下文（macOS 上踩过同样的坑：一个进程三处字体库）。
