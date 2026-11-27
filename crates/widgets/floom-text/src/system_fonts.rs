@@ -72,7 +72,9 @@ const CJK_STEMS: &[&str] = &[
 /// Latin face every image ships.
 #[cfg(target_env = "ohos")]
 const OHOS_FACES: &[&str] = &[
-    "/system/fonts/HarmonyOS_Sans_SC_Regular.ttf",
+    // The device ships `HarmonyOS_Sans_SC.ttf`; there is no `_Regular` variant.
+    // A wrong path here is silent -- text still measures, just without Han.
+    "/system/fonts/HarmonyOS_Sans_SC.ttf",
     "/system/fonts/HarmonyOS_Sans.ttf",
 ];
 
