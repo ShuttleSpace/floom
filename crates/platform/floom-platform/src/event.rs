@@ -80,6 +80,15 @@ pub enum PlatformEvent {
         window: WindowId,
         text: String,
     },
+    /// The platform's own "go back" affordance: Android's hardware/gesture back,
+    /// OpenHarmony's back gesture.
+    ///
+    /// A variant rather than an Escape key: a shell that fakes a key press makes
+    /// navigation a special case of typing, and apps cannot tell the difference
+    /// between "the user wants to go back" and "the user pressed Esc".
+    Back {
+        window: WindowId,
+    },
     RedrawRequested {
         window: WindowId,
     },

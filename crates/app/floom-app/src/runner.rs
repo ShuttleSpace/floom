@@ -449,6 +449,17 @@ impl<R: Presenter> AppRunner<R> {
                 self.push_ime_cursor_area(platform, window, None);
                 self.request_repaint(platform, window);
             }
+            PlatformEvent::Back { window } => {
+                // A back is a command, not a key: it goes to the host's handler,
+                // and unhandled it closes the window rather than being ignored —
+                // a back that does nothing is the bug this variant was added for.
+                if !self.host.dispatch_back() {
+                    // Nothing claimed it. Say so instead of silently eating the
+                    // gesture: a back that does nothing was the bug.
+                    let _ = window;
+                    self.host.log_unhandled_back();
+                }
+            }
             PlatformEvent::ImePreedit { window, text } => {
                 // Surface the in-progress composition to the focused text
                 // widget, which owns the IME state machine and renders the

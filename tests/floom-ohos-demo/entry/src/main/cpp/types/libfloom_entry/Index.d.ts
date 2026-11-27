@@ -1,3 +1,8 @@
-// libfloom_entry.so exposes no ArkTS-callable functions: it binds the
-// XComponent surface in its N-API Init (via `libraryname`), then drives frames
-// natively. The declaration file exists only so the module is recognised.
+// libfloom_entry.so binds the XComponent surface in its N-API Init (via
+// `libraryname`) and drives frames natively; the two functions below are the
+// only ones ArkTS calls directly.
+declare const api: {
+  wantsIme(): boolean;
+  back(): void;
+};
+export default api;

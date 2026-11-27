@@ -1,6 +1,7 @@
 import { AbilityConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import nativeApi from 'libfloom_entry.so';
 
 const TAG = 'FloomOHOS';
 
@@ -17,5 +18,12 @@ export default class EntryAbility extends UIAbility {
         return;
       }
     });
+  }
+
+  onBackPressed(): boolean {
+    // Forwarded to the framework, which records a Back event. `false` keeps the
+    // system default (close the app) for the case where nothing claims it.
+    nativeApi.back();
+    return false;
   }
 }

@@ -508,6 +508,7 @@ pub struct WidgetHost {
     root: Option<usize>,
     ids: IdAllocator,
     router: EventRouter,
+    on_back: Option<Box<dyn FnMut() -> bool>>,
     layout: LayoutEngine,
     scene: Scene,
     resources: ResourceRegistry,
@@ -929,6 +930,7 @@ impl WidgetHost {
         let mut focus = FocusManager::new();
         let scope = focus.create_scope(None);
         Self {
+            on_back: None,
             nodes: Vec::new(),
             focus_ring: Some(FocusRing::DEFAULT),
             ring_edges: [None; 4],
@@ -2500,6 +2502,29 @@ impl WidgetHost {
     /// answers for the *widget* rather than for the tree's grouping of it.
     pub fn semantics_hint(&self, node: NodeId) -> Option<SemanticsHint> {
         self.nodes.get(node.0)?.widget.semantics_hint()
+    }
+
+    /// Installs the app's "go back" policy.
+    ///
+    /// The framework has no navigation stack to pop, so it cannot invent one:
+    /// return `false` and the shell is told the back was not handled. That is
+    /// the whole contract — deciding what back *means* is the app's job, which
+    /// is why this is a callback and not a stack.
+    pub fn set_back_handler(&mut self, handler: impl FnMut() -> bool + 'static) {
+        self.on_back = Some(Box::new(handler));
+    }
+
+    /// Records that a back arrived and nobody claimed it.
+    pub fn log_unhandled_back(&self) {
+        eprintln!("floom: back was not handled; install one with set_back_handler");
+    }
+
+    /// Runs the app's back policy. `false` means nothing claimed it.
+    pub fn dispatch_back(&mut self) -> bool {
+        match self.on_back.as_mut() {
+            Some(handler) => handler(),
+            None => false,
+        }
     }
 
     /// Whether the focused node is a text field, i.e. whether a platform shell

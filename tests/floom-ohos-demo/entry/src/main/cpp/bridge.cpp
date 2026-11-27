@@ -32,6 +32,7 @@ extern "C" void floom_harmony_release_surface();
 extern "C" void floom_demo_start(int32_t width, int32_t height, float density);
 extern "C" void floom_harmony_touch(double x, double y, uint8_t phase);
 extern "C" void floom_harmony_text_input(const uint8_t* bytes, size_t len);
+extern "C" void floom_harmony_back();
 extern "C" bool floom_harmony_wants_ime();
 
 namespace {
@@ -167,6 +168,12 @@ napi_value TextInput(napi_env env, napi_callback_info info) {
   return nullptr;
 }
 
+napi_value Back(napi_env env, napi_callback_info info) {
+  (void)env; (void)info;
+  floom_harmony_back();
+  return nullptr;
+}
+
 napi_value WantsIme(napi_env env, napi_callback_info info) {
   napi_value result = nullptr;
   napi_get_boolean(env, floom_harmony_wants_ime(), &result);
@@ -189,6 +196,7 @@ napi_value Init(napi_env env, napi_value exports) {
   }
   napi_property_descriptor exported[] = {
       {"textInput", nullptr, TextInput, nullptr, nullptr, nullptr, napi_default, nullptr},
+      {"back", nullptr, Back, nullptr, nullptr, nullptr, napi_default, nullptr},
       {"wantsIme", nullptr, WantsIme, nullptr, nullptr, nullptr, napi_default, nullptr},
   };
   napi_define_properties(env, exports, sizeof(exported) / sizeof(exported[0]), exported);

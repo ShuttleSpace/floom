@@ -254,6 +254,29 @@ pub unsafe extern "C" fn floom_harmony_text_input(ptr: *const u8, len: usize) {
     }
 }
 
+static BACK_REQUESTS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+
+/// Records one "go back" and returns. Called from the shell's back handler.
+///
+/// # Safety
+///
+/// Touches only an atomic, so it is safe to call from any thread; `unsafe` only
+/// because the shell's foreign-function declaration makes it so.
+#[cfg(target_env = "ohos")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn floom_harmony_back() {
+    BACK_REQUESTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Takes the backs recorded since the last call, saturating at one.
+///
+/// One is enough: a back is a decision, not a count, and two baked-in backs
+/// would pop twice on a single gesture.
+#[cfg(target_env = "ohos")]
+pub fn take_back_requests() -> bool {
+    BACK_REQUESTS.swap(0, std::sync::atomic::Ordering::Relaxed) > 0
+}
+
 /// Takes every committed string since the last frame.
 pub fn take_ime_commits() -> Vec<String> {
     IME_COMMITS

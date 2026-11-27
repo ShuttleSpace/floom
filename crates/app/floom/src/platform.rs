@@ -908,6 +908,10 @@ mod harmony {
                         platform
                             .push_event(floom_platform::PlatformEvent::ImeCommit { window, text });
                     }
+                    if floom_platform_harmony::take_back_requests() {
+                        floom_platform_harmony::log("back");
+                        platform.push_event(floom_platform::PlatformEvent::Back { window });
+                    }
                     let scale = floom_platform_harmony::display_scale() as f64;
                     for touch in floom_platform_harmony::take_touches() {
                         // The shell reports device pixels; layout is in points.
