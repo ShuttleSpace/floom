@@ -2502,6 +2502,18 @@ impl WidgetHost {
         self.nodes.get(node.0)?.widget.semantics_hint()
     }
 
+    /// Whether the focused node is a text field, i.e. whether a platform shell
+    /// should be holding the keyboard up.
+    ///
+    /// [`Self::ime_caret_rect`] answers a different question: it is only `Some`
+    /// *while composing*, so a shell that reads it waits for text before showing
+    /// a keyboard to type that text with.
+    pub fn ime_active(&self) -> bool {
+        self.focused()
+            .and_then(|element| self.semantics_hint(NodeId(element.index() as usize)))
+            .is_some_and(|hint| matches!(hint.role, SemanticsRole::TextField))
+    }
+
     pub fn bounds(&self, node: NodeId) -> Rect {
         self.nodes[node.0].bounds
     }

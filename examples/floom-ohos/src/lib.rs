@@ -83,7 +83,9 @@ pub extern "C" fn floom_demo_start(width_px: i32, height_px: i32, density: f32) 
                 host.on_frame(|host| {
                     // The shell cannot see Floom's focus, so it asks: this is the
                     // caret the host already tracks for IME anchoring.
-                    floom_platform_harmony::set_wants_ime(host.ime_caret_rect().is_some());
+                    // The caret is only Some *while composing*, so it cannot answer
+                    // "should the keyboard be up". Focus + role can.
+                    floom_platform_harmony::set_wants_ime(host.ime_active());
                     use std::sync::atomic::{AtomicU32, Ordering};
                     static FRAMES: AtomicU32 = AtomicU32::new(0);
                     // The first frame's callback runs before layout, so the
