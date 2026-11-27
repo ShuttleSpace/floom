@@ -43,15 +43,27 @@ pub extern "C" fn floom_demo_start(width_px: i32, height_px: i32, density: f32) 
                 host.mount(
                     column,
                     floom_layout::LayoutStyle::default(),
-                    Stack::new(floom_core::Axis::Vertical).child(floom_core::Child::new(
-                        floom_core::ChildKey::index(0),
-                        floom_core::LayoutRequest::new(),
-                        || {
-                            Box::new(Button::new("Floom on OpenHarmony").on_click(|| {
-                                floom_platform_harmony::log("tapped");
-                            }))
-                        },
-                    )),
+                    Stack::new(floom_core::Axis::Vertical)
+                        .child(floom_core::Child::new(
+                            floom_core::ChildKey::index(0),
+                            floom_core::LayoutRequest::new(),
+                            || {
+                                Box::new(Button::new("Floom on OpenHarmony").on_click(|| {
+                                    floom_platform_harmony::log("tapped");
+                                }))
+                            },
+                        ))
+                        // The gate needs a field that can take composition: tap it,
+                        // type on the soft keyboard, and the text has to arrive.
+                        .child(floom_core::Child::new(
+                            floom_core::ChildKey::index(1),
+                            floom_core::LayoutRequest::new(),
+                            || {
+                                Box::new(floom_widgets::TextInput::new(std::sync::Arc::new(
+                                    std::sync::Mutex::new(String::new()),
+                                )))
+                            },
+                        )),
                 );
                 // 量一次就够：布局尺寸、缩放、内容盒子，与 present 那行
                 // `frame WxH` 对起来，就能看出 scale 在哪一段被多用了一次。

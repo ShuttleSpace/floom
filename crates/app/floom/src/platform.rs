@@ -904,6 +904,7 @@ mod harmony {
                 floom_platform_harmony::present,
                 |platform, window| {
                     for text in floom_platform_harmony::take_ime_commits() {
+                        floom_platform_harmony::log(&format!("ime commit {text:?}"));
                         platform
                             .push_event(floom_platform::PlatformEvent::ImeCommit { window, text });
                     }
