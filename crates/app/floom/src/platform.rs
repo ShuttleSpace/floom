@@ -904,10 +904,8 @@ mod harmony {
                 floom_platform_harmony::present,
                 |platform, window| {
                     for text in floom_platform_harmony::take_ime_commits() {
-                        platform.push_event(floom_platform::PlatformEvent::ImeCommit {
-                            window,
-                            text,
-                        });
+                        platform
+                            .push_event(floom_platform::PlatformEvent::ImeCommit { window, text });
                     }
                     let scale = floom_platform_harmony::display_scale() as f64;
                     for touch in floom_platform_harmony::take_touches() {
