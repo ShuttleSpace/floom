@@ -55,7 +55,7 @@ nothing more.
 | `aarch64-linux-android` | `floom-platform-android` | **device-gated (Phase 17)**: emulator-verified start+interaction+IME+CJK+clipboard; a11y/file picker/safe area pending emulator closure |
 | `aarch64-apple-ios` | `floom-platform-ios` (UIKit staticlib) | **device-gated (Phase 17)**: device-only — needs a signing identity. The simulator slice below is what runs in CI. |
 | `aarch64-apple-ios-sim` | same | **tested (CI)**: `ios-simulator-smoke` scaffolds an app with `floom create`, links it with `swiftc`, installs it on whatever iPhone runtime the runner's Xcode ships, launches it and counts the pixels it drew (`scripts/ios-smoke.sh`). Device behaviour (a11y actions, IME composition, safe area on notched hardware) is still device-gated. |
-| OpenHarmony | `floom-platform-harmony` (N-API cdylib) | **device-gated (Phase 19)**: DevEco emulator Mate X7 verified start+interaction; IME/a11y/clipboard/file/safe area/focus pending |
+| OpenHarmony | `floom-platform-harmony` (N-API cdylib) + `examples/floom-ohos` | **emulator-tested for render + touch** (2026-11-27: 2210x2208 frame, `bbox=0x0-540x74`, tap reaches `host.activate`); CI cross-builds and links the example. IME/a11y/clipboard/file/focus still device-gated — nothing forwards them yet |
 | `wasm32-unknown-unknown` | `floom-platform-web` | **target-gated** (Phase 19): headless WASM harness pending |
 | no-std / bare metal | `floom-platform-embedded` | **target-gated** (Phase 19): `aarch64-unknown-linux-ohos`/`x86_64-unknown-linux-ohos` ELF verified; bare-metal target pending |
 
