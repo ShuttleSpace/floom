@@ -10,6 +10,13 @@ struct Index {
   // one known composition instead, which proves the ETS -> napi -> Rust leg.
   aboutToAppear(): void {
     nativeApi.textInput('汉字 selfcheck');
+    // Floom owns focus internally; the keyboard follows the caret the host
+    // reports, polled here because there is no callback into ArkTS.
+    setInterval(() => {
+      if (nativeApi.wantsIme()) {
+        focusControl.requestFocus('floom-ime');
+      }
+    }, 200);
   }
 
   build() {
@@ -22,6 +29,7 @@ struct Index {
         .height(1)
         .opacity(0)
         .hitTestBehavior(HitTestMode.None)
+        .id('floom-ime')
         .onChange((value: string) => {
           nativeApi.textInput(value);
         })

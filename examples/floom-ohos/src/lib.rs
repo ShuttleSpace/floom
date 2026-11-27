@@ -71,6 +71,9 @@ pub extern "C" fn floom_demo_start(width_px: i32, height_px: i32, density: f32) 
                 // 量一次就够：布局尺寸、缩放、内容盒子，与 present 那行
                 // `frame WxH` 对起来，就能看出 scale 在哪一段被多用了一次。
                 host.on_frame(|host| {
+                    // The shell cannot see Floom's focus, so it asks: this is the
+                    // caret the host already tracks for IME anchoring.
+                    floom_platform_harmony::set_wants_ime(host.ime_caret_rect().is_some());
                     use std::sync::atomic::{AtomicU32, Ordering};
                     static FRAMES: AtomicU32 = AtomicU32::new(0);
                     // The first frame's callback runs before layout, so the

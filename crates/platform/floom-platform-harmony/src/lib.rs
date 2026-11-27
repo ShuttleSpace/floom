@@ -215,6 +215,20 @@ pub fn take_touches() -> Vec<Touch> {
 
 static IME_COMMITS: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
+/// Whether a composition is open, i.e. whether the shell should hold the
+/// keyboard. Written by the app from the host's caret, read by ArkTS.
+static WANTS_IME: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+pub fn set_wants_ime(wants: bool) {
+    WANTS_IME.store(wants, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Polled from ArkTS: `true` while a Floom field has a composition open.
+#[unsafe(no_mangle)]
+pub extern "C" fn floom_harmony_wants_ime() -> bool {
+    WANTS_IME.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// Queues text the ArkTS shell committed on behalf of a focused field.
 ///
 /// The shell owns the keyboard, so composition arrives out of band exactly like
